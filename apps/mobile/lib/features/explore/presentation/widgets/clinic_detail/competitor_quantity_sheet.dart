@@ -126,7 +126,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     }
   }
 
-  /// Clears this competitor's quantity for the current month.
+  /// Removes this competitor product from the metric.
   ///
   /// The product picker is deliberately locked while editing — a different
   /// product is a different row, not an edit — so removal is the only way to
@@ -142,8 +142,9 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
       builder: (ctx) => AlertDialog(
         title: const Text('Remover outra marca?'),
         content: Text(
-          'A quantidade de ${existing.productName} registrada neste mês será '
-          'apagada. Os meses anteriores não mudam.',
+          '${existing.productName} deixa de contar neste cálculo. Para '
+          'registrar que a clínica passou a usar menos, edite a quantidade '
+          'em vez de remover.',
         ),
         actions: [
           TextButton(
@@ -274,10 +275,18 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Quantidade por mês',
-                  helperText: 'Na unidade da embalagem, como o rep a conhece.',
-                  border: OutlineInputBorder(),
+                  // The list shows this product in metric units and this field
+                  // takes packaging units, so the number here will not match the
+                  // row that was just tapped. Saying so is cheaper than a rep
+                  // deciding the figure was lost.
+                  helperText: widget.existing == null
+                      ? 'Na unidade da embalagem, como o rep a conhece.'
+                      : 'Na unidade da embalagem. A lista mostra o total '
+                            'convertido para a unidade da métrica.',
+                  helperMaxLines: 3,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               if (_error != null) ...[

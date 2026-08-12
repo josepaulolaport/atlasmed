@@ -82,13 +82,12 @@ const removeFacilityProductUsageRoute = new Elysia()
         verticalId: query.verticalId,
         definitionId: params.definitionId,
         productId: params.productId,
-        month: query.month,
         scope,
       });
     },
     {
       detail: {
-        summary: "Remove a competitor product from a metric, for one month",
+        summary: "Remove a competitor product from a metric",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
@@ -99,9 +98,8 @@ const removeFacilityProductUsageRoute = new Elysia()
       }),
       query: t.Object({
         verticalId: t.Number({ minimum: 1 }),
-        // Defaults to the current month. A delete clears one month, never the
-        // product's whole history.
-        month: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-01$" })),
+        // No month: a competitor is removed from the metric outright. The
+        // parameter was optional and no client ever sent it.
       }),
     },
   );

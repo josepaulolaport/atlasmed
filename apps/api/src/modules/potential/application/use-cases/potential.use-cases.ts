@@ -9,7 +9,6 @@ import {
 } from "../../../../shared/errors";
 import {
   addMonths,
-  averageMonthly,
   deriveShare,
   monthKeyAt,
   monthlyRateFromDays,
@@ -76,10 +75,9 @@ export class ListFacilityPotentialsUseCase {
 
     const now = input.now ?? new Date();
     const currentMonth = monthKeyAt(now);
-    // The rep's competitor figures are month-keyed, so the window still names
-    // months for them — but ours is a rolling day window (spec 0013 §4.3), which
-    // is what stops a partial month from dragging the number down.
-    const months = trailingMonths(currentMonth, MONTHS_IN_WINDOW);
+    // Ours is a rolling day window (spec 0013 §4.3), which is what stops a
+    // partial month from dragging the number down. Theirs no longer names
+    // months at all — it is the figure standing per product.
     const window = rollingWindow(now);
 
     const definitions = await this.deps.potentialRepository.listDefinitions({
@@ -342,15 +340,11 @@ export class RemoveFacilityProductUsageUseCase {
     verticalId: number;
     definitionId: number;
     productId: number;
-    /** The month to clear. Defaults to the current month in São Paulo. */
-    month?: MonthKey;
     scope: ScopeContext;
     now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
-
-    const month = input.month ?? monthKeyAt(input.now ?? new Date());
 
     const profileId = await this.deps.potentialRepository.findProfileId({
       facilityId: input.facilityId,
@@ -363,24 +357,29 @@ export class RemoveFacilityProductUsageUseCase {
       );
     }
 
-    // Deletes one month, never the product's whole history — removing what the
-    // rep sees today must not silently erase what was true in March.
-    const removed = await this.deps.potentialRepository.deleteUsage({
+    // Every month the product carries, not just this one. A competitor holds a
+    // single standing figure and the months behind it are the dates it changed,
+    // so clearing only the newest left the previous one standing and the product
+    // reappeared with an older number on the next load.
+    const clearedMonths = await this.deps.potentialRepository.deleteUsageForProduct({
       profileId,
       definitionId: input.definitionId,
       productId: input.productId,
-      month,
     });
-    if (!removed) {
+    if (clearedMonths.length === 0) {
       throw new ResourceNotFoundError(
         "FacilityProductUsage",
-        `${input.definitionId}:${input.productId}:${month}`,
+        `${input.definitionId}:${input.productId}`,
       );
     }
 
-    // Removing a competitor changes the denominator, so the snapshot is stale
-    // the instant the row goes. Same reasoning as the write above.
-    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
+    // Removing a competitor changes the denominator, so every month it appeared
+    // in now has a stale snapshot — including months outside the current window,
+    // which the manager dashboards aggregate over (spec 0014 §4).
+    const staleMonths = [
+      ...new Set(clearedMonths.flatMap((cleared) => windowFor(cleared))),
+    ];
+    await this.deps.recomputeSnapshots?.({ profileId, months: staleMonths });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,

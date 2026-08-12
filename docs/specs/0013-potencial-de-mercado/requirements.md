@@ -225,7 +225,7 @@ ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
 > It also removes a live distortion: dividing by a constant 3 understated any clinic with fewer
 > than three months of orders by up to 3×.
 
-> **Amendment 2026-08-11 — a competitor figure is a standing rate, not a month to average.**
+> **Amendment 2026-08-12 — a competitor figure is a standing rate, not a month to average.**
 > The distortion named directly above was fixed for `ours` and left in place for `theirs`:
 > the read computed `theirs = (Σ theirs[M-N+1 … M]) ÷ N`, so a rep who recorded one competitor at
 > 100/mês saw 33. The two months nobody had surveyed were counted as hard zeros — precisely the
@@ -243,12 +243,19 @@ ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
 > Same product recorded again → replaces. Different product → adds. A figure recorded long ago still
 > counts, per §6 — `updated_at` remains the only signal that it is old.
 >
+> **Removal clears every month the product carries.** With one standing figure per product, the
+> months behind it are the dates that figure changed, not separate surveys — so deleting only the
+> newest left the one before it standing and the product returned with an older number. Removing a
+> competitor means it no longer counts here at all; recording that a clinic uses less is an edit,
+> not a removal. Every month it appeared in is recomputed, including months outside the current
+> window, because the manager aggregates in spec 0014 §4 read them.
+>
 > **`facility_product_usage` is unchanged**, month key and all. The month rows are still the history
 > the snapshots and the §4.5 trend are built from; `theirs[M]` above still describes a *stored month*.
 > What changed is the read behind the clinic screen, which asks a different question: not "what was
 > true in each of the last three months" but "what is true now".
 
-> **Amendment 2026-08-11 — our own quantity is shown per product.** §6 gave the rep our total and
+> **Amendment 2026-08-12 — our own quantity is shown per product.** §6 gave the rep our total and
 > the competitor products behind theirs, with no way to see which of our products made up our own
 > number. The read now also returns `ourProducts`: the same 90-day window, grouped by product and
 > normalised to a month, largest first, listing only products actually sold in the window.

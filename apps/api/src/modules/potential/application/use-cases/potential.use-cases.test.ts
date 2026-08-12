@@ -8,6 +8,7 @@ import type { PotentialRepository } from "../interfaces/potential.repository.int
 import {
   ListFacilityPotentialsUseCase,
   ListPotentialDefinitionsUseCase,
+  RemoveFacilityProductUsageUseCase,
   UnlinkProductPotentialUseCase,
 } from "./potential.use-cases";
 
@@ -42,7 +43,7 @@ function createRepository(
     listUsage: async () => [],
     listLatestUsageByProduct: async () => [],
     upsertUsage: async () => undefined,
-    deleteUsage: async () => true,
+    deleteUsageForProduct: async () => ['2026-08-01'],
     sumAtlasmedQtyByDefinitionAndMonth: async () => [],
     sumAtlasmedQtyByDefinitionAndProduct: async () => [],
     linkProduct: async () => undefined,
@@ -223,5 +224,79 @@ describe("what a metric reports for a clinic", () => {
     });
 
     expect(page.items[0]!.share).toBeNull();
+  });
+});
+
+describe("removing a competitor product", () => {
+  const globalScope: ScopeContext = { ...baseScope, isGlobal: true };
+
+  it("clears every month it was recorded in, not just the newest", async () => {
+    // The regression this guards: removal used to delete the current month
+    // only, so the month before it became the standing figure and the product
+    // came back with an older number on the next load.
+    let deletedFor: unknown = null;
+    const repository = createRepository({
+      listDefinitions: async () => [],
+      deleteUsageForProduct: async (input) => {
+        deletedFor = input;
+        return ['2026-06-01', '2026-08-01'];
+      },
+    });
+
+    await new RemoveFacilityProductUsageUseCase({
+      potentialRepository: repository,
+    }).execute({
+      facilityId: 1,
+      verticalId: 1,
+      definitionId: 7,
+      productId: 10,
+      scope: globalScope,
+    });
+
+    expect(deletedFor).toEqual({ profileId: 1, definitionId: 7, productId: 10 });
+  });
+
+  it("recomputes the snapshots of every month it touched", async () => {
+    // Months outside the current window still feed the manager aggregates, so
+    // leaving their snapshots behind would keep a removed competitor in them.
+    const recomputed: string[][] = [];
+    await new RemoveFacilityProductUsageUseCase({
+      potentialRepository: createRepository({
+        listDefinitions: async () => [],
+        deleteUsageForProduct: async () => ['2026-01-01', '2026-08-01'],
+      }),
+      recomputeSnapshots: async ({ months }) => {
+        recomputed.push(months as string[]);
+        return undefined;
+      },
+    }).execute({
+      facilityId: 1,
+      verticalId: 1,
+      definitionId: 7,
+      productId: 10,
+      scope: globalScope,
+    });
+
+    const months = recomputed.flat();
+    expect(months).toContain('2026-01-01');
+    expect(months).toContain('2026-08-01');
+    // Deduplicated: overlapping windows must not recompute a month twice.
+    expect(new Set(months).size).toBe(months.length);
+  });
+
+  it("reports not-found when the product was never recorded", async () => {
+    await expect(
+      new RemoveFacilityProductUsageUseCase({
+        potentialRepository: createRepository({
+          deleteUsageForProduct: async () => [],
+        }),
+      }).execute({
+        facilityId: 1,
+        verticalId: 1,
+        definitionId: 7,
+        productId: 10,
+        scope: globalScope,
+      }),
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
   });
 });

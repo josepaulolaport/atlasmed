@@ -133,7 +133,7 @@ void main() {
     await dismiss(tester, showing);
   });
 
-  testWidgets('removing an existing row confirms, then clears the month', (
+  testWidgets('removing an existing row confirms, then clears the product', (
     tester,
   ) async {
     final repository = _RecordingPotentialRepository();
@@ -143,14 +143,18 @@ void main() {
       existing: usage,
     );
 
+    await tester.ensureVisible(
+      find.byKey(const Key('competitor-quantity-remove')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('competitor-quantity-remove')));
     await tester.pumpAndSettle();
 
-    // Destructive and irreversible for that month, so it asks first, and names
-    // what survives.
+    // Destructive, so it asks first, names the product, and points at the edit
+    // path for the case the rep actually means "they use less now".
     expect(find.text('Remover outra marca?'), findsOneWidget);
     expect(find.textContaining('Marca A'), findsWidgets);
-    expect(find.textContaining('meses anteriores'), findsOneWidget);
+    expect(find.textContaining('edite a quantidade'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Remover'));
     await tester.pumpAndSettle();
@@ -172,6 +176,10 @@ void main() {
       existing: usage,
     );
 
+    await tester.ensureVisible(
+      find.byKey(const Key('competitor-quantity-remove')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('competitor-quantity-remove')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
@@ -194,6 +202,10 @@ void main() {
       existing: usage,
     );
 
+    await tester.ensureVisible(
+      find.byKey(const Key('competitor-quantity-remove')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('competitor-quantity-remove')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Remover'));

@@ -13,6 +13,12 @@ import { db } from "../../../../../infrastructure/database/db";
 import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
 import { isPostgresUniqueViolation } from "../../../../../shared/utils/postgres-unique-violation";
 
+/** The indexes that carry "one live invitation per person" (spec: users.ts). */
+const PENDING_IDENTITY_INDEXES = [
+  "invitations_pending_email_uidx",
+  "invitations_pending_phone_number_uidx",
+];
+
 import type {
   InviteRepository,
   CreateInviteParams,
@@ -47,7 +53,11 @@ export class DrizzleInviteRepository implements InviteRepository {
     try {
       return await this.insertInvite(params);
     } catch (error) {
-      if (isPostgresUniqueViolation(error)) {
+      // Only the two identity indexes mean "someone already has a live invite".
+      // A token_hash collision is a different failure entirely, and reporting it
+      // as a duplicate invitation would send the caller looking for one that
+      // does not exist.
+      if (isPostgresUniqueViolation(error, PENDING_IDENTITY_INDEXES)) {
         throw new ResourceConflictError(
           "Invitation",
           "A pending invitation already exists for this user"

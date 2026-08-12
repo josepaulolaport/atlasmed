@@ -121,12 +121,20 @@ export interface PotentialRepository {
     updatedByUserId: number;
   }): Promise<void>;
 
-  deleteUsage(input: {
+  /**
+   * Removes a competitor product from a metric entirely, and reports the months
+   * it cleared so their snapshots can be recomputed.
+   *
+   * Every month, not one: a competitor carries a single standing figure, so the
+   * months behind it are the dates that figure changed, not separate surveys.
+   * Deleting only the newest left the one before it standing, and the product
+   * came back with an older number the next time the screen loaded.
+   */
+  deleteUsageForProduct(input: {
     profileId: number;
     definitionId: number;
     productId: number;
-    month: MonthKey;
-  }): Promise<boolean>;
+  }): Promise<MonthKey[]>;
 
   /**
    * Sum eligible order-item quantities (× `metric_units`) for **one calendar

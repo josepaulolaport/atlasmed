@@ -238,12 +238,11 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async deleteUsage(input: {
+  async deleteUsageForProduct(input: {
     profileId: number;
     definitionId: number;
     productId: number;
-    month: MonthKey;
-  }): Promise<boolean> {
+  }): Promise<MonthKey[]> {
     const deleted = await this.database
       .delete(facilityProductUsage)
       .where(
@@ -251,11 +250,10 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
           eq(facilityProductUsage.definitionId, input.definitionId),
           eq(facilityProductUsage.productId, input.productId),
-          eq(facilityProductUsage.month, input.month),
         ),
       )
-      .returning({ id: facilityProductUsage.id });
-    return deleted.length > 0;
+      .returning({ month: facilityProductUsage.month });
+    return deleted.map((row) => row.month as MonthKey);
   }
 
   /**
