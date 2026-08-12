@@ -132,21 +132,41 @@ describe("deriveShare", () => {
   it("is null, never 0, when nothing is known", () => {
     // The distinction the whole metric rests on: no sales and no information
     // must not collapse into the same number.
-    expect(deriveShare(0, 0)).toEqual({ totalQty: 0, share: null });
+    expect(deriveShare(0, 0, false)).toEqual({ totalQty: 0, share: null });
   });
 
   it("is 0 when we genuinely sell nothing into a known market", () => {
-    expect(deriveShare(0, 40)).toEqual({ totalQty: 40, share: 0 });
+    expect(deriveShare(0, 40, false)).toEqual({ totalQty: 40, share: 0 });
   });
 
-  it("is 1 when everything observable is ours", () => {
-    // A clinic with orders and no competitor data is genuinely 100% of the
-    // market we can see — which is why backfilled history would read 100%.
-    expect(deriveShare(30, 0)).toEqual({ totalQty: 30, share: 1 });
+  it("is null when we have orders but nobody has looked at the market", () => {
+    // The §4.6 rule. Ours is 30 and theirs is 0, but that 0 means "nothing
+    // recorded", not "nothing there" — so 100% would be a claim to own a market
+    // no one has measured. This case read 1 before the claim existed, which is
+    // how every unsurveyed clinic reported that we owned it outright.
+    expect(deriveShare(30, 0, false)).toEqual({ totalQty: 30, share: null });
+  });
+
+  it("is 1 once a rep says there is no other brand here", () => {
+    // Same operands, one assertion added. The claim is what turns an unknown
+    // denominator into a known one.
+    expect(deriveShare(30, 0, true)).toEqual({ totalQty: 30, share: 1 });
+  });
+
+  it("is null with the claim but nothing at all to divide", () => {
+    // "No other brand here" and no orders either: the market is known to be
+    // empty, and our share of an empty market is not a number.
+    expect(deriveShare(0, 0, true)).toEqual({ totalQty: 0, share: null });
   });
 
   it("splits a mixed market", () => {
-    expect(deriveShare(30, 10)).toEqual({ totalQty: 40, share: 0.75 });
+    expect(deriveShare(30, 10, false)).toEqual({ totalQty: 40, share: 0.75 });
+  });
+
+  it("does not need the claim once a competitor is recorded", () => {
+    // A recorded competitor *is* the observation; the claim adds nothing and,
+    // per the table's check constraint, cannot coexist with one anyway.
+    expect(deriveShare(30, 10, false)).toEqual(deriveShare(30, 10, true));
   });
 });
 

@@ -169,12 +169,15 @@ export const facilityMetricSnapshots = pgTable(
      * The rep's claim that no other brand is sold here for this metric.
      *
      * An **input**, living on a derived row — see §4.6. The recompute must
-     * never write these three columns; the check below and
+     * never write these two columns; the check below and
      * `metric-snapshot.test.ts` both exist to keep that true, because a cache
      * that quietly eats a person's assertion is the worst kind of bug.
+     *
+     * Who set it is deliberately not stored. It would be written on every claim
+     * and read by nothing, which is how `assigned_by` ended up deleted in spec
+     * 0009 R9; the column can come back the day a screen asks for it.
      */
     noOtherBrands: boolean("no_other_brands").notNull().default(false),
-    noOtherBrandsSetByUserId: bigint("no_other_brands_set_by_user_id", { mode: "number" }),
     /** A stale claim still counts; the date is the only signal it is old (§6). */
     noOtherBrandsSetAt: timestamp("no_other_brands_set_at"),
     /**
@@ -231,14 +234,6 @@ export const facilityMetricSnapshots = pgTable(
     // "No other brand is sold here" and "here is a brand they sell" cannot both
     // be true. The application clears the claim when a product is added; this
     // makes the contradiction unrepresentable rather than merely unlikely.
-    // Named explicitly: the derived name ran past 63 characters and Postgres
-    // truncated it, leaving the database holding a constraint under a name the
-    // schema did not know.
-    foreignKey({
-      name: "facility_metric_snapshots_claim_user_fk",
-      columns: [t.noOtherBrandsSetByUserId],
-      foreignColumns: [users.id],
-    }).onDelete("set null"),
     check(
       "facility_metric_snapshots_no_other_brands_excludes_theirs",
       sql`not ${t.noOtherBrands} or ${t.theirsQty} = 0`,

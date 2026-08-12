@@ -142,13 +142,12 @@ export class ListFacilityPotentialsUseCase {
         const theirs = standingRows.reduce((sum, row) => sum + row.quantity, 0);
         // A share needs a denominator we actually know. An empty competitor
         // list is only a *known* empty market when a rep has said so — that is
-        // what "nenhuma outra marca" asserts (§4.6). Without it the market is
-        // unknown, and reporting 100% would claim we own it on no evidence.
+        // what "nenhuma outra marca" asserts (§4.6). That condition is part of
+        // the share rule rather than a guard around it, so it lives inside
+        // `deriveShare` with the rest of it and is checked against the
+        // generated column by `market-share-parity.db.test.ts`.
         const claim = claimByDef.get(def.id);
-        const hasCompetitorObservation =
-          standingRows.length > 0 || claim?.noOtherBrands === true;
-        const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
-        const share = hasCompetitorObservation ? mathematicalShare : null;
+        const { totalQty, share } = deriveShare(ours, theirs, claim?.noOtherBrands === true);
 
         // Our own side of the same window, largest first. These sum to
         // `atlasmedMonthlyAvgQty` above, as the competitor rows now sum to
@@ -297,7 +296,6 @@ export class SetFacilityProductUsageUseCase {
       definitionId: input.definitionId,
       verticalId: definition.verticalId,
       value: false,
-      setByUserId: input.userId,
     });
 
     // Synchronous, not enqueued (spec 0013 §4.4): the rep is looking at the
@@ -450,7 +448,6 @@ export class SetNoOtherBrandsUseCase {
       definitionId: input.definitionId,
       verticalId: definition.verticalId,
       value: input.value,
-      setByUserId: input.userId,
     });
 
     // The claim is an input to the share, so the stored value is stale until

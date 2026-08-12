@@ -462,8 +462,10 @@ metric*.
 
 - It may only be **turned on while the competitor list is empty**.
 - Adding a competitor product **clears it automatically**, and saves.
-- It records **who set it and when**, exactly like a quantity: a stale claim still counts, and the
-  date is the only signal that it is old (§6).
+- It records **when** it was set: a stale claim still counts, and the date is the only signal that
+  it is old (§6). *Who* set it is deliberately not stored — it would be written on every claim and
+  read by nothing, the same shape spec 0009 R9 deleted as `assigned_by`. The day a screen asks for
+  it, the column comes back with the reader that justifies it.
 
 It is the *only* thing that makes `share = 100%` legitimate. Without it:
 

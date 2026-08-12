@@ -437,7 +437,6 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         definitionId: scenario.definitionId,
         verticalId: scenario.verticalId,
         value: true,
-        setByUserId: 1,
       });
       await recompute(tx, scenario.profileId);
 
@@ -465,7 +464,6 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         definitionId: scenario.definitionId,
         verticalId: scenario.verticalId,
         value: true,
-        setByUserId: 1,
       });
 
       for (let i = 0; i < 5; i += 1) {

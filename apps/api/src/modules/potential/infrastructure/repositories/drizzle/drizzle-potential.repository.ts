@@ -200,7 +200,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
    * Records or withdraws "no other brand is sold here".
    *
    * Upserts, because the claim can be made about a clinic no recompute has
-   * touched yet — and writes only the claim's three columns, never the derived
+   * touched yet — and writes only the claim's two columns, never the derived
    * figures, which are the recompute's to own.
    */
   async setNoOtherBrands(input: {
@@ -208,11 +208,9 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     definitionId: number;
     verticalId: number;
     value: boolean;
-    setByUserId: number;
   }): Promise<void> {
     const claim = {
       noOtherBrands: input.value,
-      noOtherBrandsSetByUserId: input.value ? input.setByUserId : null,
       noOtherBrandsSetAt: input.value ? new Date() : null,
     };
     await this.database

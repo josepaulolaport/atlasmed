@@ -83,22 +83,17 @@ ALTER TABLE facility_metric_snapshots
 --> statement-breakpoint
 
 -- The claim. An input living on a derived row: the recompute writes ours_qty,
--- theirs_qty and computed_at, and never these three.
+-- theirs_qty and computed_at, and never these two.
+--
+-- Who set it is not stored. It would be written on every claim and read by
+-- nothing — the shape spec 0009 R9 deleted as `assigned_by`. The date is kept
+-- because §6 puts it on screen: a stale claim still counts, and the date is the
+-- only signal it is old.
 ALTER TABLE facility_metric_snapshots
   ADD COLUMN no_other_brands boolean DEFAULT false NOT NULL;
 --> statement-breakpoint
 ALTER TABLE facility_metric_snapshots
-  ADD COLUMN no_other_brands_set_by_user_id bigint;
---> statement-breakpoint
-ALTER TABLE facility_metric_snapshots
   ADD COLUMN no_other_brands_set_at timestamp;
---> statement-breakpoint
-ALTER TABLE facility_metric_snapshots
-  -- Named explicitly and kept under 63 characters: the derived name was
-  -- truncated by Postgres, which is how a constraint ends up under a name the
-  -- schema does not know.
-  ADD CONSTRAINT facility_metric_snapshots_claim_user_fk
-  FOREIGN KEY (no_other_brands_set_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
 --> statement-breakpoint
 
 -- "No other brand is sold here" and "here is one they sell" cannot both hold.

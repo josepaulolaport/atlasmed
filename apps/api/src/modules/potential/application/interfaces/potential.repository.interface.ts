@@ -107,7 +107,6 @@ export interface PotentialRepository {
     definitionId: number;
     verticalId: number;
     value: boolean;
-    setByUserId: number;
   }): Promise<void>;
 
   /** Whether the claim stands, per metric. */
