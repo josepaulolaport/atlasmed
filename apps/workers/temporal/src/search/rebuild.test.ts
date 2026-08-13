@@ -58,6 +58,8 @@ describe("search rebuild", () => {
         state: "SP",
         streetAddress: "Rua Augusta",
         neighborhood: "Consolação",
+        unitTypeId: 3,
+        legalDocumentType: "CNPJ",
         verticalIds: [10],
         territoryIds: [20],
         repUserIds: [7, 3, 3],
@@ -84,6 +86,8 @@ describe("search rebuild", () => {
       state: "SP",
       streetAddress: "Rua Augusta",
       neighborhood: "Consolação",
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
       verticalIds: [10],
       territoryIds: [20],
       repUserIds: [3, 7],
@@ -184,6 +188,12 @@ describe("search rebuild", () => {
     );
     expect(facilityFilterable).not.toContain("commercialStatus");
     expect(facilityFilterable).not.toContain("territoryId");
+    // Explorar filters on these. A name missing here is not a build failure —
+    // Meili rejects the query at runtime and the API quietly falls back to
+    // SQL, so the feature keeps working and only the latency shows it.
+    expect(facilityFilterable).toEqual(
+      expect.arrayContaining(["unitTypeId", "legalDocumentType"])
+    );
     expect(searchRebuild.FACILITY_SETTINGS.searchableAttributes).toEqual(
       expect.arrayContaining(["streetAddress", "neighborhood", "city", "state"])
     );

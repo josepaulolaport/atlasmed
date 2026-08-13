@@ -15,6 +15,8 @@ const FILTER_FIELDS = [
   "verticalPurchaseIntervalSources",
   "verticalManualPurchaseProfiles",
   "purchaseFunnelStagesAny",
+  "unitTypeId",
+  "legalDocumentType",
 ] as const;
 
 type FilterField = (typeof FILTER_FIELDS)[number];

@@ -27,6 +27,14 @@ export type FacilitySearchDocument = {
   state: string | null;
   streetAddress: string | null;
   neighborhood: string | null;
+  /**
+   * CNES unit type. Indexed so a search combined with the unit type filter can
+   * be answered by Meili; without it every such request over-matched, lost rows
+   * in the SQL hydrate, and fell back to a full SQL query.
+   */
+  unitTypeId: number | null;
+  /** CNPJ or CPF. Indexed for the same reason as [unitTypeId]. */
+  legalDocumentType: string | null;
   verticalIds: number[];
   territoryIds: number[];
   /** Active rep assignment user ids (compact REP Meili scope). */
@@ -114,6 +122,8 @@ export function mapFacilitySearchDocument(row: {
   state: string | null;
   streetAddress?: string | null;
   neighborhood?: string | null;
+  unitTypeId?: number | null;
+  legalDocumentType?: string | null;
   verticalIds?: number[];
   territoryIds?: number[];
   repUserIds?: number[];
@@ -139,6 +149,8 @@ export function mapFacilitySearchDocument(row: {
     state: row.state,
     streetAddress: row.streetAddress ?? null,
     neighborhood: row.neighborhood ?? null,
+    unitTypeId: row.unitTypeId ?? null,
+    legalDocumentType: row.legalDocumentType ?? null,
     verticalIds: row.verticalIds ?? [],
     territoryIds,
     repUserIds,

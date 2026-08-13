@@ -8,6 +8,7 @@ import { logger } from "../../../../infrastructure/logging/logger";
 import {
   buildMeiliFilter,
   compactFacilityMeiliScopeFilter,
+  eqFilter,
   geoRadiusFilter,
   gteFilter,
   inFilter,
@@ -171,6 +172,15 @@ export class ListFacilitiesUseCase {
           : undefined,
         input.purchaseIntervalMaxDays !== undefined
           ? lteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMaxDays)
+          : undefined,
+        // OR across the selected unit types, matching the SQL. Both of these
+        // are plain facility columns, so the indexed value cannot drift from
+        // the row the way an order-derived field would.
+        input.unitTypeIds?.length
+          ? inFilter("unitTypeId", input.unitTypeIds)
+          : undefined,
+        input.legalDocumentType
+          ? eqFilter("legalDocumentType", input.legalDocumentType)
           : undefined,
       ];
       const verticalFilter =
