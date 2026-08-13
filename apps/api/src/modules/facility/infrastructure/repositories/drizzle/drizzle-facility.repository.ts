@@ -670,6 +670,10 @@ export function buildFacilityListOrderBy(params: {
         asc(facilities.displayName),
         asc(facilities.id),
       ];
+    // Explicit, and honouring `order`. The default branch below returns
+    // ascending regardless, so "Nome Z–A" could not have worked through it.
+    case "name":
+      return [direction(facilities.displayName), asc(facilities.id)];
     default: return [asc(facilities.displayName), asc(facilities.id)];
   }
 }
@@ -717,9 +721,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const skip = (params.page - 1) * params.limit;
 
+    // Sorts the caller asked for explicitly. Distance is the default ordering
+    // when coordinates are present, but it must not override a choice the rep
+    // made: `name` was missing from this list, so picking "Nome A–Z" or
+    // "Nome Z–A" on Explorar returned a distance-ordered list while the sheet
+    // showed the name option selected. The client sends coordinates on every
+    // request regardless of sort, so this was every request with GPS on.
+    // Verified against production on 2026-08-13 before fixing.
+    //
+    // The doctors list already excludes `name` from its equivalent check.
     const isSpecificSort = params.sort === "purchaseFunnelStage"
       || params.sort === "purchaseIntervalDays"
-      || params.sort === "lastPurchaseDate";
+      || params.sort === "lastPurchaseDate"
+      || params.sort === "name";
 
     const [rows, countRows] = await Promise.all([
       db
