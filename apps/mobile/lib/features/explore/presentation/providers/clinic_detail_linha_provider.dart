@@ -16,12 +16,31 @@ final clinicDetailSelectedLinhaIdProvider = StateProvider.autoDispose
 final clinicDetailEntryVerticalIdProvider = StateProvider.autoDispose
     .family<int?, int>((ref, facilityId) => null);
 
-/// Clinic vertical profile ids learned after first detail/zip load.
+/// Clinic vertical profile ids, seeded from the list row at tap time and
+/// refreshed from the detail response.
 ///
 /// Used to intersect with user options without circular dependency on the
 /// scoped repository (bootstrap uses user options alone until this is set).
-final clinicDetailKnownProfileIdsProvider = StateProvider.autoDispose
-    .family<Set<int>, int>((ref, facilityId) => const {});
+///
+/// Deliberately **not** autoDispose, unlike its neighbours here.
+///
+/// The seed arrives before anything listens: the tap handler writes the ids and
+/// returns, the route builds a frame or more later, and only then does a widget
+/// subscribe. autoDispose collected the value in that gap — measured
+/// 2026-08-13, a seeded `{7}` read back as `{}` two frames later. So every
+/// clinic opened with the linha still unresolved, and every linha-scoped
+/// provider ran twice: once on the provisional `null` and again on the real id.
+/// Four duplicate requests per clinic open, discarding an answer the client had
+/// already computed.
+///
+/// Keeping it means visited clinics hold a small `Set<int>` for the session.
+/// That is the right trade here because these ids are a fact about the clinic
+/// rather than a user choice — unlike [clinicDetailSelectedLinhaIdProvider],
+/// which must reset between visits. Persisting them also makes a second visit
+/// resolve the linha on the first build with no round trip at all.
+final clinicDetailKnownProfileIdsProvider = StateProvider.family<Set<int>, int>(
+  (ref, facilityId) => const {},
+);
 
 /// User ∩ clinic verticals as switcher options.
 List<BusinessVertical> clinicDetailLinhaOptions({
