@@ -141,6 +141,13 @@ jobs:
             mode="store"
           fi
 
+          # Temporário: toda entrega mobile vai para as lojas. Mantemos a
+          # resolução e a infraestrutura de patches para reativação futura.
+          if [[ "$mode" != "store" ]]; then
+            echo "🏪 Patch mode temporariamente suspenso → store mode"
+            mode="store"
+          fi
+
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "has_patches=$has_patches" >> "$GITHUB_OUTPUT"
           echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
