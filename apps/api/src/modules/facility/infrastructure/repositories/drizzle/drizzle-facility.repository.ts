@@ -12,6 +12,7 @@ import {
   orderItems,
   municipalities,
   states,
+  unitTypes,
   personFacilities,
   personFacilityClassificationAssignments,
   personFacilityClassifications,
@@ -35,6 +36,21 @@ import type {
   FacilityVerticalProfileRecord,
 } from "../../../application/interfaces/facility.repository.interface";
 import { normalizeLegalDocument } from "../../../application/utils/facility-tax-id.utils";
+/**
+ * Taken from the interface rather than restated here.
+ *
+ * These two used to be hand-copied shapes, and they had already drifted: the
+ * interface accepted `unitTypeIds` and `legalDocumentType` while neither copy
+ * mentioned them. Nothing broke, because the whole `params` object is handed to
+ * `buildFacilityListConditions` and TypeScript checks method parameters
+ * bivariantly — so the filters worked while the class claimed not to accept
+ * them. The next filter would have been added the same way, and a refactor that
+ * destructured `params` instead of passing it whole would have dropped every
+ * undeclared one with no compiler error and no failing test.
+ */
+type FacilityListParams = Parameters<FacilityRepository["findAll"]>[0];
+type FacilityHydrateParams = Parameters<FacilityRepository["findAllByIds"]>[0];
+
 type FacilityRow = typeof facilities.$inferSelect;
 
 /** Row shape after JOIN municipalities/states for display city + UF. */
@@ -522,6 +538,13 @@ export function buildFacilityListConditions(params: {
   purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
   purchaseIntervalMinDays?: number;
   purchaseIntervalMaxDays?: number;
+  /**
+   * CNES unit type. OR, not AND: a facility has exactly one, so requiring all
+   * of several would always return nothing.
+   */
+  unitTypeIds?: number[];
+  /** CNPJ or CPF. Single value — the enum has only these two. */
+  legalDocumentType?: "CNPJ" | "CPF";
   candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
@@ -574,15 +597,38 @@ export function buildFacilityListConditions(params: {
     conditions.push(activeProfileMatchCondition(verticalIds, [stageCond]));
   }
   // Orders reach the facility through the profile since spec 0010 §4.
-  if (params.productIds?.length) conditions.push(inArray(facilities.id,
-    db.select({ facilityId: facilityVerticalProfiles.facilityId })
-      .from(orders)
-      .innerJoin(
-        facilityVerticalProfiles,
-        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
-      )
-      .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-      .where(inArray(orderItems.productId, params.productIds))));
+  //
+  // AND: the clinic must have bought every selected product, matching the
+  // clinical-focus filter below. This was OR — "bought any of these" — which
+  // made two filters that look identical in the UI behave in opposite
+  // directions, so adding a product widened the results here and narrowed them
+  // there.
+  if (params.productIds?.length) {
+    const ids = [...new Set(params.productIds)];
+    conditions.push(inArray(facilities.id,
+      db.select({ facilityId: facilityVerticalProfiles.facilityId })
+        .from(orders)
+        .innerJoin(
+          facilityVerticalProfiles,
+          eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+        )
+        .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+        .where(inArray(orderItems.productId, ids))
+        .groupBy(facilityVerticalProfiles.facilityId)
+        .having(
+          sql`count(distinct ${orderItems.productId}) = ${ids.length}`,
+        )));
+  }
+  if (params.unitTypeIds?.length) {
+    conditions.push(
+      inArray(facilities.unitTypeId, [...new Set(params.unitTypeIds)]),
+    );
+  }
+  if (params.legalDocumentType) {
+    conditions.push(
+      eq(facilities.legalDocumentType, params.legalDocumentType),
+    );
+  }
   if (params.clinicalFocusIds?.length) {
     // AND: clinic must offer every selected clinical focus.
     const ids = [...new Set(params.clinicalFocusIds)];
@@ -720,32 +766,18 @@ export function buildFacilityListOrderBy(params: {
         asc(facilities.displayName),
         asc(facilities.id),
       ];
+    // Explicit, and honouring `order`. The default branch below returns
+    // ascending regardless, so "Nome Z–A" could not have worked through it.
+    case "name":
+      return [direction(facilities.displayName), asc(facilities.id)];
     default: return [asc(facilities.displayName), asc(facilities.id)];
   }
 }
 
 export class DrizzleFacilityRepository implements FacilityRepository {
-  async findAll(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
-    purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: number[];
-    clinicalFocusIds?: number[];
-    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
-    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
-    purchaseIntervalMinDays?: number;
-    purchaseIntervalMaxDays?: number;
-    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
-    order?: "asc" | "desc";
-    userId: number;
-    scope: FacilityListScopeFilter;
-    candidateIds?: number[];
-  }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
+  async findAll(
+    params: FacilityListParams,
+  ): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const referencePoint =
       params.latitude === undefined
         ? undefined
@@ -767,9 +799,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const skip = (params.page - 1) * params.limit;
 
+    // Sorts the caller asked for explicitly. Distance is the default ordering
+    // when coordinates are present, but it must not override a choice the rep
+    // made: `name` was missing from this list, so picking "Nome A–Z" or
+    // "Nome Z–A" on Explorar returned a distance-ordered list while the sheet
+    // showed the name option selected. The client sends coordinates on every
+    // request regardless of sort, so this was every request with GPS on.
+    // Verified against production on 2026-08-13 before fixing.
+    //
+    // The doctors list already excludes `name` from its equivalent check.
     const isSpecificSort = params.sort === "purchaseFunnelStage"
       || params.sort === "purchaseIntervalDays"
-      || params.sort === "lastPurchaseDate";
+      || params.sort === "lastPurchaseDate"
+      || params.sort === "name";
 
     const [rows, countRows] = await Promise.all([
       db
@@ -860,24 +902,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     };
   }
 
-  async findAllByIds(params: {
-    ids: number[];
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
-    purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: number[];
-    clinicalFocusIds?: number[];
-    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
-    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
-    purchaseIntervalMinDays?: number;
-    purchaseIntervalMaxDays?: number;
-    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
-    order?: "asc" | "desc";
-    userId: number;
-    scope: FacilityListScopeFilter;
-  }): Promise<FacilityListRecord[]> {
+  async findAllByIds(
+    params: FacilityHydrateParams,
+  ): Promise<FacilityListRecord[]> {
     if (params.ids.length === 0) {
       return [];
     }
@@ -889,6 +916,32 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       candidateIds: params.ids,
     });
     return rows;
+  }
+
+  /**
+   * Unit types some active facility actually has.
+   *
+   * Joined rather than listing `unit_types` outright: CNES defines 39 and 12
+   * are in use, so the catalogue would offer reps 27 options that can only
+   * return an empty list.
+   */
+  async listUnitTypesInUse(): Promise<FacilityClinicalFocus[]> {
+    const rows = await db
+      .selectDistinct({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        cnesCode: unitTypes.cnesId,
+      })
+      .from(unitTypes)
+      .innerJoin(facilities, eq(facilities.unitTypeId, unitTypes.id))
+      .where(isNull(facilities.deactivatedAt))
+      .orderBy(asc(unitTypes.name));
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      cnesCode: row.cnesCode,
+    }));
   }
 
   async listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]> {

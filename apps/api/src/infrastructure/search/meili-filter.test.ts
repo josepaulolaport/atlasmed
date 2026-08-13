@@ -11,6 +11,7 @@ import {
   isNullFilter,
   lteFilter,
   orGroup,
+  allOfFilter,
 } from "./meili-filter";
 
 describe("Meilisearch filter builder", () => {
@@ -24,6 +25,46 @@ describe("Meilisearch filter builder", () => {
       inFilter("activeFacilityIds", [2, 1, 1]),
       geoRadiusFilter(-23.55, -46.63, 2500),
     ])).toBe("activeFacilityIds IN [1, 2] AND _geoRadius(-23.55, -46.63, 2500)");
+  });
+
+  describe("allOfFilter", () => {
+    it("requires every value rather than any of them", () => {
+      // The whole point. `IN [...]` here would mean "offers either focus" and
+      // would widen the result set where SQL narrows it — the exact
+      // products-vs-focuses asymmetry this filter audit set out to remove.
+      expect(buildMeiliFilter([allOfFilter("clinicalFocusIds", [2, 1])])).toBe(
+        "(clinicalFocusIds = 1 AND clinicalFocusIds = 2)",
+      );
+    });
+
+    it("stays parenthesised so it cannot be split by a surrounding AND/OR", () => {
+      expect(
+        buildMeiliFilter([
+          allOfFilter("clinicalFocusIds", [1, 2]),
+          eqFilter("legalDocumentType", "CNPJ"),
+        ]),
+      ).toBe(
+        "(clinicalFocusIds = 1 AND clinicalFocusIds = 2) AND legalDocumentType = 'CNPJ'",
+      );
+    });
+
+    it("de-duplicates so a repeated id is not an extra condition", () => {
+      expect(allOfFilter("clinicalFocusIds", [1, 1, 2])).toEqual(
+        allOfFilter("clinicalFocusIds", [1, 2]),
+      );
+    });
+
+    it("omits the parentheses for a single value", () => {
+      expect(allOfFilter("clinicalFocusIds", [7])?.expression).toBe(
+        "clinicalFocusIds = 7",
+      );
+    });
+
+    it("returns undefined for an empty list rather than an empty group", () => {
+      // An empty expression would be dropped by buildMeiliFilter anyway, but a
+      // stray "()" would make Meili reject the whole query.
+      expect(allOfFilter("clinicalFocusIds", [])).toBeUndefined();
+    });
   });
 
   it("builds allowlisted purchase filters with composite tokens and numeric bounds", () => {

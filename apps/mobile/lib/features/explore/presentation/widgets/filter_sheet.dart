@@ -3,9 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/legal_document_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_unit_types_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
@@ -109,6 +113,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
         (widget.hideCommercialStatus ? 0 : (_local['status']?.length ?? 0)) +
         (_local['specialties']?.length ?? 0) +
         (_local['clinicalFocusIds']?.length ?? 0) +
+        (_local['unitTypeIds']?.length ?? 0) +
+        (_local['legalDocumentType']?.length ?? 0) +
         (widget.hidePurchaseFunnel
             ? 0
             : (_local['purchaseBucket']?.length ?? 0)) +
@@ -143,6 +149,9 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                             _toggleMulti('purchaseBucket', v),
                         onSelectProfile: (v) =>
                             _selectSingle('purchaseProfile', v),
+                        onToggleUnitType: (v) => _toggleMulti('unitTypeIds', v),
+                        onSelectLegalDocumentType: (v) =>
+                            _selectSingle('legalDocumentType', v),
                         onOpenSpecialty: _openSpecialtyDrawer,
                         minimumIntervalController: _minimumIntervalController,
                         maximumIntervalController: _maximumIntervalController,
@@ -290,6 +299,8 @@ class _ClinicFilters extends StatelessWidget {
   final ValueChanged<String> onSelectStatus;
   final ValueChanged<String> onTogglePurchaseBucket;
   final ValueChanged<String> onSelectProfile;
+  final ValueChanged<String> onToggleUnitType;
+  final ValueChanged<String> onSelectLegalDocumentType;
   final VoidCallback onOpenSpecialty;
   final TextEditingController minimumIntervalController;
   final TextEditingController maximumIntervalController;
@@ -304,6 +315,8 @@ class _ClinicFilters extends StatelessWidget {
     required this.onSelectStatus,
     required this.onTogglePurchaseBucket,
     required this.onSelectProfile,
+    required this.onToggleUnitType,
+    required this.onSelectLegalDocumentType,
     required this.onOpenSpecialty,
     required this.minimumIntervalController,
     required this.maximumIntervalController,
@@ -343,6 +356,32 @@ class _ClinicFilters extends StatelessWidget {
           child: _SpecialtyNavRow(
             count: local['clinicalFocusIds']?.length ?? 0,
             onTap: onOpenSpecialty,
+          ),
+        ),
+        const _SectionHeader(title: 'Tipo de unidade'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: _UnitTypeChips(
+            selected: local['unitTypeIds'] ?? const [],
+            onToggle: onToggleUnitType,
+          ),
+        ),
+        const _SectionHeader(title: 'Natureza jurídica'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: LegalDocumentTypeFilter.values.map((value) {
+              final selected = (local['legalDocumentType'] ?? []).contains(
+                value,
+              );
+              return _SimpleChip(
+                label: LegalDocumentTypeFilter.label(value),
+                selected: selected,
+                onTap: () => onSelectLegalDocumentType(value),
+              );
+            }).toList(),
           ),
         ),
         if (!hidePurchaseFunnel) ...[
@@ -429,6 +468,61 @@ class _ClinicFilters extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// CNES unit types, multi-select.
+///
+/// OR semantics, matching the API: a facility has exactly one unit type, so
+/// requiring all of the selected ones would always return an empty list.
+class _UnitTypeChips extends ConsumerWidget {
+  const _UnitTypeChips({required this.selected, required this.onToggle});
+
+  final List<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.watch(facilityUnitTypesRepositoryProvider);
+    return RepositoryBuilder<
+      FacilityUnitTypesRepository,
+      List<FacilityUnitTypeOption>
+    >(
+      repository: repository,
+      builder: (context, snapshot, _) {
+        if (snapshot == null) {
+          return const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Carregando tipos de unidade…',
+              style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          );
+        }
+        if (snapshot.isEmpty) {
+          return const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Nenhum tipo de unidade disponível no seu escopo.',
+              style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          );
+        }
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: snapshot.map((option) {
+            final id = option.id.toString();
+            return _SimpleChip(
+              label: option.label,
+              selected: selected.contains(id),
+              onTap: () => onToggle(id),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

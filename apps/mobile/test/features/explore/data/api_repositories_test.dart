@@ -20,6 +20,58 @@ void main() {
       );
     });
 
+    test('sends the unit type and legal type filters', () {
+      final endpoint = ClinicsRepository.makeEndpoint(
+        baseUrl: 'https://api.example.test',
+        page: 1,
+        limit: 20,
+        unitTypeIds: '3,7',
+        legalDocumentType: 'CNPJ',
+      );
+
+      expect(endpoint.queryParameters['unitTypeIds'], '3,7');
+      expect(endpoint.queryParameters['legalDocumentType'], 'CNPJ');
+    });
+
+    test('omits both filters when they are not set', () {
+      final endpoint = ClinicsRepository.makeEndpoint(
+        baseUrl: 'https://api.example.test',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(endpoint.queryParameters.containsKey('unitTypeIds'), isFalse);
+      expect(
+        endpoint.queryParameters.containsKey('legalDocumentType'),
+        isFalse,
+      );
+    });
+
+    test('the constructed repository requests the same URL as makeEndpoint', () {
+      // These were two hand-maintained copies of the same query map, so a test
+      // over makeEndpoint alone could pass while the app sent a URL missing the
+      // filter entirely.
+      final repository = ClinicsRepository(
+        baseUrl: 'https://api.example.test',
+        page: 1,
+        limit: 20,
+        unitTypeIds: '3,7',
+        legalDocumentType: 'CNPJ',
+      );
+
+      expect(
+        repository.endpoint,
+        ClinicsRepository.makeEndpoint(
+          baseUrl: 'https://api.example.test',
+          page: 1,
+          limit: 20,
+          unitTypeIds: '3,7',
+          legalDocumentType: 'CNPJ',
+        ),
+      );
+      repository.dispose();
+    });
+
     test('parses paginated clinic responses with total metadata', () {
       final result = PaginatedFacilities.fromJson('''
 {

@@ -51,6 +51,15 @@ const listFacilitiesRoute = new Elysia()
           }),
         ),
         clinicalFocusIds: t.Optional(t.String()),
+        unitTypeIds: t.Optional(
+          t.String({
+            description:
+              "Comma-separated CNES unit type ids; a facility matches any of them",
+          }),
+        ),
+        legalDocumentType: t.Optional(
+          t.String({ description: "CNPJ or CPF" }),
+        ),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),
@@ -73,6 +82,23 @@ const listClinicalFocusesRoute = new Elysia()
     {
       detail: {
         summary: "List clinical focus catalog for filters",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  );
+
+const listFacilityUnitTypesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/unit-types",
+    async () => {
+      return facilityUseCases.listFacilityUnitTypes().execute();
+    },
+    {
+      detail: {
+        summary: "List CNES unit types in use, for filters",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -917,6 +943,7 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  .use(listFacilityUnitTypesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)

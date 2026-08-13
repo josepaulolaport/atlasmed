@@ -172,6 +172,39 @@ async function loadEnrichmentMap(
   return map;
 }
 
+/**
+ * Matches a professional holding any of [specialtyValues], primary or not.
+ *
+ * This used to carry `and phps.is_primary = true`, so filtering Explorar for
+ * Ortopedia hid every doctor who practises it as a secondary specialty. The
+ * failure was invisible from the outside: the response was a shorter but
+ * entirely plausible list.
+ *
+ * The primary flag is still what decides which single specialty to *display*
+ * (see the loader above) — that is a different question from which doctors
+ * match a filter.
+ *
+ * Exported so the absence of the flag can be asserted against rendered SQL;
+ * the expressions themselves are cyclic and compare by identity.
+ */
+export function buildSpecialtyMatchCondition(specialtyValues: string[]) {
+  return sql`exists (
+    select 1
+    from person_healthcare_profile_specialties phps
+    inner join healthcare_specialties hs on hs.id = phps.specialty_id
+    where phps.person_id = ${persons.id}
+      and regexp_replace(
+        trim(translate(lower(hs.name),
+          'áàâãäéèêëíìîïóòôõöúùûüç' || chr(768) || chr(769) || chr(770) || chr(771) || chr(776) || chr(807),
+          'aaaaaeeeeiiiiooooouuuuc')),
+        '[[:space:]]+', ' ', 'g'
+      ) in (${sql.join(
+        specialtyValues.map((value) => sql`${value}`),
+        sql`, `
+      )})
+  )`;
+}
+
 function buildOrderBy(params: { order?: "asc" | "desc" }) {
   const direction = params.order === "desc" ? desc : asc;
   return [direction(persons.lastName), direction(persons.firstName)];
@@ -274,24 +307,7 @@ export class DrizzleHealthcareProfessionalRepository
     if (params.specialty) {
       const specialtyValues = parseSpecialtyFilterValues(params.specialty);
       if (specialtyValues.length > 0) {
-        conditions.push(
-          sql`exists (
-            select 1
-            from person_healthcare_profile_specialties phps
-            inner join healthcare_specialties hs on hs.id = phps.specialty_id
-            where phps.person_id = ${persons.id}
-              and phps.is_primary = true
-              and regexp_replace(
-                trim(translate(lower(hs.name),
-                  'áàâãäéèêëíìîïóòôõöúùûüç' || chr(768) || chr(769) || chr(770) || chr(771) || chr(776) || chr(807),
-                  'aaaaaeeeeiiiiooooouuuuc')),
-                '[[:space:]]+', ' ', 'g'
-              ) in (${sql.join(
-                specialtyValues.map((value) => sql`${value}`),
-                sql`, `
-              )})
-          )`
-        );
+        conditions.push(buildSpecialtyMatchCondition(specialtyValues));
       }
     }
 
