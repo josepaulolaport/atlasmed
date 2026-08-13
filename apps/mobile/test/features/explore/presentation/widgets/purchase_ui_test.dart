@@ -11,7 +11,10 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recur
 import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/stub_unit_types_repository.dart';
 
 ThemeData _testTheme() => ThemeData(
   splashFactory: NoSplash.splashFactory,
@@ -198,23 +201,30 @@ void main() {
   ) async {
     Map<String, List<String>>? applied;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: _testTheme(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: FilterSheet(
-              kind: 'clinic',
-              filters: const {},
-              radiusKm: null,
-              onApply: (value, _) => applied = value,
+      ProviderScope(
+        overrides: stubUnitTypesOverrides(),
+        child: MaterialApp(
+          theme: _testTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: FilterSheet(
+                kind: 'clinic',
+                filters: const {},
+                radiusKm: null,
+                onApply: (value, _) => applied = value,
+              ),
             ),
           ),
         ),
       ),
     );
-    await tester.tap(find.text('Inativas'));
-    await tester.tap(find.text('Ativas'));
-    await tester.tap(find.text('Mensal'));
+    await tester.pump();
+    for (final label in ['Inativas', 'Ativas', 'Mensal']) {
+      final finder = find.text(label);
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
+    }
     await tester.tap(find.textContaining('Aplicar'));
     expect(applied?['purchaseBucket'], ['inactive', 'active']);
     expect(applied?['purchaseFunnelStage'], isNull);
