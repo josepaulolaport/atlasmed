@@ -253,6 +253,32 @@ const importCnesProfessionalRoute = (
            * this can drop or reorder but never invent.
            */
           occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          birthDate: t.Optional(t.Union([t.String(), t.Null()])),
+          landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
+          /*
+           * Required by the use case, optional in the schema so the failure is
+           * a domain error naming the field rather than a 422 the client
+           * renders as "invalid request".
+           */
+          specialtyId: t.Optional(t.Integer({ minimum: 1 })),
+          roleIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          /*
+           * Added to the registry's, never replacing them. There is still no
+           * way to send the CNES registration itself.
+           */
+          extraRegistrations: t.Optional(
+            t.Array(
+              t.Object({
+                councilId: t.Integer({ minimum: 1 }),
+                stateCode: t.String({ minLength: 2, maxLength: 2 }),
+                registrationNumber: t.String({ minLength: 1 }),
+              })
+            )
+          ),
+          hobbies: t.Optional(t.Union([t.String(), t.Null()])),
+          favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
+          favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
+          languages: t.Optional(t.Union([t.String(), t.Null()])),
         }),
       }
     );

@@ -32,6 +32,17 @@ const ALL_SUS = [SUS_NEW, SUS_HELD, SUS_ELSEWHERE, SUS_NO_REGISTRATION];
 
 const useCase = new ImportCnesProfessionalUseCase();
 
+/**
+ * Specialty and role are required by the wizard, so every successful import
+ * carries them. Both catalogues are seeded reference data.
+ */
+const SPECIALTY_ORTOPEDIA = 1;
+const ROLE_PRESCRITOR = 1;
+const required = {
+  specialtyId: SPECIALTY_ORTOPEDIA,
+  roleIds: [ROLE_PRESCRITOR],
+};
+
 const globalScope = { isGlobal: true, facilityIds: [] } as unknown as ScopeContext;
 
 interface Fixture {
@@ -253,6 +264,7 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
       facilityId: fixture.facilityId,
       professionalCnesId: SUS_NEW,
       scope: globalScope,
+      ...required,
     });
 
     expect(result.created).toBe(true);
@@ -338,12 +350,81 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
     expect(row!.n).toBe(1);
   });
 
+  it("records the specialty and the role the wizard required", async () => {
+    const [row] = (await db.execute(sql`
+      select hs.name as specialty, r.name as role
+        from person_healthcare_profiles hp
+        join person_healthcare_profile_specialties s on s.person_id = hp.person_id
+        join healthcare_specialties hs on hs.id = s.specialty_id
+        join person_facilities pf on pf.person_id = hp.person_id
+        join person_facility_role_assignments ra on ra.person_facility_id = pf.id
+        join person_facility_roles r on r.id = ra.role_id
+       where hp.cnes_professional_id = ${SUS_NEW}
+         and pf.facility_id = ${fixture.facilityId}
+         and s.is_primary;
+    `)) as unknown as { specialty: string; role: string }[];
+
+    expect(row?.specialty).toBeDefined();
+    expect(row?.role).toBe("Prescritor");
+  });
+
+  it("refuses without a specialty, before writing anything", async () => {
+    /**
+     * Required because the data says it already is: 1 205 of 1 206 doctors we
+     * hold carry one, and a doctor without a specialty is unfindable by the
+     * search reps actually use.
+     */
+    const before = (await db.execute(sql`
+      select count(*)::int as n from persons where deleted_at is null;
+    `)) as unknown as { n: number }[];
+
+    await expect(
+      useCase.execute({
+        facilityId: fixture.facilityId,
+        professionalCnesId: SUS_NO_REGISTRATION,
+        scope: globalScope,
+        roleIds: [ROLE_PRESCRITOR],
+      })
+    ).rejects.toThrow();
+
+    const after = (await db.execute(sql`
+      select count(*)::int as n from persons where deleted_at is null;
+    `)) as unknown as { n: number }[];
+    expect(after[0]!.n).toBe(before[0]!.n);
+  });
+
+  it("refuses without a role", async () => {
+    await expect(
+      useCase.execute({
+        facilityId: fixture.facilityId,
+        professionalCnesId: SUS_NO_REGISTRATION,
+        scope: globalScope,
+        specialtyId: SPECIALTY_ORTOPEDIA,
+        roleIds: [],
+      })
+    ).rejects.toThrow();
+  });
+
+  it("rejects a hand-typed registration that is not one", async () => {
+    // The rep may add a council they hold; they may not add nonsense that then
+    // looks as sourced as the CNES row beside it.
+    expect(
+      await reasonFor(SUS_NO_REGISTRATION, {
+        ...required,
+        extraRegistrations: [
+          { councilId: 1, stateCode: "XX", registrationNumber: "abc" },
+        ],
+      })
+    ).toMatch(/is not a (registration number|UF)/);
+  });
+
   it("returns the same person when the import is repeated", async () => {
     // Two reps importing the same doctor, or one double-tapping, is ordinary.
     const first = await useCase.execute({
       facilityId: fixture.facilityId,
       professionalCnesId: SUS_NEW,
       scope: globalScope,
+      ...required,
     });
     expect(first.created).toBe(false);
 
@@ -370,6 +451,7 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
         facilityId: fixture.facilityId,
         professionalCnesId: SUS_HELD,
         scope: globalScope,
+        ...required,
       });
     } catch (error) {
       thrown = error;
@@ -406,13 +488,17 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
   });
 
   /** `ValidationError`'s message is generic; the reason lives in its context. */
-  async function reasonFor(professionalCnesId: string): Promise<string> {
+  async function reasonFor(
+    professionalCnesId: string,
+    overrides: Record<string, unknown> = required,
+  ): Promise<string> {
     try {
       await useCase.execute({
         facilityId: fixture.facilityId,
         professionalCnesId,
         scope: globalScope,
-      });
+        ...overrides,
+      } as never);
     } catch (error) {
       const context = (error as { context?: { errors?: { message: string }[] } })
         .context;
@@ -446,6 +532,7 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
         facilityId: fixture.facilityId,
         professionalCnesId: "NOPE000000000000",
         scope: globalScope,
+        ...required,
       })
     ).rejects.toThrow();
   });

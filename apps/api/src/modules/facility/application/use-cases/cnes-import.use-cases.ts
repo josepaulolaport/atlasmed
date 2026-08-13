@@ -70,6 +70,32 @@ export interface ImportCnesProfessionalInput {
    * and is honoured.
    */
   occupationIds?: number[];
+  birthDate?: string | null;
+  landlinePhone?: string | null;
+  /**
+   * Required. 1 205 of the 1 206 doctors we hold carry a specialty, so it is
+   * mandatory in practice already — the wizard makes that explicit rather than
+   * producing the one record that has none.
+   */
+  specialtyId?: number;
+  /** Required. 1 749 of 1 752 active affiliations carry at least one role. */
+  roleIds?: number[];
+  /**
+   * Registrations typed by the rep, added to what the registry supplied.
+   *
+   * The CRM CNES gave is not editable — it is the identity the whole feature
+   * rests on. A doctor legitimately holding a second council or state is a
+   * different claim, and it is additive.
+   */
+  extraRegistrations?: Array<{
+    councilId: number;
+    stateCode: string;
+    registrationNumber: string;
+  }>;
+  hobbies?: string | null;
+  favoriteTeam?: string | null;
+  favoriteSport?: string | null;
+  languages?: string | null;
 }
 
 /**
@@ -132,6 +158,43 @@ export class ImportCnesProfessionalUseCase {
     input: ImportCnesProfessionalInput
   ): Promise<ImportCnesProfessionalResult> {
     assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    /*
+     * Request shape first, before any lookup.
+     *
+     * These are facts about the request, not about the professional, so they
+     * need no database round trip — and checking them later meant a malformed
+     * body reported whatever the lookup happened to find instead of the field
+     * that was actually wrong.
+     *
+     * Specialty and role are required because the data says they already are:
+     * 1 205 of 1 206 doctors carry a specialty and 1 749 of 1 752 affiliations
+     * carry a role. A doctor with neither is unfindable by the search reps use
+     * and invisible to every commercial view.
+     */
+    const problems: Array<{ field: string; message: string }> = [];
+    if (!input.specialtyId) {
+      problems.push({ field: "specialtyId", message: "specialtyId is required" });
+    }
+    if (!input.roleIds || input.roleIds.length === 0) {
+      problems.push({ field: "roleIds", message: "at least one role is required" });
+    }
+    for (const registration of input.extraRegistrations ?? []) {
+      const number = registration.registrationNumber?.trim();
+      if (!number || !/^\d+$/.test(number)) {
+        problems.push({
+          field: "extraRegistrations",
+          message: `"${registration.registrationNumber}" is not a registration number`,
+        });
+      }
+      if (!/^[A-Za-z]{2}$/.test(registration.stateCode ?? "")) {
+        problems.push({
+          field: "extraRegistrations",
+          message: `"${registration.stateCode}" is not a UF`,
+        });
+      }
+    }
+    if (problems.length > 0) throw new ValidationError(problems);
 
     const professional = await this.repository.findProfessional({
       professionalCnesId: input.professionalCnesId,
@@ -220,9 +283,24 @@ export class ImportCnesProfessionalUseCase {
       lastName,
       socialName: input.socialName ?? professional.socialName,
       cpf: input.cpf ?? null,
+      birthDate: input.birthDate ?? null,
       email: input.email ?? null,
       mobilePhone: input.mobilePhone ?? null,
+      landlinePhone: input.landlinePhone ?? null,
       occupationIds: resolveOccupations(input.occupationIds, professional),
+      specialtyId: input.specialtyId!,
+      roleIds: [...new Set(input.roleIds!)],
+      extraRegistrations: (input.extraRegistrations ?? []).map((r) => ({
+        councilId: r.councilId,
+        stateCode: r.stateCode.toUpperCase(),
+        registrationNumber: r.registrationNumber.trim(),
+      })),
+      personal: {
+        hobbies: input.hobbies ?? null,
+        favoriteTeam: input.favoriteTeam ?? null,
+        favoriteSport: input.favoriteSport ?? null,
+        languages: input.languages ?? null,
+      },
     });
 
     return { personId, created: true, occupations: professional.occupations };

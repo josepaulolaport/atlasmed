@@ -162,21 +162,53 @@ export class DrizzleCnesImportRepository {
     lastName: string;
     socialName: string | null;
     cpf: string | null;
+    birthDate: string | null;
     email: string | null;
     mobilePhone: string | null;
+    landlinePhone: string | null;
     /**
      * Occupations the rep confirmed — CNES's claim for this clinic by default,
      * edited on the way in. The first is primary, which
      * `person_facility_occupations_primary_uidx` allows exactly one of.
      */
     occupationIds: number[];
+    /** What they practise. Required by the wizard; 1205 of 1206 doctors have one. */
+    specialtyId: number;
+    /** Prescritor, Comprador… Required; 1749 of 1752 affiliations carry one. */
+    roleIds: number[];
+    /**
+     * Registrations the rep added by hand, on top of what the registry gave.
+     *
+     * Additive only. The registry's are written first and these follow, so a
+     * typed value can never displace or alter a sourced one — the worst a bad
+     * entry does is add a row somebody can delete.
+     */
+    extraRegistrations: Array<{
+      councilId: number;
+      stateCode: string;
+      registrationNumber: string;
+    }>;
+    /** Rapport notes. Optional, and folded into the review step. */
+    personal: {
+      hobbies: string | null;
+      favoriteTeam: string | null;
+      favoriteSport: string | null;
+      languages: string | null;
+    };
   }): Promise<number> {
     return db.transaction(async (tx) => {
       const [person] = (await tx.execute(sql`
-        insert into persons (first_name, last_name, social_name, cpf, email, mobile_phone)
+        insert into persons (
+          first_name, last_name, social_name, cpf, birth_date,
+          email, mobile_phone, landline_phone,
+          hobbies, favorite_team, favorite_sport, languages
+        )
         values (
           ${input.firstName}, ${input.lastName}, ${input.socialName},
-          ${input.cpf}, ${input.email}, ${input.mobilePhone}
+          ${input.cpf}, ${input.birthDate},
+          ${input.email}, ${input.mobilePhone}, ${input.landlinePhone},
+          ${input.personal.hobbies}, ${input.personal.favoriteTeam},
+          ${input.personal.favoriteSport}, ${input.personal.languages}
         )
         returning id
       `)) as unknown as { id: number | string }[];
@@ -203,6 +235,31 @@ export class DrizzleCnesImportRepository {
           )
         `);
       }
+
+      /*
+       * The rep's own registrations, after the registry's.
+       *
+       * Order matters: the sourced ones claim primary and their
+       * `(council, UF, number)` first, so a typed value can only ever add a
+       * row — never displace, renumber or outrank what CNES supplied.
+       * `on conflict do nothing` absorbs a rep retyping one they already have.
+       */
+      for (const registration of input.extraRegistrations) {
+        await tx.execute(sql`
+          insert into person_professional_registrations
+            (person_id, council_id, state_code, registration_number, is_primary)
+          values (
+            ${personId}, ${registration.councilId}, ${registration.stateCode},
+            ${registration.registrationNumber}, false
+          )
+          on conflict do nothing
+        `);
+      }
+
+      await tx.execute(sql`
+        insert into person_healthcare_profile_specialties (person_id, specialty_id, is_primary)
+        values (${personId}, ${input.specialtyId}, true)
+      `);
 
       await tx.execute(sql`
         update registry.professionals set atlasmed_id = ${personId}, updated_at = now()
@@ -246,6 +303,14 @@ export class DrizzleCnesImportRepository {
           on conflict (person_facility_id, occupation_id) do nothing
         `);
         primaryTaken = true;
+      }
+
+      for (const roleId of input.roleIds) {
+        await tx.execute(sql`
+          insert into person_facility_role_assignments (person_facility_id, role_id)
+          values (${personFacilityId}, ${roleId})
+          on conflict do nothing
+        `);
       }
 
       return personId;
