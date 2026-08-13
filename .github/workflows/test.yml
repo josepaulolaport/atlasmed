@@ -185,6 +185,17 @@ jobs:
         run: fvm install
         working-directory: ./apps/mobile
 
+      # pdfium_dart fetches a prebuilt library from a third-party GitHub
+      # release on first use. Cached so a PR does not depend on that host being
+      # up; keyed by pubspec.lock because the package version pins the release.
+      - name: Restaurar cache de assets nativos
+        uses: actions/cache@v5
+        with:
+          path: apps/mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-native-assets-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-native-assets-
+
       - name: Instalar dependências
         run: fvm flutter pub get
         working-directory: ./apps/mobile
@@ -193,6 +204,7 @@ jobs:
         run: fvm flutter analyze
         working-directory: ./apps/mobile
 
+      # Retries only a failed native-asset download, never a failed test.
       - name: Executar testes
-        run: fvm flutter test
+        run: ./scripts/run-with-native-asset-retry.sh fvm flutter test
         working-directory: ./apps/mobile

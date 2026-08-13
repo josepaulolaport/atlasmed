@@ -57,6 +57,19 @@ jobs:
             ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-
             ${{ runner.os }}-turbo-${{ github.job }}-
 
+      # pdfium_dart downloads a prebuilt library from a third-party GitHub
+      # release on first use. Without this, every run fetched it again, and on
+      # 2026-08-13 one dropped connection failed the job and skipped the
+      # production deploy. The artifact is keyed by pubspec.lock because the
+      # pdfium release it pulls is pinned by the package version.
+      - name: Restaurar cache de assets nativos
+        uses: actions/cache@v5
+        with:
+          path: apps/mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-native-assets-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-native-assets-
+
       - name: Instalar dependências
         run: fvm flutter pub get
         working-directory: ./apps/mobile
@@ -64,8 +77,9 @@ jobs:
       - name: Analisar código
         run: bun run mobile:lint
 
+      # Retries only a failed native-asset download, never a failed test.
       - name: Executar testes
-        run: bun run mobile:test
+        run: ./apps/mobile/scripts/run-with-native-asset-retry.sh bun run mobile:test
 
   deploy_web_production:
     name: Deploy Web (Produção)
@@ -92,12 +106,24 @@ jobs:
         run: fvm install
         working-directory: ./apps/mobile
 
+      - name: Restaurar cache de assets nativos
+        uses: actions/cache@v5
+        with:
+          path: apps/mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-native-assets-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-native-assets-
+
       - name: Instalar dependências
         run: fvm flutter pub get
         working-directory: ./apps/mobile
 
+      # The build resolves native assets too, so it carries the same exposure
+      # as the test step and gets the same treatment.
       - name: Build Flutter Web (Release)
-        run: fvm flutter build web --release --dart-define-from-file=config.production.json
+        run: >-
+          ./scripts/run-with-native-asset-retry.sh
+          fvm flutter build web --release --dart-define-from-file=config.production.json
         working-directory: ./apps/mobile
 
       - name: Instalar Firebase CLI
