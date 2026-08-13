@@ -100,7 +100,14 @@ Also allowed: `emultec-order-import-every-10m` and CLI Temporal ids (`-backfill`
 | `RECONCILE` | Date window on `Data` / `Finalizado_Data` / `Sem_Faturamento_Data` |
 | `HYBRID` (default) | **DLQ replay** → RECONCILE → INCREMENTAL |
 
-Facility resolve: link → PF→PJ CNPJ → CNPJ-14 → CPF-11. Candidates must be active; a unique match is required (two active facilities on one document → `facility_ambiguous`). CNES registration is not a precondition — requiring it made a facility with an exact CNPJ match invisible to the importer, which excluded individual surgeons and distributors by construction.
+Facility resolve: link → PF→PJ CNPJ → CNPJ-14 → CPF-11.
+
+Order type comes from `avulsa.Natureza`, not from status: `VENDA` → `SALE`,
+`DOACAO` → `DONATION`, blank → `SALE`, anything else → `OTHER`. About a third of
+the whitelist volume is donated product (6 277 orders, ~R$1.8k average against
+~R$10.4k for a sale), and the purchase funnel counts only `SALE` /
+`CONSIGNMENT`, so donations are now excluded because of what they are rather
+than because they happen to carry `SEM FATURAMENTO`. Candidates must be active; a unique match is required (two active facilities on one document → `facility_ambiguous`). CNES registration is not a precondition — requiring it made a facility with an exact CNPJ match invisible to the importer, which excluded individual surgeons and distributors by construction.
 
 ## Digests and dead letters
 

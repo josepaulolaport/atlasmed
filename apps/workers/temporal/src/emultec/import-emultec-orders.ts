@@ -24,6 +24,7 @@ import {
   resolveEmultecDeadLetter,
 } from "./emultec-order-import-ops";
 import { mapEmultecOrderStatus } from "./map-emultec-order-status";
+import { mapEmultecOrderType } from "./map-emultec-order-type";
 import { resolveEmultecFacility } from "./resolve-emultec-facility";
 
 const ORTOPEDIA_CODE = "ORTOPEDIA";
@@ -330,6 +331,7 @@ async function upsertOneOrder(
 
   const personId = await resolvePersonId(bundle);
   const status = mapEmultecOrderStatus(bundle.status);
+  const type = mapEmultecOrderType(bundle.nature);
   const orderedAt = parseOrderedAt(bundle.orderedAt);
 
   const [existing] = await db
@@ -348,7 +350,7 @@ async function upsertOneOrder(
         sellerId: seller,
         personId,
         status,
-        type: "SALE",
+        type,
         orderedAt,
         notes: bundle.notes,
         freight: String(bundle.freight),
@@ -365,7 +367,7 @@ async function upsertOneOrder(
         sellerId: seller,
         personId,
         status,
-        type: "SALE",
+        type,
         orderedAt,
         notes: bundle.notes,
         freight: String(bundle.freight),
