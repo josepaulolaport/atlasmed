@@ -21,6 +21,13 @@ import { DrizzleHealthcareProfessionalRepository } from "./drizzle-healthcare-pr
 const dbUp = await isDatabaseReachable();
 
 const MARK = "T-POOL-EXCLUSION";
+/**
+ * Reserved for this suite. Real IBGE state codes are two digits and município
+ * codes seven, so four and eight put these outside the space any other fixture
+ * or the production data can reach.
+ */
+const STATE_IBGE = "9991";
+const MUNICIPALITY_IBGE = "99910001";
 const repository = new DrizzleHealthcareProfessionalRepository();
 
 interface Fixture {
@@ -50,6 +57,21 @@ async function purge() {
   await db.execute(sql`delete from persons where last_name = ${MARK};`);
   await db.execute(sql`delete from facilities where name like ${`${MARK}%`};`);
   await db.execute(sql`delete from users where username = ${MARK};`);
+  await db.execute(sql`delete from roles where name = ${MARK};`);
+  // Everything hanging off this suite's state, then the state. Matched by
+  // abbreviation too, since it is unique and a row left by an earlier run would
+  // otherwise absorb the insert in `seed`.
+  await db.execute(sql`
+    delete from municipalities
+     where ibge_id = ${MUNICIPALITY_IBGE}
+        or state_id in (
+          select id from states
+           where ibge_id = ${STATE_IBGE} or abbreviation = 'ZP'
+        );
+  `);
+  await db.execute(
+    sql`delete from states where ibge_id = ${STATE_IBGE} or abbreviation = 'ZP';`
+  );
 }
 
 /** Links a person to a facility under one classification code. */
@@ -85,7 +107,7 @@ async function makeFacility(name: string): Promise<number> {
   await db.execute(sql`
     insert into facilities (name, location, legal_document_type, state_id, municipality_id)
       select ${name}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id
-        from municipalities m limit 1;
+        from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE};
   `);
   const [facility] = (await db.execute(sql`
     select id from facilities where name = ${name} limit 1;
@@ -99,18 +121,24 @@ async function makeFacility(name: string): Promise<number> {
 }
 
 async function seed(): Promise<Fixture> {
-  // A database migrated from empty has neither, and CI is exactly that.
+  /*
+   * Its own state and município, always.
+   *
+   * The previous version only inserted when the table was empty, which meant it
+   * borrowed a real UF on a production clone and claimed `ibge_id` 91 on a
+   * database migrated from empty — a value the territory suites also insert. It
+   * never deleted them either, so the collision outlived the run that caused it.
+   */
   await db.execute(sql`
     insert into states (name, ibge_id, abbreviation)
-      select 'T-POOL UF', '91', 'ZP'
-       where not exists (select 1 from states);
+      values ('T-POOL UF', ${STATE_IBGE}, 'ZP')
+      on conflict do nothing;
   `);
   await db.execute(sql`
     insert into municipalities (state_id, name, ibge_id)
-      select s.id, 'T-POOL City', '9100001'
-        from states s
-       where not exists (select 1 from municipalities)
-       limit 1;
+      select s.id, 'T-POOL City', ${MUNICIPALITY_IBGE}
+        from states s where s.ibge_id = ${STATE_IBGE}
+      on conflict do nothing;
   `);
 
   const facilityId = await makeFacility(MARK);
@@ -210,17 +238,29 @@ describe.if(dbUp)("healthcare professional pool exclusion", () => {
     // `ended_at` and `ended_by_user_id` are paired by a check constraint, so
     // ending one needs a real user — any user, since who ended it is not what
     // this asserts.
+    /*
+     * Created outright rather than borrowed. Inserting only when `users` was
+     * empty *and* a role already existed is true on a production clone and
+     * false on a database migrated from empty — so the id came back null there
+     * and the paired check refused the update. It passed locally and failed in
+     * CI.
+     */
     await db.execute(sql`
+      insert into roles (name, description)
+        values (${MARK}, 'fixture role') on conflict do nothing;
+    `);
+    const [user] = (await db.execute(sql`
       insert into users (email, username, password_hash, role_id)
         select ${`${MARK}@example.test`}, ${MARK}, 'x', r.id
-          from roles r
-         where not exists (select 1 from users)
-         limit 1;
-    `);
+          from roles r where r.name = ${MARK}
+        returning id;
+    `)) as unknown as { id: number | string }[];
+    if (!user) throw new Error("fixture user was not created");
+
     await db.execute(sql`
       update person_facilities
          set ended_at = now(),
-             ended_by_user_id = (select id from users order by id limit 1)
+             ended_by_user_id = ${Number(user.id)}
        where facility_id = ${fixture.facilityId}
          and person_id in (
            select id from persons where first_name = 'Aaa Associado Um' and last_name = ${MARK}

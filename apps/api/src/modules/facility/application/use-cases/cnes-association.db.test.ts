@@ -19,6 +19,13 @@ const dbUp = await isDatabaseReachable();
 
 const MARK = "T-CNES-ASSOC";
 const CNES_CODE = "9990004";
+/**
+ * Reserved for this suite. Real IBGE state codes are two digits and município
+ * codes seven, so four and eight put these outside the space any other fixture
+ * or the production data can reach.
+ */
+const STATE_IBGE = "9994";
+const MUNICIPALITY_IBGE = "99940001";
 const SUS_BRIDGED = "CCCC000000000001";
 const SUS_HELD_ONLY = "CCCC000000000002";
 const SUS_PRELINKED = "CCCC000000000003";
@@ -79,6 +86,27 @@ async function purge() {
   await db.execute(
     sql`delete from person_facility_roles where name = 'T-CNES-ASSOC Papel';`
   );
+  // After the facility that references them. Leaving these behind is what
+  // collided with the territory suite on a database migrated from empty.
+  /*
+   * Everything hanging off this suite's state, then the state.
+   *
+   * Matched by abbreviation as well as by id because both are unique: a row
+   * left by an earlier run under a different `ibge_id` would otherwise absorb
+   * the insert in `seed` and leave the fixture with no state at all — and its
+   * município would block the delete, since the foreign key is RESTRICT.
+   */
+  await db.execute(sql`
+    delete from municipalities
+     where ibge_id = ${MUNICIPALITY_IBGE}
+        or state_id in (
+          select id from states
+           where ibge_id = ${STATE_IBGE} or abbreviation = 'ZA'
+        );
+  `);
+  await db.execute(
+    sql`delete from states where ibge_id = ${STATE_IBGE} or abbreviation = 'ZA';`
+  );
 }
 
 async function createPerson(firstName: string): Promise<number> {
@@ -93,22 +121,31 @@ async function createPerson(firstName: string): Promise<number> {
 }
 
 async function seed(): Promise<Fixture> {
+  /*
+   * Its own state and município, always — not "one if the table is empty".
+   *
+   * That bootstrap behaved differently on the two databases it has to pass on:
+   * on a production clone it borrowed a real UF, and on one migrated from empty
+   * it claimed `ibge_id` 93, which the territory suite inserts unconditionally.
+   * Whichever ran first won and the other failed on `states_ibge_id_uidx`.
+   * Owning the rows and deleting them again is the only version that behaves
+   * the same in both places.
+   */
   await db.execute(sql`
     insert into states (name, ibge_id, abbreviation)
-      select 'T-CNES-ASSOC UF', '93', 'ZA'
-       where not exists (select 1 from states);
+      values ('T-CNES-ASSOC UF', ${STATE_IBGE}, 'ZA')
+      on conflict do nothing;
   `);
   await db.execute(sql`
     insert into municipalities (state_id, name, ibge_id)
-      select s.id, 'T-CNES-ASSOC City', '9300001'
-        from states s
-       where not exists (select 1 from municipalities)
-       limit 1;
+      select s.id, 'T-CNES-ASSOC City', ${MUNICIPALITY_IBGE}
+        from states s where s.ibge_id = ${STATE_IBGE}
+      on conflict do nothing;
   `);
   await db.execute(sql`
     insert into facilities (name, location, legal_document_type, state_id, municipality_id, cnes_code)
       select ${MARK}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id, ${CNES_CODE}
-        from municipalities m limit 1;
+        from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE};
   `);
   const [facility] = (await db.execute(sql`
     select id from facilities where name = ${MARK} limit 1;

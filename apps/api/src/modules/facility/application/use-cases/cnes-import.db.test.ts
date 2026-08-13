@@ -23,6 +23,9 @@ const dbUp = await isDatabaseReachable();
 
 const MARK = "T-CNES-IMPORT";
 const CNES_CODE = "9990003";
+/** Reserved for this suite — see the note in `cnes-association.db.test.ts`. */
+const STATE_IBGE = "9993";
+const MUNICIPALITY_IBGE = "99930001";
 const SUS_NEW = "BBBB000000000001";
 const SUS_HELD = "BBBB000000000002";
 const SUS_ELSEWHERE = "BBBB000000000003";
@@ -104,25 +107,41 @@ async function purge() {
   `);
   await db.execute(sql`delete from persons where last_name = ${MARK};`);
   await db.execute(sql`delete from facilities where name = ${MARK};`);
+  // After the facility that references them.
+  // Everything hanging off this suite's state, then the state — see the note
+  // in `cnes-association.db.test.ts`.
+  await db.execute(sql`
+    delete from municipalities
+     where ibge_id = ${MUNICIPALITY_IBGE}
+        or state_id in (
+          select id from states
+           where ibge_id = ${STATE_IBGE} or abbreviation = 'ZI'
+        );
+  `);
+  await db.execute(
+    sql`delete from states where ibge_id = ${STATE_IBGE} or abbreviation = 'ZI';`
+  );
 }
 
 async function seed(): Promise<Fixture> {
+  // Its own geography, always — a bootstrap that only fired on an empty table
+  // behaved differently on the two databases this has to pass on, and claimed
+  // an `ibge_id` the territory suite inserts unconditionally.
   await db.execute(sql`
     insert into states (name, ibge_id, abbreviation)
-      select 'T-CNES-IMPORT UF', '92', 'ZI'
-       where not exists (select 1 from states);
+      values ('T-CNES-IMPORT UF', ${STATE_IBGE}, 'ZI')
+      on conflict do nothing;
   `);
   await db.execute(sql`
     insert into municipalities (state_id, name, ibge_id)
-      select s.id, 'T-CNES-IMPORT City', '9200001'
-        from states s
-       where not exists (select 1 from municipalities)
-       limit 1;
+      select s.id, 'T-CNES-IMPORT City', ${MUNICIPALITY_IBGE}
+        from states s where s.ibge_id = ${STATE_IBGE}
+      on conflict do nothing;
   `);
   await db.execute(sql`
     insert into facilities (name, location, legal_document_type, state_id, municipality_id, cnes_code)
       select ${MARK}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id, ${CNES_CODE}
-        from municipalities m limit 1;
+        from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE};
   `);
   const [facility] = (await db.execute(sql`
     select id from facilities where name = ${MARK} limit 1;
