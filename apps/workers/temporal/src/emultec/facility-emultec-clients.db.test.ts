@@ -6,7 +6,12 @@ import {
   states,
 } from "@atlasmed/database";
 import { eq, sql } from "drizzle-orm";
-import { isDatabaseReachable, withRollback, type Tx } from "../test-utils/db-harness";
+import {
+  isDatabaseReachable,
+  uniqueAbbreviation,
+  withRollback,
+  type Tx,
+} from "../test-utils/db-harness";
 
 /**
  * The cardinality `facilities.id_cliente_emultec` could not express.
@@ -41,7 +46,7 @@ async function seedGeo(tx: Tx): Promise<Geo> {
     .values({
       name: `T-State-${suffix}`,
       ibgeId: `T${suffix}`.slice(0, 12),
-      abbreviation: suffix.slice(-2).toUpperCase(),
+      abbreviation: uniqueAbbreviation(),
     })
     .returning({ id: states.id });
   const [municipality] = await tx

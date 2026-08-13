@@ -34,6 +34,33 @@ export function isDatabaseReachable(): Promise<boolean> {
   return reachable;
 }
 
+/**
+ * A two-character `states.abbreviation` no other fixture is using.
+ *
+ * The column is `char(2)` and UNIQUE, so there are only 1 296 values, and other
+ * suites commit their fixtures into the same database instead of rolling back —
+ * the CNES loader's test leaves a permanent `ZZ` behind. A literal here makes a
+ * test's outcome depend on what else has ever run against the database.
+ *
+ * The counter guarantees uniqueness within a run; the random first character
+ * spreads separate runs and parallel files apart. It throws rather than
+ * colliding silently once a single test file exhausts its 36 slots.
+ */
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+let abbreviationCounter = 0;
+
+export function uniqueAbbreviation(): string {
+  if (abbreviationCounter >= ALPHABET.length) {
+    throw new Error(
+      "uniqueAbbreviation exhausted — seed fewer states per test file",
+    );
+  }
+  const head = ALPHABET[Math.floor(Math.random() * ALPHABET.length)]!;
+  const tail = ALPHABET[abbreviationCounter]!;
+  abbreviationCounter += 1;
+  return `${head}${tail}`;
+}
+
 /** Thrown to unwind the transaction. Never escapes `withRollback`. */
 class RollbackSignal extends Error {
   constructor() {

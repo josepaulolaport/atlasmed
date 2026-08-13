@@ -8,7 +8,12 @@ import {
   states,
 } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
-import { isDatabaseReachable, withRollback, type Tx } from "../test-utils/db-harness";
+import {
+  isDatabaseReachable,
+  uniqueAbbreviation,
+  withRollback,
+  type Tx,
+} from "../test-utils/db-harness";
 import { DrizzlePurchaseRecurrenceStore } from "./purchase-recurrence.activities";
 
 /**
@@ -49,13 +54,25 @@ async function seed(tx: Tx): Promise<Seeded> {
     .insert(businessVerticals)
     .values({ code: `T-RECONCILE-${suffix}`, name: "T-RECONCILE" })
     .returning({ id: businessVerticals.id });
+  // `states.ibge_id` and `states.abbreviation` are both UNIQUE, and other suites
+  // commit fixtures into the same database rather than rolling back — the CNES
+  // loader's leaves a permanent `ZZ` / `99` row behind. Fixed literals here made
+  // this file's outcome depend on what else had run, so both are derived.
   const [state] = await tx
     .insert(states)
-    .values({ name: `T-State-${suffix}`, ibgeId: "98", abbreviation: "ZZ" })
+    .values({
+      name: `T-State-${suffix}`,
+      ibgeId: `T${suffix}`.slice(0, 12),
+      abbreviation: uniqueAbbreviation(),
+    })
     .returning({ id: states.id });
   const [municipality] = await tx
     .insert(municipalities)
-    .values({ stateId: state!.id, name: "T-City", ibgeId: "9899999" })
+    .values({
+      stateId: state!.id,
+      name: "T-City",
+      ibgeId: `T${suffix}`.slice(0, 12),
+    })
     .returning({ id: municipalities.id });
 
   async function facility(input: { deactivated: boolean }): Promise<number> {
