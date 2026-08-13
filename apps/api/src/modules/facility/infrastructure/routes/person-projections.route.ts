@@ -9,6 +9,7 @@ import {
 } from "../../../person/composition";
 import { ListCnesSuggestionsUseCase } from "../../application/use-cases/cnes-suggestion.use-cases";
 import { ImportCnesProfessionalUseCase } from "../../application/use-cases/cnes-import.use-cases";
+import { AssociateCnesProfessionalUseCase } from "../../application/use-cases/cnes-association.use-cases";
 
 type Executable = { execute(input: any): Promise<any> };
 
@@ -279,6 +280,50 @@ const importCnesProfessionalRoute = (
           favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
           favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
           languages: t.Optional(t.Union([t.String(), t.Null()])),
+        }),
+      }
+    );
+
+/**
+ * Link a professional we already hold to a clinic CNES places them at.
+ *
+ * `update PERSON` rather than `create PERSON`: nothing is created here. It is
+ * the sibling of the generic create route, chosen over it because that one
+ * cannot see the registry and therefore cannot record the CBO.
+ */
+const associateCnesProfessionalRoute = (
+  useCase: AssociateCnesProfessionalUseCase = new AssociateCnesProfessionalUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .post(
+      "/facilities/:id/healthcare-professionals/cnes-associations",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCase.execute({
+          facilityId: params.id,
+          scope,
+          ...body,
+        });
+      },
+      {
+        detail: {
+          summary: "Link a CNES-registered professional we already hold",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object({
+          /*
+           * The SUS id, not a person id. Identity is resolved server-side from
+           * the same registry the suggestion came from, so a client cannot
+           * attach one doctor's occupations to another.
+           */
+          professionalCnesId: t.String({ minLength: 1 }),
+          occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
         }),
       }
     );
@@ -572,7 +617,8 @@ export function createPersonProjectionsRoutes(
   useCases: PersonProjectionsHttpUseCases = personUseCases,
   authPlugin: any = auth,
   cnesSuggestionsUseCase: Executable = new ListCnesSuggestionsUseCase(),
-  cnesImportUseCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase()
+  cnesImportUseCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase(),
+  cnesAssociationUseCase: AssociateCnesProfessionalUseCase = new AssociateCnesProfessionalUseCase()
 ) {
   return new Elysia()
     /**
@@ -588,6 +634,7 @@ export function createPersonProjectionsRoutes(
     // Static segment, same as `cnes-suggestions` above, and registered before
     // the `:personFacilityId` routes for the same reason.
     .use(importCnesProfessionalRoute(cnesImportUseCase, authPlugin))
+    .use(associateCnesProfessionalRoute(cnesAssociationUseCase, authPlugin))
     .use(listHealthcareRoute(useCases, authPlugin))
     .use(createHealthcareRoute(useCases, authPlugin))
     .use(getHealthcareRoute(useCases, authPlugin))

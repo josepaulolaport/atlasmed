@@ -812,9 +812,29 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
       final newlySelected = chosen
           .where((d) => !alreadyLinked.contains(d.id))
           .toList();
+      /*
+       * Which of them CNES placed here, so the association can carry the CBO.
+       *
+       * A doctor picked from the search pool is a bare "they work here"; the
+       * same doctor picked from the CNES tab comes with what the export says
+       * they do at this clinic, and routing both through the generic endpoint
+       * threw the second half away — the roster gained a clinician with no
+       * occupation while an imported one gained both.
+       */
+      final cnesByPersonId = <int, CnesSuggestion>{
+        for (final suggestion in _cnesRows) suggestion.personId!: suggestion,
+      };
       final associated = <ProfessionalRoster>[];
       for (final doctor in newlySelected) {
-        await repo.associateDoctor(doctor.id);
+        final suggestion = cnesByPersonId[doctor.id];
+        if (suggestion != null) {
+          await repo.associateCnesProfessional(
+            professionalCnesId: suggestion.professionalCnesId,
+            occupationIds: _occupationsFor(suggestion),
+          );
+        } else {
+          await repo.associateDoctor(doctor.id);
+        }
         associated.add(doctor);
       }
 
@@ -842,7 +862,13 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
         if (result.alreadyExisted) {
           reused += 1;
           if (!alreadyLinked.contains(result.personId)) {
-            await repo.associateDoctor(result.personId);
+            // Through the CNES endpoint, not the generic one: the occupations
+            // the rep just confirmed are still the point, and the server
+            // resolves the person from the registration it refused to duplicate.
+            await repo.associateCnesProfessional(
+              professionalCnesId: suggestion.professionalCnesId,
+              occupationIds: _occupationsFor(suggestion),
+            );
           }
         }
         associated.add(suggestion.toRoster(importedAs: result.personId));

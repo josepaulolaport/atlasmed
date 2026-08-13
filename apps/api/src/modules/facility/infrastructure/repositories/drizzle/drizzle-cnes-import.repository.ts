@@ -16,6 +16,16 @@ export interface RegistryProfessional {
   socialName: string | null;
   /** Already one of ours — the loader's bridge, or an earlier import. */
   atlasmedId: number | null;
+  /**
+   * The person whose healthcare profile carries this SUS id, if anyone's does.
+   *
+   * A second route to the same answer, and not redundant: an old backfill
+   * stamped the SUS id on roughly a thousand profiles, and the suggestion query
+   * resolves through `coalesce(atlasmed_id, hp.person_id)` for exactly that
+   * reason. Reading only the bridge here would make the associate path disagree
+   * with the list the rep is looking at.
+   */
+  profilePersonId: number | null;
   /** True when CNES places them at the facility being imported into. */
   atThisFacility: boolean;
   registrations: RegistryRegistration[];
@@ -50,6 +60,13 @@ export class DrizzleCnesImportRepository {
         rp.full_name    as full_name,
         rp.social_name  as social_name,
         rp.atlasmed_id  as atlasmed_id,
+        (
+          select hp.person_id
+            from person_healthcare_profiles hp
+            join persons p on p.id = hp.person_id
+           where hp.cnes_professional_id = rp.cnes_id
+             and p.deleted_at is null
+        )               as profile_person_id,
         exists (
           select 1
             from registry.facility_professionals fp
@@ -64,6 +81,7 @@ export class DrizzleCnesImportRepository {
       full_name: string;
       social_name: string | null;
       atlasmed_id: number | string | null;
+      profile_person_id: number | string | null;
       at_this_facility: boolean;
     }[];
 
@@ -129,6 +147,8 @@ export class DrizzleCnesImportRepository {
       socialName: row.social_name,
       // bigint arrives as a string from this driver.
       atlasmedId: row.atlasmed_id == null ? null : Number(row.atlasmed_id),
+      profilePersonId:
+        row.profile_person_id == null ? null : Number(row.profile_person_id),
       atThisFacility: row.at_this_facility === true,
       registrations: registrations.map((r) => ({
         councilId: Number(r.council_id),
@@ -314,6 +334,118 @@ export class DrizzleCnesImportRepository {
       }
 
       return personId;
+    });
+  }
+
+  /**
+   * Links a person we already hold to a clinic CNES places them at, and records
+   * what CNES says they do there.
+   *
+   * The same write the import performs after creating the person, minus the
+   * person. It exists because associating used to go through the generic
+   * projection upsert, which knows nothing about the registry and therefore
+   * dropped the CBO: the roster gained a doctor with no occupation while the
+   * identical doctor arriving by import gained one.
+   *
+   * Idempotent throughout — a rep tapping twice, or two reps at once, must land
+   * on one affiliation rather than a second row or an error.
+   */
+  async associateAtFacility(input: {
+    professionalCnesId: string;
+    personId: number;
+    facilityId: number;
+    occupationIds: number[];
+  }): Promise<{ personFacilityId: number; affiliationCreated: boolean }> {
+    return db.transaction(async (tx) => {
+      // Being at a clinic as a clinician implies the profile. Import writes it
+      // on creation; a person associated here may predate that.
+      await tx.execute(sql`
+        insert into person_healthcare_profiles (person_id)
+        values (${input.personId})
+        on conflict (person_id) do nothing
+      `);
+
+      /*
+       * Set the bridge while we know the answer.
+       *
+       * The loader would set it next month on the same evidence, so writing it
+       * now only moves the moment. Guarded twice: never overwrite a bridge that
+       * already exists, and never point two professionals at one person — the
+       * conditions the loader's own bridge applies.
+       */
+      await tx.execute(sql`
+        update registry.professionals rp
+           set atlasmed_id = ${input.personId}, updated_at = now()
+         where rp.cnes_id = ${input.professionalCnesId}
+           and rp.atlasmed_id is null
+           and not exists (
+             select 1 from registry.professionals other
+              where other.atlasmed_id = ${input.personId}
+           )
+      `);
+
+      /*
+       * One active affiliation per person per clinic, enforced by
+       * `person_facilities_active_facility_person_uidx`. `on conflict` rather
+       * than check-then-insert so two concurrent associations settle in the
+       * database instead of racing in the application.
+       */
+      const inserted = (await tx.execute(sql`
+        insert into person_facilities (person_id, facility_id)
+        values (${input.personId}, ${input.facilityId})
+        on conflict (facility_id, person_id) where ended_at is null do nothing
+        returning id
+      `)) as unknown as { id: number | string }[];
+
+      let personFacilityId: number;
+      let affiliationCreated: boolean;
+      if (inserted[0]) {
+        personFacilityId = Number(inserted[0].id);
+        affiliationCreated = true;
+      } else {
+        const [existing] = (await tx.execute(sql`
+          select id from person_facilities
+           where person_id = ${input.personId}
+             and facility_id = ${input.facilityId}
+             and ended_at is null
+        `)) as unknown as { id: number | string }[];
+        // The conflict fired, so the row is there; a missing one would mean the
+        // index and this query disagree, which is worth failing loudly over.
+        if (!existing) {
+          throw new Error(
+            `person_facilities row for person ${input.personId} at facility ${input.facilityId} vanished between insert and read`
+          );
+        }
+        personFacilityId = Number(existing.id);
+        affiliationCreated = false;
+      }
+
+      await tx.execute(sql`
+        insert into person_facility_classification_assignments (person_facility_id, classification_id)
+          select ${personFacilityId}, c.id
+            from person_facility_classifications c
+           where c.code = 'HEALTHCARE_PROFESSIONAL'
+        on conflict do nothing
+      `);
+
+      /*
+       * Primary is decided per row against what is already stored, so an
+       * association that predates this call keeps the primary it has and the
+       * new occupations attach beside it. Only a fresh affiliation gives its
+       * first occupation the primary flag.
+       */
+      for (const occupationId of input.occupationIds) {
+        await tx.execute(sql`
+          insert into person_facility_occupations (person_facility_id, occupation_id, is_primary)
+            select ${personFacilityId}, ${occupationId}, not exists (
+              select 1 from person_facility_occupations
+               where person_facility_id = ${personFacilityId} and is_primary
+            )
+          on conflict (person_facility_id, occupation_id) do nothing
+        `);
+      }
+
+      return { personFacilityId, affiliationCreated };
     });
   }
 }

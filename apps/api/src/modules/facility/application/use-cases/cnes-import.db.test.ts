@@ -34,14 +34,13 @@ const useCase = new ImportCnesProfessionalUseCase();
 
 /**
  * Specialty and role are required by the wizard, so every successful import
- * carries them. Both catalogues are seeded reference data.
+ * carries them.
+ *
+ * Resolved from the catalogues in `seed` rather than hard-coded: both are
+ * reference data a database migrated from empty does not have, and ids 1/1
+ * happened to exist only because this lane's database is a production clone.
  */
-const SPECIALTY_ORTOPEDIA = 1;
-const ROLE_PRESCRITOR = 1;
-const required = {
-  specialtyId: SPECIALTY_ORTOPEDIA,
-  roleIds: [ROLE_PRESCRITOR],
-};
+let required: { specialtyId: number; roleIds: number[] };
 
 const globalScope = { isGlobal: true, facilityIds: [] } as unknown as ScopeContext;
 
@@ -131,6 +130,53 @@ async function seed(): Promise<Fixture> {
       values (${COUNCIL}, 'Conselho Regional de Medicina', 'CRM')
       on conflict (cnes_id) do nothing;
   `);
+
+  /*
+   * Reference data this fixture used to assume.
+   *
+   * Councils and the specialty and role catalogues are hand-seeded on our side,
+   * and `registry.occupations` is filled by the monthly load — none of them
+   * exist on a database migrated from empty. The suite passed here only because
+   * this lane's database is a production clone, which means it was proving
+   * nothing about the schema CI runs against.
+   */
+  await db.execute(sql`
+    insert into person_professional_registration_councils (name, abbreviation)
+      values ('Conselho Regional de Medicina', 'CRM')
+      on conflict (abbreviation) do nothing;
+  `);
+  await db.execute(sql`
+    insert into healthcare_specialties (cnes_id, name)
+      values (99001, 'T-CNES-IMPORT Especialidade')
+      on conflict (cnes_id) do nothing;
+  `);
+  await db.execute(sql`
+    insert into person_facility_roles (name) values ('Prescritor')
+      on conflict do nothing;
+  `);
+  for (const [cbo, name] of [
+    ["225151", "MEDICO ANESTESIOLOGISTA"],
+    ["225150", "MEDICO EM MEDICINA INTENSIVA"],
+  ] as const) {
+    await db.execute(sql`
+      insert into registry.occupations (cnes_id, name) values (${cbo}, ${name})
+        on conflict (cnes_id) do nothing;
+    `);
+  }
+
+  const [specialty] = (await db.execute(sql`
+    select id from healthcare_specialties where is_active order by id limit 1;
+  `)) as unknown as { id: number | string }[];
+  const [role] = (await db.execute(sql`
+    select id from person_facility_roles where name = 'Prescritor' limit 1;
+  `)) as unknown as { id: number | string }[];
+  if (!specialty || !role) {
+    throw new Error("specialty or role catalogue is empty after seeding");
+  }
+  required = {
+    specialtyId: Number(specialty.id),
+    roleIds: [Number(role.id)],
+  };
 
   for (const [sus, name] of [
     [SUS_NEW, "MARINA COSTA ALMEIDA"],
@@ -383,7 +429,7 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
         facilityId: fixture.facilityId,
         professionalCnesId: SUS_NO_REGISTRATION,
         scope: globalScope,
-        roleIds: [ROLE_PRESCRITOR],
+        roleIds: required.roleIds,
       })
     ).rejects.toThrow();
 
@@ -399,7 +445,7 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
         facilityId: fixture.facilityId,
         professionalCnesId: SUS_NO_REGISTRATION,
         scope: globalScope,
-        specialtyId: SPECIALTY_ORTOPEDIA,
+        specialtyId: required.specialtyId,
         roleIds: [],
       })
     ).rejects.toThrow();

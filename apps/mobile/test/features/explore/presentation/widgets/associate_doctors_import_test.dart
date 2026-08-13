@@ -66,6 +66,9 @@ Object _suggestionsPayload() => {
       'professionalCnesId': 'SUS5',
       'displayName': 'Conhecida Silva',
       'registrationLabel': 'CRM 100100/SP',
+      'occupationOptions': [
+        {'id': 30, 'name': 'Ortopedista'},
+      ],
     },
     {
       'personId': null,
@@ -117,6 +120,9 @@ void main() {
     if (path.endsWith('/cnes-suggestions')) return _json(_suggestionsPayload());
     if (path.endsWith('/cnes-imports')) {
       return _json({'personId': 777, 'created': true});
+    }
+    if (path.endsWith('/cnes-associations')) {
+      return _json({'personId': 5, 'personFacilityId': 88, 'created': true});
     }
     if (path.contains('/healthcare-professionals')) {
       return _json({'data': const [], 'pagination': const {}});
@@ -222,11 +228,92 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
-    // It associated the person the server named, rather than creating another.
+    // It associated the person the server named, rather than creating another —
+    // through the CNES endpoint, so the occupations the rep confirmed survive
+    // the detour.
+    final associate = client.requests.lastWhere(
+      (r) => r.url.path.endsWith('/cnes-associations'),
+    );
+    expect((associate.body as Map)['professionalCnesId'], 'SUS999');
+    expect((associate.body as Map)['occupationIds'], [10, 20]);
+    // Not the generic upsert: it cannot see the registry, so it would have
+    // written the affiliation and dropped the CBO.
+    expect(
+      client.paths.where(
+        (p) => p.endsWith('/facilities/9/healthcare-professionals'),
+      ),
+      isEmpty,
+    );
+  });
+
+  testWidgets('associating a CNES row records what they do here', (
+    tester,
+  ) async {
+    /*
+     * The defect this endpoint exists for: ticking someone from the CNES tab
+     * used to post the generic association, which knows nothing about the
+     * registry — the roster gained a clinician and person_facility_occupations
+     * stayed exactly as it was, while the identical doctor arriving by import
+     * gained both.
+     */
+    final client = RecordingClient(defaultHandler);
+    await _pumpSheet(tester, client: client);
+    await _openCnesTab(tester);
+
+    await tester.tap(find.text('Conhecida Silva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    final associate = client.requests.firstWhere(
+      (r) => r.url.path.endsWith('/cnes-associations'),
+    );
+    // The SUS id, not a person id: the server resolves identity from the same
+    // registry the suggestion came from.
+    expect((associate.body as Map)['professionalCnesId'], 'SUS5');
+    expect((associate.body as Map)['occupationIds'], [30]);
+    expect(
+      client.paths.where(
+        (p) => p.endsWith('/facilities/9/healthcare-professionals'),
+      ),
+      isEmpty,
+    );
+  });
+
+  testWidgets('a doctor picked from the search pool still associates plainly', (
+    tester,
+  ) async {
+    /*
+     * The CNES endpoint is not a replacement. Someone found by search carries
+     * no registry claim about this clinic, so there is no CBO to record and
+     * the generic association is the honest request to make.
+     */
+    final client = RecordingClient((request) {
+      if (request.url.path.contains('/api/v1/healthcare-professionals')) {
+        return _json({
+          'data': [
+            {'id': 42, 'firstName': 'Fora', 'lastName': 'Do CNES'},
+          ],
+          'pagination': const {},
+        });
+      }
+      return defaultHandler(request);
+    });
+    await _pumpSheet(tester, client: client);
+
+    await tester.tap(find.text('Fora Do CNES'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
     final associate = client.requests.lastWhere(
       (r) => r.url.path.endsWith('/facilities/9/healthcare-professionals'),
     );
-    expect((associate.body as Map)['personId'], 5150);
+    expect((associate.body as Map)['personId'], 42);
+    expect(
+      client.paths.where((p) => p.endsWith('/cnes-associations')),
+      isEmpty,
+    );
   });
 
   testWidgets('a search outage leaves the CNES tab usable', (tester) async {

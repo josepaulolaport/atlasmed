@@ -175,6 +175,42 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
+  /// Link a doctor CNES places here and we already hold —
+  /// `POST …/healthcare-professionals/cnes-associations`.
+  ///
+  /// Its own endpoint rather than [associateDoctor] because the two record
+  /// different amounts of truth: the generic one cannot see the registry, so it
+  /// wrote the affiliation and dropped the CBO that made the suggestion worth
+  /// acting on. The person is identified by their SUS id, not by a person id —
+  /// the server resolves them from the same registry the suggestion came from.
+  Future<void> associateCnesProfessional({
+    required String professionalCnesId,
+    List<int>? occupationIds,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-associations'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'professionalCnesId': professionalCnesId,
+          // Sent even when empty: `[]` means the rep cleared them, which is a
+          // different answer from omitting the field and taking CNES's.
+          'occupationIds': ?occupationIds,
+        },
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao associar médico (${response.statusCode})',
+        );
+      }
+    }
+  }
+
   /// Outcome of importing one CNES professional.
   ///
   /// [alreadyExisted] is not an error path. The server refuses to create a
