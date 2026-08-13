@@ -410,12 +410,16 @@ describe("ListFacilitiesUseCase", () => {
       search: "central",
       unitTypeIds: [7, 3, 3],
       legalDocumentType: "CNPJ" as const,
+      clinicalFocusIds: [5, 4],
       scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 
-    // De-duplicated and sorted by inFilter, so the expression is stable.
+    // De-duplicated and sorted, so the expression is stable. Note the shapes
+    // differ on purpose: unit types are OR (a facility has exactly one),
+    // clinical focuses are AND (it must offer all of them).
     expect(options?.filter).toBe(
-      "unitTypeId IN [3, 7] AND legalDocumentType = 'CNPJ'",
+      "unitTypeId IN [3, 7] AND legalDocumentType = 'CNPJ'"
+        + " AND (clinicalFocusIds = 4 AND clinicalFocusIds = 5)",
     );
   });
 

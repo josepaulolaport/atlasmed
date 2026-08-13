@@ -6,6 +6,7 @@ import { ValidationError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { logger } from "../../../../infrastructure/logging/logger";
 import {
+  allOfFilter,
   buildMeiliFilter,
   compactFacilityMeiliScopeFilter,
   eqFilter,
@@ -181,6 +182,10 @@ export class ListFacilitiesUseCase {
           : undefined,
         input.legalDocumentType
           ? eqFilter("legalDocumentType", input.legalDocumentType)
+          : undefined,
+        // AND, mirroring the SQL: the clinic must offer every selected focus.
+        input.clinicalFocusIds?.length
+          ? allOfFilter("clinicalFocusIds", input.clinicalFocusIds)
           : undefined,
       ];
       const verticalFilter =

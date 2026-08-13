@@ -20,6 +20,7 @@ describe("mapFacilitySearchDocument", () => {
         neighborhood: "Consolação",
         unitTypeId: 3,
         legalDocumentType: "CNPJ",
+        clinicalFocusIds: [9, 4, 4],
         verticalIds: [10],
         territoryIds: [20],
         repUserIds: [7, 3, 3],
@@ -47,6 +48,9 @@ describe("mapFacilitySearchDocument", () => {
       neighborhood: "Consolação",
       unitTypeId: 3,
       legalDocumentType: "CNPJ",
+      // De-duplicated and sorted, like repUserIds: the filter is an AND over
+      // membership, so a repeat would only bloat the document.
+      clinicalFocusIds: [4, 9],
       _geo: { lat: -23.55, lng: -46.63 },
     });
   });
@@ -70,6 +74,7 @@ describe("mapFacilitySearchDocument", () => {
 
     expect(document).toHaveProperty("unitTypeId", null);
     expect(document).toHaveProperty("legalDocumentType", null);
+    expect(document).toHaveProperty("clinicalFocusIds", []);
   });
 
   it("returns null for deactivated facilities", () => {

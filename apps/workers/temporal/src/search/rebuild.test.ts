@@ -60,6 +60,7 @@ describe("search rebuild", () => {
         neighborhood: "Consolação",
         unitTypeId: 3,
         legalDocumentType: "CNPJ",
+        clinicalFocusIds: [9, 4],
         verticalIds: [10],
         territoryIds: [20],
         repUserIds: [7, 3, 3],
@@ -88,6 +89,7 @@ describe("search rebuild", () => {
       neighborhood: "Consolação",
       unitTypeId: 3,
       legalDocumentType: "CNPJ",
+      clinicalFocusIds: [4, 9],
       verticalIds: [10],
       territoryIds: [20],
       repUserIds: [3, 7],
@@ -175,6 +177,107 @@ describe("search rebuild", () => {
     ).toEqual([]);
   });
 
+  test("carries every per-facility association into the rebuilt document", () => {
+    // The rebuild is where a filterable attribute goes wrong most quietly: if
+    // the page builder does not populate it, the index is rebuilt with the
+    // field empty on every document, the filter then matches nothing, and
+    // facilities that do match disappear from search with no error anywhere.
+    const row = {
+      id: 1,
+      displayName: "Clínica Central",
+      legalName: null,
+      tradeName: null,
+      legalDocument: null,
+      cnesCode: null,
+      city: null,
+      state: null,
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      latitude: null,
+      longitude: null,
+      deactivatedAt: null,
+    };
+
+    const [document] = searchRebuild.buildFacilityPageDocuments(
+      [row],
+      {
+        verticalIds: new Map([[1, [10]]]),
+        territoryIds: new Map([[1, [20]]]),
+        repUserIds: new Map([[1, [7]]]),
+        funnelData: new Map(),
+      },
+      new Map([[1, [9, 4]]]),
+    );
+
+    expect(document).toMatchObject({
+      id: "1",
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      clinicalFocusIds: [4, 9],
+      verticalIds: [10],
+      territoryIds: [20],
+      repUserIds: [7],
+    });
+  });
+
+  test("leaves associations empty for a facility that has none", () => {
+    const [document] = searchRebuild.buildFacilityPageDocuments(
+      [{
+        id: 2,
+        displayName: "Sem vínculos",
+        legalName: null,
+        tradeName: null,
+        legalDocument: null,
+        cnesCode: null,
+        city: null,
+        state: null,
+        latitude: null,
+        longitude: null,
+        deactivatedAt: null,
+      }],
+      {
+        verticalIds: new Map(),
+        territoryIds: new Map(),
+        repUserIds: new Map(),
+        funnelData: new Map(),
+      },
+      new Map(),
+    );
+
+    expect(document).toMatchObject({
+      clinicalFocusIds: [],
+      unitTypeId: null,
+      legalDocumentType: null,
+    });
+  });
+
+  test("drops deactivated facilities from the page", () => {
+    expect(
+      searchRebuild.buildFacilityPageDocuments(
+        [{
+          id: 3,
+          displayName: "Fechada",
+          legalName: null,
+          tradeName: null,
+          legalDocument: null,
+          cnesCode: null,
+          city: null,
+          state: null,
+          latitude: null,
+          longitude: null,
+          deactivatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        }],
+        {
+          verticalIds: new Map(),
+          territoryIds: new Map(),
+          repUserIds: new Map(),
+          funnelData: new Map(),
+        },
+        new Map(),
+      ),
+    ).toEqual([]);
+  });
+
   test("exposes hybrid filter and distance-sort index settings", () => {
     const facilityFilterable = [...searchRebuild.FACILITY_SETTINGS.filterableAttributes];
     expect(facilityFilterable).toEqual(
@@ -192,8 +295,16 @@ describe("search rebuild", () => {
     // Meili rejects the query at runtime and the API quietly falls back to
     // SQL, so the feature keeps working and only the latency shows it.
     expect(facilityFilterable).toEqual(
-      expect.arrayContaining(["unitTypeId", "legalDocumentType"])
+      expect.arrayContaining([
+        "unitTypeId",
+        "legalDocumentType",
+        "clinicalFocusIds",
+      ])
     );
+    // Order history is deliberately absent: nothing re-indexes a facility when
+    // an order is created, so an indexed copy would go stale and silently drop
+    // facilities that do match.
+    expect(facilityFilterable).not.toContain("productIds");
     expect(searchRebuild.FACILITY_SETTINGS.searchableAttributes).toEqual(
       expect.arrayContaining(["streetAddress", "neighborhood", "city", "state"])
     );

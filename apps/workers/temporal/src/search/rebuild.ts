@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   facilities,
+  facilityClinicalFocuses,
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
   healthcareSpecialties,
@@ -246,6 +247,7 @@ export const FACILITY_SETTINGS = {
     "purchaseIntervalDaysMin",
     "unitTypeId",
     "legalDocumentType",
+    "clinicalFocusIds",
     "_geo",
   ],
   sortableAttributes: ["_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin", "hasLastValidPurchase", "lastValidPurchaseSortAt", "id"],
@@ -258,6 +260,61 @@ type ActiveFacilityProfiles = {
   repUserIds: Map<number, number[]>;
   funnelData: Map<number, FacilityProfileFunnelData[]>;
 };
+
+/** The row shape [facilityPages] selects, kept structural for testability. */
+type FacilityPageRow = Parameters<typeof mapFacilitySearchDocument>[0];
+
+/**
+ * Joins a page of facility rows to its separately-loaded associations.
+ *
+ * Split out of [facilityPages] so it can be tested without a database. It was
+ * inline, and a field could then be added to the document type and to the
+ * index settings while the rebuild never populated it — which fails in the
+ * worst direction available: the attribute is filterable, every document has
+ * it empty, and matching facilities silently vanish from search results
+ * instead of erroring.
+ */
+export function buildFacilityPageDocuments(
+  rows: FacilityPageRow[],
+  profiles: ActiveFacilityProfiles,
+  clinicalFocusIds: Map<number, number[]>,
+): FacilitySearchDocument[] {
+  return rows
+    .map((row) =>
+      mapFacilitySearchDocument({
+        ...row,
+        verticalIds: profiles.verticalIds.get(row.id) ?? [],
+        territoryIds: profiles.territoryIds.get(row.id) ?? [],
+        repUserIds: profiles.repUserIds.get(row.id) ?? [],
+        clinicalFocusIds: clinicalFocusIds.get(row.id) ?? [],
+        profileFunnelData: profiles.funnelData.get(row.id) ?? [],
+      }),
+    )
+    .filter((row): row is FacilitySearchDocument => row !== null);
+}
+
+/** One query per page, not per facility. */
+async function loadClinicalFocusIds(
+  facilityIds: number[],
+): Promise<Map<number, number[]>> {
+  const map = new Map<number, number[]>();
+  if (facilityIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      facilityId: facilityClinicalFocuses.facilityId,
+      clinicalFocusId: facilityClinicalFocuses.clinicalFocusId,
+    })
+    .from(facilityClinicalFocuses)
+    .where(inArray(facilityClinicalFocuses.facilityId, facilityIds));
+
+  for (const row of rows) {
+    const current = map.get(row.facilityId) ?? [];
+    current.push(row.clinicalFocusId);
+    map.set(row.facilityId, current);
+  }
+  return map;
+}
 
 async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<ActiveFacilityProfiles> {
   const verticalIds = new Map<number, number[]>();
@@ -383,18 +440,12 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
     if (rows.length === 0) return;
 
     lastId = rows.at(-1)!.id;
-    const profiles = await loadActiveFacilityProfiles(rows.map((row) => row.id));
-    yield rows
-      .map((row) =>
-        mapFacilitySearchDocument({
-          ...row,
-          verticalIds: profiles.verticalIds.get(row.id) ?? [],
-          territoryIds: profiles.territoryIds.get(row.id) ?? [],
-          repUserIds: profiles.repUserIds.get(row.id) ?? [],
-          profileFunnelData: profiles.funnelData.get(row.id) ?? [],
-        })
-      )
-      .filter((row): row is FacilitySearchDocument => row !== null);
+    const facilityIds = rows.map((row) => row.id);
+    const [profiles, clinicalFocusIds] = await Promise.all([
+      loadActiveFacilityProfiles(facilityIds),
+      loadClinicalFocusIds(facilityIds),
+    ]);
+    yield buildFacilityPageDocuments(rows, profiles, clinicalFocusIds);
   }
 }
 

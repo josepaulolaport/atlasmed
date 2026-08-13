@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   facilities,
+  facilityClinicalFocuses,
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
   municipalities,
@@ -15,6 +16,85 @@ import {
 import { db } from "../database/db";
 import { logger } from "../logging/logger";
 import { searchService } from "./search.service";
+
+type FacilityUpsertRow = {
+  id: number;
+  displayName: string;
+  legalName: string | null;
+  tradeName: string | null;
+  legalDocument: string | null;
+  cnesCode: string | null;
+  city: string | null;
+  state: string | null;
+  streetAddress?: string | null;
+  neighborhood?: string | null;
+  unitTypeId: number | null;
+  legalDocumentType: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  deactivatedAt: Date | null;
+};
+
+/**
+ * Assembles the Meili document from rows already fetched.
+ *
+ * Split from the query so it can be tested without a database. A filterable
+ * attribute the upsert forgets to populate does not error anywhere: the
+ * facility is simply rewritten with the field empty on the next edit, and from
+ * then on it silently fails to match a filter it should match. The full
+ * rebuild would mask it until someone edits that facility again.
+ */
+export function buildFacilityUpsertDocument(input: {
+  row: FacilityUpsertRow;
+  verticalIds: number[];
+  territoryIds: number[];
+  repUserIds: number[];
+  clinicalFocusIds: number[];
+  profiles: Array<{
+    verticalId: number;
+    purchaseFunnelStage: string;
+    purchaseIntervalDays: number;
+    purchaseIntervalSource: string;
+    manualPurchaseProfile: string | null;
+    lastValidPurchaseDate: unknown;
+  }>;
+}) {
+  const { row } = input;
+  return mapFacilitySearchDocument({
+    id: row.id,
+    displayName: row.displayName,
+    legalName: row.legalName,
+    tradeName: row.tradeName,
+    legalDocument: row.legalDocument,
+    cnesCode: row.cnesCode,
+    city: row.city,
+    state: row.state,
+    streetAddress: row.streetAddress ?? null,
+    neighborhood: row.neighborhood ?? null,
+    unitTypeId: row.unitTypeId,
+    legalDocumentType: row.legalDocumentType,
+    clinicalFocusIds: input.clinicalFocusIds,
+    verticalIds: input.verticalIds,
+    territoryIds: input.territoryIds,
+    repUserIds: input.repUserIds,
+    profileFunnelData: input.profiles.map((profile) => ({
+      verticalId: profile.verticalId,
+      purchaseFunnelStage: profile.purchaseFunnelStage as PurchaseFunnelStage,
+      purchaseIntervalDays: profile.purchaseIntervalDays,
+      purchaseIntervalSource:
+        profile.purchaseIntervalSource as PurchaseIntervalSource,
+      manualPurchaseProfile:
+        profile.manualPurchaseProfile as PurchaseProfile | null,
+      lastValidPurchaseDate:
+        profile.lastValidPurchaseDate === null
+          ? null
+          : String(profile.lastValidPurchaseDate).slice(0, 10),
+    })),
+    latitude: row.latitude,
+    longitude: row.longitude,
+    deactivatedAt: row.deactivatedAt,
+  });
+}
 
 /**
  * Upsert one facility into Meili after create/update so name/address/geo
@@ -74,6 +154,11 @@ export async function upsertFacilitySearchDocument(
         )
       );
 
+    const focusRows = await db
+      .select({ clinicalFocusId: facilityClinicalFocuses.clinicalFocusId })
+      .from(facilityClinicalFocuses)
+      .where(eq(facilityClinicalFocuses.facilityId, facilityId));
+
     const verticalIds = profiles.map((profile) => profile.verticalId);
     const territoryIds = [
       ...new Set(
@@ -106,38 +191,13 @@ export async function upsertFacilitySearchDocument(
               )
             );
 
-    const document = mapFacilitySearchDocument({
-      id: row.id,
-      displayName: row.displayName,
-      legalName: row.legalName,
-      tradeName: row.tradeName,
-      legalDocument: row.legalDocument,
-      cnesCode: row.cnesCode,
-      city: row.city,
-      state: row.state,
-      streetAddress: row.streetAddress ?? null,
-      neighborhood: row.neighborhood ?? null,
-      unitTypeId: row.unitTypeId,
-      legalDocumentType: row.legalDocumentType,
+    const document = buildFacilityUpsertDocument({
+      row,
       verticalIds,
       territoryIds,
       repUserIds: repRows.map((rep) => rep.userId),
-      profileFunnelData: profiles.map((profile) => ({
-        verticalId: profile.verticalId,
-        purchaseFunnelStage: profile.purchaseFunnelStage as PurchaseFunnelStage,
-        purchaseIntervalDays: profile.purchaseIntervalDays,
-        purchaseIntervalSource:
-          profile.purchaseIntervalSource as PurchaseIntervalSource,
-        manualPurchaseProfile:
-          profile.manualPurchaseProfile as PurchaseProfile | null,
-        lastValidPurchaseDate:
-          profile.lastValidPurchaseDate === null
-            ? null
-            : String(profile.lastValidPurchaseDate).slice(0, 10),
-      })),
-      latitude: row.latitude,
-      longitude: row.longitude,
-      deactivatedAt: row.deactivatedAt,
+      clinicalFocusIds: focusRows.map((focus) => focus.clinicalFocusId),
+      profiles,
     });
 
     if (!document) {
