@@ -189,3 +189,61 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
     expect(await repository.countDoctors(filter())).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe.skipIf(!dbUp)("team member metrics (database)", () => {
+  const now = new Date();
+  const monthAgo = new Date(now.getTime() - 30 * 86_400_000);
+
+  test("computes every row metric for a roster in one pass", async () => {
+    const reps = await team.listRepsUnderZones({
+      verticalId: 1,
+      zoneIds: [1, 2, 3, 4, 5],
+    });
+    if (reps.length === 0) return;
+
+    const metrics = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds: reps.map((r) => r.userId),
+      scope: "rep",
+      ordersFrom: monthAgo,
+      ordersTo: now,
+    });
+
+    for (const rep of reps) {
+      const row = metrics.get(rep.userId);
+      if (row == null) continue;
+      // The batched count must agree with the roster's own, or the header and
+      // the row would disagree about the same person.
+      expect(row.assignedClinics).toBe(rep.assignedClinicCount);
+      expect(row.ordersMonth).toBeGreaterThanOrEqual(0);
+      for (const percent of [row.coveragePercent, row.cadastroPercent]) {
+        if (percent !== null) {
+          expect(percent).toBeGreaterThanOrEqual(0);
+          expect(percent).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  test("a manager is measured on their zones, not on assignments", async () => {
+    const managers = await team.listManagers(1);
+    if (managers.length === 0) return;
+
+    const metrics = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds: managers.map((m) => m.userId),
+      scope: "manager",
+      ordersFrom: monthAgo,
+      ordersTo: now,
+    });
+
+    for (const manager of managers) {
+      const row = metrics.get(manager.userId);
+      if (row == null) continue;
+      // A manager holds no clinics directly — the roster says 0 — so a zone
+      // denominator is the only thing that gives them a number at all.
+      expect(manager.assignedClinicCount).toBe(0);
+      expect(row.assignedClinics).toBeGreaterThan(0);
+    }
+  });
+});

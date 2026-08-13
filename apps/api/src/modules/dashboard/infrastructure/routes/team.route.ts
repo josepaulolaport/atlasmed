@@ -8,9 +8,10 @@ import type { TeamSortKey } from "../../application/use-cases/team.use-cases";
  * Equipe (spec 0014 §6) — the roster, and the entry point to a person's
  * Desempenho.
  *
- * Lives in the dashboard module rather than in `access` because a row's value
- * is a **metric**: sorting by one computes it per member through the same use
- * cases the screen uses. Splitting it would mean two definitions of coverage.
+ * Lives in the dashboard module rather than in `access` because a row's values
+ * are **metrics**: every row carries clínicas, cobertura, cadastro and pedidos,
+ * computed for the whole roster in one pass against the same definitions the
+ * Desempenho screen uses. Splitting it would mean two definitions of coverage.
  * The existing `/users` admin surface is unrelated and stays where it is
  * (spec 0014 §2).
  */

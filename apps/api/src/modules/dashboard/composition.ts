@@ -52,10 +52,6 @@ export const dashboardUseCases = {
       teamRepository,
       directory,
       metrics: {
-        assignedClinics: new GetAssignedClinicsMetricUseCase(deps),
-        coverage: new GetCoverageMetricUseCase(deps),
-        cadastroCompletion: new GetCadastroCompletionMetricUseCase(deps),
-        orders: new GetOrdersMetricUseCase(deps),
         penetration: new GetPenetrationMetricUseCase(deps),
         unassignedClinics: new GetUnassignedClinicsMetricUseCase(deps),
       },

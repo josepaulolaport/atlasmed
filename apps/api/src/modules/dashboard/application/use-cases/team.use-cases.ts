@@ -1,15 +1,20 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { Role } from "@atlasmed/access";
+import {
+  APPLICATION_TIMEZONE,
+  monthBounds,
+  monthKeyAt,
+} from "@atlasmed/facility-insights";
 import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
-import type { DrizzleTeamRepository, TeamMemberRow } from "../../infrastructure/repositories/drizzle-team.repository";
+import type {
+  DrizzleTeamRepository,
+  TeamMemberMetrics,
+  TeamMemberRow,
+} from "../../infrastructure/repositories/drizzle-team.repository";
 import type { DashboardDirectoryPort } from "../dashboard-query";
 import { resolveSingleVerticalId } from "../dashboard-query";
 import type {
-  GetAssignedClinicsMetricUseCase,
-  GetCadastroCompletionMetricUseCase,
-  GetCoverageMetricUseCase,
-  GetOrdersMetricUseCase,
   GetPenetrationMetricUseCase,
   GetUnassignedClinicsMetricUseCase,
 } from "./dashboard-metrics.use-cases";
@@ -30,12 +35,44 @@ export type TeamSortKey =
 
 export type TeamOrder = "asc" | "desc";
 
+/**
+ * What someone with nothing in scope measures.
+ *
+ * The counts are zero because they are: a rep with an empty patch holds no
+ * clinics and placed no orders. The percentages are null because there is no
+ * denominator — 0% would claim they covered none of something, when there was
+ * no something.
+ */
+const HOLDS_NOTHING: TeamMemberMetrics = {
+  assignedClinics: 0,
+  coveragePercent: null,
+  cadastroPercent: null,
+  ordersMonth: 0,
+};
+
 export interface TeamMemberDto extends TeamMemberRow {
   /**
-   * The active sort metric's value for this person, or null when it is not
-   * calculable for them. Absent when sorting by name — spec 0014 §6 requires
-   * the endpoint to compute **only** the active metric, so there is nothing
-   * else to report.
+   * The four metrics every roster row carries, computed for the whole roster in
+   * one statement regardless of the sort.
+   *
+   * Originally the endpoint returned only the metric being sorted by, which
+   * made the roster a single-column leaderboard: comparing two people on
+   * clinics *and* pedidos meant sorting twice and remembering the first read.
+   * Since one pass over the scope produces all four for roughly the cost of
+   * one, sorting can go back to meaning order rather than visibility.
+   *
+   * Always present. Someone holding nothing aggregates to no row at all, and
+   * that is a real state with real values — zero clinics, zero pedidos, and no
+   * percentage, since there is nothing to take a percentage of. Reporting it as
+   * "no data" would sort a rep with an empty patch alongside one whose figures
+   * failed to compute.
+   */
+  metrics: TeamMemberMetrics;
+  /**
+   * The active sort metric's value, or null when it is not calculable for this
+   * person. Still reported separately because two sort keys — penetração and
+   * clínicas sem representante — are not row metrics and are computed per
+   * member only when they are the sort.
    */
   metricValue: number | null;
 }
@@ -43,11 +80,12 @@ export interface TeamMemberDto extends TeamMemberRow {
 interface Dependencies {
   teamRepository: DrizzleTeamRepository;
   directory: DashboardDirectoryPort;
+  /**
+   * Only the two sort keys the batched query cannot produce. The other four
+   * come out of `findMemberMetrics`, so the roster no longer depends on the
+   * metric use cases it used to call once per member.
+   */
   metrics: {
-    assignedClinics: GetAssignedClinicsMetricUseCase;
-    coverage: GetCoverageMetricUseCase;
-    cadastroCompletion: GetCadastroCompletionMetricUseCase;
-    orders: GetOrdersMetricUseCase;
     penetration: GetPenetrationMetricUseCase;
     unassignedClinics: GetUnassignedClinicsMetricUseCase;
   };
@@ -93,32 +131,52 @@ export class ListTeamUseCase {
 
     const sortBy = request.sortBy ?? "name";
     const order = request.order ?? "asc";
-    const members = await this.loadMembers(request, verticalId);
+    const roster = await this.loadMembers(request, verticalId);
 
-    const data =
-      sortBy === "name"
-        ? members.map((member) => ({ ...member, metricValue: null }))
-        : await Promise.all(
-            members.map(async (member) => ({
-              ...member,
-              metricValue: await this.metricFor({
-                request,
-                verticalId,
-                member,
-                sortBy,
-              }),
-            })),
-          );
+    // The same month the Desempenho pedidos card uses, so a row and the screen
+    // it opens can never disagree about the window.
+    const month = monthBounds(monthKeyAt(new Date(), APPLICATION_TIMEZONE));
+    const metrics = await this.deps.teamRepository.findMemberMetrics({
+      verticalId,
+      userIds: roster.members.map((member) => member.userId),
+      scope: roster.scope,
+      ordersFrom: month.start,
+      ordersTo: month.end,
+    });
+
+    const data: TeamMemberDto[] = await Promise.all(
+      roster.members.map(async (member) => {
+        const row = metrics.get(member.userId) ?? HOLDS_NOTHING;
+        return {
+          ...member,
+          metrics: row,
+          metricValue: await this.metricFor({
+            request,
+            verticalId,
+            member,
+            sortBy,
+            batched: row,
+          }),
+        };
+      }),
+    );
 
     sortMembers(data, sortBy, order);
 
     return { verticalId, sortBy, order, data };
   }
 
+  /**
+   * The roster, and which denominator its metrics are measured against.
+   *
+   * The scope is a property of who is *listed*, not of who is looking: an admin
+   * viewing managers gets zone-scoped figures, and the same admin drilled into
+   * one manager's team gets assignment-scoped ones.
+   */
   private async loadMembers(
     request: ListTeamRequest,
     verticalId: number,
-  ): Promise<TeamMemberRow[]> {
+  ): Promise<{ members: TeamMemberRow[]; scope: "rep" | "manager" }> {
     if (request.viewerRole === Role.MANAGER) {
       // A manager's roster is their own reps. `managerId` cannot widen it:
       // pointing it at a peer would be a lateral read of someone else's team.
@@ -132,18 +190,33 @@ export class ListTeamUseCase {
         userId: request.viewerId,
         verticalId,
       });
-      return this.deps.teamRepository.listRepsUnderZones({ verticalId, zoneIds });
+      return {
+        members: await this.deps.teamRepository.listRepsUnderZones({
+          verticalId,
+          zoneIds,
+        }),
+        scope: "rep",
+      };
     }
 
     if (request.viewerRole === Role.ADMIN || request.viewerRole === Role.OPS) {
       if (request.managerId == null) {
-        return this.deps.teamRepository.listManagers(verticalId);
+        return {
+          members: await this.deps.teamRepository.listManagers(verticalId),
+          scope: "manager",
+        };
       }
       const zoneIds = await this.deps.directory.findManagerZoneIds({
         userId: request.managerId,
         verticalId,
       });
-      return this.deps.teamRepository.listRepsUnderZones({ verticalId, zoneIds });
+      return {
+        members: await this.deps.teamRepository.listRepsUnderZones({
+          verticalId,
+          zoneIds,
+        }),
+        scope: "rep",
+      };
     }
 
     // Spec 0014 §2: a REP has no team, so Equipe shows them nothing at all.
@@ -151,19 +224,35 @@ export class ListTeamUseCase {
   }
 
   /**
-   * One metric, for one person — never all of them.
+   * The value the sort orders by.
    *
-   * The cost of the roster is therefore (team size × one query), which is cheap
-   * at real team sizes and preserves §4's rule that metrics load separately: a
-   * leaderboard that computed seven metrics per member would reintroduce the
-   * fat blocking request this spec removed.
+   * The four row metrics come straight out of the batch — no query at all. Only
+   * penetração and clínicas sem representante still cost a request per member,
+   * because neither is a count over the roster's own scope: penetração averages
+   * a stored share per metric definition, and unassigned clinics is a property
+   * of a zone rather than of a person. Both are computed only when they are the
+   * active sort, so the common paths issue exactly one statement.
    */
   private async metricFor(input: {
     request: ListTeamRequest;
     verticalId: number;
     member: TeamMemberRow;
     sortBy: TeamSortKey;
+    batched: TeamMemberMetrics;
   }): Promise<number | null> {
+    switch (input.sortBy) {
+      case "name":
+        return null;
+      case "assigned-clinics":
+        return input.batched.assignedClinics;
+      case "coverage":
+        return input.batched.coveragePercent;
+      case "cadastro-completion":
+        return input.batched.cadastroPercent;
+      case "orders-month":
+        return input.batched.ordersMonth;
+    }
+
     const metricRequest = {
       viewerId: input.request.viewerId,
       viewerRole: input.request.viewerRole,
@@ -174,18 +263,6 @@ export class ListTeamUseCase {
     };
 
     switch (input.sortBy) {
-      case "assigned-clinics":
-        return (
-          await this.deps.metrics.assignedClinics.execute(metricRequest)
-        ).value;
-      case "coverage":
-        return (await this.deps.metrics.coverage.execute(metricRequest)).percent;
-      case "cadastro-completion":
-        return (
-          await this.deps.metrics.cadastroCompletion.execute(metricRequest)
-        ).percent;
-      case "orders-month":
-        return (await this.deps.metrics.orders.execute(metricRequest)).month;
       case "penetration": {
         const result = await this.deps.metrics.penetration.execute(metricRequest);
         // A vertical may define several metrics and they are not addable

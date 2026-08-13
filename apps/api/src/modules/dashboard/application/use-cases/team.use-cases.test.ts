@@ -32,9 +32,16 @@ function deps(overrides: {
   managers?: TeamMemberRow[];
   reps?: TeamMemberRow[];
   zoneIds?: number[];
+  /** Feeds the batched query's coverage figure, and the per-member fakes. */
   metricByUser?: Record<number, number | null>;
-}): Deps & { calls: { metricSubjects: number[] } } {
-  const calls = { metricSubjects: [] as number[] };
+}): Deps & {
+  calls: { metricSubjects: number[]; batchScopes: string[]; batchIds: number[][] };
+} {
+  const calls = {
+    metricSubjects: [] as number[],
+    batchScopes: [] as string[],
+    batchIds: [] as number[][],
+  };
   const metric = {
     execute: async (request: { subjectUserId?: number | null }) => {
       calls.metricSubjects.push(request.subjectUserId!);
@@ -49,6 +56,29 @@ function deps(overrides: {
       listManagers: async () => overrides.managers ?? [],
       listRepsUnderZones: async () => overrides.reps ?? [],
       listRepsWithoutPatch: async () => [],
+      findMemberMetrics: async (input: { userIds: number[]; scope: string }) => {
+        calls.batchScopes.push(input.scope);
+        calls.batchIds.push(input.userIds);
+        // Only people with something in scope produce a row, exactly as the
+        // real query's GROUP BY does — so anyone absent from `metricByUser`
+        // exercises the holds-nothing path rather than a zeroed row.
+        return new Map(
+          input.userIds
+            .filter((userId) => overrides.metricByUser?.[userId] != null)
+            .map((userId) => {
+              const value = overrides.metricByUser![userId]!;
+              return [
+                userId,
+                {
+                  assignedClinics: value,
+                  coveragePercent: value,
+                  cadastroPercent: value,
+                  ordersMonth: value,
+                },
+              ];
+            }),
+        );
+      },
     } as unknown as Deps["teamRepository"],
     directory: {
       findUser: async () => null,
@@ -56,10 +86,6 @@ function deps(overrides: {
       findManagedUserIds: async () => [],
     } satisfies DashboardDirectoryPort,
     metrics: {
-      assignedClinics: metric,
-      coverage: metric,
-      cadastroCompletion: metric,
-      orders: metric,
       penetration: metric,
       unassignedClinics: metric,
     } as unknown as Deps["metrics"],
@@ -115,18 +141,22 @@ describe("Equipe roster (spec 0014 §6)", () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
-  it("sorts alphabetically and computes no metric by default", async () => {
+  it("sorts alphabetically and still carries every row metric", async () => {
     const d = deps({
       reps: [member({ userId: 6, name: "Bruno" }), member({ userId: 5, name: "Ana" })],
+      metricByUser: { 5: 3, 6: 9 },
     });
     const result = await new ListTeamUseCase(d).execute(request(Role.MANAGER));
 
     expect(result.data.map((row) => row.name)).toEqual(["Ana", "Bruno"]);
-    expect(d.calls.metricSubjects).toEqual([]);
     expect(result.data.every((row) => row.metricValue === null)).toBe(true);
+    // The row metrics are not conditional on the sort — that is the whole point
+    // of batching them, and the screen shows several at once.
+    expect(result.data.map((row) => row.metrics?.ordersMonth)).toEqual([3, 9]);
+    expect(d.calls.metricSubjects).toEqual([]);
   });
 
-  it("computes only the active sort metric, once per member (§7.7)", async () => {
+  it("sorts by a row metric without a single per-member query", async () => {
     const d = deps({
       reps: [member({ userId: 5, name: "Ana" }), member({ userId: 6, name: "Bruno" })],
       metricByUser: { 5: 3, 6: 9 },
@@ -135,9 +165,56 @@ describe("Equipe roster (spec 0014 §6)", () => {
       request(Role.MANAGER, { sortBy: "coverage", order: "desc" }),
     );
 
-    expect(d.calls.metricSubjects.sort()).toEqual([5, 6]);
     expect(result.data.map((row) => row.userId)).toEqual([6, 5]);
     expect(result.data[0]!.metricValue).toBe(9);
+    // The N+1 this replaced: one metric use case call per member, per roster.
+    expect(d.calls.metricSubjects).toEqual([]);
+    expect(d.calls.batchIds).toEqual([[5, 6]]);
+  });
+
+  it("reads holding nothing as zero clinics, not as a missing figure", async () => {
+    // Someone with an empty patch aggregates to no row in the batch. Treating
+    // that as "not calculable" would sort them with the failures instead of at
+    // the bottom where zero belongs — and would show "—" for a count that is
+    // genuinely 0.
+    const d = deps({ reps: [member({ userId: 9, name: 'Novo' })] });
+    const result = await new ListTeamUseCase(d).execute(
+      request(Role.MANAGER, { sortBy: "assigned-clinics" }),
+    );
+
+    expect(result.data[0]!.metrics.assignedClinics).toBe(0);
+    expect(result.data[0]!.metrics.ordersMonth).toBe(0);
+    expect(result.data[0]!.metricValue).toBe(0);
+    // A percentage of nothing stays absent — 0% would be a claim about a
+    // denominator that does not exist.
+    expect(result.data[0]!.metrics.coveragePercent).toBeNull();
+  });
+
+  it("still computes penetração per member — it is not a row metric", async () => {
+    const d = deps({
+      reps: [member({ userId: 5, name: "Ana" }), member({ userId: 6, name: "Bruno" })],
+      metricByUser: { 5: 3, 6: 9 },
+    });
+    await new ListTeamUseCase(d).execute(
+      request(Role.MANAGER, { sortBy: "penetration" }),
+    );
+
+    expect(d.calls.metricSubjects.sort()).toEqual([5, 6]);
+  });
+
+  it("measures each roster against its own denominator", async () => {
+    // Spec 0014 §3: a manager is measured on the clinics in their zones, a rep
+    // on the clinics assigned to them. Sending the wrong scope would silently
+    // give a manager a figure of zero — they hold no assignments.
+    const admin = deps({ managers: [member({ userId: 2, roleName: Role.MANAGER })] });
+    await new ListTeamUseCase(admin).execute(request(Role.ADMIN));
+    expect(admin.calls.batchScopes).toEqual(["manager"]);
+
+    const drilled = deps({ reps: [member({ userId: 5 })] });
+    await new ListTeamUseCase(drilled).execute(
+      request(Role.ADMIN, { managerId: 2 }),
+    );
+    expect(drilled.calls.batchScopes).toEqual(["rep"]);
   });
 
   it("sorts members with no calculable value last, in both directions", async () => {

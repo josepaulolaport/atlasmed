@@ -279,6 +279,35 @@ class DashboardTerritory {
   }
 }
 
+/// Every metric a roster row shows, for one person (spec 0014 §6).
+///
+/// All four arrive with the roster whatever the sort is, so a row can be read
+/// on its own terms instead of only through the column it happens to be ordered
+/// by. Percentages are null when the person has no clinics — a missing figure,
+/// not a zero.
+class TeamMemberMetrics {
+  const TeamMemberMetrics({
+    required this.assignedClinics,
+    required this.ordersMonth,
+    this.coveragePercent,
+    this.cadastroPercent,
+  });
+
+  final int assignedClinics;
+  final double? coveragePercent;
+  final double? cadastroPercent;
+  final int ordersMonth;
+
+  factory TeamMemberMetrics.fromJson(Map<String, dynamic> json) {
+    return TeamMemberMetrics(
+      assignedClinics: _readInt(json['assignedClinics']),
+      coveragePercent: _readRatio(json['coveragePercent']),
+      cadastroPercent: _readRatio(json['cadastroPercent']),
+      ordersMonth: _readInt(json['ordersMonth']),
+    );
+  }
+}
+
 /// A row of the Equipe roster (spec 0014 §6).
 class TeamMember {
   const TeamMember({
@@ -289,6 +318,7 @@ class TeamMember {
     required this.assignedClinicCount,
     this.name,
     this.avatarUrl,
+    this.metrics,
     this.metricValue,
   });
 
@@ -300,7 +330,15 @@ class TeamMember {
   final List<({int id, String name})> territories;
   final int assignedClinicCount;
 
-  /// The active sort metric's value, or null when it is not calculable.
+  /// The row's own figures, independent of the sort.
+  ///
+  /// The API always sends these; null here means an older build that predates
+  /// them, which the row renders as "sem números" rather than as zeros it did
+  /// not receive.
+  final TeamMemberMetrics? metrics;
+
+  /// The active sort metric's value, or null when it is not calculable. Only
+  /// penetração and clínicas sem representante are not covered by [metrics].
   final double? metricValue;
 
   String get displayName => (name?.trim().isNotEmpty ?? false) ? name! : email;
@@ -322,6 +360,9 @@ class TeamMember {
           )
           .toList(growable: false),
       assignedClinicCount: _readInt(json['assignedClinicCount']),
+      metrics: json['metrics'] is Map<String, dynamic>
+          ? TeamMemberMetrics.fromJson(json['metrics'] as Map<String, dynamic>)
+          : null,
       metricValue: _readRatio(json['metricValue']),
     );
   }

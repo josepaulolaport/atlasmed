@@ -112,12 +112,14 @@ Filters apply uniformly to every metric endpoint.
 Manager sees their reps; admin sees managers and drills into each manager's team. Each row
 carries the person, their assigned clinics, their territories, and basic information.
 
-**Sorting:** alphabetical by default; sortable ascending/descending **by any metric**. When a
-metric sort is active, that metric's value is shown per person — so the roster becomes a
-leaderboard on demand.
+**Sorting:** alphabetical by default; sortable ascending/descending **by any metric**.
 
-Consequence for the API: the team endpoint computes **only the active sort metric** per member,
-not all of them. Cheap at real team sizes, and it preserves the load-separately rule.
+**Revised 2026-08-12 — see §8.5.** The original rule was that the endpoint computes *only* the
+active sort metric, and only that metric shows a value per person. Built and used, it made the
+roster a single-column leaderboard: seeing anyone's clinics *and* their pedidos meant sorting
+twice and holding the first answer in your head. Every row now carries clínicas, cobertura,
+cadastro and pedidos at all times — one batched statement for the whole roster, not one request
+per member — and sorting reorders the list rather than deciding what a row will tell you.
 
 **Reps without an active patch** appear here (spec 0009 R8/D9). A rep with no patch has no
 manager, appears on no team, and can hold no clinics — this roster is what makes that visible
@@ -333,6 +335,46 @@ scope resolved before a fix keeps its stale shape until it expires — both (1) 
 (2) looked unfixed until that key was dropped. And the mobile app takes its API
 from `--dart-define-from-file=config.development.json`; built without it, it
 silently targets the default remote host rather than localhost.
+
+## 8.5 Equipe redesigned (2026-08-12)
+
+Desempenho is unchanged. The split now drawn: **Equipe answers *who*, Desempenho answers
+*how much***, and every deeper question leaves Equipe rather than being reproduced there in
+miniature.
+
+**The N+1 the old rule created.** `ListTeamUseCase` called a metric use case once per member,
+so a roster of N people cost N queries and could still only show one figure. `DrizzleTeamRepository.findMemberMetrics` replaces that with a single statement per roster:
+one `scoped` CTE, then `COUNT(*) FILTER` for coverage and cadastro and a join for pedidos. Three
+extra aggregates over a set already being scanned cost almost nothing, which is why showing four
+metrics is cheaper than the old way of showing one.
+
+The denominator is a property of *who is listed*, not of who is looking — `scope: "rep"` counts
+open assignments, `scope: "manager"` counts profiles whose `manager_zone_id` is one of theirs
+(§3). Only the head of the query differs; every count below it is shared, so the two readings
+cannot drift. Penetração and clínicas sem representante stay per-member: neither is a count over
+the roster's own scope, and both are computed only while they are the active sort.
+
+**On the screen.** A summary strip totals the roster and, on a drill-down, links to that
+manager's own Desempenho — the rows below are their reps, so nothing else led there. Coverage in
+the strip is weighted by clinics rather than averaged across people: a mean would let 100% of two
+clinics cancel out 2% of five hundred. Search appears past eight people and filters what is
+already loaded. Sorting moved from seven scrolling chips into one button, since order is a
+preference once the figures no longer depend on it.
+
+**Two row semantics corrected.** A row now always opens *that person*; a manager's team moved to
+its own control, because "tap a person" previously meant two different things depending on the
+viewer's role. And the sort menu no longer offers "sem representante" on a rep roster — a rep
+holds no zones, so the API can only answer null for everyone, which is an order that does not
+exist.
+
+**Verified.** Silvio on device: header 1134 / 3% / 4 pedidos over rows of 242, 445 and 447 —
+the roster sums to the header, and the header agrees with his Desempenho. Sorting by cobertura
+reordered to 1% / 2% / 5% with all three figures still on every row. Flavio's row (242, 5%)
+opened his Desempenho showing 242 and 5%. Admin paths proved against the lane database: the
+manager roster reads 144 / 146 / 1134 on zone scope, and drilling into Silvio returns his three
+reps on assignment scope with pedidos 2 / 2 / 0 — summing to the 4 his own row shows.
+
+---
 
 ## 9. Deferred
 

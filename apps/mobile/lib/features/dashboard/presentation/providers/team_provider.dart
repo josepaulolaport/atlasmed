@@ -16,8 +16,9 @@ class TeamArgs {
   /// ADMIN only: drill into one manager's team.
   final int? managerId;
 
-  /// Sorting by anything but `name` turns the roster into a leaderboard — the
-  /// API then computes that one metric per member (spec 0014 §6).
+  /// Only the order. Every row carries its figures whatever the sort is, and
+  /// the two sorts that are not row metrics — penetração, sem representante —
+  /// are the only ones the API computes per member (spec 0014 §6).
   final String sortBy;
   final String order;
 

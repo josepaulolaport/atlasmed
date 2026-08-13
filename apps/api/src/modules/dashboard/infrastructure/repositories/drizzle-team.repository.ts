@@ -1,9 +1,24 @@
+import { orders } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/database/db";
 
 /** Kept local, as the scope repository does, to avoid a composition cycle. */
 const MANAGER_ZONE_TYPE_SLUG = "manager_zone";
 const REP_PATCH_TYPE_SLUG = "patch";
+
+/**
+ * Every metric a roster row can show, for one person.
+ *
+ * Percentages are null when the denominator is empty — the same rule the
+ * Desempenho cards follow, so a person with no clinics reads as "no figure"
+ * rather than as 0%.
+ */
+export type TeamMemberMetrics = {
+  assignedClinics: number;
+  coveragePercent: number | null;
+  cadastroPercent: number | null;
+  ordersMonth: number;
+};
 
 export type TeamMemberRow = {
   userId: number;
@@ -104,6 +119,128 @@ export class DrizzleTeamRepository {
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.avatar_url, r.name
       ORDER BY name NULLS LAST, u.id
     `);
+  }
+
+  /**
+   * Every row metric for a whole roster, in one pass.
+   *
+   * Equipe used to compute **one** metric per member by calling a metric use
+   * case once per person — N+1 by construction, and it forced the screen to let
+   * you see only the metric you had sorted by. Comparing people on two things
+   * meant sorting twice and holding the first read in your head.
+   *
+   * One statement for the roster is both cheaper than that and richer: the
+   * marginal cost of a second and third `COUNT(*) FILTER` over a set already
+   * being scanned is close to nothing, so the screen can show several at once
+   * and sorting goes back to meaning *order*.
+   *
+   * The denominators differ by role and that difference is the point of spec
+   * 0014 §3 — a rep is measured on the clinics **assigned** to them, a manager
+   * on the clinics **in their zones**. Only the head of the query changes; every
+   * count below it is shared, so the two can never drift apart.
+   */
+  async findMemberMetrics(input: {
+    verticalId: number;
+    userIds: number[];
+    scope: "rep" | "manager";
+    /** Half-open, for the orders count. */
+    ordersFrom: Date;
+    ordersTo: Date;
+  }): Promise<Map<number, TeamMemberMetrics>> {
+    if (input.userIds.length === 0) return new Map();
+
+    const ids = sql.join(
+      input.userIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    // A `Date` inside a raw template never reaches the column's encoder, and
+    // postgres-js rejects it at Bind time. Same trap as `countOrders`.
+    const from = orders.orderedAt.mapToDriverValue(input.ordersFrom) as string;
+    const to = orders.orderedAt.mapToDriverValue(input.ordersTo) as string;
+
+    const scoped =
+      input.scope === "rep"
+        ? sql`
+            SELECT a.user_id, p.id AS profile_id
+              FROM facility_vertical_rep_assignments a
+              JOIN facility_vertical_profiles p
+                ON p.id = a.facility_vertical_profile_id
+              JOIN facilities f ON f.id = p.facility_id
+             WHERE a.ended_at IS NULL
+               AND a.user_id IN (${ids})
+               AND p.vertical_id = ${input.verticalId}
+               AND p.is_active = true
+               AND f.deactivated_at IS NULL`
+        : sql`
+            SELECT uta.user_id, p.id AS profile_id
+              FROM user_territory_assignments uta
+              JOIN territories z
+                ON z.id = uta.territory_id AND z.is_active = true
+              JOIN territory_types tt
+                ON tt.id = z.territory_type_id AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
+              JOIN facility_vertical_profiles p ON p.manager_zone_id = z.id
+              JOIN facilities f ON f.id = p.facility_id
+             WHERE uta.user_id IN (${ids})
+               AND z.vertical_id = ${input.verticalId}
+               AND p.is_active = true
+               AND f.deactivated_at IS NULL`;
+
+    const rows = (await db.execute(sql`
+      WITH scoped AS (${scoped}),
+      profile_stats AS (
+        SELECT s.user_id,
+               COUNT(*)::int AS assigned,
+               COUNT(*) FILTER (
+                 WHERE p.purchase_funnel_stage
+                   IN ('PURCHASE_WINDOW', 'OUTSIDE_WINDOW', 'CHURN')
+               )::int AS covered,
+               COUNT(*) FILTER (
+                 WHERE p.conformity_status = 'REGISTERED'
+               )::int AS registered
+          FROM scoped s
+          JOIN facility_vertical_profiles p ON p.id = s.profile_id
+         GROUP BY s.user_id
+      ),
+      order_stats AS (
+        SELECT s.user_id, COUNT(*)::int AS orders
+          FROM scoped s
+          JOIN ${orders} o ON o.facility_vertical_profile_id = s.profile_id
+         WHERE o.status IN ('APPROVED', 'INVOICED')
+           AND o.type IN ('SALE', 'CONSIGNMENT')
+           AND o.ordered_at >= ${from}::timestamp
+           AND o.ordered_at <  ${to}::timestamp
+         GROUP BY s.user_id
+      )
+      SELECT ps.user_id,
+             ps.assigned,
+             ps.covered,
+             ps.registered,
+             COALESCE(os.orders, 0) AS orders
+        FROM profile_stats ps
+        LEFT JOIN order_stats os ON os.user_id = ps.user_id
+    `)) as unknown as Array<{
+      user_id: number | string;
+      assigned: number | string;
+      covered: number | string;
+      registered: number | string;
+      orders: number | string;
+    }>;
+
+    const byUser = new Map<number, TeamMemberMetrics>();
+    for (const row of rows) {
+      const assigned = Number(row.assigned);
+      byUser.set(Number(row.user_id), {
+        assignedClinics: assigned,
+        // Null rather than 0 when there is nothing to divide: a person with no
+        // clinics has no coverage figure, and 0% reads as failure rather than
+        // absence — the same rule the cards follow.
+        coveragePercent: assigned > 0 ? Number(row.covered) / assigned : null,
+        cadastroPercent:
+          assigned > 0 ? Number(row.registered) / assigned : null,
+        ordersMonth: Number(row.orders),
+      });
+    }
+    return byUser;
   }
 
   /**
