@@ -147,28 +147,22 @@ async function findFacilityId(
       : []
   );
 
-  let docDigits: string | null = null;
-  let docType: "CNPJ" | "CPF" | null = null;
-  if (bundle.idClientePj != null) {
-    docDigits = bundle.pjCnpjDigits;
-    docType = "CNPJ";
-  } else if (bundle.clientCnpjDigits?.length === 14) {
-    docDigits = bundle.clientCnpjDigits;
-    docType = "CNPJ";
-  } else if (bundle.clientCpfDigits?.length === 11) {
-    docDigits = bundle.clientCpfDigits;
-    docType = "CPF";
-  }
+  // Every document the client carries, not just the first one resolve would try
+  // — `resolveEmultecFacility` falls back from CNPJ to CPF, and it can only do
+  // that if both were loaded. Filtering by document alone (not by type) keeps a
+  // facility whose `legal_document_type` disagrees with ours in the candidate
+  // set, so resolve decides rather than the query.
+  const docDigits = [
+    bundle.idClientePj != null ? bundle.pjCnpjDigits : bundle.clientCnpjDigits,
+    bundle.clientCpfDigits,
+  ].filter(
+    (digits): digits is string =>
+      digits != null && (digits.length === 14 || digits.length === 11)
+  );
 
-  let candidates: Array<{
-    id: number;
-    idClienteEmultec: number | null;
-    legalDocument: string | null;
-    legalDocumentType: "CNPJ" | "CPF" | null;
-  }> = [];
-
-  if (docDigits && docType) {
-    candidates = await db
+  const candidates = docDigits.length === 0
+    ? []
+    : await db
       .select({
         id: facilities.id,
         idClienteEmultec: facilities.idClienteEmultec,
@@ -178,12 +172,10 @@ async function findFacilityId(
       .from(facilities)
       .where(
         and(
-          eq(facilities.legalDocument, docDigits),
-          eq(facilities.legalDocumentType, docType),
+          inArray(facilities.legalDocument, [...new Set(docDigits)]),
           isNull(facilities.deactivatedAt)
         )
       );
-  }
 
   const resolved = resolveEmultecFacility(
     {
