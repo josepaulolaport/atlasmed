@@ -268,6 +268,66 @@ void main() {
     expect(body.containsKey('email'), isFalse);
   });
 
+  testWidgets('will not carry a CPF the column cannot hold', (tester) async {
+    /*
+     * `persons.cpf` is char(11) and the endpoint demands exactly eleven. Left
+     * to the server this is a rejected request after the rep has filled in the
+     * whole wizard, naming a field two steps behind them.
+     */
+    final client = RecordingClient(defaultHandler);
+    await _pumpWizard(tester, client: client);
+
+    await tester.enterText(find.byKey(const Key('wizard-cpf')), '12345');
+    await tester.pumpAndSettle();
+
+    expect(find.text('CPF deve ter 11 dígitos'), findsOneWidget);
+    expect(_nextEnabled(tester), isFalse);
+
+    await tester.enterText(find.byKey(const Key('wizard-cpf')), '12345678901');
+    await tester.pumpAndSettle();
+    expect(_nextEnabled(tester), isTrue);
+  });
+
+  testWidgets('will not carry a birth date that is not one', (tester) async {
+    /*
+     * `persons.birth_date` is a real date, so free text used to reach the
+     * driver and come back as a query failure — a 500 the rep read as "falha ao
+     * importar", for a typo in a field they could see.
+     */
+    final client = RecordingClient(defaultHandler);
+    await _pumpWizard(tester, client: client);
+
+    await _completeClinicalStep(tester);
+    await tester.tap(find.byKey(const Key('wizard-next')));
+    await tester.pumpAndSettle();
+    await _scrollTo(tester, find.byKey(const Key('wizard-personal')));
+    await tester.tap(find.byKey(const Key('wizard-personal')));
+    await tester.pumpAndSettle();
+
+    await _scrollTo(tester, find.byKey(const Key('wizard-birth-date')));
+    await tester.enterText(
+      find.byKey(const Key('wizard-birth-date')),
+      '2026-02-30',
+    );
+    await tester.pumpAndSettle();
+
+    // Eleven plausible characters, and still not a day.
+    expect(find.text('Data inválida'), findsOneWidget);
+    expect(_nextEnabled(tester), isFalse);
+    expect(client.requests, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const Key('wizard-birth-date')),
+      '1979-04-17',
+    );
+    await tester.pumpAndSettle();
+    expect(_nextEnabled(tester), isTrue);
+
+    await tester.tap(find.byKey(const Key('wizard-next')));
+    await tester.pumpAndSettle();
+    expect(client.bodyEndingWith('/cnes-imports')['birthDate'], '1979-04-17');
+  });
+
   testWidgets('the CNES registration is shown but cannot be edited', (
     tester,
   ) async {

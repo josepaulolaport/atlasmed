@@ -143,6 +143,21 @@ export function resolveOccupations(
   );
 }
 
+/**
+ * True for a string Postgres will accept into a `date` column.
+ *
+ * Shape alone is not enough — `2026-02-30` is eleven plausible characters and
+ * not a day — so the parsed value is compared back to what was typed. Without
+ * this the driver raises 22007 from inside the insert, which reaches the rep as
+ * "falha ao importar" for what is a typo in a field they can see.
+ */
+export function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().slice(0, 10) === value;
+}
+
 function registrationLabel(professional: RegistryProfessional): string {
   const first = professional.registrations[0];
   if (!first) return "Esta inscrição";
@@ -178,6 +193,26 @@ export class ImportCnesProfessionalUseCase {
     }
     if (!input.roleIds || input.roleIds.length === 0) {
       problems.push({ field: "roleIds", message: "at least one role is required" });
+    }
+    /*
+     * Values the columns themselves refuse, checked before the insert rather
+     * than after. `persons.birth_date` is a date and `persons.cpf` is char(11):
+     * either one reaches the driver as a query failure, and a query failure
+     * names no field.
+     */
+    const birthDate = input.birthDate?.trim();
+    if (birthDate && !isCalendarDate(birthDate)) {
+      problems.push({
+        field: "birthDate",
+        message: `"${input.birthDate}" is not a date (expected AAAA-MM-DD)`,
+      });
+    }
+    const cpf = input.cpf?.trim();
+    if (cpf && !/^\d{11}$/.test(cpf)) {
+      problems.push({
+        field: "cpf",
+        message: "cpf must be 11 digits",
+      });
     }
     for (const registration of input.extraRegistrations ?? []) {
       const number = registration.registrationNumber?.trim();
@@ -282,8 +317,10 @@ export class ImportCnesProfessionalUseCase {
       firstName,
       lastName,
       socialName: input.socialName ?? professional.socialName,
-      cpf: input.cpf ?? null,
-      birthDate: input.birthDate ?? null,
+      // Blank is not a value: an empty string would reach `date` and `char(11)`
+      // as surely as a bad one, and it is what a cleared field sends.
+      cpf: cpf || null,
+      birthDate: birthDate || null,
       email: input.email ?? null,
       mobilePhone: input.mobilePhone ?? null,
       landlinePhone: input.landlinePhone ?? null,

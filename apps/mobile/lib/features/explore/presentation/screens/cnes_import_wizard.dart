@@ -137,7 +137,7 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
     if (_saving) return false;
     switch (_step) {
       case 0:
-        return _draft.hasName;
+        return _draft.isIdentityComplete;
       case 1:
         return _draft.isClinicalComplete;
       default:
@@ -414,17 +414,17 @@ class _IdentityStep extends StatelessWidget {
           onChanged: (v) => draft.socialName = v,
         ),
         _field(
+          key: const Key('wizard-cpf'),
           label: 'CPF',
           initial: draft.cpf,
           keyboardType: TextInputType.number,
           formatters: [FilteringTextInputFormatter.digitsOnly],
           maxLength: 11,
-          onChanged: (v) => draft.cpf = v,
-        ),
-        _field(
-          label: 'Data de nascimento (AAAA-MM-DD)',
-          initial: draft.birthDate,
-          onChanged: (v) => draft.birthDate = v,
+          errorText: draft.cpfError,
+          onChanged: (v) {
+            draft.cpf = v;
+            onChanged();
+          },
         ),
         _field(
           label: 'Celular',
@@ -822,7 +822,8 @@ class _ReviewStep extends StatelessWidget {
           ('Nome', draft.displayName),
           ('Nome social', draft.socialName),
           ('CPF', draft.cpf),
-          ('Nascimento', draft.birthDate),
+          // No birth date row: it is edited below, in the optional section, and
+          // "editar" here jumps to step 1 where the field no longer lives.
           ('Celular', draft.mobilePhone),
           ('Fixo', draft.landlinePhone),
           ('E-mail', draft.email),
@@ -858,6 +859,23 @@ class _ReviewStep extends StatelessWidget {
             ),
             childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             children: [
+              /*
+               * Birth date lives here rather than on step 1.
+               *
+               * Not one of the 1 206 doctors we hold has one, and every rep
+               * skipped it — a field nobody fills sitting above CPF and phone
+               * teaches people to scroll past that whole step.
+               */
+              _field(
+                key: const Key('wizard-birth-date'),
+                label: 'Data de nascimento (AAAA-MM-DD)',
+                initial: draft.birthDate,
+                errorText: draft.birthDateError,
+                onChanged: (v) {
+                  draft.birthDate = v;
+                  onChanged();
+                },
+              ),
               _field(
                 label: 'Hobbies',
                 initial: draft.hobbies,
@@ -976,13 +994,18 @@ Widget _field({
   TextInputType? keyboardType,
   List<TextInputFormatter>? formatters,
   int? maxLength,
+  String? errorText,
 }) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 4),
     child: TextFormField(
       key: key,
       initialValue: initial,
-      decoration: InputDecoration(labelText: label, counterText: ''),
+      decoration: InputDecoration(
+        labelText: label,
+        counterText: '',
+        errorText: errorText,
+      ),
       keyboardType: keyboardType,
       inputFormatters: formatters,
       maxLength: maxLength,

@@ -27,8 +27,16 @@ const SUS_NEW = "BBBB000000000001";
 const SUS_HELD = "BBBB000000000002";
 const SUS_ELSEWHERE = "BBBB000000000003";
 const SUS_NO_REGISTRATION = "BBBB000000000004";
+/** Importable, and reserved for the tests that send bad field values. */
+const SUS_BAD_INPUT = "BBBB000000000005";
 const COUNCIL = "71";
-const ALL_SUS = [SUS_NEW, SUS_HELD, SUS_ELSEWHERE, SUS_NO_REGISTRATION];
+const ALL_SUS = [
+  SUS_NEW,
+  SUS_HELD,
+  SUS_ELSEWHERE,
+  SUS_NO_REGISTRATION,
+  SUS_BAD_INPUT,
+];
 
 const useCase = new ImportCnesProfessionalUseCase();
 
@@ -183,6 +191,7 @@ async function seed(): Promise<Fixture> {
     [SUS_HELD, "OUTRO MEDICO HOMONIMO"],
     [SUS_ELSEWHERE, "MEDICO DE OUTRA CLINICA"],
     [SUS_NO_REGISTRATION, "MEDICO SEM REGISTRO"],
+    [SUS_BAD_INPUT, "MEDICO DADOS RUINS"],
   ] as const) {
     await db.execute(sql`
       insert into registry.professionals (cnes_id, full_name) values (${sus}, ${name});
@@ -190,7 +199,7 @@ async function seed(): Promise<Fixture> {
   }
 
   // Everyone except SUS_ELSEWHERE is placed at this clinic by CNES.
-  for (const sus of [SUS_NEW, SUS_HELD, SUS_NO_REGISTRATION]) {
+  for (const sus of [SUS_NEW, SUS_HELD, SUS_NO_REGISTRATION, SUS_BAD_INPUT]) {
     await db.execute(sql`
       insert into registry.facility_professionals (facility_cnes_id, professional_cnes_id)
         values (${CNES_CODE}, ${sus});
@@ -201,6 +210,7 @@ async function seed(): Promise<Fixture> {
     [SUS_NEW, "9970001"],
     [SUS_HELD, "9970002"],
     [SUS_ELSEWHERE, "9970003"],
+    [SUS_BAD_INPUT, "9970005"],
   ] as const) {
     await db.execute(sql`
       insert into registry.professional_registrations
@@ -533,7 +543,13 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
     expect(JSON.stringify(payload)).not.toContain("Alguém");
   });
 
-  /** `ValidationError`'s message is generic; the reason lives in its context. */
+  /**
+   * `ValidationError`'s message is generic; the reason lives in its context.
+   *
+   * Returns `field: message` pairs so a test can assert which field was blamed,
+   * not merely that something was — naming the wrong field is its own bug, and
+   * one the rep pays for.
+   */
   async function reasonFor(
     professionalCnesId: string,
     overrides: Record<string, unknown> = required,
@@ -546,9 +562,13 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
         ...overrides,
       } as never);
     } catch (error) {
-      const context = (error as { context?: { errors?: { message: string }[] } })
-        .context;
-      return context?.errors?.map((e) => e.message).join("; ") ?? String(error);
+      const context = (
+        error as { context?: { errors?: { field: string; message: string }[] } }
+      ).context;
+      return (
+        context?.errors?.map((e) => `${e.field}: ${e.message}`).join("; ") ??
+        String(error)
+      );
     }
     throw new Error(`importing ${professionalCnesId} was expected to fail`);
   }
@@ -570,6 +590,57 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
     expect(await reasonFor(SUS_NO_REGISTRATION)).toMatch(
       /no council registration/
     );
+  });
+
+  it("refuses a birth date that is not one, rather than letting Postgres do it", async () => {
+    /**
+     * `persons.birth_date` is a real `date`. Free text reaching the insert is a
+     * 22007 from the driver — a 500 the client renders as "falha ao importar",
+     * for what is a typo in a field the rep can see and fix.
+     */
+    expect(
+      await reasonFor(SUS_BAD_INPUT, { ...required, birthDate: "ontem" })
+    ).toMatch(/birthDate|data de nascimento/i);
+
+    const [count] = (await db.execute(sql`
+      select count(*)::int as n from person_healthcare_profiles
+       where cnes_professional_id = ${SUS_BAD_INPUT};
+    `)) as unknown as { n: number }[];
+    expect(count!.n).toBe(0);
+  });
+
+  it("refuses an impossible calendar date", async () => {
+    // Shape alone is not enough: 2026-02-30 parses as digits and is still not
+    // a day, and Postgres would be the one to say so.
+    expect(
+      await reasonFor(SUS_BAD_INPUT, { ...required, birthDate: "2026-02-30" })
+    ).toMatch(/birthDate|data de nascimento/i);
+  });
+
+  it("accepts a birth date that is one", async () => {
+    const result = await useCase.execute({
+      facilityId: fixture.facilityId,
+      professionalCnesId: SUS_BAD_INPUT,
+      scope: globalScope,
+      ...required,
+      birthDate: "1979-04-17",
+    });
+
+    const [row] = (await db.execute(sql`
+      select birth_date from persons where id = ${result.personId};
+    `)) as unknown as { birth_date: string | Date }[];
+    expect(String(row!.birth_date)).toContain("1979");
+  });
+
+  it("refuses a CPF that is not eleven digits", async () => {
+    /**
+     * `persons.cpf` is char(11) and the route schema demands exactly eleven, so
+     * a short one is a 422 whose message names nothing the rep would recognise.
+     * Refusing here reports the field instead.
+     */
+    expect(
+      await reasonFor(SUS_NO_REGISTRATION, { ...required, cpf: "12345" })
+    ).toMatch(/cpf/i);
   });
 
   it("refuses a registry professional that does not exist", async () => {

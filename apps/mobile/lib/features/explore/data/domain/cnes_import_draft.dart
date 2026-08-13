@@ -102,12 +102,41 @@ class CnesImportDraft {
 
   bool get hasName => firstName.trim().isNotEmpty && lastName.trim().isNotEmpty;
 
+  /// Null when the field is acceptable — empty counts, since both are optional.
+  ///
+  /// These two are checked here rather than left to the server because the
+  /// columns behind them are `char(11)` and `date`: anything else comes back as
+  /// a rejected request after the rep has finished the whole wizard, naming a
+  /// field they can no longer see.
+  String? get cpfError {
+    final value = cpf?.trim() ?? '';
+    if (value.isEmpty) return null;
+    return RegExp(r'^\d{11}$').hasMatch(value) ? null : 'CPF deve ter 11 dígitos';
+  }
+
+  String? get birthDateError {
+    final value = birthDate?.trim() ?? '';
+    if (value.isEmpty) return null;
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+      return 'Use o formato AAAA-MM-DD';
+    }
+    // Shape alone would accept 2026-02-30. Reparsing and comparing back is what
+    // separates a date from eleven plausible characters.
+    final parsed = DateTime.tryParse('${value}T00:00:00Z');
+    if (parsed == null) return 'Data inválida';
+    final normalised = parsed.toUtc().toIso8601String().substring(0, 10);
+    return normalised == value ? null : 'Data inválida';
+  }
+
   /// The only gate between the steps. Everything else is optional on purpose:
   /// of the 1 206 doctors we hold, 37 carry a mobile number and none a birth
   /// date, so requiring more would block imports on data nobody has.
   bool get isClinicalComplete => specialtyId != null && roleIds.isNotEmpty;
 
-  bool get isReadyToImport => hasName && isClinicalComplete;
+  bool get isIdentityComplete => hasName && cpfError == null;
+
+  bool get isReadyToImport =>
+      isIdentityComplete && isClinicalComplete && birthDateError == null;
 
   String get displayName => '${firstName.trim()} ${lastName.trim()}'.trim();
 
