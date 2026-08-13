@@ -65,6 +65,8 @@ void seedClinicDetailShellFromEntry(WidgetRef ref, FacilityEntry entry) {
     address: FacilityAddress(
       neighborhood: entry.neighborhood ?? '',
       city: entry.city,
+      lat: entry.lat,
+      lng: entry.lng,
     ),
     commercial: FacilityCommercial(
       commercialStatus: entry.commercialStatus,

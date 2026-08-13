@@ -42,6 +42,8 @@ void main() {
     name: 'Clínica Teste',
     city: 'São Paulo',
     doctorCount: 0,
+    lat: -23.5614,
+    lng: -46.6559,
     verticalProfiles: [
       for (final id in verticalIds)
         FacilityVerticalProfileDTO(verticalId: id, verticalName: 'Linha $id'),
@@ -130,5 +132,24 @@ void main() {
     seedClinicDetailShellFromEntry(ref, entry(verticalIds: [0, 7]));
 
     expect(container.read(clinicDetailKnownProfileIdsProvider(42)), {7});
+  });
+
+  testWidgets('the shell carries the clinic\'s coordinates from the list', (
+    tester,
+  ) async {
+    // They are already in the list response — `serializeFacility` emits lat and
+    // lng. Dropping them meant the nearby preview started with no position,
+    // fell through to awaiting the detail, and fetched `/facilities` a second
+    // time once the real coordinates arrived.
+    final container = ProviderContainer(overrides: withUserLinhas([7]));
+    addTearDown(container.dispose);
+    final ref = await refFor(tester, container);
+    await container.read(currentUserFacilityVerticalOptionsProvider.future);
+
+    seedClinicDetailShellFromEntry(ref, entry(verticalIds: [7]));
+
+    final shell = container.read(clinicDetailShellFacilityProvider(42));
+    expect(shell?.address?.lat, -23.5614);
+    expect(shell?.address?.lng, -46.6559);
   });
 }
