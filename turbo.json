@@ -33,7 +33,8 @@
 
     "storage:check": {
       "cache": false,
-      "outputs": []
+      "outputs": [],
+      "env": ["STORAGE_*"]
     },
 
     "dev": {

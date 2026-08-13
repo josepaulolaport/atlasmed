@@ -116,11 +116,13 @@ jobs:
       # failed every upload. A deploy that fails here leaves the working
       # container serving.
       #
-      # Deploy path only. This workflow also runs on pull requests, and a check
-      # that writes to production storage on every PR is a wider blast radius
-      # than the problem needs. Credentials change outside PRs anyway — the one
-      # that caused this was rotated in the Cloudflare dashboard — so the deploy
-      # is the moment worth guarding.
+      # Runs on pull requests too, despite writing to the production bucket.
+      # It was deploy-only first, on the reasoning that a PR-triggered write to
+      # production is a wider blast radius than the problem needs. That was the
+      # wrong trade: the step was then never exercised until it ran on main,
+      # where it failed immediately because turbo had not been told to pass
+      # STORAGE_*. An unexercised guard is not a guard.
+      #
+      # The write is nine bytes under `_preflight/`, deleted immediately.
       - name: Verify object storage is writable
-        if: github.event_name != 'pull_request'
         run: bun run storage:check
