@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   facilities,
   facilityVerticalProfiles,
@@ -39,6 +39,14 @@ type PersonSearchDocument = {
   specialty: string | null;
   specialtyNormalized: string | null;
   activeFacilityIds: number[];
+  /**
+   * Active links carrying the `HEALTHCARE_PROFESSIONAL` classification.
+   *
+   * Distinct from [activeFacilityIds], which is every link whatever its nature
+   * and backs scope enforcement. The associate-doctors picker excludes on this
+   * one so it agrees with its SQL condition.
+   */
+  clinicalFacilityIds: number[];
   activeTerritoryIds: number[];
   registrationDisplays: string[];
 };
@@ -86,6 +94,13 @@ export async function upsertPersonSearchDocument(
     const activeFacilityIds = [
       ...new Set(associations.map((association) => association.facilityId)),
     ].sort((a, b) => a - b);
+    const clinicalFacilityIds = [
+      ...new Set(
+        associations.flatMap((association) =>
+          association.isClinical ? [association.facilityId] : []
+        )
+      ),
+    ].sort((a, b) => a - b);
     const activeTerritoryIds = [
       ...new Set(
         associations.flatMap((association) =>
@@ -104,6 +119,7 @@ export async function upsertPersonSearchDocument(
         ? normalizeSearchFilterValue(primarySpecialtyLabel)
         : null,
       activeFacilityIds,
+      clinicalFacilityIds,
       activeTerritoryIds,
       registrationDisplays,
     };
@@ -118,13 +134,29 @@ export async function upsertPersonSearchDocument(
   }
 }
 
+type PersonAssociation = {
+  facilityId: number;
+  territoryId: number | null;
+  isClinical: boolean;
+};
+
 async function loadActivePersonAssociations(
   personId: number
-): Promise<Array<{ facilityId: number; territoryId: number | null }>> {
+): Promise<PersonAssociation[]> {
   const rows = await db
     .select({
       facilityId: personFacilities.facilityId,
       territoryId: facilityVerticalProfiles.managerZoneId,
+      // Correlated rather than joined, so an association is not multiplied by
+      // its classifications. Mirrors the worker rebuild.
+      isClinical: sql<boolean>`exists (
+        select 1
+        from person_facility_classification_assignments pfca
+        join person_facility_classifications pfc
+          on pfc.id = pfca.classification_id
+        where pfca.person_facility_id = ${personFacilities.id}
+          and pfc.code = 'HEALTHCARE_PROFESSIONAL'
+      )`,
     })
     .from(personFacilities)
     .innerJoin(facilities, eq(personFacilities.facilityId, facilities.id))
@@ -143,20 +175,25 @@ async function loadActivePersonAssociations(
       )
     );
 
-  const associations: Array<{ facilityId: number; territoryId: number | null }> =
-    [];
+  const associations: PersonAssociation[] = [];
   for (const row of rows) {
-    const already = associations.some(
+    const already = associations.find(
       (entry) =>
         entry.facilityId === row.facilityId &&
         entry.territoryId === row.territoryId
     );
-    if (!already) {
-      associations.push({
-        facilityId: row.facilityId,
-        territoryId: row.territoryId,
-      });
+    if (already) {
+      // An administrative link and a clinical one to the same clinic collapse
+      // here. OR-ed rather than overwritten, so the outcome does not depend on
+      // which row the database returned first.
+      already.isClinical = already.isClinical || row.isClinical;
+      continue;
     }
+    associations.push({
+      facilityId: row.facilityId,
+      territoryId: row.territoryId,
+      isClinical: row.isClinical,
+    });
   }
   return associations;
 }

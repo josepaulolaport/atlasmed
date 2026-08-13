@@ -50,7 +50,26 @@ export type PersonSearchDocument = {
   cpf: string | null;
   specialty: string | null;
   specialtyNormalized: string | null;
+  /**
+   * Every active facility link, whatever its nature.
+   *
+   * Deliberately NOT classification-scoped: this backs Meili scope enforcement
+   * and the `facilityId` roster filter, both of which ask "is this person
+   * attached to this clinic", not "do they practise there".
+   */
   activeFacilityIds: number[];
+  /**
+   * Active links carrying the `HEALTHCARE_PROFESSIONAL` classification.
+   *
+   * Separate from [activeFacilityIds] because the two questions differ: a
+   * person can be an administrative contact at a clinic without ever having
+   * been clinically associated there. The associate-doctors picker excludes on
+   * this one, matching its SQL condition — excluding on `activeFacilityIds`
+   * hid such a doctor from the only screen able to add them, but only when the
+   * rep typed a search (the Meili path), so the same sheet disagreed with
+   * itself about who was already there.
+   */
+  clinicalFacilityIds: number[];
   activeTerritoryIds: number[];
   /** Active regs as `CRM/SP 123456` — searchable (multi-reg UI). */
   registrationDisplays: string[];
@@ -98,7 +117,12 @@ export function mapPersonSearchDocument(row: {
   socialName: string | null;
   cpf: string | null;
   primarySpecialtyLabel: string | null;
-  activeAssociations: Array<{ facilityId: number; territoryId: number | null }>;
+  activeAssociations: Array<{
+    facilityId: number;
+    territoryId: number | null;
+    /** Carries the HEALTHCARE_PROFESSIONAL classification at that facility. */
+    isClinical?: boolean;
+  }>;
   registrationDisplays?: string[];
   deletedAt: Date | null;
 }): PersonSearchDocument | null {
@@ -107,6 +131,11 @@ export function mapPersonSearchDocument(row: {
   const activeFacilityIds = [...new Set(row.activeAssociations.map((association) => association.facilityId))].sort(
     (a, b) => a - b,
   );
+  const clinicalFacilityIds = [...new Set(
+    row.activeAssociations.flatMap((association) =>
+      association.isClinical ? [association.facilityId] : []
+    )
+  )].sort((a, b) => a - b);
   const activeTerritoryIds = [...new Set(
     row.activeAssociations.flatMap((association) => association.territoryId ? [association.territoryId] : [])
   )].sort((a, b) => a - b);
@@ -121,6 +150,7 @@ export function mapPersonSearchDocument(row: {
       ? normalizeSearchFilterValue(row.primarySpecialtyLabel)
       : null,
     activeFacilityIds,
+    clinicalFacilityIds,
     activeTerritoryIds,
     registrationDisplays: row.registrationDisplays ?? [],
   };
@@ -406,7 +436,12 @@ export const PERSON_SETTINGS = {
     "specialty",
     "registrationDisplays",
   ],
-  filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"],
+  filterableAttributes: [
+    "specialtyNormalized",
+    "activeFacilityIds",
+    "clinicalFacilityIds",
+    "activeTerritoryIds",
+  ],
 };
 
 async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
@@ -449,9 +484,15 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
   }
 }
 
+type PersonAssociation = {
+  facilityId: number;
+  territoryId: number | null;
+  isClinical?: boolean;
+};
+
 async function loadActivePersonAssociations(
   personIds: number[]
-): Promise<Map<number, Array<{ facilityId: number; territoryId: number | null }>>> {
+): Promise<Map<number, PersonAssociation[]>> {
   if (personIds.length === 0) return new Map();
 
   const rows = await db
@@ -459,6 +500,17 @@ async function loadActivePersonAssociations(
       personId: personFacilities.personId,
       facilityId: personFacilities.facilityId,
       territoryId: facilityVerticalProfiles.managerZoneId,
+      // Correlated rather than joined: joining the classification tables would
+      // multiply the association rows, and every consumer here wants one row
+      // per (person, facility, territory).
+      isClinical: sql<boolean>`exists (
+        select 1
+        from person_facility_classification_assignments pfca
+        join person_facility_classifications pfc
+          on pfc.id = pfca.classification_id
+        where pfca.person_facility_id = ${personFacilities.id}
+          and pfc.code = 'HEALTHCARE_PROFESSIONAL'
+      )`,
     })
     .from(personFacilities)
     .innerJoin(facilities, eq(personFacilities.facilityId, facilities.id))
@@ -475,16 +527,46 @@ async function loadActivePersonAssociations(
       isNull(facilities.deactivatedAt)
     ));
 
-  const associations = new Map<number, Array<{ facilityId: number; territoryId: number | null }>>();
+  return mergePersonAssociations(rows);
+}
+
+/**
+ * Collapses association rows per person.
+ *
+ * Split from the query so the flag can be tested without a database. It carries
+ * `isClinical` from the row into the document, and dropping that one line makes
+ * `clinicalFacilityIds` empty on every document — at which point the
+ * associate-doctors exclusion matches nobody, and the only symptom is that the
+ * search path quietly falls back to SQL for every request.
+ */
+export function mergePersonAssociations(
+  rows: Array<{
+    personId: number;
+    facilityId: number;
+    territoryId: number | null;
+    isClinical: boolean;
+  }>
+): Map<number, PersonAssociation[]> {
+  const associations = new Map<number, PersonAssociation[]>();
   for (const row of rows) {
     const current = associations.get(row.personId) ?? [];
-    const already = current.some(
+    const already = current.find(
       (entry) => entry.facilityId === row.facilityId && entry.territoryId === row.territoryId
     );
-    if (!already) {
-      current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
-      associations.set(row.personId, current);
+    if (already) {
+      // Someone can hold more than one link to the same clinic — an
+      // administrative one and a clinical one. Dropping the duplicate must not
+      // drop the clinical flag with it, so it is OR-ed rather than overwritten;
+      // otherwise whether they count as a doctor there depends on row order.
+      already.isClinical = already.isClinical || row.isClinical;
+      continue;
     }
+    current.push({
+      facilityId: row.facilityId,
+      territoryId: row.territoryId,
+      isClinical: row.isClinical,
+    });
+    associations.set(row.personId, current);
   }
   return associations;
 }

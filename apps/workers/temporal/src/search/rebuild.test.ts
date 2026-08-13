@@ -142,9 +142,11 @@ describe("search rebuild", () => {
         cpf: "12345678901",
         primarySpecialtyLabel: "Cardiologia",
         activeAssociations: [
+          // Clinic 2 is an administrative link only — she is attached to it but
+          // does not practise there.
           { facilityId: 2, territoryId: 22 },
-          { facilityId: 1, territoryId: 11 },
-          { facilityId: 1, territoryId: 11 },
+          { facilityId: 1, territoryId: 11, isClinical: true },
+          { facilityId: 1, territoryId: 11, isClinical: true },
         ],
         registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
         deletedAt: null,
@@ -157,9 +159,64 @@ describe("search rebuild", () => {
       specialty: "Cardiologia",
       specialtyNormalized: "cardiologia",
       activeFacilityIds: [1, 2],
+      // Narrower than activeFacilityIds on purpose: clinic 2 is absent, so the
+      // associate picker still offers her there.
+      clinicalFacilityIds: [1],
       activeTerritoryIds: [11, 22],
       registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
     });
+  });
+
+  test("carries the clinical flag from the row into the association", () => {
+    // Without this the field is empty on every document, the exclusion matches
+    // nobody, and the only symptom is that every search in the picker falls
+    // back to SQL.
+    const merged = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: null, isClinical: true },
+      { personId: 1, facilityId: 8, territoryId: null, isClinical: false },
+    ]);
+
+    expect(merged.get(1)).toEqual([
+      { facilityId: 9, territoryId: null, isClinical: true },
+      { facilityId: 8, territoryId: null, isClinical: false },
+    ]);
+  });
+
+  test("a clinical duplicate does not lose its flag to an administrative one", () => {
+    // Two links to the same clinic collapse into one association. Whichever row
+    // the database returned first, the person practises there.
+    const clinicalLast = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: false },
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: true },
+    ]);
+    const clinicalFirst = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: true },
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: false },
+    ]);
+
+    expect(clinicalLast.get(1)).toEqual([
+      { facilityId: 9, territoryId: 4, isClinical: true },
+    ]);
+    expect(clinicalLast.get(1)).toEqual(clinicalFirst.get(1)!);
+  });
+
+  test("a person with no clinical link anywhere gets an empty list, not a missing field", () => {
+    // Meili cannot filter an attribute some documents omit, and a person who is
+    // purely an administrative contact is exactly the case the exclusion has to
+    // reason about.
+    const document = mapPersonSearchDocument({
+      id: 5,
+      firstName: "Bruno",
+      lastName: "Costa",
+      socialName: null,
+      cpf: null,
+      primarySpecialtyLabel: null,
+      activeAssociations: [{ facilityId: 9, territoryId: null }],
+      deletedAt: null,
+    });
+
+    expect(document).toHaveProperty("clinicalFacilityIds", []);
+    expect(document?.activeFacilityIds).toEqual([9]);
   });
 
   test("defaults registrationDisplays to empty when omitted", () => {
@@ -316,7 +373,15 @@ describe("search rebuild", () => {
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
     ]));
     expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
-      expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
+      // clinicalFacilityIds is what the associate-doctors exclusion filters on.
+      // Missing here, Meili rejects the filter at runtime and the request falls
+      // back to SQL — correct, but the whole point of indexing it is lost.
+      expect.arrayContaining([
+        "specialtyNormalized",
+        "activeFacilityIds",
+        "clinicalFacilityIds",
+        "activeTerritoryIds",
+      ])
     );
     expect(searchRebuild.PERSON_SETTINGS.searchableAttributes).toEqual(
       expect.arrayContaining([

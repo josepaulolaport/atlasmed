@@ -9,6 +9,7 @@ const FILTER_FIELDS = [
   "verticalIds",
   "specialtyNormalized",
   "activeFacilityIds",
+  "clinicalFacilityIds",
   "activeTerritoryIds",
   "repUserIds",
   "verticalFunnelStages",
