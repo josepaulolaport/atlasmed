@@ -122,6 +122,29 @@ export interface CadastroSubmissionRepository {
     excludeDraft?: boolean;
   }): Promise<SubmissionDocumentRecord[]>;
   /**
+   * Every document for a facility, across all requirements, newest version
+   * first (`version DESC, updatedAt DESC`).
+   *
+   * Exists for the checklist, which needs the working document *and* the
+   * history for every requirement on the page. Asking per requirement made that
+   * two queries each; with the per-document file lookups it reached four per
+   * requirement, and `/cadastro` was reliably the slowest endpoint on the clinic
+   * screen at ~1.7s. Unfiltered by status on purpose: the working document and
+   * the submitted history want different status sets, and one pass over the
+   * facility's rows answers both.
+   */
+  listDocumentsByFacility(facilityId: number): Promise<SubmissionDocumentRecord[]>;
+  /**
+   * Files for many documents at once, ordered by document then `position`.
+   *
+   * Each record carries `submissionDocumentId`, so the caller groups without a
+   * second lookup. An empty input returns empty without touching the database —
+   * `IN ()` is not valid SQL.
+   */
+  listDocumentFilesForDocuments(
+    documentIds: number[]
+  ): Promise<DocumentFileRecord[]>;
+  /**
    * Ops review queue: documents across facilities by document status.
    *
    * `facilityIds` restricts the queue to what the reviewer may see. Omitting it
