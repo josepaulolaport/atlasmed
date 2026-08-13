@@ -4,6 +4,7 @@ import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./
 import { sweepCadastroUploadsActivity as sweepCadastroUploadsActivityImpl } from "./cadastro-sweep.activities";
 import {
   discoverCnesReferenceActivity as discoverCnesReferenceActivityImpl,
+  ensureCnesArchiveActivity as ensureCnesArchiveActivityImpl,
   finishCnesRunActivity as finishCnesRunActivityImpl,
   ingestCnesRegistryActivity as ingestCnesRegistryActivityImpl,
   startCnesRunActivity as startCnesRunActivityImpl,
@@ -73,6 +74,11 @@ export const sweepCadastroUploadsActivity = wrapActivity(
 export const discoverCnesReferenceActivity = wrapActivity(
   "discoverCnesReference",
   discoverCnesReferenceActivityImpl
+);
+
+export const ensureCnesArchiveActivity = wrapActivity(
+  "ensureCnesArchive",
+  ensureCnesArchiveActivityImpl
 );
 
 export const startCnesRunActivity = wrapActivity(

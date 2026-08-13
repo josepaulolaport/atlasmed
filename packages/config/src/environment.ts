@@ -109,13 +109,6 @@ const EnvironmentSchema = Type.Object({
   EMULTEC_MYSQL_PASSWORD: OptionalString(),
   EMULTEC_MYSQL_DATABASE: Type.String({ default: "atlasmed", minLength: 1 }),
 
-  /**
-   * DATASUS CNES export (registry ingestion, ADR 0009). Anonymous FTP, so no
-   * credentials — the host is configurable only so a mirror can be substituted
-   * and so tests never reach the real one.
-   */
-  CNES_FTP_HOST: Type.String({ default: "ftp.datasus.gov.br", minLength: 1 }),
-  CNES_FTP_DIRECTORY: Type.String({ default: "/cnes", minLength: 1 }),
 
 
   UNCLOUD_CONNECT: OptionalString(),
@@ -197,8 +190,6 @@ function normalizeEnvironment(rawEnv: EnvInput) {
     TEMPORAL_TASK_QUEUE: env.TEMPORAL_TASK_QUEUE ?? "atlasmed-workflows",
     EMULTEC_MYSQL_PORT: numberFromEnv(env.EMULTEC_MYSQL_PORT, 3306),
     EMULTEC_MYSQL_DATABASE: env.EMULTEC_MYSQL_DATABASE ?? "atlasmed",
-    CNES_FTP_HOST: env.CNES_FTP_HOST ?? "ftp.datasus.gov.br",
-    CNES_FTP_DIRECTORY: env.CNES_FTP_DIRECTORY ?? "/cnes",
   };
 }
 

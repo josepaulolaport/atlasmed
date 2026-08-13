@@ -35,6 +35,20 @@ const ingest = proxyActivities<typeof import("../activities/index")>({
 });
 
 /**
+ * The fetch: ~725 MB over a single HTTPS stream, measured at 141 s.
+ *
+ * Three attempts rather than two, because unlike the load this one is worth
+ * retrying — it is one sequential transfer with nothing to resume from, and a
+ * dropped connection is the ordinary failure. It heartbeats per chunk, so five
+ * minutes of silence still means genuinely stuck.
+ */
+const fetchArchive = proxyActivities<typeof import("../activities/index")>({
+  startToCloseTimeout: "1 hour",
+  heartbeatTimeout: "5 minutes",
+  retry: { maximumAttempts: 3 },
+});
+
+/**
  * Flattens Temporal's failure chain into something worth storing.
  *
  * An activity that throws surfaces here as `ActivityFailure: Activity task
@@ -97,7 +111,28 @@ export async function cnesIngestionWorkflow(
   const runId = await quick.startCnesRunActivity({ workflowId, reference });
 
   try {
-    const result = await ingest.ingestCnesRegistryActivity({ runId, reference });
+    /**
+     * Fetch and load are separate activities so a failed load never re-fetches.
+     * `ensureCnesArchive` is idempotent — object present and verified means it
+     * returns at once — so Temporal retrying the load below starts from the
+     * bucket rather than from DATASUS (ADR 0010).
+     */
+    const archive = await fetchArchive.ensureCnesArchiveActivity({
+      runId,
+      reference,
+      force: input.force,
+    });
+    log.info("cnes.archive.ready", {
+      objectKey: archive.objectKey,
+      downloaded: archive.downloaded,
+      sizeBytes: archive.sizeBytes,
+    });
+
+    const result = await ingest.ingestCnesRegistryActivity({
+      runId,
+      reference,
+      objectKey: archive.objectKey,
+    });
     const { archiveManifest, ...stats } = result;
     await quick.finishCnesRunActivity({
       runId,

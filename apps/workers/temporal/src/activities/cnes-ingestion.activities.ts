@@ -4,9 +4,11 @@ import { environment } from "@atlasmed/config";
 import { cnesRuns } from "@atlasmed/database";
 import { listCnesReferences, type CnesReference } from "@atlasmed/cnes-ingestion";
 import { db } from "../infrastructure/db";
+import { ensureArchive } from "../cnes/archive-object-store";
 import {
   failAbandonedCnesRuns,
   finishCnesRun,
+  setCnesRunPhase,
   startCnesRun,
 } from "../cnes/cnes-run-ops";
 import {
@@ -40,10 +42,9 @@ export async function discoverCnesReferenceActivity(input: {
     exceptWorkflowId: input.workflowId,
   });
 
-  const references = await listCnesReferences({
-    host: environment.CNES_FTP_HOST,
-    directory: environment.CNES_FTP_DIRECTORY,
-  });
+  // Over HTTPS, from the listing endpoint the downloads page itself uses. The
+  // FTP directory listing is gone with the rest of the FTP reader (ADR 0010).
+  const references = await listCnesReferences();
   const latest = references[0];
   if (!latest) {
     return { reference: null, available: 0, alreadyLoaded: false };
@@ -80,9 +81,35 @@ export async function startCnesRunActivity(input: {
   });
 }
 
+/**
+ * Puts the archive in the bucket, or confirms it is already there.
+ *
+ * Its own activity so a failed load never re-fetches: Temporal retries
+ * `ingestCnesRegistryActivity` alone, and this one returns immediately because
+ * the object is present and verified.
+ */
+export async function ensureCnesArchiveActivity(input: {
+  runId: number;
+  reference: CnesReference;
+  force?: boolean;
+}): Promise<{ objectKey: string; downloaded: boolean; sizeBytes: number }> {
+  await setCnesRunPhase({ runId: input.runId, phase: "DOWNLOADING" });
+  const result = await ensureArchive({
+    reference: input.reference,
+    force: input.force,
+    heartbeat: (detail) => Context.current().heartbeat(detail),
+  });
+  return {
+    objectKey: result.key,
+    downloaded: result.downloaded,
+    sizeBytes: result.verification.sizeBytes,
+  };
+}
+
 export async function ingestCnesRegistryActivity(input: {
   runId: number;
   reference: CnesReference;
+  objectKey: string;
 }): Promise<IngestCnesRegistryOutput> {
   return ingestCnesRegistry(input, (detail) => Context.current().heartbeat(detail));
 }

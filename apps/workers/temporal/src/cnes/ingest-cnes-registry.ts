@@ -1,10 +1,9 @@
-import { environment } from "@atlasmed/config";
 import {
   archiveFileName,
   CNES_SOURCE_STEMS,
   formatReference,
   loadRegistryFromCsv,
-  openCnesArchive,
+  openArchiveFromObjectStore,
   sourceFileName,
   type CnesReference,
   type CnesSourceName,
@@ -12,6 +11,7 @@ import {
 } from "@atlasmed/cnes-ingestion";
 import { db } from "../infrastructure/db";
 import { logger } from "../logger";
+import { objectRangeReadable } from "./archive-object-store";
 import { setCnesRunPhase } from "./cnes-run-ops";
 import { promotionGateFor } from "./validate-promotion";
 
@@ -32,10 +32,14 @@ import { promotionGateFor } from "./validate-promotion";
 export interface IngestCnesRegistryInput {
   runId: number;
   reference: CnesReference;
+  /** Bucket key the archive was stored at by `ensureArchive`. */
+  objectKey: string;
 }
 
 export interface CnesArchiveManifest {
   archive: string;
+  /** Where the archive is, so a run really can be replayed without re-fetching. */
+  objectKey: string;
   sizeBytes: number;
   entryCount: number;
   /** Only the entries this run actually read. */
@@ -63,26 +67,21 @@ export async function ingestCnesRegistry(
   const reference = formatReference(input.reference);
   const fileName = archiveFileName(input.reference);
 
-  await setCnesRunPhase({ runId: input.runId, phase: "DOWNLOADING" });
+  await setCnesRunPhase({ runId: input.runId, phase: "LOADING" });
 
   let bytesRead = 0;
   let lastHeartbeatAt = 0;
-  const source = await openCnesArchive({
-    location: {
-      host: environment.CNES_FTP_HOST,
-      directory: environment.CNES_FTP_DIRECTORY,
-    },
+  // Reads from the bucket, not from DATASUS. `ensureArchive` has already put the
+  // archive there and proved it complete, so every range here is exact and a
+  // short read is a genuine fault rather than a routine hazard.
+  const source = await openArchiveFromObjectStore({
+    readable: objectRangeReadable(input.objectKey),
     reference: input.reference,
-    archiveFileName: fileName,
     onProgress: (message, detail) => {
       logger.info(`cnes.ingestion.archive.${message.replaceAll(" ", "_")}`, {
         ...detail,
         reference,
       });
-      // Opening the archive happens before a single byte of payload arrives, and
-      // its retries sleep for up to 30 s. Without a heartbeat here the activity
-      // is silent through the whole open and Temporal kills it as hung — which
-      // is exactly what happened on the first run with backoff enabled.
       heartbeat({ reference, step: message, ...detail });
     },
     onBytes: (total) => {
@@ -94,8 +93,6 @@ export async function ingestCnesRegistry(
       heartbeat({ reference, compressedBytesRead: total });
     },
   });
-
-  await setCnesRunPhase({ runId: input.runId, phase: "LOADING" });
 
   const result = await loadRegistryFromCsv({
     db,
@@ -120,7 +117,11 @@ export async function ingestCnesRegistry(
   );
   const archiveManifest: CnesArchiveManifest = {
     archive: fileName,
-    sizeBytes: source.entries.reduce((n, e) => n + e.compressedSize, 0),
+    // The object's real size, now that there is an object — this column
+    // originally documented archive keys and could not be honest while nothing
+    // was stored (ADR 0009 §"archive_manifest", reversed by ADR 0010).
+    objectKey: input.objectKey,
+    sizeBytes: source.verification.sizeBytes,
     entryCount: source.entries.length,
     read: source.entries
       .filter((e) => wanted.has(e.name))
