@@ -148,7 +148,6 @@ async function findFacilityId(
             bundle.idCliente,
             {
               id: linked.id,
-              idClienteEmultec: bundle.idCliente,
               legalDocument: linked.legalDocument,
               legalDocumentType: linked.legalDocumentType,
             },
@@ -175,7 +174,6 @@ async function findFacilityId(
     : await db
       .select({
         id: facilities.id,
-        idClienteEmultec: facilities.idClienteEmultec,
         legalDocument: facilities.legalDocument,
         legalDocumentType: facilities.legalDocumentType,
       })

@@ -11,7 +11,6 @@ export type EmultecClientForFacilityResolve = {
 
 export type ResolvableFacility = {
   id: number;
-  idClienteEmultec: number | null;
   legalDocument: string | null;
   legalDocumentType: "CNPJ" | "CPF" | null;
 };

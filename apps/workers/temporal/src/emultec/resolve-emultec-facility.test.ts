@@ -4,20 +4,18 @@ import { resolveEmultecFacility } from "./resolve-emultec-facility";
 const fac = (
   id: number,
   opts: Partial<{
-    idClienteEmultec: number | null;
     legalDocument: string | null;
     legalDocumentType: "CNPJ" | "CPF" | null;
   }> = {}
 ) => ({
   id,
-  idClienteEmultec: opts.idClienteEmultec ?? null,
   legalDocument: opts.legalDocument ?? null,
   legalDocumentType: opts.legalDocumentType ?? null,
 });
 
 describe("resolveEmultecFacility", () => {
   test("prefers id_cliente_emultec stamp", () => {
-    const stamped = fac(10, { idClienteEmultec: 55 });
+    const stamped = fac(10);
     const byId = new Map([[55, stamped]]);
     const result = resolveEmultecFacility(
       {
