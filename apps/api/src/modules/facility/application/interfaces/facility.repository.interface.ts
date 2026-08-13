@@ -139,6 +139,13 @@ export interface FacilityListScopeFilter {
   restrictToVerticalProfiles?: boolean;
 }
 
+export interface FacilityMapBounds {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
+
 /** Thin map pin — no list hydration. */
 export interface FacilityMapPoint {
   id: number;
@@ -247,7 +254,10 @@ export interface FacilityRepository {
    * All in-scope geocoded facilities as thin map points (id/name/lat/lng).
    * Used by the live map — no pagination, no list joins.
    */
-  listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]>;
+  listMapPoints(
+    scope: FacilityListScopeFilter,
+    bounds?: FacilityMapBounds,
+  ): Promise<FacilityMapPoint[]>;
 
   findActiveFacilityIdsByVerticalIds(verticalIds: number[]): Promise<number[]>;
 

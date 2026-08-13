@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_facility_points_repository.dart';
@@ -43,11 +44,15 @@ final mapTerritoryProvider = FutureProvider<TerritoryGeometry?>((ref) async {
   return ref.watch(mapRepositoryProvider).getAssignedTerritory();
 });
 
+/// Current visible map rectangle. Pins are not requested until Mapbox reports
+/// a settled viewport, and every pan/zoom replaces this value.
+final mapViewportBoundsProvider = StateProvider<MapBounds?>((ref) => null);
+
 /// Bump to force a re-fetch of map pins (refresh button).
 final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// Raw in-scope thin map pins (no distance). Reloads on user / vertical /
-/// refresh — not on pan/zoom.
+/// refresh and whenever the settled visible viewport changes.
 ///
 /// Invalidates via [mapSessionProvider] (session dataStream). Watching
 /// [sessionProvider] alone is a no-op — it is a singleton instance — which
@@ -55,6 +60,8 @@ final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
   (ref) async {
     ref.watch(mapFacilityPointsRefreshProvider);
+    final bounds = ref.watch(mapViewportBoundsProvider);
+    if (bounds == null) return const [];
     final session = await ref.watch(mapSessionProvider.future);
     if (session == null) return const [];
     final verticalId = await ref.watch(
@@ -63,6 +70,7 @@ final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
     // Tag Hive by token so account switches never reuse another user's FC.
     return fetchMapFacilityPoints(
       verticalId: verticalId,
+      bounds: bounds,
       cacheTag: 'tok-${session.token.hashCode}',
     );
   },

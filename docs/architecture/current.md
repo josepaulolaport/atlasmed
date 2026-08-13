@@ -31,6 +31,7 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Flutter mobile ap
 ## Mobile Architecture
 
 - Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
+- The live map requests thin facility points only for the settled visible viewport; the API applies the viewport bounds in addition to role, territory, and vertical scope.
 - ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
 ## Data Architecture

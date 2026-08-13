@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
@@ -18,17 +19,26 @@ class MapFacilityPointsPage {
 
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
-  MapFacilityPointsRepository({String? baseUrl, this.verticalId, super.tag})
-    : super(
-        endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
-        name: 'MapFacilityPointsRepository',
-        // Never hydrate cross-user Hive cache before the first network fetch.
-        resolveOnCreate: false,
-      );
+  MapFacilityPointsRepository({
+    String? baseUrl,
+    this.verticalId,
+    required this.bounds,
+    super.tag,
+  }) : super(
+         endpoint: _buildEndpoint(
+           baseUrl ?? AppConfig.apiBaseUrl,
+           verticalId,
+           bounds,
+         ),
+         name: 'MapFacilityPointsRepository',
+         // Never hydrate cross-user Hive cache before the first network fetch.
+         resolveOnCreate: false,
+       );
 
   final int? verticalId;
+  final MapBounds bounds;
 
-  static Uri _buildEndpoint(String baseUrl, int? verticalId) {
+  static Uri _buildEndpoint(String baseUrl, int? verticalId, MapBounds bounds) {
     final base = Uri.parse(baseUrl);
     final basePath = base.path.endsWith('/')
         ? base.path.substring(0, base.path.length - 1)
@@ -38,6 +48,10 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
       queryParameters: {
         if (verticalId != null && verticalId > 0)
           'verticalId': verticalId.toString(),
+        'south': bounds.southwest.latitude.toString(),
+        'west': bounds.southwest.longitude.toString(),
+        'north': bounds.northeast.latitude.toString(),
+        'east': bounds.northeast.longitude.toString(),
       },
     );
   }
@@ -107,6 +121,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
 
 Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
   int? verticalId,
+  required MapBounds bounds,
   String? cacheTag,
 }) async {
   // Wait for session so SessionEnvironmentMixin.refresh does not short-circuit
@@ -117,6 +132,7 @@ Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
   }
   final repo = MapFacilityPointsRepository(
     verticalId: verticalId,
+    bounds: bounds,
     tag: cacheTag ?? 'tok-${session.token.hashCode}',
   );
   try {
