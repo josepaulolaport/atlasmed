@@ -12,6 +12,9 @@ import {
   orderItems,
   municipalities,
   states,
+  personFacilities,
+  personFacilityClassificationAssignments,
+  personFacilityClassifications,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
@@ -422,6 +425,53 @@ async function loadLastVisitAt(
   return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
 }
 
+/**
+ * Clinicians currently linked to each facility — the "N médicos" on a card.
+ *
+ * Classification-scoped, like every other count of doctors in this codebase: a
+ * `person_facilities` row is not by itself a clinical link, and 211 active ones
+ * are administrative contacts. Counting those would put a receptionist in a
+ * clinic's doctor count.
+ *
+ * Facilities with none are absent from the map, and the caller defaults to 0.
+ */
+async function loadProfessionalCounts(
+  facilityIds: number[],
+): Promise<Map<number, number>> {
+  if (facilityIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      facilityId: personFacilities.facilityId,
+      count: sql<number>`count(distinct ${personFacilities.personId})::int`,
+    })
+    .from(personFacilities)
+    .innerJoin(
+      personFacilityClassificationAssignments,
+      eq(
+        personFacilityClassificationAssignments.personFacilityId,
+        personFacilities.id,
+      ),
+    )
+    .innerJoin(
+      personFacilityClassifications,
+      eq(
+        personFacilityClassifications.id,
+        personFacilityClassificationAssignments.classificationId,
+      ),
+    )
+    .where(
+      and(
+        inArray(personFacilities.facilityId, facilityIds),
+        isNull(personFacilities.endedAt),
+        eq(personFacilityClassifications.code, "HEALTHCARE_PROFESSIONAL"),
+      ),
+    )
+    .groupBy(personFacilities.facilityId);
+
+  return new Map(rows.map((row) => [row.facilityId, row.count]));
+}
+
 /** Batch-load clinical focuses, alphabetical for UI chips. */
 async function loadClinicalFocusesByFacilityIds(
   facilityIds: number[],
@@ -764,19 +814,21 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       consultantMap,
       lastVisitAtByFacility,
       clinicalFocusesByFacility,
+      countMap,
     ] = await Promise.all([
       loadVerticalProfiles(ids, params.scope.verticalIds),
       loadConsultantInfo(ids, params.scope.verticalIds),
       loadLastVisitAt(ids, params.userId),
       loadClinicalFocusesByFacilityIds(ids),
+      // Was an empty Map declared below and never filled, so every clinic in
+      // the list reported "0 médicos" regardless of its roster.
+      loadProfessionalCounts(ids),
     ]);
 
     const derivedTerritoryIds = ids.map((id) =>
       deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
     );
     const territoryNameById = await loadTerritoryNames(derivedTerritoryIds);
-
-    const countMap = new Map<number, number>();
 
     return {
       facilities: rows.map((row) => {

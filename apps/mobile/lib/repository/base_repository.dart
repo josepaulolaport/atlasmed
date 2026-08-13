@@ -41,7 +41,7 @@ abstract class BaseRepository<Data> {
       trigger: 'hydration',
     );
 
-    if (autoRefreshInterval != null) {
+    if (autoRefreshInterval != null && autoRefreshEnabled) {
       timer = Timer.periodic(autoRefreshInterval!, (_) {
         if (_controller.hasListener) {
           runInBackground(refresh, trigger: 'auto refresh');
@@ -228,6 +228,24 @@ abstract class BaseRepository<Data> {
 
   /// Monostate logger service to log messages.
   static RepositoryLogger logger = const RepositoryLogger.dev();
+
+  /// When false, repositories skip their auto-refresh timer.
+  ///
+  /// A widget test fails if any timer is still pending when it ends, and a
+  /// *periodic* timer never drains — so a single repository carrying an
+  /// [autoRefreshInterval] made every screen that builds one untestable.
+  /// `SessionEnvironment` carries an eight-minute one and is reached by almost
+  /// every authenticated request, which is why this bit on the base class is
+  /// what unblocks widget tests rather than a seam in any one repository.
+  ///
+  /// Only the clock is switched off. Hydration, explicit `refresh`, dependency
+  /// fan-out and every on-demand read behave exactly as in production, so a
+  /// test still exercises the real fetching path.
+  ///
+  /// Set it once in test setup, as with [storage]. Nothing in the app touches
+  /// it.
+  @visibleForTesting
+  static bool autoRefreshEnabled = true;
 
   /// Getter for the last value of the stream.
   /// Returns null if the stream is empty.

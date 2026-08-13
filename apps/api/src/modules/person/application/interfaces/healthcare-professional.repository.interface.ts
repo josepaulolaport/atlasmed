@@ -30,6 +30,14 @@ export interface HealthcareProfessionalRepository {
     limit: number;
     search?: string;
     facilityId?: number;
+    /**
+     * Exclude people currently working at this facility.
+     *
+     * Applied inside the query, before `LIMIT`, so a page of results is a page of
+     * genuine candidates. Filtering the returned page instead silently shortens
+     * it and strands everyone past the cutoff.
+     */
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -44,6 +52,7 @@ export interface HealthcareProfessionalRepository {
   findAllByIds(params: {
     ids: number[];
     facilityId?: number;
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;

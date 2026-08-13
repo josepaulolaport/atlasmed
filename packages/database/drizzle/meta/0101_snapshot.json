@@ -1,5 +1,5 @@
 {
-  "id": "f9d864ae-72b7-45d6-9fcd-7bb0d52bf6e7",
+  "id": "3fca499f-1b21-4d54-9e22-255b0769743b",
   "prevId": "29473492-e6d0-4a87-93af-b6f1937380c7",
   "version": "7",
   "dialect": "postgresql",
@@ -4556,82 +4556,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.facility_emultec_clients": {
-      "name": "facility_emultec_clients",
-      "schema": "",
-      "columns": {
-        "id_cliente_emultec": {
-          "name": "id_cliente_emultec",
-          "type": "bigint",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "facility_id": {
-          "name": "facility_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source": {
-          "name": "source",
-          "type": "emultec_client_link_source",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "facility_emultec_clients_facility_id_idx": {
-          "name": "facility_emultec_clients_facility_id_idx",
-          "columns": [
-            {
-              "expression": "facility_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "facility_emultec_clients_facility_id_facilities_id_fk": {
-          "name": "facility_emultec_clients_facility_id_facilities_id_fk",
-          "tableFrom": "facility_emultec_clients",
-          "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.facility_healthcare_provider_shares": {
       "name": "facility_healthcare_provider_shares",
       "schema": "",
@@ -6209,6 +6133,22 @@
         }
       },
       "indexes": {
+        "person_facility_occupations_primary_uidx": {
+          "name": "person_facility_occupations_primary_uidx",
+          "columns": [
+            {
+              "expression": "person_facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"person_facility_occupations\".\"is_primary\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "person_facility_occupations_person_facility_id_idx": {
           "name": "person_facility_occupations_person_facility_id_idx",
           "columns": [
@@ -12363,6 +12303,1200 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "registry.facilities": {
+      "name": "facilities",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cnes_unit_code": {
+          "name": "cnes_unit_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trade_name": {
+          "name": "trade_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_id_cnpj": {
+          "name": "tax_id_cnpj",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_id_cpf": {
+          "name": "tax_id_cpf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "street_address": {
+          "name": "street_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "street_number": {
+          "name": "street_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_complement": {
+          "name": "address_complement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "neighborhood": {
+          "name": "neighborhood",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "municipality_cnes_id": {
+          "name": "municipality_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit_type_code": {
+          "name": "unit_type_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit_type_name": {
+          "name": "unit_type_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit_subtype_name": {
+          "name": "unit_subtype_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deactivation_reason_code": {
+          "name": "deactivation_reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_facilities_cnes_unit_code_uidx": {
+          "name": "registry_facilities_cnes_unit_code_uidx",
+          "columns": [
+            {
+              "expression": "cnes_unit_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"facilities\".\"cnes_unit_code\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_facilities_atlasmed_id_uidx": {
+          "name": "registry_facilities_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"facilities\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_facilities_municipality_cnes_id_idx": {
+          "name": "registry_facilities_municipality_cnes_id_idx",
+          "columns": [
+            {
+              "expression": "municipality_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "registry_facilities_municipality_cnes_id_fk": {
+          "name": "registry_facilities_municipality_cnes_id_fk",
+          "tableFrom": "facilities",
+          "tableTo": "municipalities",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "municipality_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.facility_professional_occupations": {
+      "name": "facility_professional_occupations",
+      "schema": "registry",
+      "columns": {
+        "facility_cnes_id": {
+          "name": "facility_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "professional_cnes_id": {
+          "name": "professional_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occupation_cnes_id": {
+          "name": "occupation_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_facility_professional_occupations_occupation_idx": {
+          "name": "registry_facility_professional_occupations_occupation_idx",
+          "columns": [
+            {
+              "expression": "occupation_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_facility_professional_occupations_professional_idx": {
+          "name": "registry_facility_professional_occupations_professional_idx",
+          "columns": [
+            {
+              "expression": "professional_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "registry_facility_professional_occupations_vinculo_fk": {
+          "name": "registry_facility_professional_occupations_vinculo_fk",
+          "tableFrom": "facility_professional_occupations",
+          "tableTo": "facility_professionals",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "facility_cnes_id",
+            "professional_cnes_id"
+          ],
+          "columnsTo": [
+            "facility_cnes_id",
+            "professional_cnes_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "registry_facility_prof_occupations_occupation_fk": {
+          "name": "registry_facility_prof_occupations_occupation_fk",
+          "tableFrom": "facility_professional_occupations",
+          "tableTo": "occupations",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "occupation_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "registry_facility_professional_occupations_pkey": {
+          "name": "registry_facility_professional_occupations_pkey",
+          "columns": [
+            "facility_cnes_id",
+            "professional_cnes_id",
+            "occupation_cnes_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.facility_professionals": {
+      "name": "facility_professionals",
+      "schema": "registry",
+      "columns": {
+        "facility_cnes_id": {
+          "name": "facility_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "professional_cnes_id": {
+          "name": "professional_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cnes_unit_code": {
+          "name": "cnes_unit_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_facility_professionals_professional_cnes_id_idx": {
+          "name": "registry_facility_professionals_professional_cnes_id_idx",
+          "columns": [
+            {
+              "expression": "professional_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "registry_facility_professionals_facility_cnes_id_fk": {
+          "name": "registry_facility_professionals_facility_cnes_id_fk",
+          "tableFrom": "facility_professionals",
+          "tableTo": "facilities",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "facility_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "registry_facility_professionals_professional_cnes_id_fk": {
+          "name": "registry_facility_professionals_professional_cnes_id_fk",
+          "tableFrom": "facility_professionals",
+          "tableTo": "professionals",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "professional_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "registry_facility_professionals_pkey": {
+          "name": "registry_facility_professionals_pkey",
+          "columns": [
+            "facility_cnes_id",
+            "professional_cnes_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.municipalities": {
+      "name": "municipalities",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_cnes_id": {
+          "name": "state_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_municipalities_atlasmed_id_uidx": {
+          "name": "registry_municipalities_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"municipalities\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_municipalities_state_cnes_id_idx": {
+          "name": "registry_municipalities_state_cnes_id_idx",
+          "columns": [
+            {
+              "expression": "state_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "registry_municipalities_state_cnes_id_fk": {
+          "name": "registry_municipalities_state_cnes_id_fk",
+          "tableFrom": "municipalities",
+          "tableTo": "states",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "state_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.occupations": {
+      "name": "occupations",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_health_occupation": {
+          "name": "is_health_occupation",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_regulated": {
+          "name": "is_regulated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_occupations_atlasmed_id_uidx": {
+          "name": "registry_occupations_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"occupations\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_occupations_is_health_occupation_idx": {
+          "name": "registry_occupations_is_health_occupation_idx",
+          "columns": [
+            {
+              "expression": "is_health_occupation",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"registry\".\"occupations\".\"is_health_occupation\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.professional_councils": {
+      "name": "professional_councils",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "abbreviation": {
+          "name": "abbreviation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_professional_councils_atlasmed_id_uidx": {
+          "name": "registry_professional_councils_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"professional_councils\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "registry_professional_councils_abbreviation_key": {
+          "name": "registry_professional_councils_abbreviation_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "abbreviation"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.professional_registrations": {
+      "name": "professional_registrations",
+      "schema": "registry",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "professional_registrations_id_seq",
+            "schema": "registry",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "professional_cnes_id": {
+          "name": "professional_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "council_cnes_id": {
+          "name": "council_cnes_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_code": {
+          "name": "state_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_professional_registrations_professional_cnes_id_idx": {
+          "name": "registry_professional_registrations_professional_cnes_id_idx",
+          "columns": [
+            {
+              "expression": "professional_cnes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "registry_professional_registrations_professional_cnes_id_fk": {
+          "name": "registry_professional_registrations_professional_cnes_id_fk",
+          "tableFrom": "professional_registrations",
+          "tableTo": "professionals",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "professional_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "registry_professional_registrations_council_cnes_id_fk": {
+          "name": "registry_professional_registrations_council_cnes_id_fk",
+          "tableFrom": "professional_registrations",
+          "tableTo": "professional_councils",
+          "schemaTo": "registry",
+          "columnsFrom": [
+            "council_cnes_id"
+          ],
+          "columnsTo": [
+            "cnes_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "registry_professional_registrations_council_state_number_key": {
+          "name": "registry_professional_registrations_council_state_number_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "council_cnes_id",
+            "state_code",
+            "registration_number"
+          ]
+        },
+        "registry_prof_registrations_prof_council_state_key": {
+          "name": "registry_prof_registrations_prof_council_state_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "professional_cnes_id",
+            "council_cnes_id",
+            "state_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "registry_professional_registrations_state_code_len_check": {
+          "name": "registry_professional_registrations_state_code_len_check",
+          "value": "char_length(\"registry\".\"professional_registrations\".\"state_code\") = 2"
+        },
+        "registry_professional_registrations_number_not_blank_check": {
+          "name": "registry_professional_registrations_number_not_blank_check",
+          "value": "char_length(btrim(\"registry\".\"professional_registrations\".\"registration_number\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "registry.professionals": {
+      "name": "professionals",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "social_name": {
+          "name": "social_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_id": {
+          "name": "tax_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "health_card_number": {
+          "name": "health_card_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_first_seen_at": {
+          "name": "source_first_seen_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "source_last_seen_at": {
+          "name": "source_last_seen_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_professionals_atlasmed_id_uidx": {
+          "name": "registry_professionals_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"professionals\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_professionals_tax_id_idx": {
+          "name": "registry_professionals_tax_id_idx",
+          "columns": [
+            {
+              "expression": "tax_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"registry\".\"professionals\".\"tax_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "registry_professionals_full_name_idx": {
+          "name": "registry_professionals_full_name_idx",
+          "columns": [
+            {
+              "expression": "full_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "registry.states": {
+      "name": "states",
+      "schema": "registry",
+      "columns": {
+        "cnes_id": {
+          "name": "cnes_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "atlasmed_id": {
+          "name": "atlasmed_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "registry_states_atlasmed_id_uidx": {
+          "name": "registry_states_atlasmed_id_uidx",
+          "columns": [
+            {
+              "expression": "atlasmed_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"registry\".\"states\".\"atlasmed_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "registry_states_cnes_id_len_check": {
+          "name": "registry_states_cnes_id_len_check",
+          "value": "char_length(\"registry\".\"states\".\"cnes_id\") = 2"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "ingestion.cnes_runs": {
+      "name": "cnes_runs",
+      "schema": "ingestion",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "cnes_runs_id_seq",
+            "schema": "ingestion",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "temporal_workflow_id": {
+          "name": "temporal_workflow_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_year": {
+          "name": "reference_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_month": {
+          "name": "reference_month",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "cnes_run_status",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RUNNING'"
+        },
+        "phase": {
+          "name": "phase",
+          "type": "cnes_run_phase",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phase_started_at": {
+          "name": "phase_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "promoted_at": {
+          "name": "promoted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stats": {
+          "name": "stats",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_report": {
+          "name": "validation_report",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archive_manifest": {
+          "name": "archive_manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "cnes_runs_active_reference_uidx": {
+          "name": "cnes_runs_active_reference_uidx",
+          "columns": [
+            {
+              "expression": "reference_year",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "reference_month",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"ingestion\".\"cnes_runs\".\"status\" = 'RUNNING'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_runs_temporal_workflow_id_uidx": {
+          "name": "cnes_runs_temporal_workflow_id_uidx",
+          "columns": [
+            {
+              "expression": "temporal_workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"ingestion\".\"cnes_runs\".\"temporal_workflow_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_runs_status_started_at_idx": {
+          "name": "cnes_runs_status_started_at_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -12471,15 +13605,6 @@
         "REGISTERED",
         "SUSPENDED",
         "CLOSED"
-      ]
-    },
-    "public.emultec_client_link_source": {
-      "name": "emultec_client_link_source",
-      "schema": "public",
-      "values": [
-        "MANUAL",
-        "AUTO_CNPJ",
-        "AUTO_CPF"
       ]
     },
     "public.facility_legal_document_type": {
@@ -12681,11 +13806,36 @@
         "WARNING",
         "CRITICAL"
       ]
+    },
+    "ingestion.cnes_run_phase": {
+      "name": "cnes_run_phase",
+      "schema": "ingestion",
+      "values": [
+        "DISCOVERING",
+        "DOWNLOADING",
+        "EXTRACTING",
+        "PREFLIGHT",
+        "LOADING",
+        "VALIDATING",
+        "PROMOTING",
+        "BRIDGING"
+      ]
+    },
+    "ingestion.cnes_run_status": {
+      "name": "cnes_run_status",
+      "schema": "ingestion",
+      "values": [
+        "RUNNING",
+        "COMPLETED",
+        "FAILED"
+      ]
     }
   },
   "schemas": {
     "audit": "audit",
-    "ops": "ops"
+    "ops": "ops",
+    "registry": "registry",
+    "ingestion": "ingestion"
   },
   "sequences": {},
   "roles": {},

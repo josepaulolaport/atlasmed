@@ -22,6 +22,16 @@ const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
   // Spec 0009 R5: the reviewer has to see *which* reps a move would strand
   // before deciding, so the list is part of the client-facing payload.
   FACILITY_COVERAGE_LOSS: ["losingCoverage"],
+  /*
+   * Spec 0012 §6: this is the answer to "does this doctor already exist", not a
+   * failure, so the caller needs the id to associate them instead of importing.
+   *
+   * The person's *name* stays server-side. Professionals are scope-filtered, and
+   * the caller has access to the clinic rather than necessarily to that person —
+   * an id they can attempt to associate (which checks scope again) discloses
+   * less than a name they may not be entitled to read.
+   */
+  CNES_REGISTRATION_ALREADY_HELD: ["personId", "registrationLabel"],
 };
 
 export abstract class AppError extends Error {

@@ -69,15 +69,52 @@ function projectionUseCases(
 
 function app(
   useCases: PersonProjectionsHttpUseCases = projectionUseCases(),
-  role: Role | "unauthenticated" = "REP"
+  role: Role | "unauthenticated" = "REP",
+  cnesSuggestions: { execute: (input: unknown) => Promise<unknown> } = {
+    execute: async () => ({ items: [], status: "OK", reference: null }),
+  }
 ) {
   const authPlugin =
     role === "unauthenticated" ? unauthenticatedPlugin() : actorPlugin(role);
 
   return createHttpIntegrationApp(
-    createPersonProjectionsRoutes(useCases, authPlugin)
+    createPersonProjectionsRoutes(useCases, authPlugin, cnesSuggestions)
   );
 }
+
+describe("CNES suggestions route", () => {
+  /**
+   * `cnes-suggestions` occupies the same path slot as `:personFacilityId`, which
+   * is declared as an integer. If the dynamic route wins the match, this request
+   * fails validation instead of reaching the handler — and the failure is a 422
+   * that looks like a client bug rather than a routing one.
+   */
+  it("is not swallowed by the :personFacilityId route", async () => {
+    const execute = mock(async () => ({
+      items: [{ personId: 7, displayName: "Ana", occupation: null, occupations: [], registrationLabel: null }],
+      status: "OK",
+      reference: "2026-05",
+    }));
+    const response = await authRequest(
+      app(projectionUseCases(), "REP", { execute }),
+      "http://localhost/api/v1/facilities/1/healthcare-professionals/cnes-suggestions",
+      null
+    );
+
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(await response.json()).toMatchObject({ status: "OK", reference: "2026-05" });
+  });
+
+  it("returns 401 without auth", async () => {
+    const response = await authRequest(
+      app(projectionUseCases(), "unauthenticated"),
+      "http://localhost/api/v1/facilities/1/healthcare-professionals/cnes-suggestions",
+      null
+    );
+    expect(response.status).toBe(401);
+  });
+});
 
 describe("Person projection HTTP routes", () => {
   it("returns 401 without auth on PUT healthcare roles", async () => {
