@@ -199,7 +199,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Inativas'), findsOneWidget);
+    // The chip names the clinic's own stage now, not the bucket it falls into:
+    // CHURN is "overdue, still recoverable", which the bucket label flattened.
+    expect(find.text('Em risco'), findsOneWidget);
   });
 
   testWidgets('does not show a funnel chip when recurrence is unavailable', (

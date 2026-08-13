@@ -1,25 +1,50 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 
+/// Purchase-funnel counts for the Desempenho donut.
+///
+/// The API sends one count per funnel stage and groups nothing — grouping is a
+/// presentation choice and lives here. `active` / `inactive` / `neverBought`
+/// are derived, so a surface that wants the finer breakdown (say, splitting
+/// "due to buy now" out of Ativas) can read [stages] directly without an API
+/// change.
 class DashboardPurchaseStatus {
   const DashboardPurchaseStatus({
-    required this.active,
-    required this.inactive,
-    required this.neverBought,
+    required this.stages,
     required this.total,
     required this.coveragePercent,
   });
 
-  final int active;
-  final int inactive;
-  final int neverBought;
+  /// Count per `purchase_funnel_stage`, keyed by API value, plus `UNKNOWN`.
+  final Map<String, int> stages;
   final int total;
   final int coveragePercent;
 
+  int _stage(String key) => stages[key] ?? 0;
+
+  int get neverPurchased => _stage('NEVER_PURCHASED');
+  int get outsideWindow => _stage('OUTSIDE_WINDOW');
+  int get purchaseWindow => _stage('PURCHASE_WINDOW');
+  int get churn => _stage('CHURN');
+  int get inactiveStage => _stage('INACTIVE');
+
+  Map<String, int> get _grouped => PurchaseBucketFilter.groupStageCounts(stages);
+
+  int get active => _grouped[PurchaseBucketFilter.active] ?? 0;
+  int get inactive => _grouped[PurchaseBucketFilter.inactive] ?? 0;
+  int get neverBought => _grouped[PurchaseBucketFilter.neverBought] ?? 0;
+
   factory DashboardPurchaseStatus.fromJson(Map<String, dynamic> json) {
+    final raw = json['stages'];
+    final stages = <String, int>{};
+    if (raw is Map<String, dynamic>) {
+      for (final entry in raw.entries) {
+        final value = entry.value;
+        if (value is int) stages[entry.key] = value;
+      }
+    }
     return DashboardPurchaseStatus(
-      active: json['active'] as int? ?? 0,
-      inactive: json['inactive'] as int? ?? 0,
-      neverBought: json['neverBought'] as int? ?? 0,
+      stages: stages,
       total: json['total'] as int? ?? 0,
       coveragePercent: json['coveragePercent'] as int? ?? 0,
     );
