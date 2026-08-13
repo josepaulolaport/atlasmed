@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -72,15 +73,54 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               _order = order;
             }),
           ),
+          // An exception report, not a roster entry — so it reads as a notice
+          // rather than as the first person on the team. It also stops citing
+          // a spec number at the user, which meant nothing to them.
           if (role == UserRoleName.admin && widget.managerId == null)
-            ListTile(
-              leading: const Icon(Icons.report_problem_outlined),
-              title: const Text('Representantes sem território'),
-              subtitle: const Text(
-                'Sem gestor, sem equipe e sem clínicas (spec 0009 R8)',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => const RepsWithoutPatchRoute().push(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.amber.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.report_problem_outlined,
+                        size: 16,
+                        color: AppColors.amber,
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Representantes sem território',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: AppColors.gray500,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => const RepsWithoutPatchRoute().push(context),
             ),
           Expanded(
             child: RefreshIndicator(
@@ -92,32 +132,37 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                 repository: ref.watch(teamProvider(args)),
                 builder: (context, members, repo) {
                   if (members == null) {
-                    return const Center(child: CircularProgressIndicator());
+                    // A skeleton, not a spinner: the rest of the app's lists
+                    // load this way and `list_skeletons_test.dart` holds them
+                    // to it.
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [TeamListSkeleton()],
+                    );
                   }
+                  final isManagerRoster =
+                      widget.managerId == null && role != UserRoleName.manager;
                   if (members.isEmpty) {
                     // A ListView rather than a Center: an empty roster is
                     // exactly when someone reaches for pull-to-refresh, and a
                     // non-scrollable child never fires it.
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 64,
-                          ),
-                          child: Text(
-                            'Nenhuma pessoa nesta equipe.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6b7280),
-                            ),
-                          ),
-                        ),
+                      children: [
+                        _TeamEmptyState(isManagerRoster: isManagerRoster),
                       ],
                     );
                   }
+                  // The largest value on screen, so each row can draw its own
+                  // share of it. Sorting by name has no bar to scale.
+                  final peak = _sortBy == 'name'
+                      ? 0.0
+                      : members.fold<double>(
+                          0,
+                          (max, m) => (m.metricValue ?? 0) > max
+                              ? (m.metricValue ?? 0)
+                              : max,
+                        );
                   // No separator: each row draws its own bottom border, the
                   // same way Explorar's list does.
                   return ListView.builder(
@@ -126,9 +171,8 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                     itemBuilder: (context, index) => _MemberTile(
                       member: members[index],
                       sortBy: _sortBy,
-                      isManagerRoster:
-                          widget.managerId == null &&
-                          role != UserRoleName.manager,
+                      peakMetric: peak,
+                      isManagerRoster: isManagerRoster,
                     ),
                   );
                 },
@@ -195,11 +239,20 @@ class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.member,
     required this.sortBy,
+    required this.peakMetric,
     required this.isManagerRoster,
   });
 
   final TeamMember member;
   final String sortBy;
+
+  /// The largest value in the roster, so a row can draw its share of it.
+  ///
+  /// A bare "447" says nothing about whether that is good. Scaling every bar to
+  /// the leader turns the roster into something you can read at a glance, which
+  /// is the whole point of sorting by a metric.
+  final double peakMetric;
+
   final bool isManagerRoster;
 
   /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
@@ -302,22 +355,21 @@ class _MemberTile extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (sortBy != 'name') ...[
+                    const SizedBox(height: 7),
+                    _MetricBar(
+                      value: member.metricValue,
+                      peak: peakMetric,
+                      label: _sortLabels[sortBy] ?? '',
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            if (sortBy == 'name')
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.gray500,
-                ),
-              )
-            else
+            if (sortBy != 'name')
               Padding(
-                padding: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.only(top: 8, right: 4),
                 child: Text(
                   _formatMetric(sortBy, member.metricValue),
                   style: const TextStyle(
@@ -325,6 +377,42 @@ class _MemberTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: AppColors.gray900,
                   ),
+                ),
+              ),
+            // An admin's manager row leads to that manager's *team*, so their
+            // own Desempenho had no way in at all (spec 0014 §2 puts it behind
+            // "via profile"). One row cannot mean two destinations, so the
+            // second one gets its own control.
+            if (isManagerRoster && member.roleName == 'MANAGER')
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                  tooltip: 'Ver desempenho de ${member.displayName}',
+                  icon: const Icon(
+                    Icons.insights_rounded,
+                    size: 18,
+                    color: AppColors.navyBright,
+                  ),
+                  onPressed: () => SubjectDashboardRoute(
+                    subjectUserId: member.userId,
+                    subjectName: member.displayName,
+                    subjectRole: member.roleName,
+                  ).push(context),
+                ),
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
                 ),
               ),
           ],
@@ -502,6 +590,98 @@ class _PersonRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One person's share of the roster's largest value.
+///
+/// Scaled to the leader rather than to 100%: for a count like "clínicas" there
+/// is no natural ceiling, and for a percentage a full-width bar at 3% would be
+/// a lie. Relative is the only honest reading, and it is also the one that
+/// answers the question people bring to a leaderboard.
+class _MetricBar extends StatelessWidget {
+  const _MetricBar({
+    required this.value,
+    required this.peak,
+    required this.label,
+  });
+
+  final double? value;
+  final double peak;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    // No value means the metric could not be calculated for this person, which
+    // is not the same as zero — so there is no bar to draw, only the reason.
+    if (value == null) {
+      return Text(
+        'sem $label',
+        style: const TextStyle(fontSize: 11, color: AppColors.gray500),
+      );
+    }
+    final fraction = peak <= 0 ? 0.0 : (value! / peak).clamp(0.0, 1.0);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        value: fraction,
+        minHeight: 4,
+        backgroundColor: AppColors.surfaceSecondary,
+        valueColor: const AlwaysStoppedAnimation(AppColors.navyBright),
+      ),
+    );
+  }
+}
+
+/// An empty roster, explained.
+///
+/// "Nenhuma pessoa nesta equipe" is true and useless. The two ways to get here
+/// have different causes and different fixes, and saying which one you are
+/// looking at is the difference between a dead end and a next step.
+class _TeamEmptyState extends StatelessWidget {
+  const _TeamEmptyState({required this.isManagerRoster});
+
+  final bool isManagerRoster;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 56),
+      child: Column(
+        children: [
+          Icon(
+            isManagerRoster ? Icons.groups_outlined : Icons.person_off_outlined,
+            size: 28,
+            color: AppColors.gray500,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isManagerRoster
+                ? 'Nenhum gestor com zona nesta linha'
+                : 'Nenhum representante nesta equipe',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isManagerRoster
+                ? 'A equipe aparece quando um gestor assume uma zona desta linha.'
+                : 'Os representantes aparecem quando um patch é criado dentro das zonas do gestor.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.gray500,
+              height: 1.35,
+            ),
+          ),
+        ],
       ),
     );
   }
