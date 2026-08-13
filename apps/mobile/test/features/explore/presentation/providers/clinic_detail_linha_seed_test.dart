@@ -134,6 +134,31 @@ void main() {
     expect(container.read(clinicDetailKnownProfileIdsProvider(42)), {7});
   });
 
+  testWidgets('the seed survives the gap before the route subscribes', (
+    tester,
+  ) async {
+    // The test above reads the seed in the same synchronous block that writes
+    // it, which is not how navigation works: the tap handler seeds and returns,
+    // the route builds a frame or more later, and only then does a widget
+    // subscribe. While this provider was autoDispose, nothing held the value in
+    // that gap and it was collected — measured 2026-08-13, a seeded {7} read
+    // back as {} two frames later, so the linha was unresolved on first build
+    // and every linha-scoped provider ran a second time once it resolved.
+    final container = ProviderContainer(overrides: withUserLinhas([7]));
+    addTearDown(container.dispose);
+    final ref = await refFor(tester, container);
+    await container.read(currentUserFacilityVerticalOptionsProvider.future);
+
+    seedClinicDetailShellFromEntry(ref, entry(verticalIds: [7]));
+
+    // Let the frames the route transition would occupy actually elapse.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    expect(container.read(clinicDetailKnownProfileIdsProvider(42)), {7});
+    expect(container.read(clinicDetailActiveLinhaIdProvider(42)), 7);
+  });
+
   testWidgets('the shell carries the clinic\'s coordinates from the list', (
     tester,
   ) async {
