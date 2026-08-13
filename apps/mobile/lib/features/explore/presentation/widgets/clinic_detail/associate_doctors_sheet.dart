@@ -107,6 +107,13 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
   /// precisely what makes them an import rather than an association.
   final Set<String> _selectedCnesIds = {};
 
+  /// Everything the confirm button would act on, from both selection sets.
+  ///
+  /// Counting `_selected` alone left the button dead when the only things
+  /// ticked were people to import — the rows that need the most work were the
+  /// ones the sheet refused to act on.
+  int get _selectionCount => _selected.length + _selectedCnesIds.length;
+
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
@@ -479,7 +486,9 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _selected.isEmpty || _saving ? null : _confirm,
+                    onPressed: _selectionCount == 0 || _saving
+                        ? null
+                        : _confirm,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.navyBright,
                       disabledBackgroundColor: AppColors.gray200,
@@ -498,9 +507,9 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
                             ),
                           )
                         : Text(
-                            _selected.isEmpty
+                            _selectionCount == 0
                                 ? 'Associar'
-                                : 'Associar (${_selected.length})',
+                                : 'Associar ($_selectionCount)',
                           ),
                   ),
                 ),
