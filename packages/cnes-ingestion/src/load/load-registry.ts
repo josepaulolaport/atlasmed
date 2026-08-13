@@ -54,9 +54,15 @@ export interface LoadRegistryOptions {
    * Last gate before the roster is replaced. Throwing here aborts the run with
    * the old snapshot intact.
    *
-   * The loader deliberately does not decide what "too few" means: that needs the
-   * previous run's numbers, which live in `ingestion.cnes_runs` and belong to the
-   * worker. This is the seam — the package counts, the caller judges.
+   * The loader counts; the caller judges. Keeping the judgement out here is what
+   * lets the rules change without touching the load, and lets the worker record
+   * its verdict in `ingestion.cnes_runs` where the package has no business
+   * writing.
+   *
+   * Note what the caller is asked to judge: whether *this* run read and wrote
+   * coherently. Not whether it resembles last month — a clinic's roster changes
+   * substantially month to month, so a rule built on that comparison refuses good
+   * data.
    */
   beforePromote?: (summary: PromotionSummary) => Promise<void>;
 }

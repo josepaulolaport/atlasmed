@@ -40,7 +40,7 @@ reliable but sequential only.
 ```
 discover      GET /services/arquivos-download/base-dados/   (JSON, newest first)
 ensureArchive HTTPS stream ──▶ S3 multipart, then verified
-loadRegistry  S3 ranges ──▶ inflate ──▶ parse ──▶ promotion gate ──▶ registry.*
+loadRegistry  S3 ranges ──▶ inflate ──▶ parse ──▶ validation ──▶ registry.*
 ```
 
 Each half now uses the transport it is good at: one sequential stream for the fetch, real range
@@ -90,7 +90,7 @@ endpoint, and the fetch additionally requires the ZIP magic `50 4b 03 04`.
 - One more phase that can fail — though the ledger already modelled it.
 
 **Neutral**
-- The loader, the CSV parser, `zip-directory.ts`, `skipLocalHeader` and the promotion gate are
+- The loader, the CSV parser, `zip-directory.ts`, `skipLocalHeader` and the validation are
   untouched. Only the byte source changes, which is what the `CnesSource` seam was for.
 
 ## Alternatives considered
