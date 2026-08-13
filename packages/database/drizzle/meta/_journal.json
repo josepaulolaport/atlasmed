@@ -715,6 +715,13 @@
       "when": 1786574840028,
       "tag": "0101_cnes_registry_and_ingestion",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1786574841028,
+      "tag": "0102_seed_cnes_occupations",
+      "breakpoints": true
     }
   ]
 }
