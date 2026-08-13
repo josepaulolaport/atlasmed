@@ -112,6 +112,17 @@ export interface LoadRegistryResult {
   occupationLinks: number;
   /** CBOs seen in carga that no aux row covers — the occupation link is dropped. */
   occupationsUnmapped: number;
+  /**
+   * Registry professionals newly matched to one of our persons by council
+   * registration — the identity both schemas share.
+   */
+  professionalsBridged: number;
+  /**
+   * Matched, but to more than one person (or to a person another SUS id already
+   * claims). Left unlinked: a wrong bridge attaches a clinic's roster to the
+   * wrong doctor, which is worse than no bridge at all.
+   */
+  professionalsBridgeAmbiguous: number;
 }
 
 const BATCH = 1_000;
@@ -200,6 +211,8 @@ export async function loadRegistryFromCsv(
     vinculos: 0,
     occupationLinks: 0,
     occupationsUnmapped: 0,
+    professionalsBridged: 0,
+    professionalsBridgeAmbiguous: 0,
   };
 
   // ── Step 0 — Resolve scope ────────────────────────────────────────────────
@@ -731,5 +744,115 @@ export async function loadRegistryFromCsv(
     unmappedCbos: result.occupationsUnmapped,
   });
 
+  // ── Step 7 — Bridge registry professionals to the people we already hold ───
+  const bridged = await bridgeByRegistration(db);
+  result.professionalsBridged = bridged.linked;
+  result.professionalsBridgeAmbiguous = bridged.ambiguous;
+  log("registry professionals bridged to persons", {
+    linked: bridged.linked,
+    ambiguous: bridged.ambiguous,
+  });
+
   return result;
+}
+
+interface BridgeResult {
+  linked: number;
+  /** Matched, but not to exactly one person — left unlinked on purpose. */
+  ambiguous: number;
+}
+
+/**
+ * Links `registry.professionals` to `public.persons` on council registration.
+ *
+ * A council registration is the one identifier both sides genuinely share: CNES
+ * publishes it, our reps type it, and `(council, UF, number)` is unique in both
+ * schemas. Names are not identity — five of our confirmed-same-person pairs
+ * already disagree on spelling — and the SUS id only matches people some earlier
+ * backfill happened to stamp, which no doctor added by hand since will carry.
+ *
+ * Without this, a doctor a rep entered last week reappears next month as somebody
+ * CNES knows and we do not. The sheet offers to import them, and the import is
+ * refused by the `(council, UF, number)` unique — a duplicate prevented by error
+ * message rather than by recognising the person. This is the step that recognises
+ * them.
+ *
+ * Runs after everything else: the registrations it matches on are written by
+ * step 5, and a bridge is worth nothing if the load it describes was refused.
+ */
+async function bridgeByRegistration(db: AnyDatabase): Promise<BridgeResult> {
+  /**
+   * Three conditions, each guarding a different way this could attach a clinic's
+   * roster to the wrong human:
+   *
+   *  - `atlasmed_id is null` — the column is user-authorable. A human who
+   *    corrected a link outranks anything derived here, and a monthly job that
+   *    silently reverts their correction is worse than one that never ran.
+   *  - one person per SUS id, and one SUS id per person. Anything else is a
+   *    guess, and `registry_professionals_atlasmed_id_uidx` would abort the whole
+   *    statement on the second claim to one person anyway.
+   *  - only active registrations, and no soft-deleted person. A registration
+   *    someone deactivated is one they disowned; identity should not rest on it.
+   */
+  const [row] = (await db.execute(sql`
+    with candidate as (
+      select rr.professional_cnes_id as sus, ppr.person_id
+        from registry.professional_registrations rr
+        join registry.professional_councils rc
+          on rc.cnes_id = rr.council_cnes_id
+        join person_professional_registration_councils c
+          on c.abbreviation = rc.abbreviation
+        join person_professional_registrations ppr
+          on ppr.council_id = c.id
+         and ppr.state_code = rr.state_code
+         and ppr.registration_number = rr.registration_number
+         and ppr.is_active
+        join persons p
+          on p.id = ppr.person_id
+         and p.deleted_at is null
+        join registry.professionals rp
+          on rp.cnes_id = rr.professional_cnes_id
+         and rp.atlasmed_id is null
+       group by rr.professional_cnes_id, ppr.person_id
+    ),
+    one_person_per_sus as (
+      select sus, min(person_id) as person_id
+        from candidate
+       group by sus
+      having count(*) = 1
+    ),
+    -- Two SUS ids matching one person means the registry holds that doctor twice,
+    -- or one of the registrations is wrong. Either way it is not ours to resolve.
+    one_sus_per_person as (
+      select person_id
+        from one_person_per_sus
+       group by person_id
+      having count(*) = 1
+    ),
+    eligible as (
+      select s.sus, s.person_id
+        from one_person_per_sus s
+        join one_sus_per_person u on u.person_id = s.person_id
+       where not exists (
+         select 1 from registry.professionals taken
+          where taken.atlasmed_id = s.person_id
+       )
+    ),
+    linked as (
+      update registry.professionals rp
+         set atlasmed_id = e.person_id, updated_at = now()
+        from eligible e
+       where rp.cnes_id = e.sus
+      returning 1
+    )
+    select
+      (select count(*) from linked)                                   as linked,
+      (select count(*) from candidate) - (select count(*) from eligible) as ambiguous
+  `)) as unknown as { linked: number | string; ambiguous: number | string }[];
+
+  return {
+    // `count(*)` comes back as bigint, which the driver renders as a string.
+    linked: Number(row?.linked ?? 0),
+    ambiguous: Number(row?.ambiguous ?? 0),
+  };
 }
