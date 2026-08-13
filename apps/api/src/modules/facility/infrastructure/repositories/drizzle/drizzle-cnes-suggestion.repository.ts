@@ -2,8 +2,9 @@ import { sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 
 /**
- * Professionals CNES associates with a clinic that already exist in our
- * database, minus the ones a user has already linked (spec 0012 §5).
+ * Everyone CNES associates with a clinic, in three states: people we hold and
+ * have not linked here, people we do not hold at all, and people already linked
+ * (spec 0012 §5–§6).
  *
  * **Read-only, and it stays in the facility module.** ADR 0006 excludes a
  * `/registry/*` API module; the registry is reference data serving a facility
@@ -18,10 +19,20 @@ import { db } from "../../../../../infrastructure/database/db";
  */
 
 export interface CnesSuggestion {
-  personId: number;
-  firstName: string;
-  lastName: string;
+  /** `CO_PROFISSIONAL_SUS` — how the import names whom it is creating. */
+  professionalCnesId: string;
+  /**
+   * Null when CNES places this person here and we do not hold them under any
+   * identity. Those are the ones a rep imports; everything else about the row
+   * still comes from the registry, so it is renderable either way.
+   */
+  personId: number | null;
+  firstName: string | null;
+  lastName: string | null;
   socialName: string | null;
+  /** What CNES calls them — the only name available for someone unmatched. */
+  registryFullName: string;
+  registrySocialName: string | null;
   /** CBOs CNES records for this person **at this clinic**, not globally. */
   occupations: string[];
   registrationNumber: string | null;
@@ -128,10 +139,13 @@ export class DrizzleCnesSuggestionRepository {
   }): Promise<CnesSuggestion[]> {
     const rows = (await db.execute(sql`
       select
+        rp.cnes_id                         as professional_cnes_id,
         p.id                               as person_id,
         p.first_name                       as first_name,
         p.last_name                        as last_name,
         p.social_name                      as social_name,
+        rp.full_name                       as registry_full_name,
+        rp.social_name                     as registry_social_name,
         coalesce(
           array_agg(distinct ro.name) filter (where ro.name is not null),
           '{}'
@@ -156,11 +170,17 @@ export class DrizzleCnesSuggestionRepository {
        * that same month, already says who they are.
        *
        * The bridge wins where both exist. It is the one a human can correct.
+       *
+       * Neither resolving is not an omission: CNES places roughly 18 000 people
+       * at our clinics whom we do not hold under any identity, and they are the
+       * ones a rep needs to import. Dropping them made the tab quietly claim
+       * CNES knew nobody else here.
        */
       left join person_healthcare_profiles hp
         on hp.cnes_professional_id = rp.cnes_id
-      join persons p
+      left join persons p
         on p.id = coalesce(rp.atlasmed_id, hp.person_id)
+       and p.deleted_at is null
       left join registry.facility_professional_occupations fo
         on fo.facility_cnes_id = fp.facility_cnes_id
        and fo.professional_cnes_id = fp.professional_cnes_id
@@ -188,17 +208,37 @@ export class DrizzleCnesSuggestionRepository {
             and pfc.code = 'HEALTHCARE_PROFESSIONAL'
        )
       where rf.atlasmed_id = ${input.facilityId}
-        and p.deleted_at is null
-      group by p.id, p.first_name, p.last_name, p.social_name
-      -- Unlinked first: the suggestions are the actionable half, and the linked
-      -- rows are context for how much of this clinic CNES already agrees with.
-      order by bool_or(pf.id is not null), p.first_name, p.last_name
+      /*
+       * Grouped by the registry professional, not by the person: that is the
+       * grain of what CNES claims, and it is the only key every row has. A
+       * person resolves to at most one registry row anyway — cnes_professional_id
+       * and atlasmed_id are both unique, and the loader refuses to bridge someone
+       * another professional already reaches.
+       */
+      group by rp.cnes_id, rp.full_name, rp.social_name,
+               p.id, p.first_name, p.last_name, p.social_name
+      /*
+       * Three tiers: people we hold and have not linked, then people we do not
+       * hold at all, then the ones already linked here.
+       *
+       * The already-linked rows are context rather than work, so they sit last.
+       * Importing someone is a heavier action than associating someone, so the
+       * rows a rep can act on cheaply come first.
+       */
+      order by
+        bool_or(pf.id is not null),
+        (p.id is null),
+        coalesce(p.first_name, rp.full_name),
+        p.last_name
       limit ${input.limit}
     `)) as unknown as {
-      person_id: number;
-      first_name: string;
-      last_name: string;
+      professional_cnes_id: string;
+      person_id: number | string | null;
+      first_name: string | null;
+      last_name: string | null;
       social_name: string | null;
+      registry_full_name: string;
+      registry_social_name: string | null;
       occupations: string[] | null;
       registration_number: string | null;
       registration_state_code: string | null;
@@ -207,15 +247,21 @@ export class DrizzleCnesSuggestionRepository {
     }[];
 
     return rows.map((row) => ({
+      professionalCnesId: row.professional_cnes_id,
       // `persons.id` is bigint, and the driver hands those back as strings to
       // avoid precision loss. Passing it through gave a payload whose personId
       // was `"410"` while this type said `number` — the API looked correct in
       // every test and the client threw on the cast, which surfaced as "could
       // not consult CNES" rather than as a type error.
-      personId: Number(row.person_id),
+      //
+      // Null now means something: CNES places this person here and we do not
+      // hold them. It is not an error and must not be coerced to 0.
+      personId: row.person_id == null ? null : Number(row.person_id),
       firstName: row.first_name,
       lastName: row.last_name,
       socialName: row.social_name,
+      registryFullName: row.registry_full_name,
+      registrySocialName: row.registry_social_name,
       occupations: row.occupations ?? [],
       registrationNumber: row.registration_number,
       registrationStateCode: row.registration_state_code,

@@ -13,7 +13,16 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
 export interface CnesSuggestionItem {
-  personId: number;
+  /**
+   * Null when we do not hold this person under any identity — CNES places them
+   * at the clinic and nothing on our side matches. The rep imports them rather
+   * than associating them, which is why the field is nullable rather than the
+   * row being dropped: ~18 000 of the people CNES reports at our clinics are in
+   * this state, and omitting them made the tab claim CNES knew nobody else.
+   */
+  personId: number | null;
+  /** `CO_PROFISSIONAL_SUS` — what an import names, since there is no personId. */
+  professionalCnesId: string;
   displayName: string;
   /** "MEDICO ORTOPEDISTA E TRAUMATOLOGISTA" — what makes the row useful. */
   occupation: string | null;
@@ -47,10 +56,21 @@ export interface CnesSuggestionsResponse {
   hasMore: boolean;
 }
 
+/**
+ * Our name for them when we have one, CNES's otherwise.
+ *
+ * Ours wins because it is the name a rep typed and will recognise; the registry
+ * ships uppercase legal names that disagree with ours on ~0.5 % of confirmed
+ * matches — dropped middle names, married names, the occasional typo.
+ */
 function displayNameOf(row: CnesSuggestion): string {
   const social = row.socialName?.trim();
   if (social) return social;
-  return `${row.firstName} ${row.lastName}`.trim();
+  const ours = `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim();
+  if (ours) return ours;
+  const registrySocial = row.registrySocialName?.trim();
+  if (registrySocial) return registrySocial;
+  return row.registryFullName.trim();
 }
 
 function registrationLabelOf(row: CnesSuggestion): string | null {
@@ -101,6 +121,7 @@ export class ListCnesSuggestionsUseCase {
     return {
       items: rows.slice(0, limit).map((row) => ({
         personId: row.personId,
+        professionalCnesId: row.professionalCnesId,
         displayName: displayNameOf(row),
         occupation: row.occupations[0] ?? null,
         occupations: row.occupations,

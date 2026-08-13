@@ -810,9 +810,16 @@ async function bridgeByRegistration(db: AnyDatabase): Promise<BridgeResult> {
         join persons p
           on p.id = ppr.person_id
          and p.deleted_at is null
+        -- Not already reachable from a *different* registry professional by SUS
+        -- id. Bridging them anyway would put one human in the suggestion list
+        -- twice, once by each route, and neither copy would be wrong.
+        left join person_healthcare_profiles hp
+          on hp.person_id = ppr.person_id
         join registry.professionals rp
           on rp.cnes_id = rr.professional_cnes_id
          and rp.atlasmed_id is null
+       where hp.cnes_professional_id is null
+          or hp.cnes_professional_id = rr.professional_cnes_id
        group by rr.professional_cnes_id, ppr.person_id
     ),
     one_person_per_sus as (

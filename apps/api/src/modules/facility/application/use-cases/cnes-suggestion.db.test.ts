@@ -266,8 +266,11 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
      */
     expect(result.items.length).toBeGreaterThan(0);
     for (const item of result.items) {
-      expect(typeof item.personId).toBe("number");
+      // Null is a real answer — CNES places them here and we do not hold them.
+      // A string is not, and never coerce the null to 0: that names person 0.
+      if (item.personId !== null) expect(typeof item.personId).toBe("number");
     }
+    expect(result.items.some((i) => i.personId === null)).toBe(true);
   });
 
   it("labels someone already linked rather than dropping them", async () => {
@@ -318,12 +321,34 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
     expect(bridgedRow!.alreadyLinked).toBe(false);
   });
 
-  it("omits registry people who do not exist on our side", async () => {
+  it("returns registry people we do not hold, named by CNES", async () => {
     const result = await useCase.execute({ facilityId: fixture.facilityId });
-    // Five registry vínculos here; the one unknown to us under either route is
-    // omitted, leaving four — one of them labelled as already linked.
-    expect(result.items).toHaveLength(4);
-    expect(result.items.filter((i) => !i.alreadyLinked)).toHaveLength(3);
+    /**
+     * Every registry vínculo appears — five here, none dropped. The one we hold
+     * under no identity carries `personId: null` and CNES's own name, because a
+     * rep cannot import somebody the list never showed them.
+     */
+    expect(result.items).toHaveLength(5);
+
+    const unknown = result.items.find(
+      (i) => i.professionalCnesId === SUS_UNKNOWN
+    );
+    expect(unknown).toBeDefined();
+    expect(unknown!.personId).toBeNull();
+    expect(unknown!.displayName).toBe("DOUTOR DESCONHECIDO");
+    expect(unknown!.alreadyLinked).toBe(false);
+  });
+
+  it("orders actionable rows ahead of context", async () => {
+    const result = await useCase.execute({ facilityId: fixture.facilityId });
+    /**
+     * Associating is one tap; importing asks the rep to fill a profile; an
+     * already-linked row is neither. Cheapest work first, context last.
+     */
+    const tier = (i: (typeof result.items)[number]) =>
+      i.alreadyLinked ? 2 : i.personId === null ? 1 : 0;
+    const tiers = result.items.map(tier);
+    expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
   });
 
   it("reports the loaded competence so the UI can date the snapshot", async () => {

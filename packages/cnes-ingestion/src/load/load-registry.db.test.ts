@@ -439,6 +439,33 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
       });
     });
 
+    it("skips a person another professional already reaches by SUS id", async () => {
+      await rolledBack(async (tx) => {
+        await warmUp(tx);
+        // This person is already resolvable from the *nurse's* registry row via
+        // `cnes_professional_id`. Bridging the doctor's row to them as well would
+        // put one human in the suggestion list twice, once by each route.
+        const personId = await seedPersonWithRegistration(tx, {
+          firstName: "Already Reachable",
+          stateCode: "SP",
+          registrationNumber: DOCTOR_CRM,
+        });
+        await tx.execute(sql`
+          update person_healthcare_profiles set cnes_professional_id = ${NURSE_SUS}
+           where person_id = ${personId};
+        `);
+
+        const result = await loadRegistryFromCsv({
+          db: tx,
+          csvDir: join(dir, "with-doctor"),
+          reference: REFERENCE,
+        });
+
+        expect(result.professionalsBridged).toBe(0);
+        expect(await bridgeOf(tx, DOCTOR_SUS)).toBeNull();
+      });
+    });
+
     it("ignores a registration its owner deactivated", async () => {
       await rolledBack(async (tx) => {
         await warmUp(tx);
