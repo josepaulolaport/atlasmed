@@ -8,6 +8,7 @@ import {
   personUseCases,
 } from "../../../person/composition";
 import { ListCnesSuggestionsUseCase } from "../../application/use-cases/cnes-suggestion.use-cases";
+import { ImportCnesProfessionalUseCase } from "../../application/use-cases/cnes-import.use-cases";
 
 type Executable = { execute(input: any): Promise<any> };
 
@@ -191,6 +192,62 @@ const patchHealthcareRoute = (
         },
         params: affiliationParams,
         body: t.Object(patchBody),
+      }
+    );
+
+/**
+ * Create one of our people from a professional CNES places here (spec 0012 §6).
+ *
+ * `create PERSON` + `read FACILITY`, the same pair the sibling create route
+ * carries — this creates a person and links them, so it is that action with the
+ * identity taken from the registry instead of from the request.
+ *
+ * **Any role may import.** The gate is access to the clinic, not seniority: a
+ * rep standing in a clinic is the person who knows whether CNES is right, and
+ * routing it through someone else's queue means the roster stays wrong until
+ * they get to it.
+ */
+const importCnesProfessionalRoute = (
+  useCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("create", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .post(
+      "/facilities/:id/healthcare-professionals/cnes-imports",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCase.execute({
+          facilityId: params.id,
+          scope,
+          ...body,
+        });
+      },
+      {
+        detail: {
+          summary: "Create a person from a CNES-registered professional",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object({
+          professionalCnesId: t.String({ minLength: 1 }),
+          /*
+           * Names only. The council registration is deliberately absent: it is
+           * copied from the registry, because it is the field that has to match
+           * CNES and the one a hurried rep is most likely to mistype.
+           */
+          firstName: t.Optional(t.String({ minLength: 1 })),
+          lastName: t.Optional(t.String({ minLength: 1 })),
+          socialName: t.Optional(t.Union([t.String(), t.Null()])),
+          cpf: t.Optional(
+            t.Union([t.String({ minLength: 11, maxLength: 11 }), t.Null()])
+          ),
+          email: t.Optional(t.Union([t.String(), t.Null()])),
+          mobilePhone: t.Optional(t.Union([t.String(), t.Null()])),
+        }),
       }
     );
 
@@ -482,7 +539,8 @@ const deleteAdminRoute = (
 export function createPersonProjectionsRoutes(
   useCases: PersonProjectionsHttpUseCases = personUseCases,
   authPlugin: any = auth,
-  cnesSuggestionsUseCase: Executable = new ListCnesSuggestionsUseCase()
+  cnesSuggestionsUseCase: Executable = new ListCnesSuggestionsUseCase(),
+  cnesImportUseCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase()
 ) {
   return new Elysia()
     /**
@@ -495,6 +553,9 @@ export function createPersonProjectionsRoutes(
      * The order here is only for readability, and the test is the real guard.
      */
     .use(listCnesSuggestionsRoute(cnesSuggestionsUseCase, authPlugin))
+    // Static segment, same as `cnes-suggestions` above, and registered before
+    // the `:personFacilityId` routes for the same reason.
+    .use(importCnesProfessionalRoute(cnesImportUseCase, authPlugin))
     .use(listHealthcareRoute(useCases, authPlugin))
     .use(createHealthcareRoute(useCases, authPlugin))
     .use(getHealthcareRoute(useCases, authPlugin))
