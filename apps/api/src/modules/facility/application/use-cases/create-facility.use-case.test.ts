@@ -150,6 +150,7 @@ function inMemoryRepository(): FacilityRepository & {
     findAllByIds: async () => [],
     findById: async (id) => stored.get(id) ?? null,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypesInUse: async () => [],
     create: async (data) => {
       const id = nextId++;
       // Mirrors the adapter contract: facility and profile land together.

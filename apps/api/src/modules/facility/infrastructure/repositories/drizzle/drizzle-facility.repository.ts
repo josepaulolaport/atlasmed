@@ -12,6 +12,7 @@ import {
   orderItems,
   municipalities,
   states,
+  unitTypes,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
@@ -472,6 +473,13 @@ export function buildFacilityListConditions(params: {
   purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
   purchaseIntervalMinDays?: number;
   purchaseIntervalMaxDays?: number;
+  /**
+   * CNES unit type. OR, not AND: a facility has exactly one, so requiring all
+   * of several would always return nothing.
+   */
+  unitTypeIds?: number[];
+  /** CNPJ or CPF. Single value — the enum has only these two. */
+  legalDocumentType?: "CNPJ" | "CPF";
   candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
@@ -524,15 +532,38 @@ export function buildFacilityListConditions(params: {
     conditions.push(activeProfileMatchCondition(verticalIds, [stageCond]));
   }
   // Orders reach the facility through the profile since spec 0010 §4.
-  if (params.productIds?.length) conditions.push(inArray(facilities.id,
-    db.select({ facilityId: facilityVerticalProfiles.facilityId })
-      .from(orders)
-      .innerJoin(
-        facilityVerticalProfiles,
-        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
-      )
-      .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-      .where(inArray(orderItems.productId, params.productIds))));
+  //
+  // AND: the clinic must have bought every selected product, matching the
+  // clinical-focus filter below. This was OR — "bought any of these" — which
+  // made two filters that look identical in the UI behave in opposite
+  // directions, so adding a product widened the results here and narrowed them
+  // there.
+  if (params.productIds?.length) {
+    const ids = [...new Set(params.productIds)];
+    conditions.push(inArray(facilities.id,
+      db.select({ facilityId: facilityVerticalProfiles.facilityId })
+        .from(orders)
+        .innerJoin(
+          facilityVerticalProfiles,
+          eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+        )
+        .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+        .where(inArray(orderItems.productId, ids))
+        .groupBy(facilityVerticalProfiles.facilityId)
+        .having(
+          sql`count(distinct ${orderItems.productId}) = ${ids.length}`,
+        )));
+  }
+  if (params.unitTypeIds?.length) {
+    conditions.push(
+      inArray(facilities.unitTypeId, [...new Set(params.unitTypeIds)]),
+    );
+  }
+  if (params.legalDocumentType) {
+    conditions.push(
+      eq(facilities.legalDocumentType, params.legalDocumentType),
+    );
+  }
   if (params.clinicalFocusIds?.length) {
     // AND: clinic must offer every selected clinical focus.
     const ids = [...new Set(params.clinicalFocusIds)];
@@ -851,6 +882,32 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       candidateIds: params.ids,
     });
     return rows;
+  }
+
+  /**
+   * Unit types some active facility actually has.
+   *
+   * Joined rather than listing `unit_types` outright: CNES defines 39 and 12
+   * are in use, so the catalogue would offer reps 27 options that can only
+   * return an empty list.
+   */
+  async listUnitTypesInUse(): Promise<FacilityClinicalFocus[]> {
+    const rows = await db
+      .selectDistinct({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        cnesCode: unitTypes.cnesId,
+      })
+      .from(unitTypes)
+      .innerJoin(facilities, eq(facilities.unitTypeId, unitTypes.id))
+      .where(isNull(facilities.deactivatedAt))
+      .orderBy(asc(unitTypes.name));
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      cnesCode: row.cnesCode,
+    }));
   }
 
   async listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]> {

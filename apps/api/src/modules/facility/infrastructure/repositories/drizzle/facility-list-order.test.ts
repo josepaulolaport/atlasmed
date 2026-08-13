@@ -1,7 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { buildFacilityListOrderBy } from "./drizzle-facility.repository";
+import {
+  buildFacilityListConditions,
+  buildFacilityListOrderBy,
+} from "./drizzle-facility.repository";
 
 /**
  * Explorar offers "Nome A–Z" and "Nome Z–A" for clinics, and neither worked.
@@ -67,5 +70,58 @@ describe("buildFacilityListOrderBy", () => {
     const funnel = renderOrderBy({ sort: "purchaseFunnelStage", order: "desc" });
     expect(funnel).toContain("desc");
     expect(funnel).not.toBe(renderOrderBy({ sort: "name", order: "desc" }));
+  });
+});
+
+const globalScope = { isGlobal: true } as const;
+
+function renderConditions(
+  params: Omit<Parameters<typeof buildFacilityListConditions>[0], "scope">,
+) {
+  const conditions = buildFacilityListConditions({ ...params, scope: globalScope });
+  return dialect.sqlToQuery(conditions!).sql;
+}
+
+describe("buildFacilityListConditions", () => {
+  it("requires every selected product, not any of them", () => {
+    // Products used OR while clinical focuses used AND, so two filters that
+    // look the same in the UI moved the result set in opposite directions:
+    // adding a product widened it, adding a focus narrowed it.
+    const sql = renderConditions({ productIds: [1, 2, 3] });
+    expect(sql).toContain("count(distinct");
+    expect(sql).toContain("= $");
+  });
+
+  it("matches clinical focuses the same way", () => {
+    const sql = renderConditions({ clinicalFocusIds: [4, 5] });
+    expect(sql).toContain("count(distinct");
+  });
+
+  it("de-duplicates ids so a repeat cannot make the count unreachable", () => {
+    // "1,1,2" is two distinct products. Counting the raw length would demand
+    // three distinct matches and return nothing at all.
+    const repeated = renderConditions({ productIds: [1, 1, 2] });
+    const distinct = renderConditions({ productIds: [1, 2] });
+    expect(repeated).toBe(distinct);
+  });
+
+  it("matches any of the selected unit types", () => {
+    // OR, deliberately: a facility has exactly one unit type, so AND across
+    // several would always be empty.
+    const sql = renderConditions({ unitTypeIds: [3, 7] });
+    expect(sql).toContain('"facilities"."unit_type_id" in');
+    expect(sql).not.toContain("count(distinct");
+  });
+
+  it("filters on the legal document type", () => {
+    expect(renderConditions({ legalDocumentType: "CNPJ" })).toContain(
+      '"facilities"."legal_document_type" = ',
+    );
+  });
+
+  it("adds nothing for either new filter when they are absent", () => {
+    const base = renderConditions({});
+    expect(base).not.toContain("unit_type_id");
+    expect(base).not.toContain("legal_document_type");
   });
 });

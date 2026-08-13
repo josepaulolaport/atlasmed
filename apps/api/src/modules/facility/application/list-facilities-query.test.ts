@@ -71,6 +71,41 @@ describe("parseListFacilitiesQuery", () => {
     });
   });
 
+  it("parses unit type ids as a comma-separated list", () => {
+    expect(parseListFacilitiesQuery({ unitTypeIds: "3,7" })).toMatchObject({
+      unitTypeIds: [3, 7],
+    });
+    // Same shape as productIds/clinicalFocusIds: a present-but-unusable value
+    // is a client bug and should be rejected rather than silently ignored,
+    // which would return an unfiltered list the rep believes is filtered.
+    expect(() => parseListFacilitiesQuery({ unitTypeIds: "" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ unitTypeIds: "abc" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ unitTypeIds: "-1" })).toThrow();
+  });
+
+  it("accepts only CNPJ or CPF as the legal document type", () => {
+    expect(
+      parseListFacilitiesQuery({ legalDocumentType: "CNPJ" }),
+    ).toMatchObject({ legalDocumentType: "CNPJ" });
+    expect(parseListFacilitiesQuery({ legalDocumentType: "CPF" })).toMatchObject(
+      { legalDocumentType: "CPF" },
+    );
+    expect(() =>
+      parseListFacilitiesQuery({ legalDocumentType: "MEI" }),
+    ).toThrow();
+    expect(() =>
+      parseListFacilitiesQuery({ legalDocumentType: "cnpj" }),
+    ).toThrow();
+  });
+
+  it("leaves both new filters undefined when absent", () => {
+    // Absent must stay absent: defaulting either would filter a list the rep
+    // did not ask to filter.
+    const parsed = parseListFacilitiesQuery({});
+    expect(parsed.unitTypeIds).toBeUndefined();
+    expect(parsed.legalDocumentType).toBeUndefined();
+  });
+
   it("maps funnel stages back to Desempenho buckets", () => {
     expect(funnelStageToPurchaseBucket("PURCHASE_WINDOW")).toBe("active");
     expect(funnelStageToPurchaseBucket("OUTSIDE_WINDOW")).toBe("inactive");

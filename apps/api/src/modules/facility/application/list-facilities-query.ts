@@ -5,6 +5,8 @@ const PURCHASE_FUNNEL_STAGES = ["NEVER_PURCHASED", "OUTSIDE_WINDOW", "PURCHASE_W
 const PURCHASE_PROFILES = ["AUTOMATIC", "WEEKLY", "BIWEEKLY", "MONTHLY", "BIMONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL", "CUSTOM"] as const;
 const SORTS = ["relevance", "distance", "name", "purchaseFunnelStage", "purchaseIntervalDays", "lastPurchaseDate"] as const;
 const ORDERS = ["asc", "desc"] as const;
+/** Mirrors `facility_legal_document_type` in the database. */
+const LEGAL_DOCUMENT_TYPES = ["CNPJ", "CPF"] as const;
 
 /** Dashboard / Desempenho purchase buckets (matches countPurchaseBuckets SQL). */
 const PURCHASE_BUCKETS = ["active", "inactive", "neverBought"] as const;
@@ -15,6 +17,7 @@ export type FacilityPurchaseProfileFilter = (typeof PURCHASE_PROFILES)[number];
 export type FacilityPurchaseBucket = (typeof PURCHASE_BUCKETS)[number];
 export type FacilitySearchSort = (typeof SORTS)[number];
 export type FacilitySearchOrder = (typeof ORDERS)[number];
+export type FacilityLegalDocumentType = (typeof LEGAL_DOCUMENT_TYPES)[number];
 
 /**
  * Desempenho donut buckets → `facilities.purchase_funnel_stage`.
@@ -67,9 +70,16 @@ export interface ListFacilitiesQuery {
   commercialStatus?: FacilityCommercialStatus;
   /** Purchase-status bucket from Desempenho donut drill-down. */
   purchaseBucket?: FacilityPurchaseBucket;
+  /** Product IDs — AND semantics (clinic must have bought all). */
   productIds?: number[];
   /** Clinical focus IDs — AND semantics (clinic must have all). */
   clinicalFocusIds?: number[];
+  /**
+   * CNES unit type IDs — OR semantics. A facility has exactly one unit type,
+   * so AND across several would match nothing.
+   */
+  unitTypeIds?: number[];
+  legalDocumentType?: FacilityLegalDocumentType;
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;
   purchaseIntervalMinDays?: number;
@@ -100,6 +110,13 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
         .map((id) => Number.parseInt(id.trim(), 10))
         .filter((id) => Number.isInteger(id) && id > 0)
     : undefined;
+  const unitTypeIds = typeof query.unitTypeIds === "string"
+    ? query.unitTypeIds
+        .split(",")
+        .map((id) => Number.parseInt(id.trim(), 10))
+        .filter((id) => Number.isInteger(id) && id > 0)
+    : undefined;
+  const legalDocumentType = query.legalDocumentType;
   const purchaseFunnelStages = typeof query.purchaseFunnelStage === "string"
     ? query.purchaseFunnelStage.split(",").map((stage) => stage.trim()).filter(Boolean)
     : undefined;
@@ -138,6 +155,22 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
       message: "clinicalFocusIds must be a comma-separated list of positive integers",
     });
   }
+  if (query.unitTypeIds !== undefined && (!unitTypeIds || unitTypeIds.length === 0)) {
+    issues.push({
+      field: "unitTypeIds",
+      message: "unitTypeIds must be a comma-separated list of positive integers",
+    });
+  }
+  if (
+    legalDocumentType !== undefined &&
+    (typeof legalDocumentType !== "string" ||
+      !LEGAL_DOCUMENT_TYPES.includes(legalDocumentType as FacilityLegalDocumentType))
+  ) {
+    issues.push({
+      field: "legalDocumentType",
+      message: "legalDocumentType must be CNPJ or CPF",
+    });
+  }
   if (query.purchaseFunnelStage !== undefined && (!purchaseFunnelStages?.length || purchaseFunnelStages.some((stage) => !PURCHASE_FUNNEL_STAGES.includes(stage as FacilityPurchaseFunnelStage)))) issues.push({ field: "purchaseFunnelStage", message: "purchaseFunnelStage is invalid" });
   if (purchaseProfile !== undefined && (typeof purchaseProfile !== "string" || !PURCHASE_PROFILES.includes(purchaseProfile as FacilityPurchaseProfileFilter))) issues.push({ field: "purchaseProfile", message: "purchaseProfile is invalid" });
   if (purchaseIntervalMinDays !== undefined && (!Number.isInteger(purchaseIntervalMinDays) || purchaseIntervalMinDays < 1 || purchaseIntervalMinDays > 3650)) issues.push({ field: "purchaseIntervalMinDays", message: "purchaseIntervalMinDays must be an integer between 1 and 3650" });
@@ -157,6 +190,8 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     purchaseBucket: purchaseBucket as FacilityPurchaseBucket | undefined,
     productIds,
     clinicalFocusIds,
+    unitTypeIds,
+    legalDocumentType: legalDocumentType as FacilityLegalDocumentType | undefined,
     purchaseFunnelStages: purchaseFunnelStages as FacilityPurchaseFunnelStage[] | undefined,
     purchaseProfile: purchaseProfile as FacilityPurchaseProfileFilter | undefined,
     purchaseIntervalMinDays,

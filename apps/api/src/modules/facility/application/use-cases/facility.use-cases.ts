@@ -80,6 +80,8 @@ export class ListFacilitiesUseCase {
     purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: number[];
     clinicalFocusIds?: number[];
+    unitTypeIds?: number[];
+    legalDocumentType?: "CNPJ" | "CPF";
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -115,6 +117,8 @@ export class ListFacilitiesUseCase {
         purchaseBucket: input.purchaseBucket,
         productIds: input.productIds,
         clinicalFocusIds: input.clinicalFocusIds,
+        unitTypeIds: input.unitTypeIds,
+        legalDocumentType: input.legalDocumentType,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -228,6 +232,8 @@ export class ListFacilitiesUseCase {
           purchaseBucket: input.purchaseBucket,
           productIds: input.productIds,
           clinicalFocusIds: input.clinicalFocusIds,
+          unitTypeIds: input.unitTypeIds,
+          legalDocumentType: input.legalDocumentType,
           purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile,
           purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -261,6 +267,28 @@ export class ListFacilitiesUseCase {
       });
       return listFromSql(search);
     }
+  }
+}
+
+/**
+ * Unit types offered as filter options.
+ *
+ * Only those some active facility actually has: the CNES table defines 39 and
+ * 12 are in use, so listing the catalogue would give reps 27 options that
+ * always return nothing.
+ */
+export class ListFacilityUnitTypesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute() {
+    const catalog = await this.deps.facilityRepository.listUnitTypesInUse();
+    return {
+      data: catalog.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cnesCode: row.cnesCode ?? undefined,
+      })),
+    };
   }
 }
 
