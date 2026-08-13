@@ -9,7 +9,7 @@ export type EmultecClientForFacilityResolve = {
   pjCnpjDigits: string | null;
 };
 
-export type CnesEligibleFacility = {
+export type ResolvableFacility = {
   id: number;
   idClienteEmultec: number | null;
   legalDocument: string | null;
@@ -20,21 +20,23 @@ export type FacilityResolveResult =
   | { ok: true; facilityId: number; via: "id_cliente_emultec" | "cnpj" | "cpf" }
   | {
       ok: false;
-      reason:
-        | "no_match"
-        | "ambiguous"
-        | "no_document"
-        | "id_cliente_not_cnes_eligible";
+      reason: "no_match" | "ambiguous" | "no_document";
     };
 
 /**
- * Pure facility resolve per import locks.
- * `candidates` must already be CNES-eligible (cnes_code set, active).
+ * Pure facility resolve: stamp → PF→PJ CNPJ → CNPJ-14 → CPF-11.
+ *
+ * `candidates` must be active (`deactivated_at is null`). They used to also be
+ * required to carry a `cnes_code`, which meant a facility matching the client's
+ * CNPJ exactly was invisible to the importer unless it was CNES-registered —
+ * a rule that blocks individual surgeons and distributors by construction.
+ * Identity here is the document and the Emultec client id; CNES registration is
+ * a property of the establishment, not a precondition for recognising it.
  */
 export function resolveEmultecFacility(
   client: EmultecClientForFacilityResolve,
-  candidates: CnesEligibleFacility[],
-  byIdCliente: Map<number, CnesEligibleFacility>
+  candidates: ResolvableFacility[],
+  byIdCliente: Map<number, ResolvableFacility>
 ): FacilityResolveResult {
   const stamped = byIdCliente.get(client.idCliente);
   if (stamped) {
@@ -62,7 +64,7 @@ export function resolveEmultecFacility(
 }
 
 function matchByDigits(
-  candidates: CnesEligibleFacility[],
+  candidates: ResolvableFacility[],
   digits: string,
   type: "CNPJ" | "CPF"
 ): FacilityResolveResult {

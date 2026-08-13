@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   businessVerticals,
   facilities,
@@ -78,6 +78,40 @@ function bump(reasons: Record<string, number>, key: string) {
   reasons[key] = (reasons[key] ?? 0) + 1;
 }
 
+/**
+ * Records the Emultec client id on a facility first reached by document, so the
+ * next import resolves it on the cheap `id_cliente_emultec` branch instead of
+ * re-deriving the match.
+ *
+ * Only ever fills a blank — never repoints a facility another client already
+ * owns. `facilities_id_cliente_emultec_uidx` is UNIQUE over non-null values, so
+ * a deactivated facility still holding this id would make the write throw;
+ * throwing here would dead-letter an order that resolved perfectly well, so the
+ * stamp is best-effort and the import continues without it.
+ */
+async function stampIdClienteEmultec(
+  facilityId: number,
+  idCliente: number
+): Promise<void> {
+  try {
+    await db
+      .update(facilities)
+      .set({ idClienteEmultec: idCliente })
+      .where(
+        and(
+          eq(facilities.id, facilityId),
+          isNull(facilities.idClienteEmultec)
+        )
+      );
+  } catch (error) {
+    logger.warn("emultec.order_import.stamp_failed", {
+      facilityId,
+      idCliente,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function findFacilityId(
   bundle: EmultecOrderBundle
 ): Promise<{ facilityId: number } | { skip: string }> {
@@ -92,9 +126,7 @@ async function findFacilityId(
     .where(
       and(
         eq(facilities.idClienteEmultec, bundle.idCliente),
-        isNull(facilities.deactivatedAt),
-        isNotNull(facilities.cnesCode),
-        sql`trim(${facilities.cnesCode}) <> ''`
+        isNull(facilities.deactivatedAt)
       )
     )
     .limit(1);
@@ -148,9 +180,7 @@ async function findFacilityId(
         and(
           eq(facilities.legalDocument, docDigits),
           eq(facilities.legalDocumentType, docType),
-          isNull(facilities.deactivatedAt),
-          isNotNull(facilities.cnesCode),
-          sql`trim(${facilities.cnesCode}) <> ''`
+          isNull(facilities.deactivatedAt)
         )
       );
   }
@@ -168,6 +198,15 @@ async function findFacilityId(
   );
 
   if (!resolved.ok) return { skip: `facility_${resolved.reason}` };
+
+  // Reached by the client's own CNPJ/CPF — record the link. The PF→PJ path is
+  // excluded deliberately: it matches the *parent* company's CNPJ, and many
+  // pessoa-física buyers share one parent, so stamping would bind the parent
+  // facility to whichever buyer happened to import first.
+  if (resolved.via !== "id_cliente_emultec" && bundle.idClientePj == null) {
+    await stampIdClienteEmultec(resolved.facilityId, bundle.idCliente);
+  }
+
   return { facilityId: resolved.facilityId };
 }
 

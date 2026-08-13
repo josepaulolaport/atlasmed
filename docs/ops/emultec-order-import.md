@@ -14,7 +14,7 @@ Import whitelist EVISC / REVISCON / TRUVISC lines from Emultec MySQL (`avulsa` �
 | Docker | worker host must run `docker run --rm mysql:8 …` against Emultec |
 | Products synced | `id_produto_emultec` for whitelist ids |
 | Sellers mapped | `users.id_vendedor_emultec` (manual) |
-| Facilities resolvable | CNES-eligible + stamp and/or unique CNPJ/CPF match |
+| Facilities resolvable | active + stamp and/or unique CNPJ/CPF match (CNES not required) |
 
 ## One-time / rare setup
 
@@ -32,7 +32,7 @@ UPDATE users SET id_vendedor_emultec = $<id>, updated_at = now()
 WHERE id = $<user_id> AND deleted_at IS NULL;
 ```
 
-Stamp `facilities.id_cliente_emultec` only on exact unique CNES CNPJ/CPF match. Do not stamp PF→PJ buyer ids.
+Stamping `facilities.id_cliente_emultec` by hand is now optional: the importer records it itself the first time a facility is reached by an exact unique CNPJ/CPF match, filling a blank only and never repointing an id another facility owns. PF→PJ buyer ids are still never stamped — that path matches the *parent* company's CNPJ, which many pessoa-física buyers share.
 
 ### 3. Provision 10-minute schedule (after deploy)
 
@@ -78,7 +78,7 @@ Also allowed: `emultec-order-import-every-10m` and CLI Temporal ids (`-backfill`
 | `RECONCILE` | Date window on `Data` / `Finalizado_Data` / `Sem_Faturamento_Data` |
 | `HYBRID` (default) | **DLQ replay** → RECONCILE → INCREMENTAL |
 
-Facility resolve: stamp → PF→PJ CNPJ → CNPJ-14 → CPF-11 (unique CNES only).
+Facility resolve: stamp → PF→PJ CNPJ → CNPJ-14 → CPF-11. Candidates must be active; a unique match is required (two active facilities on one document → `facility_ambiguous`). CNES registration is not a precondition — requiring it made a facility with an exact CNPJ match invisible to the importer, which excluded individual surgeons and distributors by construction.
 
 ## Digests and dead letters
 
