@@ -111,7 +111,9 @@ class CnesImportDraft {
   String? get cpfError {
     final value = cpf?.trim() ?? '';
     if (value.isEmpty) return null;
-    return RegExp(r'^\d{11}$').hasMatch(value) ? null : 'CPF deve ter 11 dígitos';
+    return RegExp(r'^\d{11}$').hasMatch(value)
+        ? null
+        : 'CPF deve ter 11 dígitos';
   }
 
   String? get birthDateError {

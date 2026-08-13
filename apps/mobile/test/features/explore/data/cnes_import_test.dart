@@ -95,11 +95,18 @@ void main() {
        * registration somebody already holds and names them instead, so the rep
        * ends up associating the person we had all along.
        */
+        // The envelope the API actually sends: every error is nested under
+        // `error`. A flat fixture here passed while the live 409 fell through
+        // to the failure path.
         final client = FakeClient([
           _json({
-            'code': 'CNES_REGISTRATION_ALREADY_HELD',
-            'personId': 5150,
-            'registrationLabel': 'CRM 100200/SP',
+            'error': {
+              'code': 'CNES_REGISTRATION_ALREADY_HELD',
+              'message':
+                  'CRM 100200/SP already belongs to an existing professional',
+              'personId': 5150,
+              'registrationLabel': 'CRM 100200/SP',
+            },
           }, statusCode: 409),
         ]);
         final repo = FacilityAssociateRepository(9, client: client);
@@ -151,7 +158,9 @@ void main() {
       // is nothing to associate, and pretending otherwise would report success
       // for a rep who got nothing.
       final client = FakeClient([
-        _json({'code': 'CNES_REGISTRATION_ALREADY_HELD'}, statusCode: 409),
+        _json({
+          'error': {'code': 'CNES_REGISTRATION_ALREADY_HELD'},
+        }, statusCode: 409),
       ]);
       final repo = FacilityAssociateRepository(9, client: client);
       addTearDown(repo.dispose);

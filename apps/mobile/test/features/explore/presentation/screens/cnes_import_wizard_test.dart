@@ -406,10 +406,14 @@ void main() {
      */
     final client = RecordingClient((request) {
       if (request.url.path.endsWith('/cnes-imports')) {
+        // Nested under `error`, as the API sends it. A flat fixture here
+        // passed while the live 409 fell straight through to the error path.
         return _json({
-          'code': 'CNES_REGISTRATION_ALREADY_HELD',
-          'personId': 5150,
-          'registrationLabel': 'CRM 100200/SP',
+          'error': {
+            'code': 'CNES_REGISTRATION_ALREADY_HELD',
+            'personId': 5150,
+            'registrationLabel': 'CRM 100200/SP',
+          },
         }, statusCode: 409);
       }
       return defaultHandler(request);

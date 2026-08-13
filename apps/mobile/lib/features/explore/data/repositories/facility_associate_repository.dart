@@ -243,10 +243,20 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     );
 
     if (response.statusCode == 409) {
-      // The registration belongs to someone we already hold. The payload
-      // carries their id precisely so this resolves instead of failing.
+      /*
+       * The registration belongs to someone we already hold. The payload
+       * carries their id precisely so this resolves instead of failing.
+       *
+       * The API nests every error under `error`. Reading the top level found
+       * nothing, so a real 409 fell through to the failure path and the person
+       * the server had named was never associated — and the widget test missed
+       * it by faking a flat body, which proved the parser against itself.
+       */
       final body = _decodeMap(response.body);
-      final personId = _asInt(body['personId']);
+      final nested = body['error'];
+      final personId = _asInt(
+        nested is Map ? nested['personId'] : body['personId'],
+      );
       if (personId != null) {
         return CnesImportResult(personId: personId, alreadyExisted: true);
       }
