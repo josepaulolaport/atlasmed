@@ -9,6 +9,7 @@ import type { FacilityRepository } from "../interfaces/facility.repository.inter
 import type {
   CadastroSubmissionRepository,
   DocumentFileRecord,
+  SubmissionDocumentRecord,
 } from "../interfaces/cadastro-submission.repository.interface";
 import {
   FacilityCadastroCompletionService,
@@ -29,6 +30,49 @@ const REQUIREMENT_SLUG_ORDER = [
   "carta_cnpj",
   "licenca_sanitaria",
 ] as const;
+
+/**
+ * A document still open for work: the checklist's "working document".
+ *
+ * Must stay identical to the status list in
+ * `CadastroSubmissionRepository.findWorkingDocument`. The checklist now decides
+ * this in memory over one facility-wide query rather than asking per
+ * requirement, so a status added there and not here would quietly stop being
+ * treated as open on this page while every other caller kept seeing it.
+ */
+const OPEN_DOCUMENT_STATUSES = new Set([
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "CHANGES_REQUESTED",
+]);
+
+/**
+ * Actually sent for review — the history the page shows. Mirrors the
+ * `excludeDraft: true` branch of `listDocumentsForFacilityRequirement`, which
+ * is why DRAFT/PROCESSING/READY are absent and SUPERSEDED is present.
+ */
+const SUBMITTED_DOCUMENT_STATUSES = new Set([
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "CHANGES_REQUESTED",
+  "SUPERSEDED",
+]);
+
+function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
+  const out = new Map<K, T[]>();
+  for (const item of items) {
+    const k = key(item);
+    const bucket = out.get(k);
+    if (bucket) bucket.push(item);
+    else out.set(k, [item]);
+  }
+  return out;
+}
 
 interface Dependencies {
   facilityRepository: FacilityRepository;
@@ -179,24 +223,57 @@ export class GetFacilityCadastroChecklistUseCase {
     );
     const recordByRequirement = new Map(records.map((r) => [r.requirementId, r]));
 
+    // The whole checklist's documents in one query, then grouped in memory.
+    //
+    // This used to ask per requirement: the working document, the history, and
+    // then the files of each — up to four round trips per row, which made
+    // /cadastro the slowest endpoint on the clinic screen at ~1.7s. The
+    // per-requirement helpers still exist and are still used elsewhere; the
+    // checklist just stopped calling them once per row.
+    const allDocuments = this.deps.cadastroRepository
+      ? await this.deps.cadastroRepository.listDocumentsByFacility(input.facilityId)
+      : [];
+    const documentsByRequirement = groupBy(allDocuments, (d) => d.requirementId);
+
+    // Both passes below read from the same already-sorted list, so the ordering
+    // the repository guarantees (version DESC, updatedAt DESC) is what decides
+    // "working" and "latest" — exactly as when Postgres decided it per query.
+    const workingByRequirement = new Map<number, SubmissionDocumentRecord>();
+    const historyByRequirement = new Map<number, SubmissionDocumentRecord[]>();
+    for (const [requirementId, docs] of documentsByRequirement) {
+      const working = docs.find((d) => OPEN_DOCUMENT_STATUSES.has(d.status));
+      if (working) workingByRequirement.set(requirementId, working);
+      historyByRequirement.set(
+        requirementId,
+        docs.filter((d) => SUBMITTED_DOCUMENT_STATUSES.has(d.status))
+      );
+    }
+
+    // One files query for every document the page will render — the working
+    // document and the approved one for each requirement.
+    const fileDocumentIds = new Set<number>();
+    for (const requirement of requirements) {
+      const history = historyByRequirement.get(requirement.id) ?? [];
+      const approved = history.find((d) => d.status === "APPROVED");
+      const working =
+        workingByRequirement.get(requirement.id) ?? approved ?? history[0];
+      if (working) fileDocumentIds.add(working.id);
+      if (approved) fileDocumentIds.add(approved.id);
+    }
+    const allFiles = this.deps.cadastroRepository
+      ? await this.deps.cadastroRepository.listDocumentFilesForDocuments([
+          ...fileDocumentIds,
+        ])
+      : [];
+    const filesByDocument = groupBy(allFiles, (f) => f.submissionDocumentId);
+
     const documents = await Promise.all(
       requirements.map(async (requirement) => {
         const record = recordByRequirement.get(requirement.id);
 
-        const workingDocument = this.deps.cadastroRepository
-          ? await this.deps.cadastroRepository.findWorkingDocument({
-              facilityId: input.facilityId,
-              requirementId: requirement.id,
-            })
-          : null;
+        const workingDocument = workingByRequirement.get(requirement.id) ?? null;
 
-        const history = this.deps.cadastroRepository
-          ? await this.deps.cadastroRepository.listDocumentsForFacilityRequirement({
-              facilityId: input.facilityId,
-              requirementId: requirement.id,
-              excludeDraft: true,
-            })
-          : [];
+        const history = historyByRequirement.get(requirement.id) ?? [];
         const latestSubmitted = history[0] ?? null;
         const approvedEntry =
           history.find((document) => document.status === "APPROVED") ?? null;
@@ -226,11 +303,9 @@ export class GetFacilityCadastroChecklistUseCase {
         // "Versão aprovada vN" label.
         const workingDoc =
           workingDocument ?? approvedEntry ?? latestSubmitted ?? null;
-        const files = workingDoc
-          ? await this.deps.cadastroRepository!.listDocumentFiles(workingDoc.id)
-          : [];
+        const files = workingDoc ? (filesByDocument.get(workingDoc.id) ?? []) : [];
         const approvedFiles = approvedEntry
-          ? await this.deps.cadastroRepository!.listDocumentFiles(approvedEntry.id)
+          ? (filesByDocument.get(approvedEntry.id) ?? [])
           : [];
 
         return {
