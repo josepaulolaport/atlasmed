@@ -83,7 +83,6 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-temporal-db` | private | Postgres only for Temporal metadata. The app Postgres remains remote. |
 | `atlasmed-redis` | private | BullMQ, cache, and rate limiting. |
 | `atlasmed-meilisearch` | private | Search index. |
-| `atlasmed-minio` | `https://storage.tdomains.uk` (S3 API) | S3-compatible storage for app files. Console stays private. Presigned URLs use `STORAGE_PUBLIC_ENDPOINT`; API still talks to MinIO on the internal `STORAGE_ENDPOINT`. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
 All production services are pinned to the Uncloud machine named `oracle-luis` via
@@ -115,6 +114,11 @@ automatically; a pinned A record does not, and nothing in CI checks it. The fail
 silent — the origin simply stops answering. `uc machine ls` prints the current public IPs.
 The API creates `STORAGE_BUCKET` on startup when object storage is configured.
 
+Object storage in production is **Cloudflare R2**, not MinIO. MinIO ran here until
+2026-08-12 and is gone; `docker-compose.dev.yml` still uses it for local development, which
+is unaffected. Its volume is retained but no service mounts it — see the note in
+`uncloud.compose.yml`.
+
 ## One-time setup
 
 1. Create GitHub environment `production` secrets using `deploy/.env.production.example` as the checklist.
@@ -127,7 +131,7 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured.
    This defines `atlasmed_internal_guard` globally. Do not define reusable snippets only inside another service's `x-caddy`; Uncloud validates service Caddy configs incrementally, so cross-service snippet imports can fail depending on service order.
 5. Deploy infrastructure manually:
    ```bash
-   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch --yes
    ```
 6. Deploy app services. Bucket creation happens during `atlasmed-api` startup; re-running the app deploy is safe because bucket creation first checks whether each bucket already exists.
    ```bash

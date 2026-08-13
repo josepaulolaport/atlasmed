@@ -23,14 +23,16 @@ pg_dump -h 127.0.0.1 -U temporal temporal > atlasmed-temporal-$(date +%F-%H%M).s
 - Snapshots and raw volume copies are version-specific rollback backups; they cannot migrate a v1.13 database to v1.48.
 - For the v1.13 to v1.48 production rollout, retain `atlasmed_meilisearch_data` unchanged, import a successful v1.13 dump into the empty `atlasmed_meilisearch_data_v148` volume, and verify all index UIDs before switching production. See `deploy/README.md`.
 
-## MinIO
+## Object storage
 
-- Back up the `atlasmed_minio_data` volume.
-- `atlasmed-api` creates the configured `STORAGE_BUCKET` on startup.
+Cloudflare R2 (`atlasmed-production`), not our volume to back up — durability is
+Cloudflare's. The retired `atlasmed_minio_data` volume still holds pre-R2 objects that
+nothing references; it needs no backup and can be deleted once nobody wants it.
+
 
 ## Recommended schedule
 
 - Hourly: Redis AOF copy.
-- Daily: Temporal Postgres dump and MinIO volume snapshot.
+- Daily: Temporal Postgres dump. Object storage lives in R2 and needs no volume snapshot.
 - Daily or weekly: Meilisearch dump/snapshot, depending on reindex cost.
 - Weekly: restore test in a disposable environment.
