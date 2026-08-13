@@ -20,6 +20,8 @@ const SUS_LINKED = "AAAA000000000001";
 const SUS_FREE = "AAAA000000000002";
 const SUS_UNKNOWN = "AAAA000000000003";
 const SUS_ADMIN_ONLY = "AAAA000000000004";
+/** Reachable only through the bridge: a person with no CNES identifier at all. */
+const SUS_BRIDGED = "AAAA000000000005";
 const COUNCIL = "71";
 
 const useCase = new ListCnesSuggestionsUseCase();
@@ -29,6 +31,7 @@ interface Fixture {
   linkedPersonId: number;
   freePersonId: number;
   adminOnlyPersonId: number;
+  bridgedPersonId: number;
 }
 
 async function purge() {
@@ -40,11 +43,11 @@ async function purge() {
   `);
   await db.execute(sql`
     delete from registry.professional_registrations
-     where professional_cnes_id in (${SUS_LINKED}, ${SUS_FREE}, ${SUS_UNKNOWN}, ${SUS_ADMIN_ONLY});
+     where professional_cnes_id in (${SUS_LINKED}, ${SUS_FREE}, ${SUS_UNKNOWN}, ${SUS_ADMIN_ONLY}, ${SUS_BRIDGED});
   `);
   await db.execute(sql`
     delete from registry.professionals
-     where cnes_id in (${SUS_LINKED}, ${SUS_FREE}, ${SUS_UNKNOWN}, ${SUS_ADMIN_ONLY});
+     where cnes_id in (${SUS_LINKED}, ${SUS_FREE}, ${SUS_UNKNOWN}, ${SUS_ADMIN_ONLY}, ${SUS_BRIDGED});
   `);
   await db.execute(sql`delete from registry.facilities where cnes_id = ${CNES_CODE};`);
   await db.execute(sql`
@@ -173,10 +176,26 @@ async function seed(): Promise<Fixture> {
          and c.code = 'ADMINISTRATIVE_CONTACT';
   `);
 
+  /**
+   * A doctor a rep entered by hand: no `cnes_professional_id`, so the SUS-id
+   * join can never reach them. The loader's bridge is set below, which is the
+   * only thing that makes them resolvable.
+   */
+  await db.execute(sql`
+    insert into persons (first_name, last_name) values ('Bridged', ${MARK});
+  `);
+  const [bridged] = (await db.execute(sql`
+    select id from persons where first_name = 'Bridged' and last_name = ${MARK} limit 1;
+  `)) as unknown as { id: number }[];
+  await db.execute(sql`
+    insert into person_healthcare_profiles (person_id) values (${bridged!.id});
+  `);
+
   for (const [sus, name] of [
     [SUS_LINKED, "DOUTOR LINKED"],
     [SUS_FREE, "DOUTOR FREE"],
     [SUS_ADMIN_ONLY, "DOUTOR ADMIN ONLY"],
+    [SUS_BRIDGED, "DOUTOR BRIDGED"],
     // In the registry at this clinic, but no person on our side: not shown in
     // this pass (spec 0012 §5), because surfacing them means creating a person
     // from registry data, which is §6.
@@ -202,11 +221,18 @@ async function seed(): Promise<Fixture> {
   // leaving them that way is what let the serialisation bug through: assertions
   // compared string to string and agreed, while the client compared string to
   // number and threw.
+  // What the loader's bridge step writes when a council registration matches.
+  await db.execute(sql`
+    update registry.professionals set atlasmed_id = ${bridged!.id}
+     where cnes_id = ${SUS_BRIDGED};
+  `);
+
   return {
     facilityId: Number(facility!.id),
     linkedPersonId: Number(people[SUS_LINKED]!),
     freePersonId: Number(people[SUS_FREE]!),
     adminOnlyPersonId: Number(adminOnly!.id),
+    bridgedPersonId: Number(bridged!.id),
   };
 }
 
@@ -274,12 +300,30 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
     expect(adminOnly!.alreadyLinked).toBe(false);
   });
 
+  it("resolves a person reachable only through the registration bridge", async () => {
+    const result = await useCase.execute({ facilityId: fixture.facilityId });
+    /**
+     * This person has no `cnes_professional_id` — nobody types those — so the
+     * SUS-id join cannot see them. Only `registry.professionals.atlasmed_id`,
+     * written by the loader from a matching council registration, does.
+     *
+     * Without this, a doctor a rep entered last week comes back in next month's
+     * export as somebody CNES knows and we do not, and the sheet offers to
+     * import a person we already hold.
+     */
+    const bridgedRow = result.items.find(
+      (i) => i.personId === fixture.bridgedPersonId
+    );
+    expect(bridgedRow).toBeDefined();
+    expect(bridgedRow!.alreadyLinked).toBe(false);
+  });
+
   it("omits registry people who do not exist on our side", async () => {
     const result = await useCase.execute({ facilityId: fixture.facilityId });
-    // Four registry vínculos here; the one unknown to us is omitted, leaving
-    // three — one of them labelled as already linked.
-    expect(result.items).toHaveLength(3);
-    expect(result.items.filter((i) => !i.alreadyLinked)).toHaveLength(2);
+    // Five registry vínculos here; the one unknown to us under either route is
+    // omitted, leaving four — one of them labelled as already linked.
+    expect(result.items).toHaveLength(4);
+    expect(result.items.filter((i) => !i.alreadyLinked)).toHaveLength(3);
   });
 
   it("reports the loaded competence so the UI can date the snapshot", async () => {

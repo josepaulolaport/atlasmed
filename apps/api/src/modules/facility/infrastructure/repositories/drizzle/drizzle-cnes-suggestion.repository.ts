@@ -128,7 +128,7 @@ export class DrizzleCnesSuggestionRepository {
   }): Promise<CnesSuggestion[]> {
     const rows = (await db.execute(sql`
       select
-        hp.person_id                       as person_id,
+        p.id                               as person_id,
         p.first_name                       as first_name,
         p.last_name                        as last_name,
         p.social_name                      as social_name,
@@ -145,10 +145,22 @@ export class DrizzleCnesSuggestionRepository {
         on fp.facility_cnes_id = rf.cnes_id
       join registry.professionals rp
         on rp.cnes_id = fp.professional_cnes_id
-      join person_healthcare_profiles hp
+      /*
+       * Two routes to the same person, and the row appears if either resolves.
+       *
+       * atlasmed_id is the bridge the loader writes by matching the council
+       * registration; cnes_professional_id is CNES's own identifier, present
+       * only on people an old backfill stamped. A doctor a rep entered by hand
+       * has a CRM and no SUS id, so joining on the SUS id alone would report
+       * them as somebody CNES knows and we do not -- while the bridge, written
+       * that same month, already says who they are.
+       *
+       * The bridge wins where both exist. It is the one a human can correct.
+       */
+      left join person_healthcare_profiles hp
         on hp.cnes_professional_id = rp.cnes_id
       join persons p
-        on p.id = hp.person_id
+        on p.id = coalesce(rp.atlasmed_id, hp.person_id)
       left join registry.facility_professional_occupations fo
         on fo.facility_cnes_id = fp.facility_cnes_id
        and fo.professional_cnes_id = fp.professional_cnes_id
@@ -164,7 +176,7 @@ export class DrizzleCnesSuggestionRepository {
       -- treating those as "already associated" would hide a doctor from both
       -- sections of the sheet at once.
       left join person_facilities pf
-        on pf.person_id = hp.person_id
+        on pf.person_id = p.id
        and pf.facility_id = ${input.facilityId}
        and pf.ended_at is null
        and exists (
@@ -177,7 +189,7 @@ export class DrizzleCnesSuggestionRepository {
        )
       where rf.atlasmed_id = ${input.facilityId}
         and p.deleted_at is null
-      group by hp.person_id, p.first_name, p.last_name, p.social_name
+      group by p.id, p.first_name, p.last_name, p.social_name
       -- Unlinked first: the suggestions are the actionable half, and the linked
       -- rows are context for how much of this clinic CNES already agrees with.
       order by bool_or(pf.id is not null), p.first_name, p.last_name
