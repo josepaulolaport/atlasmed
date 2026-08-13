@@ -722,6 +722,13 @@
       "when": 1786574841028,
       "tag": "0102_seed_cnes_occupations",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1786574842028,
+      "tag": "0103_shorten_remaining_occupations",
+      "breakpoints": true
     }
   ]
 }
