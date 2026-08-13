@@ -28,7 +28,8 @@ class DashboardPurchaseStatus {
   int get churn => _stage('CHURN');
   int get inactiveStage => _stage('INACTIVE');
 
-  Map<String, int> get _grouped => PurchaseBucketFilter.groupStageCounts(stages);
+  Map<String, int> get _grouped =>
+      PurchaseBucketFilter.groupStageCounts(stages);
 
   int get active => _grouped[PurchaseBucketFilter.active] ?? 0;
   int get inactive => _grouped[PurchaseBucketFilter.inactive] ?? 0;
