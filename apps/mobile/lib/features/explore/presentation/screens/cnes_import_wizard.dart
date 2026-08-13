@@ -21,7 +21,9 @@ typedef CnesImportCatalogues = ({
   Future<List<ProfessionalRegistrationCouncil>> Function() councils,
 });
 
-CnesImportCatalogues _defaultCatalogues() => (
+/// The live catalogues. Public because the associate sheet reads the role list
+/// through the same seam, and two ways to build it would drift.
+CnesImportCatalogues defaultCnesImportCatalogues() => (
   specialties: () => HealthcareSpecialtiesCatalogRepository().listActive(),
   roles: () => PersonFacilityRolesCatalogRepository().listActive(),
   councils: () =>
@@ -101,11 +103,11 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
     _loadCatalogues();
   }
 
-  /// Specialty and role are required, so a catalogue that failed to load is a
-  /// blocked wizard rather than a degraded one — say so instead of showing an
-  /// empty picker that reads as "there are none".
+  /// Specialty is required, so a catalogue that failed to load is a blocked
+  /// wizard rather than a degraded one — say so instead of showing an empty
+  /// picker that reads as "there are none".
   Future<void> _loadCatalogues() async {
-    final catalogues = widget.catalogues ?? _defaultCatalogues();
+    final catalogues = widget.catalogues ?? defaultCnesImportCatalogues();
     try {
       final specialties = await catalogues.specialties();
       final roles = await catalogues.roles();
@@ -542,7 +544,12 @@ class _AddRegistrationDialog extends StatefulWidget {
 }
 
 class _AddRegistrationDialogState extends State<_AddRegistrationDialog> {
-  late int _councilId = widget.councils.first.id;
+  /// CRM unless the catalogue has none: every doctor reachable through this
+  /// wizard arrived on one, so anything else is the exception.
+  late int _councilId = (widget.councils.firstWhere(
+    (c) => c.abbreviation.toUpperCase() == 'CRM',
+    orElse: () => widget.councils.first,
+  )).id;
   String _stateCode = '';
   String _number = '';
 
@@ -698,7 +705,7 @@ class _ClinicalStep extends StatelessWidget {
             ],
           ),
         const SizedBox(height: 20),
-        const _SectionLabel('Papel na clínica *'),
+        const _SectionLabel('Papel na clínica'),
         Wrap(
           spacing: 6,
           runSpacing: 6,

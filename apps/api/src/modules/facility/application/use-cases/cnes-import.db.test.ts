@@ -29,6 +29,8 @@ const SUS_ELSEWHERE = "BBBB000000000003";
 const SUS_NO_REGISTRATION = "BBBB000000000004";
 /** Importable, and reserved for the tests that send bad field values. */
 const SUS_BAD_INPUT = "BBBB000000000005";
+/** Importable, and imported without any role at all. */
+const SUS_ROLELESS = "BBBB000000000006";
 const COUNCIL = "71";
 const ALL_SUS = [
   SUS_NEW,
@@ -36,6 +38,7 @@ const ALL_SUS = [
   SUS_ELSEWHERE,
   SUS_NO_REGISTRATION,
   SUS_BAD_INPUT,
+  SUS_ROLELESS,
 ];
 
 const useCase = new ImportCnesProfessionalUseCase();
@@ -192,6 +195,7 @@ async function seed(): Promise<Fixture> {
     [SUS_ELSEWHERE, "MEDICO DE OUTRA CLINICA"],
     [SUS_NO_REGISTRATION, "MEDICO SEM REGISTRO"],
     [SUS_BAD_INPUT, "MEDICO DADOS RUINS"],
+    [SUS_ROLELESS, "MEDICO SEM PAPEL"],
   ] as const) {
     await db.execute(sql`
       insert into registry.professionals (cnes_id, full_name) values (${sus}, ${name});
@@ -199,7 +203,7 @@ async function seed(): Promise<Fixture> {
   }
 
   // Everyone except SUS_ELSEWHERE is placed at this clinic by CNES.
-  for (const sus of [SUS_NEW, SUS_HELD, SUS_NO_REGISTRATION, SUS_BAD_INPUT]) {
+  for (const sus of [SUS_NEW, SUS_HELD, SUS_NO_REGISTRATION, SUS_BAD_INPUT, SUS_ROLELESS]) {
     await db.execute(sql`
       insert into registry.facility_professionals (facility_cnes_id, professional_cnes_id)
         values (${CNES_CODE}, ${sus});
@@ -211,6 +215,7 @@ async function seed(): Promise<Fixture> {
     [SUS_HELD, "9970002"],
     [SUS_ELSEWHERE, "9970003"],
     [SUS_BAD_INPUT, "9970005"],
+    [SUS_ROLELESS, "9970006"],
   ] as const) {
     await db.execute(sql`
       insert into registry.professional_registrations
@@ -449,16 +454,39 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
     expect(after[0]!.n).toBe(before[0]!.n);
   });
 
-  it("refuses without a role", async () => {
-    await expect(
-      useCase.execute({
-        facilityId: fixture.facilityId,
-        professionalCnesId: SUS_NO_REGISTRATION,
-        scope: globalScope,
+  it("imports a doctor who has no role at this clinic", async () => {
+    /**
+     * A role says what someone is *to this clinic*, not who they are, and not
+     * every person at a clinic has one. Demanding it would refuse a real doctor
+     * over a question the rep may not be able to answer.
+     */
+    const result = await useCase.execute({
+      facilityId: fixture.facilityId,
+      professionalCnesId: SUS_ROLELESS,
+      scope: globalScope,
+      specialtyId: required.specialtyId,
+      roleIds: [],
+    });
+
+    const [row] = (await db.execute(sql`
+      select count(*)::int as n
+        from person_facility_role_assignments ra
+        join person_facilities pf on pf.id = ra.person_facility_id
+       where pf.person_id = ${result.personId};
+    `)) as unknown as { n: number }[];
+    expect(row!.n).toBe(0);
+  });
+
+  it("refuses a role id the catalogue does not carry", async () => {
+    // `person_facility_role_assignments` has a foreign key, so this would
+    // otherwise surface as a constraint violation from inside the transaction —
+    // a 500 for a client sending a stale catalogue.
+    expect(
+      await reasonFor(SUS_NO_REGISTRATION, {
         specialtyId: required.specialtyId,
-        roleIds: [],
+        roleIds: [999_999],
       })
-    ).rejects.toThrow();
+    ).toMatch(/role id/i);
   });
 
   it("rejects a hand-typed registration that is not one", async () => {

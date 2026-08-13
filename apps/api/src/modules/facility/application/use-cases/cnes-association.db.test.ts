@@ -74,6 +74,11 @@ async function purge() {
   `);
   await db.execute(sql`delete from registry.facilities where cnes_id = ${CNES_CODE};`);
   await db.execute(sql`delete from facilities where name = ${MARK};`);
+  // After the people, so the assignments referencing it are gone: the role
+  // catalogue is `on delete restrict` on purpose.
+  await db.execute(
+    sql`delete from person_facility_roles where name = 'T-CNES-ASSOC Papel';`
+  );
 }
 
 async function createPerson(firstName: string): Promise<number> {
@@ -427,6 +432,62 @@ describe.if(dbUp)("AssociateCnesProfessionalUseCase", () => {
     ).toEqual(["Intensivista"]);
   });
 
+  it("records a role the rep chose, and adds rather than replaces", async () => {
+    /*
+     * Optional, because not every person at a clinic has a role — but when the
+     * rep does say, associating is the moment they know it, and making them
+     * come back through the roster afterwards is how roles stay unset.
+     */
+    const [role] = (await db.execute(sql`
+      insert into person_facility_roles (name) values ('T-CNES-ASSOC Papel')
+        on conflict do nothing
+        returning id;
+    `)) as unknown as { id: number | string }[];
+    const [existing] = (await db.execute(sql`
+      select id from person_facility_roles where name = 'T-CNES-ASSOC Papel' limit 1;
+    `)) as unknown as { id: number | string }[];
+    const roleId = Number((role ?? existing)!.id);
+
+    await useCase.execute({
+      facilityId: fixture.facilityId,
+      professionalCnesId: SUS_PRELINKED,
+      scope: globalScope,
+      roleIds: [roleId],
+    });
+
+    const roles = (await db.execute(sql`
+      select r.name
+        from person_facility_role_assignments ra
+        join person_facility_roles r on r.id = ra.role_id
+        join person_facilities pf on pf.id = ra.person_facility_id
+       where pf.person_id = ${fixture.prelinkedPersonId}
+         and pf.facility_id = ${fixture.facilityId};
+    `)) as unknown as { name: string }[];
+    expect(roles.map((r) => r.name)).toContain('T-CNES-ASSOC Papel');
+
+    // Repeating it neither duplicates the assignment nor clears it.
+    await useCase.execute({
+      facilityId: fixture.facilityId,
+      professionalCnesId: SUS_PRELINKED,
+      scope: globalScope,
+      roleIds: [],
+    });
+    const [after] = (await db.execute(sql`
+      select count(*)::int as n
+        from person_facility_role_assignments ra
+        join person_facilities pf on pf.id = ra.person_facility_id
+       where pf.person_id = ${fixture.prelinkedPersonId}
+         and pf.facility_id = ${fixture.facilityId};
+    `)) as unknown as { n: number }[];
+    expect(after!.n).toBe(1);
+  });
+
+  it("refuses a role id the catalogue does not carry", async () => {
+    expect(
+      await reasonFor(SUS_BRIDGED, { roleIds: [999_999] })
+    ).toMatch(/role id/i);
+  });
+
   it("refuses someone CNES does not place at this clinic", async () => {
     expect(await reasonFor(SUS_ELSEWHERE)).toMatch(
       /does not place this professional at this facility/
@@ -455,12 +516,16 @@ describe.if(dbUp)("AssociateCnesProfessionalUseCase", () => {
   });
 
   /** `ValidationError`'s message is generic; the reason lives in its context. */
-  async function reasonFor(professionalCnesId: string): Promise<string> {
+  async function reasonFor(
+    professionalCnesId: string,
+    overrides: Record<string, unknown> = {},
+  ): Promise<string> {
     try {
       await useCase.execute({
         facilityId: fixture.facilityId,
         professionalCnesId,
         scope: globalScope,
+        ...overrides,
       });
     } catch (error) {
       const context = (error as { context?: { errors?: { message: string }[] } })

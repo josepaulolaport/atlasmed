@@ -208,6 +208,51 @@ void main() {
     );
   });
 
+  testWidgets('carries a role the rep picked while associating', (
+    tester,
+  ) async {
+    /*
+     * Associating is the moment the rep knows what this person is to the
+     * clinic. Sending them back through the roster afterwards is how roles stay
+     * unset — but it is offered, never demanded: not every person at a clinic
+     * has one.
+     */
+    final client = RecordingClient(defaultHandler);
+    await _pumpSheet(tester, client: client);
+    await _openCnesTab(tester);
+
+    await tester.tap(find.text('Conhecida Silva'));
+    await tester.pumpAndSettle();
+    // The chips appear once the row is ticked, and nothing starts selected.
+    await tester.tap(find.text('Prescritor'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton).first);
+    await tester.pumpAndSettle();
+
+    final associate = client.requests.firstWhere(
+      (r) => r.url.path.endsWith('/cnes-associations'),
+    );
+    expect((associate.body as Map)['roleIds'], [1]);
+  });
+
+  testWidgets('associates without a role when the rep picked none', (
+    tester,
+  ) async {
+    final client = RecordingClient(defaultHandler);
+    await _pumpSheet(tester, client: client);
+    await _openCnesTab(tester);
+
+    await tester.tap(find.text('Conhecida Silva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton).first);
+    await tester.pumpAndSettle();
+
+    final associate = client.requests.firstWhere(
+      (r) => r.url.path.endsWith('/cnes-associations'),
+    );
+    expect((associate.body as Map)['roleIds'], isEmpty);
+  });
+
   testWidgets('a doctor picked from the search pool still associates plainly', (
     tester,
   ) async {

@@ -83,7 +83,8 @@ class CnesImportDraft {
   /// carry one, so this makes explicit what the data already says.
   int? specialtyId;
 
-  /// Required, at least one. 1 749 of 1 752 active affiliations carry one.
+  /// Optional. A role says what someone is *to this clinic* rather than who
+  /// they are, and not every person at a clinic has one.
   final Set<int> roleIds = {};
 
   /// Order matters: the first is written as primary.
@@ -133,7 +134,11 @@ class CnesImportDraft {
   /// The only gate between the steps. Everything else is optional on purpose:
   /// of the 1 206 doctors we hold, 37 carry a mobile number and none a birth
   /// date, so requiring more would block imports on data nobody has.
-  bool get isClinicalComplete => specialtyId != null && roleIds.isNotEmpty;
+  ///
+  /// Specialty alone: 1 205 of 1 206 carry one and a doctor without it is
+  /// unfindable by the search reps use, whereas a role is a fact about this
+  /// clinic that a rep may legitimately not have.
+  bool get isClinicalComplete => specialtyId != null;
 
   bool get isIdentityComplete => hasName && cpfError == null;
 
@@ -156,6 +161,8 @@ class CnesImportDraft {
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'specialtyId': specialtyId,
+      // Sent even when empty, so the shape is the same whether or not the rep
+      // had an answer.
       'roleIds': roleIds.toList()..sort(),
       // Always sent: `[]` means the rep cleared them, which differs from
       // omitting the field and inheriting CNES's list.

@@ -257,9 +257,10 @@ const importCnesProfessionalRoute = (
           birthDate: t.Optional(t.Union([t.String(), t.Null()])),
           landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
           /*
-           * Required by the use case, optional in the schema so the failure is
-           * a domain error naming the field rather than a 422 the client
-           * renders as "invalid request".
+           * `specialtyId` is required by the use case, optional in the schema so
+           * the failure is a domain error naming the field rather than a 422 the
+           * client renders as "invalid request". `roleIds` is genuinely
+           * optional: not every person at a clinic has a role.
            */
           specialtyId: t.Optional(t.Integer({ minimum: 1 })),
           roleIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
@@ -324,6 +325,9 @@ const associateCnesProfessionalRoute = (
            */
           professionalCnesId: t.String({ minLength: 1 }),
           occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          // Optional, and additive: associating may say what someone is to this
+          // clinic, but it never takes away a role somebody set deliberately.
+          roleIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
         }),
       }
     );

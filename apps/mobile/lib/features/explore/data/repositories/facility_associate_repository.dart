@@ -157,7 +157,11 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   }
 
   /// Link an existing person as healthcare professional at this facility.
-  Future<void> associateDoctor(int personId) async {
+  ///
+  /// Returns the affiliation's id, which is what roles hang off — null only
+  /// when the server answered without one, in which case there is nothing to
+  /// attach them to and the caller says so rather than guessing.
+  Future<int?> associateDoctor(int personId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(_healthcarePath),
@@ -174,7 +178,21 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
           'Falha ao associar médico (${response.statusCode})',
         );
       }
+      return null;
     }
+
+    return _asInt(_decodeMap(response.body)['personFacilityId']);
+  }
+
+  /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
+  Future<void> assignRoles({
+    required int personFacilityId,
+    required List<int> roleIds,
+  }) async {
+    await _putHealthcareRoles(
+      personFacilityId: personFacilityId,
+      roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
+    );
   }
 
   /// Link a doctor CNES places here and we already hold —
@@ -188,6 +206,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   Future<void> associateCnesProfessional({
     required String professionalCnesId,
     List<int>? occupationIds,
+    List<int>? roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -199,6 +218,9 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
           // Sent even when empty: `[]` means the rep cleared them, which is a
           // different answer from omitting the field and taking CNES's.
           'occupationIds': ?occupationIds,
+          // Additive server-side: an empty list says nothing rather than
+          // clearing what the affiliation already carries.
+          'roleIds': ?roleIds,
         },
       ),
     );

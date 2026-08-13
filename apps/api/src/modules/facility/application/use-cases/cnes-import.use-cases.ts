@@ -78,7 +78,11 @@ export interface ImportCnesProfessionalInput {
    * producing the one record that has none.
    */
   specialtyId?: number;
-  /** Required. 1 749 of 1 752 active affiliations carry at least one role. */
+  /**
+   * What they are to this clinic. Optional: most affiliations carry a role, but
+   * not every person at a clinic has one, and refusing the import over it would
+   * block a real doctor on a field nobody can always answer.
+   */
   roleIds?: number[];
   /**
    * Registrations typed by the rep, added to what the registry supplied.
@@ -164,10 +168,44 @@ function registrationLabel(professional: RegistryProfessional): string {
   return `${first.councilAbbreviation} ${first.registrationNumber}/${first.stateCode}`;
 }
 
+/**
+ * The roles to write, checked against the catalogue first.
+ *
+ * `person_facility_role_assignments` has a foreign key, so an id nobody
+ * recognises would surface as a constraint violation from inside the
+ * transaction — a 500 for what is a client sending a stale catalogue. Checking
+ * here turns it into an answer that names the field.
+ */
+export async function resolveRoleIdsAgainst(
+  requested: number[] | undefined,
+  activeRoleIds: () => Promise<number[]>
+): Promise<number[]> {
+  const unique = [...new Set(requested ?? [])];
+  if (unique.length === 0) return [];
+
+  const allowed = new Set(await activeRoleIds());
+  const unknown = unique.filter((id) => !allowed.has(id));
+  if (unknown.length > 0) {
+    throw new ValidationError(
+      unknown.map((id) => ({
+        field: "roleIds",
+        message: `Unknown or inactive role id "${id}"`,
+      }))
+    );
+  }
+  return unique;
+}
+
 export class ImportCnesProfessionalUseCase {
   constructor(
     private readonly repository = new DrizzleCnesImportRepository()
   ) {}
+
+  private resolveRoleIds(requested: number[] | undefined): Promise<number[]> {
+    return resolveRoleIdsAgainst(requested, () =>
+      this.repository.listActiveRoleIds()
+    );
+  }
 
   async execute(
     input: ImportCnesProfessionalInput
@@ -182,17 +220,17 @@ export class ImportCnesProfessionalUseCase {
      * body reported whatever the lookup happened to find instead of the field
      * that was actually wrong.
      *
-     * Specialty and role are required because the data says they already are:
-     * 1 205 of 1 206 doctors carry a specialty and 1 749 of 1 752 affiliations
-     * carry a role. A doctor with neither is unfindable by the search reps use
-     * and invisible to every commercial view.
+     * Specialty is required because the data says it already is: 1 205 of the
+     * 1 206 doctors we hold carry one, and a doctor without it is unfindable by
+     * the search reps actually use.
+     *
+     * Role is not. It describes what someone is *to this clinic* rather than
+     * who they are, and not every person at a clinic has one — so it is offered
+     * and never demanded.
      */
     const problems: Array<{ field: string; message: string }> = [];
     if (!input.specialtyId) {
       problems.push({ field: "specialtyId", message: "specialtyId is required" });
-    }
-    if (!input.roleIds || input.roleIds.length === 0) {
-      problems.push({ field: "roleIds", message: "at least one role is required" });
     }
     /*
      * Values the columns themselves refuse, checked before the insert rather
@@ -230,6 +268,16 @@ export class ImportCnesProfessionalUseCase {
       }
     }
     if (problems.length > 0) throw new ValidationError(problems);
+
+    /*
+     * Also before the lookup, though this one needs the catalogue.
+     *
+     * A role id the client sent is a fact about the request, so which
+     * professional they picked must not change the answer — checking it later
+     * meant a stale catalogue was reported as whatever the lookup happened to
+     * refuse first.
+     */
+    const roleIds = await this.resolveRoleIds(input.roleIds);
 
     const professional = await this.repository.findProfessional({
       professionalCnesId: input.professionalCnesId,
@@ -326,7 +374,7 @@ export class ImportCnesProfessionalUseCase {
       landlinePhone: input.landlinePhone ?? null,
       occupationIds: resolveOccupations(input.occupationIds, professional),
       specialtyId: input.specialtyId!,
-      roleIds: [...new Set(input.roleIds!)],
+      roleIds,
       extraRegistrations: (input.extraRegistrations ?? []).map((r) => ({
         councilId: r.councilId,
         stateCode: r.stateCode.toUpperCase(),

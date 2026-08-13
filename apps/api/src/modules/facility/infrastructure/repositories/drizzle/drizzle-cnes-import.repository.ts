@@ -166,6 +166,14 @@ export class DrizzleCnesImportRepository {
     };
   }
 
+  /** The role catalogue, so a stale client id is an answer rather than a 500. */
+  async listActiveRoleIds(): Promise<number[]> {
+    const rows = (await db.execute(sql`
+      select id from person_facility_roles where is_active
+    `)) as unknown as { id: number | string }[];
+    return rows.map((row) => Number(row.id));
+  }
+
   /**
    * Creates the person and everything that makes them the registry professional,
    * in one transaction.
@@ -355,6 +363,14 @@ export class DrizzleCnesImportRepository {
     personId: number;
     facilityId: number;
     occupationIds: number[];
+    /**
+     * Added to whatever the affiliation already carries, never replacing it.
+     *
+     * Associating is one tap on a row the rep is confirming; taking away a role
+     * somebody set deliberately is not something that gesture should be able to
+     * do. Replacing roles is its own action on the roster.
+     */
+    roleIds: number[];
   }): Promise<{ personFacilityId: number; affiliationCreated: boolean }> {
     return db.transaction(async (tx) => {
       // Being at a clinic as a clinician implies the profile. Import writes it
@@ -442,6 +458,14 @@ export class DrizzleCnesImportRepository {
                where person_facility_id = ${personFacilityId} and is_primary
             )
           on conflict (person_facility_id, occupation_id) do nothing
+        `);
+      }
+
+      for (const roleId of input.roleIds) {
+        await tx.execute(sql`
+          insert into person_facility_role_assignments (person_facility_id, role_id)
+          values (${personFacilityId}, ${roleId})
+          on conflict do nothing
         `);
       }
 

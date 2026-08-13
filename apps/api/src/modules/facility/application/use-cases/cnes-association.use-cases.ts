@@ -1,7 +1,10 @@
 import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { DrizzleCnesImportRepository } from "../../infrastructure/repositories/drizzle/drizzle-cnes-import.repository";
-import { resolveOccupations } from "./cnes-import.use-cases";
+import {
+  resolveOccupations,
+  resolveRoleIdsAgainst,
+} from "./cnes-import.use-cases";
 
 /**
  * Linking someone we already hold to a clinic CNES places them at (spec 0012 §5).
@@ -28,6 +31,13 @@ export interface AssociateCnesProfessionalInput {
    * means they cleared it, and the affiliation is still written.
    */
   occupationIds?: number[];
+  /**
+   * What they are to this clinic, if the rep said. Optional: not every person
+   * at a clinic has a role, and associating must not demand an answer the rep
+   * may not have — it is added to the affiliation, never replacing what is
+   * already there.
+   */
+  roleIds?: number[];
 }
 
 export interface AssociateCnesProfessionalResult {
@@ -94,12 +104,17 @@ export class AssociateCnesProfessionalUseCase {
       ]);
     }
 
+    const roleIds = await resolveRoleIdsAgainst(input.roleIds, () =>
+      this.repository.listActiveRoleIds()
+    );
+
     const { personFacilityId, affiliationCreated } =
       await this.repository.associateAtFacility({
         professionalCnesId: professional.cnesId,
         personId,
         facilityId: input.facilityId,
         occupationIds: resolveOccupations(input.occupationIds, professional),
+        roleIds,
       });
 
     return {

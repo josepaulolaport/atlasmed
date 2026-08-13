@@ -193,13 +193,13 @@ void main() {
     );
   });
 
-  testWidgets('will not leave the clinical step without specialty and role', (
+  testWidgets('will not leave the clinical step without a specialty', (
     tester,
   ) async {
     /*
-     * Required because the data says they already are: 1 205 of the 1 206
-     * doctors we hold carry a specialty and 1 749 of 1 752 affiliations carry a
-     * role. A doctor with neither is unfindable by the search reps use.
+     * Required because the data says it already is: 1 205 of the 1 206 doctors
+     * we hold carry one, and a doctor without it is unfindable by the search
+     * reps actually use.
      */
     final client = RecordingClient(defaultHandler);
     await _pumpWizard(tester, client: client);
@@ -212,12 +212,28 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ortopedia').last);
     await tester.pumpAndSettle();
-    // Specialty alone is not enough.
-    expect(_nextEnabled(tester), isFalse);
-
-    await tester.tap(find.widgetWithText(FilterChip, 'Prescritor'));
-    await tester.pumpAndSettle();
+    // Specialty alone is enough: a role says what someone is to this clinic,
+    // and not every person at a clinic has one.
     expect(_nextEnabled(tester), isTrue);
+  });
+
+  testWidgets('imports a doctor the rep gave no role', (tester) async {
+    final client = RecordingClient(defaultHandler);
+    await _pumpWizard(tester, client: client);
+
+    await tester.tap(find.byKey(const Key('wizard-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('wizard-specialty')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ortopedia').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('wizard-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('wizard-next')));
+    await tester.pumpAndSettle();
+
+    expect(client.bodyEndingWith('/cnes-imports')['roleIds'], isEmpty);
   });
 
   testWidgets('sends the whole profile the rep filled in', (tester) async {

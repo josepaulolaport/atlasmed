@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/cnes_import_wizard.dart';
@@ -114,6 +115,18 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
   /// precisely what makes them an import rather than an association.
   final Set<String> _selectedCnesIds = {};
 
+  /// The role catalogue, for the chips on a ticked row. Empty until it loads,
+  /// and empty for good if it fails — a failed catalogue costs the chips, not
+  /// the association.
+  List<PersonFacilityRoleCatalogEntry> _roles = const [];
+
+  /// Roles the rep picked, keyed by person id. Absent means they said nothing,
+  /// which is a legitimate answer.
+  final Map<int, Set<int>> _selectedRoles = {};
+
+  List<int> _rolesFor(int personId) =>
+      (_selectedRoles[personId] ?? const <int>{}).toList()..sort();
+
   /// What an association will record this person doing here.
   ///
   /// CNES's claim as it stands: associating is one tap on a row the rep is
@@ -143,6 +156,22 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     _selected.addAll(widget.alreadyAssociatedIds);
     _loadPool();
     _loadCnesSuggestions();
+    _loadRoles();
+  }
+
+  /// Never throws into the sheet: without the catalogue the rep simply cannot
+  /// pick a role here, which is the same position they were in before.
+  Future<void> _loadRoles() async {
+    try {
+      final roles =
+          await (widget.importCatalogues ?? defaultCnesImportCatalogues())
+              .roles();
+      if (!mounted) return;
+      setState(() => _roles = PersonFacilityRoleCatalog.activeEntries(roles));
+    } catch (_) {
+      // Deliberately silent about the catalogue, loud about nothing else: the
+      // sheet's job is associating, and it still does that.
+    }
   }
 
   /// Never throws into the sheet: a CNES outage must not stop someone
@@ -660,12 +689,41 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
             color: AppColors.gray900,
           ),
         ),
-        subtitle: Text(
-          [
-            if (d.specialty != null) d.specialty!,
-            if (d.crm != null) d.crm!,
-          ].join(' · '),
-          style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                if (d.specialty != null) d.specialty!,
+                if (d.crm != null) d.crm!,
+              ].join(' · '),
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+            ),
+            /*
+             * Roles, once the row is ticked and only for someone not already
+             * linked here.
+             *
+             * Associating is the moment the rep knows what this person is to
+             * the clinic; sending them back through the roster afterwards is
+             * how roles stay unset. Optional, because not every person at a
+             * clinic has one.
+             */
+            if (selected && !isAssociated && _roles.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _RoleChips(
+                roles: _roles,
+                selected: _selectedRoles[d.id] ?? const {},
+                enabled: !_saving,
+                onToggle: (roleId) => setState(() {
+                  final chosen = _selectedRoles.putIfAbsent(
+                    d.id,
+                    () => <int>{},
+                  );
+                  if (!chosen.remove(roleId)) chosen.add(roleId);
+                }),
+              ),
+            ],
+          ],
         ),
         activeColor: AppColors.navyBright,
       );
@@ -809,14 +867,28 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
       };
       final associated = <ProfessionalRoster>[];
       for (final doctor in newlySelected) {
+        final roleIds = _rolesFor(doctor.id);
         final suggestion = cnesByPersonId[doctor.id];
         if (suggestion != null) {
           await repo.associateCnesProfessional(
             professionalCnesId: suggestion.professionalCnesId,
             occupationIds: _occupationsFor(suggestion),
+            roleIds: roleIds,
           );
         } else {
-          await repo.associateDoctor(doctor.id);
+          /*
+           * Two calls, because the generic endpoint creates the affiliation and
+           * roles hang off it. Ordered so a failure between them leaves a real
+           * association missing only its role — recoverable from the roster,
+           * unlike an association that never happened.
+           */
+          final personFacilityId = await repo.associateDoctor(doctor.id);
+          if (roleIds.isNotEmpty && personFacilityId != null) {
+            await repo.assignRoles(
+              personFacilityId: personFacilityId,
+              roleIds: roleIds,
+            );
+          }
         }
         associated.add(doctor);
       }
@@ -886,6 +958,63 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     } finally {
       repo.dispose();
     }
+  }
+}
+
+/// What this person is to the clinic, as togglable chips.
+///
+/// Nothing starts selected, unlike the occupation chips the wizard shows: CNES
+/// states an occupation, and nobody states a role — it is the rep's own answer,
+/// and an answer they are allowed not to have.
+class _RoleChips extends StatelessWidget {
+  const _RoleChips({
+    required this.roles,
+    required this.selected,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  final List<PersonFacilityRoleCatalogEntry> roles;
+  final Set<int> selected;
+  final bool enabled;
+  final void Function(int roleId) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final role in roles)
+          GestureDetector(
+            onTap: enabled ? () => onToggle(role.id) : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: selected.contains(role.id)
+                    ? AppColors.navyBright
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected.contains(role.id)
+                      ? AppColors.navyBright
+                      : AppColors.gray300,
+                ),
+              ),
+              child: Text(
+                role.name,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: selected.contains(role.id)
+                      ? Colors.white
+                      : AppColors.gray500,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
