@@ -14,7 +14,7 @@ import {
   type PurchaseProfile,
   type PurchaseRecurrenceSnapshot,
 } from "@atlasmed/facility-insights";
-import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Meilisearch } from "meilisearch";
 import { getDb } from "../infrastructure/db";
 import { logger } from "../logger";
@@ -136,36 +136,37 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
     since: string;
     until: string;
   }): Promise<number[]> {
-    // postgres.js rejects Date binds; cast ISO strings. Branch cursor so null
-    // params do not hit 42P18 (indeterminate JDBC/pg types).
-    const sinceIso = new Date(input.since).toISOString();
-    const untilIso = new Date(input.until).toISOString();
-    const rows =
-      input.cursor == null
-        ? await this.database.execute(sql<{ facility_id: number }>`
-            select distinct o.facility_id
-            from ${orders} o
-            inner join ${facilities} f on f.id = o.facility_id
-            where f.deactivated_at is null
-              and o.updated_at >= ${sinceIso}::timestamptz
-              and o.updated_at < ${untilIso}::timestamptz
-            order by o.facility_id
-            limit ${input.limit}
-          `)
-        : await this.database.execute(sql<{ facility_id: number }>`
-            select distinct o.facility_id
-            from ${orders} o
-            inner join ${facilities} f on f.id = o.facility_id
-            where f.deactivated_at is null
-              and o.updated_at >= ${sinceIso}::timestamptz
-              and o.updated_at < ${untilIso}::timestamptz
-              and o.facility_id > ${input.cursor}
-            order by o.facility_id
-            limit ${input.limit}
-          `);
-    return Array.from(rows, (row) =>
-      Number((row as { facility_id: number | string }).facility_id),
-    );
+    /**
+     * Orders key on the profile since spec 0010 §4, so the facility is one hop
+     * away through `facility_vertical_profiles`.
+     *
+     * This was hand-written SQL selecting `o.facility_id` — the column that
+     * re-keying removed. Nothing type-checked it and the store is mocked in the
+     * unit tests, so every non-`fullSweep` reconcile failed at runtime with
+     * `42703 column o.facility_id does not exist`: the hourly schedule, and the
+     * child workflow the Emultec import starts after each successful page. The
+     * funnel only ever refreshed on the midnight full sweep. Built through the
+     * query builder now, so the next schema move breaks the build instead.
+     *
+     * Backed by orders_updated_at_profile_id_idx (updated_at, profile_id).
+     */
+    const rows = await this.database
+      .selectDistinct({ id: facilityVerticalProfiles.facilityId })
+      .from(orders)
+      .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+      )
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .where(and(
+        isNull(facilities.deactivatedAt),
+        gte(orders.updatedAt, new Date(input.since)),
+        lt(orders.updatedAt, new Date(input.until)),
+        input.cursor ? gt(facilityVerticalProfiles.facilityId, input.cursor) : undefined,
+      ))
+      .orderBy(asc(facilityVerticalProfiles.facilityId))
+      .limit(input.limit);
+    return rows.map((row) => row.id);
   }
 
   async listDueTransitionFacilityIds(input: {
