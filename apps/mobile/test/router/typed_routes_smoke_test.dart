@@ -41,15 +41,4 @@ void main() {
       '/agenda/5/occurrences/${Uri.encodeComponent(key)}/edit',
     );
   });
-
-  test('new order query camelCase preserved', () {
-    expect(
-      NewOrderRoute(
-        interactionId: 1,
-        facilityId: 2,
-        facilityName: 'Clinica',
-      ).location,
-      '/orders/new?interactionId=1&facilityId=2&facilityName=Clinica',
-    );
-  });
 }

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
@@ -182,7 +183,8 @@ class CalendarEditorState extends Equatable {
   ];
 }
 
-class CalendarEditorNotifier extends StateNotifier<CalendarEditorState> {
+class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
+    with DisposeSafeStateWrites<CalendarEditorState> {
   CalendarEditorNotifier({
     required CalendarMutationRepositoryContract repository,
     required this.target,

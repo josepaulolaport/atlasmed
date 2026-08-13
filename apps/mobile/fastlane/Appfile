@@ -1,0 +1,8 @@
+# ── Fastlane Appfile ─────────────────────────────────────────────────
+# Identidade do app iOS publicado no TestFlight.
+# O upload Android usa a service account materializada pelo workflow.
+# ──────────────────────────────────────────────────────────────────────
+
+app_identifier "br.com.atlasmed.app"
+package_name "br.com.atlasmed.app"
+team_id ENV.fetch("APPLE_TEAM_ID", "GNT83DZ768")

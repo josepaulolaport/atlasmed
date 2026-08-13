@@ -44,7 +44,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
           content: Text(
             error is CatalogApiException
                 ? error.message
-                : 'Não foi possível remover o concorrente.',
+                : 'Não foi possível remover a marca.',
           ),
         ),
       );
@@ -79,7 +79,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         foregroundColor: AppColors.gray950,
         title: const Text(
-          'Gerenciar concorrentes',
+          'Gerenciar outras marcas',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),
@@ -115,7 +115,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                   if (competitors.isEmpty) {
                     return const Center(
                       child: Text(
-                        'Nenhum concorrente cadastrado ainda',
+                        'Nenhuma outra marca cadastrada ainda',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: AppColors.gray400,
@@ -147,7 +147,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                   onPressed: () => _openAddCompetitorSheet(context, ref),
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text(
-                    'Adicionar concorrente',
+                    'Adicionar outra marca',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
@@ -234,7 +234,7 @@ class _CompetitorRow extends StatelessWidget {
   }
 }
 
-/// Bottom sheet opened by "Adicionar concorrente" — either pick an
+/// Bottom sheet opened by "Adicionar outra marca" — either pick an
 /// already-registered competitor product not yet linked to this variant,
 /// or register a brand-new one (which gets linked automatically once
 /// saved).
@@ -263,7 +263,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
         content: Text(
           error is CatalogApiException
               ? error.message
-              : 'Não foi possível vincular o concorrente.',
+              : 'Não foi possível vincular a marca.',
         ),
       ),
     );
@@ -352,7 +352,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                   onPressed: _linking ? null : _createAndLink,
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text(
-                    'Cadastrar novo concorrente',
+                    'Cadastrar nova marca',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
@@ -372,7 +372,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 error: (_, _) => const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
-                    child: Text('Não foi possível carregar concorrentes'),
+                    child: Text('Não foi possível carregar outras marcas'),
                   ),
                 ),
                 data: (unlinked) {
@@ -380,8 +380,8 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     return const Padding(
                       padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                       child: Text(
-                        'Todos os concorrentes cadastrados já estão '
-                        'vinculados a este produto.',
+                        'Todas as outras marcas cadastradas já estão '
+                        'vinculadas a este produto.',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: AppColors.gray400,

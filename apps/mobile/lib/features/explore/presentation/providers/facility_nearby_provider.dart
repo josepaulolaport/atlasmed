@@ -113,13 +113,28 @@ final facilityNearbyPreviewProvider =
       double? lng;
       Iterable<int> clinicVerticalIds = const [];
 
-      final display = ref.watch(
-        clinicDetailDisplayFacilityProvider(facilityId),
+      // Select the three values this actually uses, not the whole facility.
+      //
+      // `clinicDetailDisplayFacilityProvider` is "loaded detail, else navigation
+      // shell", so it changes identity the moment the detail lands — and every
+      // change re-ran this provider, and every run is a `/facilities` request.
+      // Measured 2026-08-13: opening one clinic issued four of them. The
+      // coordinates and linhas are usually identical across those rebuilds; a
+      // select means only a real change costs a request.
+      final (lat0, lng0, verticalIds) = ref.watch(
+        clinicDetailDisplayFacilityProvider(facilityId).select(
+          (f) => (
+            f?.address?.lat,
+            f?.address?.lng,
+            f?.verticalProfiles.map((p) => p.verticalId).join(",") ?? "",
+          ),
+        ),
       );
-      lat = display?.address?.lat;
-      lng = display?.address?.lng;
-      clinicVerticalIds =
-          display?.verticalProfiles.map((p) => p.verticalId) ?? const [];
+      lat = lat0;
+      lng = lng0;
+      clinicVerticalIds = verticalIds.isEmpty
+          ? const <int>[]
+          : verticalIds.split(",").map(int.parse);
 
       if (lat == null || lng == null) {
         // Shared with the detail screen — no duplicate ClinicDetailRepository.

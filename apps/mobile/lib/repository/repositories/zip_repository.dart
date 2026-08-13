@@ -48,9 +48,13 @@ class ZipRepository<Data> extends BaseRepository<Data> {
         CombineLatestStream(
           repositories.map((e) => e.stream.startWith(e.currentState)),
           _zipperInternal,
-        ).listen((data) {
-          emit(data: data);
-        });
+        ).listen(
+          (data) => emit(data: data),
+          // One source failing means this repository cannot produce a combined
+          // value, so its own consumers have to hear about it.
+          onError: (Object error, StackTrace stackTrace) =>
+              reportFailure(error, stackTrace, trigger: 'combined source'),
+        );
   }
 
   final String? _name;

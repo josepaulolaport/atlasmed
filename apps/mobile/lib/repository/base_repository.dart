@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/repository_failure.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_fiber.dart';
@@ -35,12 +36,15 @@ abstract class BaseRepository<Data> {
   }) : dependencies = dependencies ?? <Repository<dynamic>>[] {
     track();
 
-    hydratate(refreshAfter: resolveOnCreate);
+    runInBackground(
+      () => hydratate(refreshAfter: resolveOnCreate),
+      trigger: 'hydration',
+    );
 
     if (autoRefreshInterval != null) {
       timer = Timer.periodic(autoRefreshInterval!, (_) {
         if (_controller.hasListener) {
-          refresh();
+          runInBackground(refresh, trigger: 'auto refresh');
         }
       });
     }
@@ -80,11 +84,24 @@ abstract class BaseRepository<Data> {
   void _listenToDependencies() {
     _subscriptions.addAll(
       dependencies.map(
-        (dependency) => dependency.stream.listen((state) {
-          if (state is RepositoryStateReady) {
-            refresh();
-          }
-        }),
+        (dependency) => dependency.stream.listen(
+          (state) {
+            if (state is RepositoryStateReady) {
+              runInBackground(
+                refresh,
+                trigger: 'dependency ${dependency.name}',
+              );
+            }
+          },
+          // The dependency reports its own failure on its own channel; this
+          // repository only records that it will not be refreshed because of
+          // it. Without a handler the error would reach the zone instead.
+          onError: (Object error, StackTrace stackTrace) => logger(
+            'Repository($name): dependency ${dependency.name} failed, '
+            'skipping refresh: $error',
+            level: RepositoryLoggingLevel.error,
+          ),
+        ),
       ),
     );
   }
@@ -142,6 +159,69 @@ abstract class BaseRepository<Data> {
   @protected
   final _controller = BehaviorSubject<RepositoryState<Data>>();
 
+  final _failures = StreamController<RepositoryFailure>.broadcast();
+
+  /// Failures from refreshes nobody awaited. An awaited [refresh] still throws
+  /// — this channel exists for the ones started by the constructor, the
+  /// auto-refresh timer and dependency fan-out.
+  late final Stream<RepositoryFailure> failures = _failures.stream;
+
+  /// The most recent background failure, or null if the last one recovered.
+  RepositoryFailure? get lastFailure => _lastFailure;
+  RepositoryFailure? _lastFailure;
+
+  /// Starts an operation nobody will await, routing its failure to
+  /// [reportFailure] instead of letting it reach the zone as an unhandled
+  /// async error.
+  @protected
+  void runInBackground<T>(
+    Future<T> Function() operation, {
+    required String trigger,
+  }) {
+    unawaited(() async {
+      try {
+        await operation();
+        _lastFailure = null;
+      } catch (error, stackTrace) {
+        reportFailure(error, stackTrace, trigger: trigger);
+      }
+    }());
+  }
+
+  /// Records a background failure: always logged, always published on
+  /// [failures], and pushed down [stream] only when there is nothing to show.
+  ///
+  /// A repository that already holds data keeps showing it — a background
+  /// refresh failing is not a reason to blank a screen that works. With no data
+  /// the error goes down the stream so the UI can render a failure instead of
+  /// an endless spinner.
+  @protected
+  void reportFailure(
+    Object error,
+    StackTrace stackTrace, {
+    required String trigger,
+  }) {
+    final failure = RepositoryFailure(
+      error: error,
+      stackTrace: stackTrace,
+      trigger: trigger,
+    );
+    _lastFailure = failure;
+
+    logger(
+      'Repository($name): $trigger failed: $error',
+      level: RepositoryLoggingLevel.error,
+    );
+
+    if (!_failures.isClosed) {
+      _failures.add(failure);
+    }
+
+    if (currentValue == null && !_controller.isClosed) {
+      _controller.addError(error, stackTrace);
+    }
+  }
+
   /// Monostate cache service to save data locally. It should be initialized
   /// before using any repository.
   static late RepositoryCacheStorage storage;
@@ -189,6 +269,7 @@ abstract class BaseRepository<Data> {
     timer?.cancel();
     _unlistenToDependencies();
     _controller.close();
+    _failures.close();
   }
 
   // Default methods

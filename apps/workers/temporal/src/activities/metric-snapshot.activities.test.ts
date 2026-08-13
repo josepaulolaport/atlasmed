@@ -47,7 +47,6 @@ describe("recalculateMetricSnapshotsBatch", () => {
       mode: "RECONCILE",
       cursor: null,
       limit: 500,
-      months: MONTHS,
       since: "2026-03-01T00:00:00.000Z",
       until: "2026-03-01T02:00:00.000Z",
     });
@@ -57,7 +56,7 @@ describe("recalculateMetricSnapshotsBatch", () => {
     expect(windowSeen!.until.toISOString()).toBe("2026-03-01T02:00:00.000Z");
   });
 
-  test("BACKFILL reads every profile, never the watermark query", async () => {
+  test("NIGHTLY reads every profile, never the watermark query", async () => {
     let usedWatermark = false;
     const activity = createMetricSnapshotBatchActivity({
       store: createStore({
@@ -70,11 +69,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
     });
 
     const result = await activity({
-      mode: "BACKFILL",
+      mode: "NIGHTLY",
       cursor: null,
       limit: 500,
-      months: MONTHS,
-    });
+      });
 
     expect(usedWatermark).toBe(false);
     expect(result.processed).toBe(2);
@@ -104,7 +102,6 @@ describe("recalculateMetricSnapshotsBatch", () => {
       mode: "TRIGGER",
       cursor: null,
       limit: 500,
-      months: ["2026-03-01"],
       profileIds: [42],
     });
 
@@ -119,10 +116,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
   test("TRIGGER without profiles is refused rather than recomputing nothing quietly", async () => {
     const activity = createMetricSnapshotBatchActivity({ store: createStore() });
     await expect(
-      activity({ mode: "TRIGGER", cursor: null, limit: 500, months: MONTHS, profileIds: [] }),
+      activity({ mode: "TRIGGER", cursor: null, limit: 500, profileIds: [] }),
     ).rejects.toMatchObject({ nonRetryable: true });
     await expect(
-      activity({ mode: "TRIGGER", cursor: null, limit: 500, months: MONTHS }),
+      activity({ mode: "TRIGGER", cursor: null, limit: 500 }),
     ).rejects.toMatchObject({ nonRetryable: true });
   });
 
@@ -131,16 +128,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
     // Retrying a malformed input just burns attempts, so this must be
     // non-retryable rather than merely thrown.
     await expect(
-      activity({ mode: "RECONCILE", cursor: null, limit: 500, months: MONTHS }),
+      activity({ mode: "RECONCILE", cursor: null, limit: 500 }),
     ).rejects.toMatchObject({ nonRetryable: true });
   });
 
-  test("an empty month list is refused rather than silently doing nothing", async () => {
-    const activity = createMetricSnapshotBatchActivity({ store: createStore() });
-    await expect(
-      activity({ mode: "BACKFILL", cursor: null, limit: 500, months: [] }),
-    ).rejects.toMatchObject({ nonRetryable: true });
-  });
 
   test("one failing profile does not abandon the rest of the page", async () => {
     const recomputed: number[] = [];
@@ -156,11 +147,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
     });
 
     const result = await activity({
-      mode: "BACKFILL",
+      mode: "NIGHTLY",
       cursor: null,
       limit: 500,
-      months: MONTHS,
-    });
+      });
 
     expect(recomputed).toEqual([1, 3]);
     expect(result.processed).toBe(3);
@@ -182,11 +172,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
     });
 
     const result = await activity({
-      mode: "BACKFILL",
+      mode: "NIGHTLY",
       cursor: null,
       limit: 500,
-      months: MONTHS,
-    });
+      });
 
     expect(result.written).toBe(6);
     expect(result.differed).toBe(2);
@@ -198,11 +187,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
       store: createStore({ listAllProfileIds: async () => [4, 9, 11] }),
     });
     const result = await activity({
-      mode: "BACKFILL",
+      mode: "NIGHTLY",
       cursor: null,
       limit: 500,
-      months: MONTHS,
-    });
+      });
     expect(result.nextCursor).toBe(11);
   });
 
@@ -211,11 +199,10 @@ describe("recalculateMetricSnapshotsBatch", () => {
       store: createStore({ listAllProfileIds: async () => [] }),
     });
     const result = await activity({
-      mode: "BACKFILL",
+      mode: "NIGHTLY",
       cursor: 40,
       limit: 500,
-      months: MONTHS,
-    });
+      });
     expect(result.processed).toBe(0);
     expect(result.nextCursor).toBeNull();
   });
@@ -229,7 +216,7 @@ describe("recalculateMetricSnapshotsBatch", () => {
       }),
     });
     await expect(
-      activity({ mode: "BACKFILL", cursor: null, limit: 500, months: MONTHS }),
+      activity({ mode: "NIGHTLY", cursor: null, limit: 500 }),
     ).rejects.toMatchObject({ nonRetryable: false });
   });
 
@@ -246,7 +233,7 @@ describe("recalculateMetricSnapshotsBatch", () => {
       now: () => new Date("2026-03-15T10:00:00.000Z"),
     });
 
-    await activity({ mode: "BACKFILL", cursor: null, limit: 500, months: MONTHS });
+    await activity({ mode: "NIGHTLY", cursor: null, limit: 500 });
 
     // One instant for the page: a `computed_at` that drifts mid-page makes the
     // sweep's own staleness comparison ambiguous.

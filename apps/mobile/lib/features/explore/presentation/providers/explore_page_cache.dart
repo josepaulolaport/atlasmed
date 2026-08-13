@@ -27,8 +27,29 @@ final exploreSessionCacheTagProvider = StreamProvider<String?>((ref) async* {
 
 const exploreRepositoryPageTtl = Duration(minutes: 2);
 
-void keepExplorePageAlive(Ref ref) {
+/// Whether the provider that owns this keep-alive is still mounted.
+///
+/// Riverpod 2.6 exposes no public `ref.mounted`, and only `ref.onDispose`
+/// throws once the element is gone — `ref.watch` silently attaches to a corpse
+/// instead. An `async*` provider that awaits therefore has no way to tell it
+/// was disposed mid-build without tracking it itself.
+class ExplorePageLifetime {
+  ExplorePageLifetime._();
+
+  bool _disposed = false;
+
+  bool get isDisposed => _disposed;
+}
+
+/// Keeps an Explorar page provider alive for [exploreRepositoryPageTtl] after
+/// its last listener leaves, so paging back and forth does not refetch.
+///
+/// Must be called before the provider's first `await`: registering the
+/// lifecycle callbacks after an async gap throws if the provider was disposed
+/// while suspended.
+ExplorePageLifetime keepExplorePageAlive(Ref ref) {
   final keepAlive = ref.keepAlive();
+  final lifetime = ExplorePageLifetime._();
   Timer? disposeTimer;
 
   ref.onCancel(() {
@@ -38,5 +59,10 @@ void keepExplorePageAlive(Ref ref) {
     disposeTimer?.cancel();
     disposeTimer = null;
   });
-  ref.onDispose(() => disposeTimer?.cancel());
+  ref.onDispose(() {
+    lifetime._disposed = true;
+    disposeTimer?.cancel();
+  });
+
+  return lifetime;
 }

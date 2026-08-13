@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repository.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_state.dart';
@@ -7,7 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Drives [UsersScreen]'s list: search + role/status filters, page-based
 /// pagination against `GET /access/users`, and single-row refresh after a
 /// lifecycle/role mutation elsewhere in the feature.
-class UsersListNotifier extends StateNotifier<UsersListState> {
+class UsersListNotifier extends StateNotifier<UsersListState>
+    with DisposeSafeStateWrites<UsersListState> {
   UsersListNotifier(this._repository) : super(const UsersListState()) {
     load();
   }

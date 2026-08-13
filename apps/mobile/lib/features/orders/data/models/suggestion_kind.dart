@@ -5,7 +5,7 @@ extension SuggestionKindX on SuggestionKind {
   String get label {
     switch (this) {
       case SuggestionKind.competitor:
-        return 'Concorrente';
+        return 'Outra marca';
       case SuggestionKind.catalog:
         return 'Catálogo';
       case SuggestionKind.manual:

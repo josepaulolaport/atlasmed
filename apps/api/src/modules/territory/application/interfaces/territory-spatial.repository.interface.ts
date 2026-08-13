@@ -48,6 +48,18 @@ export interface ManagerZoneCandidate {
 export interface TerritorySpatialRepository {
   getBoundaryAsGeoJson(territoryId: number): Promise<GeoJsonGeometry | null>;
 
+  /**
+   * Boundaries for a set of territories in one query.
+   *
+   * Listing screens draw every territory at once, so fetching geometry one id at
+   * a time turns a list of N into N round trips. Territories with no boundary —
+   * a supported state, see `territory_types.can_have_boundary` — are simply
+   * absent from the result rather than present as null.
+   */
+  getBoundariesAsGeoJson(
+    territoryIds: number[]
+  ): Promise<Map<number, GeoJsonGeometry>>;
+
   saveBoundary(
     territoryId: number,
     geoJson: GeoJsonGeometry,

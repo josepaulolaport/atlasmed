@@ -9,23 +9,34 @@ import { loadWorkerConfig } from "../config";
 import { logger } from "../logger";
 
 /**
- * The reconciliation sweep's schedule (spec 0013 §4.4).
+ * Two schedules, because they answer different questions (spec 0013 §4.4, §4.6).
  *
- * Hourly on the hour, mirroring `facility-purchase-recurrence-hourly` rather
- * than inventing a second cadence — the two reconcile the same kind of derived
- * value from the same orders table, and one convention is easier to reason about
- * at 3am than two.
+ * **Hourly RECONCILE** catches profiles whose orders changed, and repairs an
+ * inline recompute that never ran. Watermark-driven, so it only visits clinics
+ * where something happened.
  *
- * `SKIP` on overlap, not `BUFFER_ONE`: the recompute is idempotent and
- * watermark-driven, so a skipped run costs at most one interval of staleness and
- * the next run's window still covers what the skipped one would have. Buffering
- * would queue redundant work behind a slow run for no gain.
+ * **Nightly NIGHTLY** visits every profile. `ours` is a rolling 90-day window,
+ * so a clinic's value moves as orders age out of it — with no event, and
+ * therefore with nothing for a watermark to select. Without this pass a quiet
+ * clinic's number freezes at whatever the window said when it was last touched.
+ * 03:00 keeps it clear of the hourly run and of business hours.
+ *
+ * `SKIP` on overlap, not `BUFFER_ONE`: the recompute is idempotent, so a skipped
+ * run costs at most one interval of staleness and the next run covers what it
+ * would have. Buffering would queue redundant work behind a slow run for no gain.
  */
 export const METRIC_SNAPSHOT_SCHEDULES = [
   {
     scheduleId: "facility-metric-snapshot-hourly",
     workflowId: "facility-metric-snapshot-hourly",
     calendar: { minute: 0 },
+    mode: "RECONCILE",
+  },
+  {
+    scheduleId: "facility-metric-snapshot-nightly",
+    workflowId: "facility-metric-snapshot-nightly",
+    calendar: { hour: 3, minute: 0 },
+    mode: "NIGHTLY",
   },
 ] as const;
 
@@ -42,7 +53,7 @@ function scheduleOptions(
       workflowType: "metricSnapshotWorkflow",
       taskQueue: input.taskQueue,
       workflowId: definition.workflowId,
-      args: [{ mode: "RECONCILE" as const }],
+      args: [{ mode: definition.mode }],
     },
   };
 }

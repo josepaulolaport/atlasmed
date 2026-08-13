@@ -89,7 +89,7 @@ class TrackingClinic {
   });
 }
 
-// ── Price suggestion for ProductOrderSheet ───────────────────
+// ── Price suggestion ─────────────────────────────────────────
 class PriceSuggestion {
   final double unit;
   final String date;

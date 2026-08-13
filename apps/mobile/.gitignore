@@ -46,5 +46,28 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
+# ── Shorebird ────────────────────────────────────────────────────────
+# shorebird.yaml é versionado (app IDs não são secretos)
+config.production.json
+config.staging.json
+
+# ── Fastlane ─────────────────────────────────────────────────────────
+fastlane/report.xml
+fastlane/test_output/
+fastlane/Preview.html
+**/fastlane/screenshots/
+**/fastlane/metadata/
+**/fastlane/readme.md
+
+# ── Ruby / Bundler ──────────────────────────────────────────────────
+vendor/bundle/
+.bundle/
+Gemfile.lock
+
+# ── Android signing ──────────────────────────────────────────────────
+android/key.properties
+**/*.keystore
+**/*.jks
+
 
 tmp/

@@ -7,7 +7,9 @@ export * from "./types/geometry";
 export {
   createMetricSnapshotStore,
   listAllProfileIds,
+  listTheirsStanding,
   listProfilesWithChangedInputs,
+  sumOursByProduct,
 } from "./queries/metric-snapshot-store";
 
 // Explicit enum value types for backward-compat

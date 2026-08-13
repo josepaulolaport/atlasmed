@@ -20,6 +20,7 @@ class UnexpectedStatusCodeException implements Exception {
   String toString() {
     return 'UnexpectedStatusCodeException{'
         'request: $sent, '
+        'sentHeaders: ${redactHeaders(received.requestHeaders)}, '
         'response: $received'
         '}';
   }

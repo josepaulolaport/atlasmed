@@ -144,40 +144,43 @@ export function addMonths(month: MonthKey, delta: number): MonthKey {
 }
 
 /**
- * The `count` months ending at `month`, oldest first — the window the read path
- * averages over.
- */
-export function trailingMonths(month: MonthKey, count: number): MonthKey[] {
-  if (!Number.isInteger(count) || count < 1) {
-    throw new MarketMetricValidationError(
-      "INVALID_WINDOW",
-      `Window must be a positive whole number of months, received ${count}`,
-    );
-  }
-  const months: MonthKey[] = [];
-  for (let offset = count - 1; offset >= 0; offset -= 1) {
-    months.push(addMonths(month, -offset));
-  }
-  return months;
-}
-
-/**
- * Total and share for one month.
+ * The observed market and our share of it — the whole rule, in one place.
  *
- * Mirrors the generated columns on `facility_metric_snapshots` so the read path
- * can derive the same figures for a trailing window without a second definition
- * of the rule drifting from the first.
+ * There are two expressions of this rule and there can only ever be two: this
+ * one, and the generated `share` column on `facility_metric_snapshots`. The
+ * column exists because cross-clinic aggregates average share in SQL; this
+ * function exists because the clinic screen computes live, so that its headline
+ * agrees with the per-product rows underneath it. Neither can be deleted in
+ * favour of the other.
  *
- * `share` is **null, never 0**, when nothing is known (spec 0013 §4.3): "we sell
- * nothing here" and "we have no information" must stay distinguishable, and a 0
- * reads as the former while meaning the latter.
+ * What *was* avoidable is the rule being written twice. The observation guard
+ * used to live in the read path's use case while the rest lived here, so the
+ * two halves of one sentence sat in different packages. `market-share-parity.
+ * db.test.ts` runs the same operands through both this function and Postgres
+ * and asserts they agree, so a change to one that is not made to the other
+ * fails rather than quietly reporting a different number on a different screen.
+ *
+ * `share` is **null, never 0** (spec 0013 §4.3, extended by §4.6). Two ways to
+ * be unknown, and they are the same principle twice:
+ *   - there is nothing in the market to divide, or
+ *   - there is no *known* market: no competitor recorded, and no rep saying
+ *     there is none. Reporting 100% there claims we own everything on no
+ *     evidence.
+ *
+ * "We sell nothing here" and "we have no information" must stay
+ * distinguishable, and a 0 reads as the former while meaning the latter.
  */
 export function deriveShare(
   oursQty: number,
   theirsQty: number,
+  noOtherBrands: boolean,
 ): { totalQty: number; share: number | null } {
   const totalQty = oursQty + theirsQty;
-  return { totalQty, share: totalQty > 0 ? oursQty / totalQty : null };
+  const marketIsKnown = noOtherBrands || theirsQty > 0;
+  return {
+    totalQty,
+    share: marketIsKnown && totalQty > 0 ? oursQty / totalQty : null,
+  };
 }
 
 /** Days in the rolling window the headline figure is computed over. */
@@ -195,8 +198,9 @@ export const DAYS_PER_MONTH = 30;
  * of every month and climbs through it — a clinic selling steadily looks like it
  * is recovering, purely from the calendar.
  *
- * Snapshots stay per calendar month regardless: "March versus April" is only
- * answerable if months are what you stored. The two windows answer different
+ * Since §4.6 this is the only window there is: the metric says what is true
+ * now, and nothing reads it as a series. The window is also why a nightly pass
+ * exists — a stored figure drifts as the calendar moves under it, with no write
  * questions and are not meant to agree exactly.
  */
 export function rollingWindow(
@@ -231,26 +235,3 @@ export function monthlyRateFromDays(
   return (quantity / days) * DAYS_PER_MONTH;
 }
 
-/**
- * The trailing monthly mean over a fixed window of months.
- *
- * Still used for month-keyed figures — the rep's competitor quantities are
- * already monthly *rates*, so they are averaged, never day-normalised.
- *
- * Divides by the window, not by the number of months supplied — a clinic that
- * recorded in one of the last three months averages over three, because the two
- * silent months are real zeros rather than missing data.
- */
-export function averageMonthly(
-  monthlyQuantities: readonly number[],
-  monthsInWindow: number,
-): number {
-  if (!Number.isInteger(monthsInWindow) || monthsInWindow < 1) {
-    throw new MarketMetricValidationError(
-      "INVALID_WINDOW",
-      `Window must be a positive whole number of months, received ${monthsInWindow}`,
-    );
-  }
-  const sum = monthlyQuantities.reduce((total, value) => total + value, 0);
-  return sum / monthsInWindow;
-}

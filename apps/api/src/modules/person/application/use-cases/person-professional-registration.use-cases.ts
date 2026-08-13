@@ -2,7 +2,7 @@ import {
   ResourceNotFoundError,
   ValidationError,
 } from "../../../../shared/errors";
-import { isPostgresUniqueViolation } from "../../infrastructure/repositories/drizzle/postgres-unique-violation";
+import { isPostgresUniqueViolation } from "../../../../shared/utils/postgres-unique-violation";
 import type { PersonProfessionalRegistrationCouncilRepository } from "../interfaces/person-professional-registration-council.repository.interface";
 import type {
   PersonProfessionalRegistrationRecord,

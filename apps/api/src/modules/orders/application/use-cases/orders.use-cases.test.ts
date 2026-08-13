@@ -277,8 +277,8 @@ describe("orders use cases", () => {
     });
   });
 
-  it("enqueues a metric snapshot recompute for the order's profile and month", async () => {
-    const enqueued: Array<{ facilityVerticalProfileId: number; months: string[] }> = [];
+  it("enqueues a metric snapshot recompute for the order's profile", async () => {
+    const enqueued: Array<{ facilityVerticalProfileId: number }> = [];
     const { repository } = createRecordingRepository();
 
     await new CreateOrderUseCase({
@@ -290,17 +290,16 @@ describe("orders use cases", () => {
       },
     }).execute({
       facilityId: 1,
-      // Late on the last day of the month in São Paulo — still March there, and
-      // April in UTC. The rep who typed it would disagree with an April figure.
+      // Backdated, and deliberately so: a recompute rebuilds the whole profile
+      // from a rolling window, so when the order was placed must not reach the
+      // request. It used to, and two orders in two months meant two runs.
       orderedAt: "2026-04-01T01:00:00.000Z",
       items: [{ productId: 1, quantity: 2 }],
       scope: scopedToFacilityOne,
       actor: { userId: 1, roleName: "REP" },
     });
 
-    expect(enqueued).toEqual([
-      { facilityVerticalProfileId: 777, months: ["2026-03-01"] },
-    ]);
+    expect(enqueued).toEqual([{ facilityVerticalProfileId: 777 }]);
   });
 
   it("still returns the order when the recompute cannot be enqueued, and says so", async () => {

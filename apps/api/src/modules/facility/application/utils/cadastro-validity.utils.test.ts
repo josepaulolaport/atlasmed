@@ -23,11 +23,13 @@ describe("deriving a cadastro expiry", () => {
 
   it("counts whole calendar days, ignoring the time of day", () => {
     // A validity is a calendar fact. Comparing it to a timestamp would make the
-    // answer depend on when in the day the request landed, so 15:30 must give
-    // the same count as 00:01.
+    // answer depend on when in the day the request landed, so any moment on the
+    // 11th must give the same count. The instants are the first and last minute
+    // of the 11th *in Brazil* — 00:01 and 23:59 UTC are the 10th and the 11th
+    // there, which is a different question.
     expect(daysUntil("2026-08-12", TODAY)).toBe(1);
-    expect(daysUntil("2026-08-12", new Date("2026-08-11T00:01:00.000Z"))).toBe(1);
-    expect(daysUntil("2026-08-12", new Date("2026-08-11T23:59:00.000Z"))).toBe(1);
+    expect(daysUntil("2026-08-12", new Date("2026-08-11T03:01:00.000Z"))).toBe(1);
+    expect(daysUntil("2026-08-12", new Date("2026-08-12T02:59:00.000Z"))).toBe(1);
   });
 
   it("treats the expiry day itself as not yet expired", () => {
@@ -54,6 +56,37 @@ describe("deriving a cadastro expiry", () => {
 
   it("carries the date through, so the client need not re-parse it", () => {
     expect(deriveExpiry("2027-01-01", TODAY)?.validUntil).toBe("2027-01-01");
+  });
+
+  describe("the day is the one the rep is standing in", () => {
+    // America/Sao_Paulo is UTC-3, so the last three hours of every Brazilian day
+    // are already tomorrow in UTC. Reading "today" off the server's UTC clock
+    // aged every document by a day for that window — a rep filing paperwork at
+    // 21:00 saw a licence valid until today flagged EXPIRED.
+    const EVENING_IN_BRAZIL = new Date("2026-08-12T01:00:00.000Z"); // 22:00 on the 11th
+
+    it("still calls the 11th today at 22:00 in Brazil", () => {
+      expect(deriveExpiry("2026-08-11", EVENING_IN_BRAZIL)).toMatchObject({
+        daysRemaining: 0,
+        status: "EXPIRING_SOON",
+      });
+    });
+
+    it("gives the same answer at 22:00 as it did that morning", () => {
+      const morning = new Date("2026-08-11T12:00:00.000Z");
+      expect(daysUntil("2026-09-01", EVENING_IN_BRAZIL)).toBe(
+        daysUntil("2026-09-01", morning)
+      );
+    });
+
+    it("rolls over at Brazilian midnight, not UTC midnight", () => {
+      // 00:30 on the 12th local — now the 11th really is yesterday.
+      const afterMidnight = new Date("2026-08-12T03:30:00.000Z");
+      expect(deriveExpiry("2026-08-11", afterMidnight)).toMatchObject({
+        daysRemaining: -1,
+        status: "EXPIRED",
+      });
+    });
   });
 });
 

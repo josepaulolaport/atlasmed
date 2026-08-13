@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
@@ -34,7 +35,8 @@ class FacilityPayersState {
   }
 }
 
-class FacilityPayersNotifier extends StateNotifier<FacilityPayersState> {
+class FacilityPayersNotifier extends StateNotifier<FacilityPayersState>
+    with DisposeSafeStateWrites<FacilityPayersState> {
   FacilityPayersNotifier({required this.facilityId})
     : super(const FacilityPayersState(loading: true)) {
     _load();

@@ -1,5 +1,4 @@
-import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -13,9 +12,9 @@ import 'package:flutter/services.dart';
 /// pair a profile in one linha with a metric in another — that invariant is the
 /// server's, and this screen simply has no way to express the wrong thing.
 ///
-/// The quantity is in *product units*, exactly as printed on the box. It is
-/// multiplied by the product's `metric_units` on read, symmetric with how our
-/// own order lines are counted, so the rep never does arithmetic in their head.
+/// The quantity is the standing monthly figure in the metric's own unit — one
+/// number per product, replaced rather than accumulated (spec 0013 §4.6). No
+/// conversion happens on read, so what the rep types is what the list shows.
 class CompetitorQuantitySheet extends StatefulWidget {
   const CompetitorQuantitySheet({
     super.key,
@@ -23,7 +22,7 @@ class CompetitorQuantitySheet extends StatefulWidget {
     required this.repository,
     required this.definitionId,
     this.existing,
-    this.catalogRepository,
+    this.definitionsRepository,
   });
 
   final String definitionLabel;
@@ -34,7 +33,7 @@ class CompetitorQuantitySheet extends StatefulWidget {
   final CompetitorUsage? existing;
 
   /// Injectable so the sheet can be driven in tests without a network.
-  final CatalogRepository? catalogRepository;
+  final PotentialDefinitionsRepository? definitionsRepository;
 
   @override
   State<CompetitorQuantitySheet> createState() =>
@@ -42,13 +41,13 @@ class CompetitorQuantitySheet extends StatefulWidget {
 }
 
 class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
-  late final CatalogRepository _catalog =
-      widget.catalogRepository ?? CatalogRepository();
+  late final PotentialDefinitionsRepository _definitions =
+      widget.definitionsRepository ?? PotentialDefinitionsRepository();
   late final TextEditingController _quantity = TextEditingController(
     text: widget.existing == null ? '' : _fmt(widget.existing!.quantity),
   );
 
-  List<CompetitorProduct> _products = const [];
+  List<LinkedPotentialProduct> _products = const [];
   int? _selectedProductId;
   bool _loadingProducts = true;
   bool _saving = false;
@@ -67,13 +66,31 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     super.dispose();
   }
 
+  /// The other brands that count toward this metric — not the whole catalogue.
+  ///
+  /// A competitor product counts when it is the equivalent of one of our
+  /// products linked to the metric. Offering all 500 brands let a rep pick one
+  /// that could never appear: the server wrote the row, the read derived
+  /// eligibility the same way and filtered it straight back out, and the figure
+  /// vanished on the next redraw. The server refuses that now; this stops it
+  /// being offered in the first place.
   Future<void> _loadProducts() async {
     try {
-      final products = await _catalog.getAllCompetitorProducts();
+      final eligible = await _definitions.listCompetitorProducts(
+        widget.definitionId,
+      );
       if (!mounted) return;
       setState(() {
-        _products = products;
+        _products = eligible;
         _loadingProducts = false;
+        // An empty picker with no caption reads as the app failing to load.
+        // This metric simply has no other brands catalogued yet, and that is
+        // an admin's job, not something the rep can resolve here.
+        if (_products.isEmpty) {
+          _error =
+              'Nenhuma outra marca está cadastrada como equivalente dos '
+              'produtos desta métrica. Fale com o catálogo para incluir.';
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -81,7 +98,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
         _loadingProducts = false;
         // Named, not swallowed: without the list there is nothing to pick, and
         // a silent empty picker reads as "no competitors exist".
-        _error = 'Não foi possível carregar os produtos concorrentes.';
+        _error = 'Não foi possível carregar os produtos de outras marcas.';
       });
     }
   }
@@ -89,14 +106,21 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
   Future<void> _save() async {
     final productId = _selectedProductId;
     if (productId == null) {
-      setState(() => _error = 'Selecione um produto concorrente.');
+      setState(() => _error = 'Selecione um produto de outra marca.');
       return;
     }
     final quantity = double.tryParse(
       _quantity.text.trim().replaceAll(',', '.'),
     );
-    if (quantity == null || quantity < 0) {
-      setState(() => _error = 'Informe uma quantidade válida.');
+    // Strictly positive (§4.6). Zero is not a quantity: "não vendem aqui" is
+    // the "Nenhuma outra marca" option on the section, which is dated.
+    if (quantity == null || quantity <= 0) {
+      setState(
+        () => _error = quantity == 0
+            ? 'Para dizer que não há outras marcas, use a opção '
+                  '"Nenhuma outra marca".'
+            : 'Informe uma quantidade válida.',
+      );
       return;
     }
 
@@ -126,6 +150,64 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     }
   }
 
+  /// Removes this competitor product from the metric.
+  ///
+  /// The product picker is deliberately locked while editing — a different
+  /// product is a different row, not an edit — so removal is the only way to
+  /// correct a row recorded against the wrong product. Without it the rep's
+  /// only escape is a quantity of 0, which is a claim about the clinic
+  /// ("uses none") rather than the absence of one.
+  Future<void> _remove() async {
+    final existing = widget.existing;
+    if (existing == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover outra marca?'),
+        content: Text(
+          '${existing.productName} deixa de contar neste cálculo. Para '
+          'registrar que a clínica passou a usar menos, edite a quantidade '
+          'em vez de remover.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final page = await widget.repository.removeCompetitor(
+        definitionId: widget.definitionId,
+        productId: existing.productId,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(page);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error is FacilityPotentialException
+            ? error.message
+            : 'Não foi possível remover a marca.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -134,7 +216,10 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SafeArea(
         top: false,
-        child: Padding(
+        // Scrollable because the keyboard is open for most of this sheet's
+        // life: with the inset applied the actions at the bottom would
+        // otherwise sit below the viewport, present but untappable.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -153,7 +238,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
               const SizedBox(height: 16),
               Text(
                 widget.existing == null
-                    ? 'Adicionar concorrente'
+                    ? 'Adicionar outra marca'
                     : 'Editar quantidade',
                 style: const TextStyle(
                   fontSize: 17,
@@ -184,13 +269,13 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                   initialValue: _selectedProductId,
                   isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText: 'Produto concorrente',
+                    labelText: 'Produto de outra marca',
                     border: OutlineInputBorder(),
                   ),
                   items: [
                     for (final product in _products)
                       DropdownMenuItem(
-                        value: product.id,
+                        value: product.productId,
                         child: Text(
                           product.name,
                           overflow: TextOverflow.ellipsis,
@@ -214,10 +299,12 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Quantidade por mês',
-                  helperText: 'Na unidade da embalagem, como o rep a conhece.',
-                  border: OutlineInputBorder(),
+                  // One standing figure, not an addition to what is there: the
+                  // rep is stating what the clinic uses now.
+                  helperText: 'Quanto a clínica usa por mês, hoje.',
+                  border: const OutlineInputBorder(),
                 ),
               ),
               if (_error != null) ...[
@@ -242,6 +329,13 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                       )
                     : const Text('Salvar'),
               ),
+              if (widget.existing != null)
+                TextButton(
+                  key: const Key('competitor-quantity-remove'),
+                  onPressed: _saving ? null : _remove,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                  child: const Text('Remover outra marca'),
+                ),
             ],
           ),
         ),

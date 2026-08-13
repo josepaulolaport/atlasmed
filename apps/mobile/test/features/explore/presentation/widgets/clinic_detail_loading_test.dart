@@ -199,6 +199,14 @@ void main() {
       ],
     );
 
+    // The declared MediaQuery is 320x800; without this the surface stays at the
+    // 800x600 default and the section — which lives in a sliver on the real
+    // screen, so it is never height-bounded there — reports a vertical overflow
+    // that no user can hit. The horizontal fit is the invariant under test.
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -212,9 +220,14 @@ void main() {
                 size: Size(320, 800),
                 textScaler: TextScaler.linear(1.4),
               ),
+              // Scrollable, because that is how the section is mounted: a
+              // SliverToBoxAdapter child, never height-bounded. Without this the
+              // test asserts a vertical limit the real screen does not impose.
               child: SizedBox(
                 width: 320,
-                child: ClinicPotentialSection(facilityId: 1, canEdit: true),
+                child: SingleChildScrollView(
+                  child: ClinicPotentialSection(facilityId: 1, canEdit: true),
+                ),
               ),
             ),
           ),

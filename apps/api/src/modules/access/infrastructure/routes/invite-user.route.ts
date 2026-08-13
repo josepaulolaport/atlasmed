@@ -10,6 +10,31 @@ import { resolveInviteAcceptUrl } from "../email/invite-accept-url";
 import { sendInviteWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
 import { ValidationError } from "../../../../shared/errors";
 
+export const inviteUserBodySchema = t.Object({
+  email: t.Optional(t.String({ format: "email", description: "User email address" })),
+  phoneNumber: t.Optional(t.String({ description: "User phone number" })),
+  roleId: t.Number({ minimum: 1, description: "Role ID to assign to the invited user" }),
+  firstName: t.String({ minLength: 1, description: "First name of the invited user" }),
+  lastName: t.String({ minLength: 1, description: "Last name of the invited user" }),
+  birthDate: t.String({
+    pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+    description: "Invitee birth date (YYYY-MM-DD) — confirmed at registration",
+  }),
+  verticalAssignments: t.Optional(t.Array(t.Object({
+    verticalId: t.Number({ minimum: 1 }),
+    territoryIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
+    newPatch: t.Optional(t.Object({
+      name: t.String({ minLength: 1 }),
+      managerZoneId: t.Number({ minimum: 1 }),
+      slug: t.Optional(t.String()),
+      boundary: t.Object({
+        type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
+        coordinates: t.Unknown(),
+      }),
+    })),
+  }))),
+});
+
 export const inviteUserRoute = new Elysia({ 
   detail: {
     tags: ["Users"],
@@ -125,30 +150,7 @@ export const inviteUserRoute = new Elysia({
       tags: ["Users"],
       security: [{ bearerAuth: [] }],
     },
-    body: t.Object({
-      email: t.Optional(t.String({ format: "email", description: "User email address" })),
-      phoneNumber: t.Optional(t.String({ description: "User phone number" })),
-      roleId: t.String({ description: "Role ID to assign to the invited user" }),
-      firstName: t.String({ minLength: 1, description: "First name of the invited user" }),
-      lastName: t.String({ minLength: 1, description: "Last name of the invited user" }),
-      birthDate: t.String({
-        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-        description: "Invitee birth date (YYYY-MM-DD) — confirmed at registration",
-      }),
-      verticalAssignments: t.Optional(t.Array(t.Object({
-        verticalId: t.String(),
-        territoryIds: t.Optional(t.Array(t.String())),
-        newPatch: t.Optional(t.Object({
-          name: t.String({ minLength: 1 }),
-          managerZoneId: t.String(),
-          slug: t.Optional(t.String()),
-          boundary: t.Object({
-            type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
-            coordinates: t.Unknown(),
-          }),
-        })),
-      }))),
-    }),
+    body: inviteUserBodySchema,
     response: {
       200: t.Object({
         invite: t.Object({

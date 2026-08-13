@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/catalog_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +34,8 @@ class CatalogProductsState {
   );
 }
 
-class CatalogProductsNotifier extends StateNotifier<CatalogProductsState> {
+class CatalogProductsNotifier extends StateNotifier<CatalogProductsState>
+    with DisposeSafeStateWrites<CatalogProductsState> {
   CatalogProductsNotifier(this._repository)
     : super(const CatalogProductsState()) {
     load();
