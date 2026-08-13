@@ -36,14 +36,27 @@ enum CnesSuggestionsStatus {
 class CnesSuggestion {
   const CnesSuggestion({
     required this.personId,
+    required this.professionalCnesId,
     required this.displayName,
     this.occupation,
     this.registrationLabel,
     this.alreadyLinked = false,
   });
 
-  final int personId;
+  /// Null when we do not hold this person under any identity.
+  ///
+  /// CNES places ~18 000 people at our clinics whom our database has never
+  /// heard of. They are shown flagged rather than hidden, because a rep cannot
+  /// import somebody the list never displayed — and importing is the only way
+  /// they enter our database at all.
+  final int? personId;
+
+  /// `CO_PROFISSIONAL_SUS` — what an import names, since there may be no person.
+  final String professionalCnesId;
   final String displayName;
+
+  /// We already hold this person; the rep associates rather than imports.
+  bool get isKnown => personId != null;
 
   /// e.g. `MEDICO ORTOPEDISTA E TRAUMATOLOGISTA` — what makes a suggestion
   /// useful rather than a bare name (spec 0012 §3.1).
@@ -65,10 +78,14 @@ class CnesSuggestion {
   /// the fetch's catch turned it into "não foi possível consultar", and a
   /// serialisation bug was indistinguishable from CNES being unreachable.
   static CnesSuggestion? tryFromMap(Map<String, dynamic> map) {
-    final personId = _asInt(map['personId']);
-    if (personId == null) return null;
+    // `professionalCnesId` is the identity every row has; `personId` is the one
+    // only some rows have. Keying the guard on the wrong one is what used to
+    // drop the entire unmatched population on the floor.
+    final professionalCnesId = _nonEmpty(map['professionalCnesId']);
+    if (professionalCnesId == null) return null;
     return CnesSuggestion(
-      personId: personId,
+      personId: _asInt(map['personId']),
+      professionalCnesId: professionalCnesId,
       displayName: (map['displayName'] as String?)?.trim().isNotEmpty == true
           ? map['displayName'] as String
           : 'Sem nome',
@@ -80,9 +97,13 @@ class CnesSuggestion {
 
   /// The same shape the rest of the sheet renders, so a CNES row and a row from
   /// our own data are drawn by one widget rather than two that drift apart.
-  ProfessionalRoster toRoster() {
+  ///
+  /// [id] is required for selection, and someone we do not hold has no person
+  /// id yet — so [importedAs] carries the id the import just minted. Calling
+  /// this on an unknown person without one is a bug, not a rendering case.
+  ProfessionalRoster toRoster({int? importedAs}) {
     return ProfessionalRoster(
-      id: personId,
+      id: importedAs ?? personId!,
       name: displayName,
       initials: initialsFromName(displayName),
       hue: hueFromName(displayName),
@@ -143,9 +164,13 @@ class CnesSuggestions {
 
   bool get hasItems => items.isNotEmpty;
 
-  /// CNES places them here and they are not linked yet — the actionable half.
+  /// CNES places them here, we hold them, and they are not linked yet — one tap.
   List<CnesSuggestion> get unlinked =>
-      items.where((i) => !i.alreadyLinked).toList(growable: false);
+      items.where((i) => !i.alreadyLinked && i.isKnown).toList(growable: false);
+
+  /// CNES places them here and we do not hold them — these must be imported.
+  List<CnesSuggestion> get unknown =>
+      items.where((i) => !i.isKnown).toList(growable: false);
 
   /// CNES places them here and we already have them linked.
   List<CnesSuggestion> get linked =>

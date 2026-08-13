@@ -10,6 +10,38 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_r
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
+/// What an import produced: the person, and whether they were already ours.
+class CnesImportResult {
+  const CnesImportResult({
+    required this.personId,
+    required this.alreadyExisted,
+  });
+
+  final int personId;
+
+  /// The council registration was already held, so no record was created.
+  final bool alreadyExisted;
+}
+
+/// A bigint id arrives as a number or a string depending on the encoder.
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
+}
+
+Map<String, dynamic> _decodeMap(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    return decoded is Map<String, dynamic> ? decoded : const {};
+  } catch (_) {
+    // A malformed body is a failure to report, not an exception to leak from a
+    // parse call — the caller turns an empty map into its own error.
+    return const {};
+  }
+}
+
 class FacilityAssociateException implements Exception {
   const FacilityAssociateException([this.message]);
 
@@ -86,21 +118,40 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     String? search,
     int limit = 40,
   }) async {
-    final repo = DoctorsRepository(
-      page: 1,
-      limit: limit,
-      searchQuery: search,
-      excludeFacilityId: facilityId,
+    /*
+     * Through `client.call`, like every other method here.
+     *
+     * It used to build a `DoctorsRepository` and resolve it, which pulled in
+     * the cache and `SessionEnvironment` for what is a one-shot, debounced,
+     * already-scoped query — nothing was reused across calls, and the injected
+     * client did not reach it, so this one request went around the seam the
+     * others honour.
+     */
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: DoctorsRepository.makeEndpoint(
+          baseUrl: AppConfig.apiBaseUrl,
+          page: 1,
+          limit: limit,
+          searchQuery: search,
+          excludeFacilityId: facilityId,
+        ),
+        method: RepositoryHttpMethod.get,
+      ),
     );
-    try {
-      final page = await repo.currentValueOrResolve();
-      if (page == null) {
-        throw const FacilityAssociateException('Falha ao buscar médicos');
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao buscar médicos (${response.statusCode})',
+        );
       }
-      return page.items.map(_doctorFromDTO).toList(growable: false);
-    } finally {
-      repo.dispose();
+      return const [];
     }
+
+    final page = PaginatedProfessionals.fromMap(_decodeMap(response.body));
+    return page.items.map(_doctorFromDTO).toList(growable: false);
   }
 
   /// Link an existing person as healthcare professional at this facility.
@@ -122,6 +173,70 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
         );
       }
     }
+  }
+
+  /// Outcome of importing one CNES professional.
+  ///
+  /// [alreadyExisted] is not an error path. The server refuses to create a
+  /// second record for a council registration somebody already holds and
+  /// returns that person instead, so this is the ordinary answer to "import
+  /// them" when we turn out to have had them all along.
+  ///
+  /// The rep is told afterwards rather than asked beforehand: of 1 039
+  /// confirmed-same people, five disagree on spelling and none is a different
+  /// human, so a confirmation would be answered yes every time and would train
+  /// people to tap through it.
+  Future<CnesImportResult> importCnesProfessional({
+    required String professionalCnesId,
+    String? firstName,
+    String? lastName,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-imports'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'professionalCnesId': professionalCnesId,
+          if (firstName != null && firstName.trim().isNotEmpty)
+            'firstName': firstName.trim(),
+          if (lastName != null && lastName.trim().isNotEmpty)
+            'lastName': lastName.trim(),
+        },
+      ),
+    );
+
+    if (response.statusCode == 409) {
+      // The registration belongs to someone we already hold. The payload
+      // carries their id precisely so this resolves instead of failing.
+      final body = _decodeMap(response.body);
+      final personId = _asInt(body['personId']);
+      if (personId != null) {
+        return CnesImportResult(personId: personId, alreadyExisted: true);
+      }
+    }
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao importar profissional (${response.statusCode})',
+        );
+      }
+      throw const FacilityAssociateException('Falha ao importar profissional');
+    }
+
+    final body = _decodeMap(response.body);
+    final personId = _asInt(body['personId']);
+    if (personId == null) {
+      throw const FacilityAssociateException(
+        'Importação não retornou o profissional criado',
+      );
+    }
+    return CnesImportResult(
+      personId: personId,
+      alreadyExisted: body['created'] == false,
+    );
   }
 
   /// `PUT …/healthcare-professionals/:personFacilityId/roles`.

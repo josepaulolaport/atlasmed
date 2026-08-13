@@ -6,13 +6,27 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_ro
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+/// Builds the repository the sheet talks through.
+///
+/// Exists so a test can supply one. The sheet used to construct its own with no
+/// way in, which made every behaviour below — selection, import, the merge in
+/// [_AssociateDoctorsSheetState._confirm] — unreachable from a widget test.
+typedef FacilityAssociateRepositoryBuilder =
+    FacilityAssociateRepository Function(int facilityId);
+
+FacilityAssociateRepository _defaultRepository(int facilityId) =>
+    FacilityAssociateRepository(facilityId);
+
 /// Search + multi-select doctors to associate with a facility.
-/// Returns the selected doctors (already-associated + newly picked).
+///
+/// Returns the doctors the rep settled on — already-associated, newly picked,
+/// and any imported from CNES along the way.
 Future<List<ProfessionalRoster>?> showAssociateDoctorsSheet(
   BuildContext context, {
   required Set<int> alreadyAssociatedIds,
   required List<ProfessionalRoster> alreadyAssociatedDoctors,
   int? facilityId,
+  FacilityAssociateRepositoryBuilder? repositoryBuilder,
 }) {
   return showModalBottomSheet<List<ProfessionalRoster>>(
     context: context,
@@ -22,32 +36,41 @@ Future<List<ProfessionalRoster>?> showAssociateDoctorsSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _AssociateDoctorsSheet(
+    builder: (_) => AssociateDoctorsSheet(
       alreadyAssociatedIds: alreadyAssociatedIds,
       alreadyAssociatedDoctors: alreadyAssociatedDoctors,
       facilityId: facilityId,
+      repositoryBuilder: repositoryBuilder,
     ),
   );
 }
 
 enum _DoctorSource { ours, cnes }
 
-class _AssociateDoctorsSheet extends StatefulWidget {
-  const _AssociateDoctorsSheet({
+/// Public only so widget tests can mount it without the modal route.
+@visibleForTesting
+class AssociateDoctorsSheet extends StatefulWidget {
+  const AssociateDoctorsSheet({
+    super.key,
     required this.alreadyAssociatedIds,
     required this.alreadyAssociatedDoctors,
     this.facilityId,
+    this.repositoryBuilder,
   });
 
   final Set<int> alreadyAssociatedIds;
   final List<ProfessionalRoster> alreadyAssociatedDoctors;
   final int? facilityId;
+  final FacilityAssociateRepositoryBuilder? repositoryBuilder;
 
   @override
-  State<_AssociateDoctorsSheet> createState() => _AssociateDoctorsSheetState();
+  State<AssociateDoctorsSheet> createState() => _AssociateDoctorsSheetState();
 }
 
-class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
+class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
+  FacilityAssociateRepository _repository() =>
+      (widget.repositoryBuilder ?? _defaultRepository)(widget.facilityId!);
+
   List<ProfessionalRoster> _pool = const [];
   final Set<int> _selected = {};
   String _query = '';
@@ -78,6 +101,12 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// association request.
   final Set<int> _cnesLinkedIds = {};
 
+  /// CNES professionals picked for import, keyed by SUS id.
+  ///
+  /// Separate from [_selected] because they have no person id yet — that is
+  /// precisely what makes them an import rather than an association.
+  final Set<String> _selectedCnesIds = {};
+
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
@@ -99,7 +128,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// section rather than an error state over the whole surface.
   Future<void> _loadCnesSuggestions() async {
     if (!_useApi) return;
-    final repo = FacilityAssociateRepository(widget.facilityId!);
+    final repo = _repository();
     try {
       final suggestions = await repo.fetchCnesSuggestions();
       if (!mounted) return;
@@ -111,7 +140,10 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         // `_confirm` would post an association for someone already associated.
         _cnesLinkedIds
           ..clear()
-          ..addAll(suggestions.linked.map((s) => s.personId));
+          // `linked` implies we hold them, so personId is present — but read it
+          // defensively rather than asserting: a null here would crash the whole
+          // sheet on open, and the row it came from is simply not linkable.
+          ..addAll(suggestions.linked.map((s) => s.personId).whereType<int>());
         _selected.addAll(_cnesLinkedIds);
       });
     } catch (_) {
@@ -145,7 +177,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         return;
       }
 
-      final repo = FacilityAssociateRepository(widget.facilityId!);
+      final repo = _repository();
       try {
         final pool = await repo.searchDoctors(search: search);
         // Merge pool with already-associated doctors (search may not
@@ -203,7 +235,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         (s.registrationLabel ?? '').toLowerCase().contains(query);
   }
 
-  /// CNES places them here and they are not linked yet — the actionable half.
+  /// CNES places them here, we hold them, and they are not linked yet.
   List<CnesSuggestion> get _cnesRows {
     final suggestions = _cnes;
     if (suggestions == null) return const [];
@@ -211,6 +243,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         .where((s) => !widget.alreadyAssociatedIds.contains(s.personId))
         .where(_matchesQuery)
         .toList(growable: false);
+  }
+
+  /// CNES places them here and our database has never heard of them.
+  ///
+  /// Their own section rather than mixed in: selecting one commits the rep to
+  /// creating a professional record, which is a heavier thing than linking an
+  /// existing one, and the row carries a chip saying so.
+  List<CnesSuggestion> get _cnesUnknownRows {
+    final suggestions = _cnes;
+    if (suggestions == null) return const [];
+    return suggestions.unknown.where(_matchesQuery).toList(growable: false);
   }
 
   /// CNES places them here and we already have them linked.
@@ -248,11 +291,19 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         items.add('_section_divider');
       }
 
-      if (cnes.isEmpty) {
+      final unknown = _cnesUnknownRows;
+      if (cnes.isEmpty && unknown.isEmpty) {
         items.add('_section_cnes_empty');
       } else {
-        items.add('_section_header_cnes_new');
-        items.addAll(cnes);
+        if (cnes.isNotEmpty) {
+          items.add('_section_header_cnes_new');
+          items.addAll(cnes);
+        }
+        if (unknown.isNotEmpty) {
+          if (items.isNotEmpty) items.add('_section_divider');
+          items.add('_section_header_cnes_unknown');
+          items.addAll(unknown);
+        }
       }
       return items;
     }
@@ -335,7 +386,10 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                   // Everyone CNES places here, linked or not — the pill counts
                   // what the tab contains rather than only the actionable part,
                   // so the number matches the rows below it.
-                  cnesCount: _cnesRows.length + _cnesLinkedRows.length,
+                  cnesCount:
+                      _cnesRows.length +
+                      _cnesLinkedRows.length +
+                      _cnesUnknownRows.length,
                   // Null until the fetch settles, so the pill can say "—"
                   // rather than claim zero before it knows.
                   cnesLoaded: _cnes != null,
@@ -346,9 +400,19 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: _loading
+            /*
+             * Both failure states are scoped to the tab that owns them.
+             *
+             * The pool and the CNES snapshot come from different places and
+             * fail independently: a search outage used to blank this whole
+             * surface, CNES tab included, so a working registry section was
+             * unreachable because an unrelated request had failed. The reverse
+             * was already true by design — a CNES outage degrades to a message
+             * inside its own section.
+             */
+            child: _loading && _source == _DoctorSource.ours
                 ? const Center(child: CircularProgressIndicator())
-                : _error != null
+                : _error != null && _source == _DoctorSource.ours
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -473,6 +537,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     ? 'Sugeridos pelo CNES'
                     : 'Sugeridos pelo CNES (dados $reference)',
               );
+            case '_section_header_cnes_unknown':
+              return _buildSectionHeader('Ainda não cadastrados');
             case '_section_cnes_empty':
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -499,7 +565,11 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         // A CNES suggestion renders through the same tile as everything else —
         // same avatar, same type scale, same subtitle rule — because two
         // builders for one row shape is how they end up looking different.
-        if (item is CnesSuggestion) return _buildPersonTile(item.toRoster());
+        if (item is CnesSuggestion) {
+          return item.isKnown
+              ? _buildPersonTile(item.toRoster())
+              : _buildUnknownTile(item);
+        }
 
         return _buildPersonTile(item as ProfessionalRoster);
       },
@@ -578,6 +648,88 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     }
   }
 
+  /// A person CNES places here that we do not hold.
+  ///
+  /// Same tile as everywhere else, plus a chip: the rep needs to know that
+  /// ticking this one creates a professional record rather than linking one.
+  /// Keyed by SUS id rather than person id, because there is no person yet.
+  Widget _buildUnknownTile(CnesSuggestion s) {
+    final roster = ProfessionalRoster(
+      id: 0,
+      name: s.displayName,
+      initials: initialsFromName(s.displayName),
+      hue: hueFromName(s.displayName),
+      specialty: s.occupation,
+      crm: s.registrationLabel,
+    );
+    final selected = _selectedCnesIds.contains(s.professionalCnesId);
+
+    return CheckboxListTile(
+      value: selected,
+      onChanged: _saving
+          ? null
+          : (v) => setState(() {
+              if (v == true) {
+                _selectedCnesIds.add(s.professionalCnesId);
+              } else {
+                _selectedCnesIds.remove(s.professionalCnesId);
+              }
+            }),
+      controlAffinity: ListTileControlAffinity.trailing,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      secondary: CircleAvatar(
+        backgroundColor: HSLColor.fromAHSL(1, roster.hue, 0.48, 0.88).toColor(),
+        child: Text(
+          roster.initials,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: HSLColor.fromAHSL(1, roster.hue, 0.55, 0.32).toColor(),
+          ),
+        ),
+      ),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(
+              roster.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.gray100,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Text(
+              'novo',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.gray500,
+              ),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Text(
+        [
+          if (roster.specialty != null) roster.specialty!,
+          if (roster.crm != null) roster.crm!,
+        ].join(' · '),
+        style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+      ),
+      activeColor: AppColors.navyBright,
+    );
+  }
+
   Future<void> _confirm() async {
     // Candidates come from the pool AND the CNES section. A suggestion is
     // deliberately absent from the pool — the server excludes people already
@@ -586,14 +738,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     // checkbox ticked, the sheet closed, and nothing was associated.
     final candidates = <int, ProfessionalRoster>{
       for (final suggestion in _cnesRows)
-        suggestion.personId: suggestion.toRoster(),
+        suggestion.personId!: suggestion.toRoster(),
       // Pool entries win on conflict: they carry the richer roster data.
       for (final doctor in _pool) doctor.id: doctor,
     };
     final chosen = candidates.values
         .where((d) => _selected.contains(d.id))
         .toList(growable: false);
-    if (chosen.isEmpty || !_useApi) return;
+    final toImport = _cnesUnknownRows
+        .where((s) => _selectedCnesIds.contains(s.professionalCnesId))
+        .toList(growable: false);
+    if ((chosen.isEmpty && toImport.isEmpty) || !_useApi) return;
     // Everyone the server already counts as linked here, from either source.
     // `alreadyAssociatedIds` alone is the caller's view and can be narrower, and
     // posting an association for someone already associated is a write nobody
@@ -603,9 +758,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       ..._cnesLinkedIds,
     };
 
-    // Associate existing persons only (POST { personId }).
     setState(() => _saving = true);
-    final repo = FacilityAssociateRepository(widget.facilityId!);
+    final repo = _repository();
     try {
       // Only call associate for doctors not already linked — already-
       // associated ones are pre-checked and don't need an API call.
@@ -617,7 +771,45 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         await repo.associateDoctor(doctor.id);
         associated.add(doctor);
       }
+
+      /*
+       * Import, then associate. Two calls because they are two facts: that this
+       * person exists in our database, and that they work here. The first is
+       * idempotent and the second is what the rep actually asked for, so a
+       * failure between them leaves a real professional who simply is not
+       * linked yet — recoverable by tapping again, unlike a half-written person.
+       */
+      var reused = 0;
+      for (final suggestion in toImport) {
+        final result = await repo.importCnesProfessional(
+          professionalCnesId: suggestion.professionalCnesId,
+        );
+        if (result.alreadyExisted) reused += 1;
+        if (!alreadyLinked.contains(result.personId)) {
+          await repo.associateDoctor(result.personId);
+        }
+        associated.add(suggestion.toRoster(importedAs: result.personId));
+      }
+
       if (!mounted) return;
+      if (reused > 0) {
+        /*
+         * Told afterwards, not asked beforehand. The server refuses to create a
+         * second record for a registration somebody already holds, so this is
+         * never a duplicate — but the rep tapped a CNES name and got one of our
+         * records, and silently swapping it would misreport what happened.
+         */
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              reused == 1
+                  ? '1 profissional já era cadastrado e foi associado'
+                  : '$reused profissionais já eram cadastrados e foram associados',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       Navigator.of(context).pop(associated);
     } catch (e) {
       if (!mounted) return;

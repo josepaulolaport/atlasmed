@@ -13,6 +13,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   DoctorsRepository({
     String? baseUrl,
     String? cacheTag,
+    RepositoryHttpClient? client,
     this.page = 1,
     this.limit = 20,
     this.searchQuery,
@@ -24,7 +25,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     this.specialty,
     this.sort,
     this.order,
-  }) : super(
+  }) : _client = client,
+       super(
          endpoint: buildEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
            path: '/api/v1/healthcare-professionals',
@@ -49,6 +51,12 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
          name: 'DoctorsRepository',
          tag: cacheTag,
        );
+
+  /// Overrides the session client, so a caller under test can supply one.
+  final RepositoryHttpClient? _client;
+
+  @override
+  RepositoryHttpClient get client => _client ?? super.client;
 
   final int page;
   final int limit;

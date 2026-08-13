@@ -52,6 +52,7 @@ void main() {
           "items": [
             {
               "personId": 7,
+              "professionalCnesId": "SUS7",
               "displayName": "Doutor Fulano",
               "occupation": "MEDICO ORTOPEDISTA E TRAUMATOLOGISTA",
               "occupations": ["MEDICO ORTOPEDISTA E TRAUMATOLOGISTA"],
@@ -115,8 +116,16 @@ void main() {
       final parsed = CnesSuggestions.fromMap({
         'status': 'OK',
         'items': [
-          {'personId': '410', 'displayName': 'Doutor Fulano'},
-          {'personId': 411, 'displayName': 'Doutora Beltrana'},
+          {
+            'personId': '410',
+            'professionalCnesId': 'SUS410',
+            'displayName': 'Doutor Fulano',
+          },
+          {
+            'personId': 411,
+            'professionalCnesId': 'SUS411',
+            'displayName': 'Doutora Beltrana',
+          },
         ],
       });
       expect(parsed.items.map((i) => i.personId), [410, 411]);
@@ -126,22 +135,70 @@ void main() {
       final parsed = CnesSuggestions.fromMap({
         'status': 'OK',
         'items': [
-          {'displayName': 'Sem id'},
-          {'personId': 7, 'displayName': 'Boa'},
+          // No `professionalCnesId` — the one identity every row has. A row
+          // without it names nobody and cannot be acted on either way.
+          {'displayName': 'Sem identidade'},
+          {'personId': 7, 'professionalCnesId': 'SUS7', 'displayName': 'Boa'},
         ],
       });
       expect(parsed.items.single.personId, 7);
+    });
+
+    test('keeps a row we hold nobody for, so a rep can import them', () {
+      /**
+       * The old parser required `personId` and dropped everything without one —
+       * which is ~18 000 of the ~19 300 people CNES reports at our clinics. They
+       * were fetched, parsed, discarded, and the tab then said CNES knew nobody
+       * else here.
+       */
+      final parsed = CnesSuggestions.fromMap({
+        'status': 'OK',
+        'items': [
+          {
+            'personId': null,
+            'professionalCnesId': 'SUS999',
+            'displayName': 'DOUTOR DESCONHECIDO',
+            'registrationLabel': 'CRM 100200/SP',
+          },
+          {
+            'personId': 5,
+            'professionalCnesId': 'SUS5',
+            'displayName': 'Conhecida',
+          },
+        ],
+      });
+
+      expect(parsed.items, hasLength(2));
+      expect(parsed.unknown.map((i) => i.professionalCnesId), ['SUS999']);
+      expect(parsed.unknown.single.isKnown, isFalse);
+      // Someone we do not hold is not a suggestion to associate: there is no
+      // person to associate. They belong to the import section alone.
+      expect(parsed.unlinked.map((i) => i.personId), [5]);
     });
 
     test('splits linked from unlinked so the CNES tab can show both', () {
       final parsed = CnesSuggestions.fromMap({
         'status': 'OK',
         'items': [
-          {'personId': 1, 'displayName': 'Nova', 'alreadyLinked': false},
-          {'personId': 2, 'displayName': 'Ja associada', 'alreadyLinked': true},
+          {
+            'personId': 1,
+            'professionalCnesId': 'SUS1',
+            'displayName': 'Nova',
+            'alreadyLinked': false,
+          },
+          {
+            'personId': 2,
+            'professionalCnesId': 'SUS2',
+            'displayName': 'Ja associada',
+            'alreadyLinked': true,
+          },
           // Absent flag must not read as linked, or a suggestion would be
           // filed under "já associados" and never offered.
-          {'personId': 3, 'displayName': 'Sem flag'},
+          {
+            'personId': 3,
+            'professionalCnesId': 'SUS3',
+            'displayName': 'Sem flag',
+          },
         ],
       });
 
@@ -171,6 +228,7 @@ void main() {
             'items': [
               {
                 'personId': 42,
+                'professionalCnesId': 'SUS42',
                 'displayName': 'Doutora Beltrana',
                 'occupation': 'MEDICO UROLOGISTA',
                 'occupations': ['MEDICO UROLOGISTA'],
