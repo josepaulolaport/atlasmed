@@ -3,11 +3,46 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+// ignore: unused_import — referenced from a doc comment on importCnesProfessional.
+import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_import_draft.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+
+/// What an import produced: the person, and whether they were already ours.
+class CnesImportResult {
+  const CnesImportResult({
+    required this.personId,
+    required this.alreadyExisted,
+  });
+
+  final int personId;
+
+  /// The council registration was already held, so no record was created.
+  final bool alreadyExisted;
+}
+
+/// A bigint id arrives as a number or a string depending on the encoder.
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
+}
+
+Map<String, dynamic> _decodeMap(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    return decoded is Map<String, dynamic> ? decoded : const {};
+  } catch (_) {
+    // A malformed body is a failure to report, not an exception to leak from a
+    // parse call — the caller turns an empty map into its own error.
+    return const {};
+  }
+}
 
 class FacilityAssociateException implements Exception {
   const FacilityAssociateException([this.message]);
@@ -44,28 +79,89 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
 
-  /// Global Explorar search — `GET /healthcare-professionals`.
+  /// Professionals CNES associates with this clinic that we already hold and
+  /// that are not linked here yet — `GET …/healthcare-professionals/cnes-suggestions`.
+  ///
+  /// The exclusion of already-linked people happens server-side (spec 0012
+  /// AC 3), as it does in [searchDoctors].
+  Future<CnesSuggestions> fetchCnesSuggestions() async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-suggestions'),
+        method: RepositoryHttpMethod.get,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao buscar sugestões do CNES (${response.statusCode})',
+        );
+      }
+      return CnesSuggestions.unavailable();
+    }
+
+    return CnesSuggestions.fromMap(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  /// Candidates to associate here — `GET /healthcare-professionals`, with the
+  /// people already working at this clinic excluded by the server.
+  ///
+  /// `excludeFacilityId` rather than a `.where` over the result: the filter has
+  /// to run before `LIMIT` or it removes rows without replacing them, and the
+  /// page comes back short by however many of this clinic's own doctors
+  /// happened to rank inside it. There is no second page here, so those
+  /// candidates are simply unreachable — and a short list looks exactly like a
+  /// complete one.
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
   }) async {
-    final repo = DoctorsRepository(page: 1, limit: limit, searchQuery: search);
-    try {
-      final page = await repo.currentValueOrResolve();
-      if (page == null) {
-        throw const FacilityAssociateException('Falha ao buscar médicos');
+    /*
+     * Through `client.call`, like every other method here.
+     *
+     * It used to build a `DoctorsRepository` and resolve it, which pulled in
+     * the cache and `SessionEnvironment` for what is a one-shot, debounced,
+     * already-scoped query — nothing was reused across calls, and the injected
+     * client did not reach it, so this one request went around the seam the
+     * others honour.
+     */
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: DoctorsRepository.makeEndpoint(
+          baseUrl: AppConfig.apiBaseUrl,
+          page: 1,
+          limit: limit,
+          searchQuery: search,
+          excludeFacilityId: facilityId,
+        ),
+        method: RepositoryHttpMethod.get,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao buscar médicos (${response.statusCode})',
+        );
       }
-      return page.items
-          .where((d) => !d.facilityIds.contains(facilityId))
-          .map(_doctorFromDTO)
-          .toList(growable: false);
-    } finally {
-      repo.dispose();
+      return const [];
     }
+
+    final page = PaginatedProfessionals.fromMap(_decodeMap(response.body));
+    return page.items.map(_doctorFromDTO).toList(growable: false);
   }
 
   /// Link an existing person as healthcare professional at this facility.
-  Future<void> associateDoctor(int personId) async {
+  ///
+  /// Returns the affiliation's id, which is what roles hang off — null only
+  /// when the server answered without one, in which case there is nothing to
+  /// attach them to and the caller says so rather than guessing.
+  Future<int?> associateDoctor(int personId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(_healthcarePath),
@@ -82,7 +178,133 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
           'Falha ao associar médico (${response.statusCode})',
         );
       }
+      return null;
     }
+
+    return _asInt(_decodeMap(response.body)['personFacilityId']);
+  }
+
+  /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
+  Future<void> assignRoles({
+    required int personFacilityId,
+    required List<int> roleIds,
+  }) async {
+    await _putHealthcareRoles(
+      personFacilityId: personFacilityId,
+      roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
+    );
+  }
+
+  /// Link a doctor CNES places here and we already hold —
+  /// `POST …/healthcare-professionals/cnes-associations`.
+  ///
+  /// Its own endpoint rather than [associateDoctor] because the two record
+  /// different amounts of truth: the generic one cannot see the registry, so it
+  /// wrote the affiliation and dropped the CBO that made the suggestion worth
+  /// acting on. The person is identified by their SUS id, not by a person id —
+  /// the server resolves them from the same registry the suggestion came from.
+  Future<void> associateCnesProfessional({
+    required String professionalCnesId,
+    List<int>? occupationIds,
+    List<int>? roleIds,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-associations'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'professionalCnesId': professionalCnesId,
+          // Sent even when empty: `[]` means the rep cleared them, which is a
+          // different answer from omitting the field and taking CNES's.
+          'occupationIds': ?occupationIds,
+          // Additive server-side: an empty list says nothing rather than
+          // clearing what the affiliation already carries.
+          'roleIds': ?roleIds,
+        },
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao associar médico (${response.statusCode})',
+        );
+      }
+    }
+  }
+
+  /// Outcome of importing one CNES professional.
+  ///
+  /// [alreadyExisted] is not an error path. The server refuses to create a
+  /// second record for a council registration somebody already holds and
+  /// returns that person instead, so this is the ordinary answer to "import
+  /// them" when we turn out to have had them all along.
+  ///
+  /// The rep is told afterwards rather than asked beforehand: of 1 039
+  /// confirmed-same people, five disagree on spelling and none is a different
+  /// human, so a confirmation would be answered yes every time and would train
+  /// people to tap through it.
+  /// [body] is the wizard's draft, already shaped for the endpoint.
+  ///
+  /// A map rather than twenty named parameters: the wizard collects a profile,
+  /// the payload is that profile, and restating every field here would be a
+  /// second place to forget one. [CnesImportDraft.toImportBody] is where the
+  /// shape is decided and where it is tested.
+  Future<CnesImportResult> importCnesProfessional(
+    Map<String, dynamic> draft,
+  ) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-imports'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: draft,
+      ),
+    );
+
+    if (response.statusCode == 409) {
+      /*
+       * The registration belongs to someone we already hold. The payload
+       * carries their id precisely so this resolves instead of failing.
+       *
+       * The API nests every error under `error`. Reading the top level found
+       * nothing, so a real 409 fell through to the failure path and the person
+       * the server had named was never associated — and the widget test missed
+       * it by faking a flat body, which proved the parser against itself.
+       */
+      final body = _decodeMap(response.body);
+      final nested = body['error'];
+      final personId = _asInt(
+        nested is Map ? nested['personId'] : body['personId'],
+      );
+      if (personId != null) {
+        return CnesImportResult(personId: personId, alreadyExisted: true);
+      }
+    }
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao importar profissional (${response.statusCode})',
+        );
+      }
+      throw const FacilityAssociateException('Falha ao importar profissional');
+    }
+
+    final body = _decodeMap(response.body);
+    final personId = _asInt(body['personId']);
+    if (personId == null) {
+      throw const FacilityAssociateException(
+        'Importação não retornou o profissional criado',
+      );
+    }
+    return CnesImportResult(
+      personId: personId,
+      alreadyExisted: body['created'] == false,
+    );
   }
 
   /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
@@ -226,6 +448,10 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: d.specialty,
+      // The API already resolves primary-or-first and preformats it
+      // (`CRM/SP 123456`); dropping it here is why the pool rows showed a
+      // specialty and no registration while every other surface showed both.
+      crm: d.primaryRegistrationDisplay,
     );
   }
 }

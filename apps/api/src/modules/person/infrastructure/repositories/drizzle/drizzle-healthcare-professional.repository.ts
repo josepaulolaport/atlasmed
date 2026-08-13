@@ -232,6 +232,7 @@ export class DrizzleHealthcareProfessionalRepository
     limit: number;
     search?: string;
     facilityId?: number;
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -257,6 +258,49 @@ export class DrizzleHealthcareProfessionalRepository
     if (params.facilityId) {
       conditions.push(
         inArray(persons.id, scopedPersonIdsSubquery([params.facilityId]))
+      );
+    }
+
+    /**
+     * Drop people already working at this facility — used when building a list of
+     * candidates to associate.
+     *
+     * It has to happen here, inside the query, rather than on whatever page the
+     * caller received: filtering after `LIMIT` removes rows without replacing
+     * them, so a clinic with many associated doctors returns a short page and the
+     * candidates past the cutoff become unreachable. The client cannot tell that
+     * apart from "no more results".
+     *
+     * `not exists` rather than `not in`: the subquery is uncorrelated and can be
+     * large, and `not in` over it forces Postgres to materialise the whole set
+     * before it can answer for one row.
+     *
+     * Scoped to `HEALTHCARE_PROFESSIONAL`, exactly as the CNES suggestion join
+     * is. A `person_facilities` row is not by itself a clinical link — someone
+     * can be an administrative contact at a clinic and still be a doctor we have
+     * never associated there. Excluding on the bare row would hide them from the
+     * only screen that can add them, and would put the two tabs of the same sheet
+     * in disagreement about who is already here.
+     */
+    if (params.excludeFacilityId) {
+      conditions.push(
+        sql`not exists (
+          select 1
+          from person_facilities pf
+          inner join facilities f on f.id = pf.facility_id
+          where pf.person_id = ${persons.id}
+            and pf.facility_id = ${params.excludeFacilityId}
+            and pf.ended_at is null
+            and f.deactivated_at is null
+            and exists (
+              select 1
+              from person_facility_classification_assignments pfca
+              join person_facility_classifications pfc
+                on pfc.id = pfca.classification_id
+              where pfca.person_facility_id = pf.id
+                and pfc.code = 'HEALTHCARE_PROFESSIONAL'
+            )
+        )`
       );
     }
 
@@ -409,6 +453,7 @@ export class DrizzleHealthcareProfessionalRepository
   async findAllByIds(params: {
     ids: number[];
     facilityId?: number;
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;

@@ -283,6 +283,20 @@ export const personFacilityOccupations = pgTable(
       t.personFacilityId,
       t.occupationId
     ),
+    /**
+     * At most one primary occupation per association, matching the identical
+     * guards on `person_professional_registrations` and
+     * `person_healthcare_profile_specialties`.
+     *
+     * Pre-emptive, not corrective: **nothing reads or writes this table yet** —
+     * `personFacilityOccupations` appears only in this schema file — so the
+     * guard exists so the rule is true before the first writer arrives rather
+     * than after. Measured safe against the 2026-08-10 production clone: 1714
+     * rows, 1714 primary, zero associations holding more than one.
+     */
+    uniqueIndex("person_facility_occupations_primary_uidx")
+      .on(t.personFacilityId)
+      .where(sql`${t.isPrimary}`),
     index("person_facility_occupations_person_facility_id_idx").on(t.personFacilityId),
     index("person_facility_occupations_occupation_id_idx").on(t.occupationId),
   ]

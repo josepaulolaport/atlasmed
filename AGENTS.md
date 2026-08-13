@@ -11,7 +11,7 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
-| ~~`packages/cnes-ingestion`~~ | — | **Removed.** A *narrowed* `registry` schema is reintroduced by ADR 0006 — see § CNES |
+| `packages/cnes-ingestion` | basic-ftp | Reads the monthly CNES export over ranged FTP into `registry.*`. Reintroduced narrowed by ADR 0006; worker and join key by ADR 0009 |
 | `packages/mapbox` | — | Mapbox API client wrappers (geocoding, directions, matrix) |
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
@@ -293,7 +293,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | General API work | `docs/architecture/current.md` |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | Database change | this file → `packages/database` section |
-| CNES / registry | `docs/architecture/adr/0006-cnes-registry-reintroduction.md`, `docs/specs/0012-cnes-registry-professional-associations/requirements.md` |
+| CNES / registry | `docs/architecture/adr/0009-cnes-ingestion-worker-and-join-key.md`, `docs/architecture/adr/0006-cnes-registry-reintroduction.md`, `docs/specs/0012-cnes-registry-professional-associations/requirements.md` |
 | Territory / clinic ownership | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
 | Verticals / facility profiles | `docs/specs/0010-verticals-and-profiles/requirements.md` |
 | Cadastro | `docs/specs/0011-cadastro-pipeline/requirements.md` |
@@ -405,7 +405,7 @@ Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possíve
 | Task | Load |
 |---|---|
 | General worker work | `docs/architecture/current.md` |
-| CNES | `docs/architecture/adr/0006-cnes-registry-reintroduction.md` — a narrow `registry` schema is permitted; FTP/archive/Temporal ingest is **not** |
+| CNES | ADR `0009-cnes-ingestion-worker-and-join-key.md` first, then ADR 0006 — 0009 supersedes it on the worker, the `ingestion` ledger and the join key |
 | Emultec order import | `docs/ops/emultec-order-import.md` |
 | Persistence from workflow | this file → `packages/database` section |
 | Workflow triggered by API | this file → `apps/api` section (only the trigger surface) |
@@ -642,19 +642,29 @@ DATABASE_URL=<url> bun run db:migrate
 
 ---
 
-## CNES — ingest removed, narrow registry reintroduced
+## CNES — a narrow registry, loaded by a monthly worker
 
 The original ingest vertical was deleted in `a3e32ac5`: FTP/archive/Temporal monthly ingest, the
-registry warehouse READ/confirm surface, and Postgres schemas `registry` / `ingestion`
-(`facilities.cnes_unit_id` dropped). **Do not bring any of that back.**
+registry warehouse READ/confirm surface, and Postgres schemas `registry` / `ingestion`. **The
+weight that got it deleted stays deleted** — see the out-of-scope list below.
 
-**ADR 0006 reintroduces a deliberately narrower `registry` schema** — three read-only tables
-(facilities, deduplicated professionals, vínculo links), loaded manually, used to suggest which
-professionals CNES associates with a clinic. See `docs/specs/0012-cnes-registry-professional-associations/`.
+**ADR 0006** reintroduced a deliberately narrower `registry` schema, used to suggest which
+professionals CNES associates with a clinic. **ADR 0009** then widened it on evidence:
 
-Explicitly still out of scope: FTP adapter · archive storage · Temporal ingest workflows ·
-`ingestion` schema · run/diff/suggestion tables · a `/registry/*` API module · any write-back
-from `registry` to `public`.
+- The load is a **Temporal worker**, not a manual script, and it reads the export **over ranged
+  FTP without downloading it** — the archive is 725 MB and 2.87 GB extracted, and only the six
+  entries it needs are fetched.
+- **`ingestion` is back, as one table.** `cnes_runs` is a run ledger. The diff and suggestion
+  tables are not coming back.
+- The professional join key is **one column**, measured at 100 % coverage on the real export:
+  `registry.professionals.cnes_id` = `person_healthcare_profiles.cnes_professional_id`. ADR 0006
+  guessed that column was dead weight; it is the key.
+- A user may **import a doctor** CNES lists at their clinic, creating a `public` person from
+  registry data after confirming it (spec 0012 §5).
+
+Still out of scope: archive storage · diff/suggestion tables · a suggestion review surface · a
+`/registry/*` API module · **automated** write-back from `registry` to `public` · national-scale
+registry data.
 
 Widening that boundary needs a new ADR.
 

@@ -85,6 +85,18 @@ export function allOfFilter(
   };
 }
 
+/**
+ * Negates a clause.
+ *
+ * Written as `NOT (…)` rather than `!=` because the fields worth negating here
+ * are arrays: on `activeFacilityIds`, `= 685` means "contains 685", so the
+ * negation has to wrap the containment rather than compare against it.
+ */
+export function notFilter(clause: FilterClause | undefined): FilterClause | undefined {
+  if (!clause) return undefined;
+  return { expression: `NOT (${clause.expression})` };
+}
+
 export function isNullFilter(field: FilterField): FilterClause {
   return { expression: `${field} IS NULL` };
 }
