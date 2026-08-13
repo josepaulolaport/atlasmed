@@ -109,3 +109,18 @@ jobs:
 
       - name: Validate compose file
         run: docker compose -f deploy/uncloud.compose.yml config --quiet
+
+      # Writes a probe object to the production bucket and deletes it. The API's
+      # boot probe proves the credential can *read* — on 2026-08-12 production
+      # ran with an R2 token that could list and not put, booted clean, and
+      # failed every upload. A deploy that fails here leaves the working
+      # container serving.
+      #
+      # Deploy path only. This workflow also runs on pull requests, and a check
+      # that writes to production storage on every PR is a wider blast radius
+      # than the problem needs. Credentials change outside PRs anyway — the one
+      # that caused this was rotated in the Cloudflare dashboard — so the deploy
+      # is the moment worth guarding.
+      - name: Verify object storage is writable
+        if: github.event_name != 'pull_request'
+        run: bun run storage:check
