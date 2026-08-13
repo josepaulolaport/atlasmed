@@ -57,11 +57,16 @@ class FacilityProfessionalsRepository
     if (result == null) {
       throw const FacilityProfessionalsException();
     }
-    // Warm id→name catalog cache so roleChipLabels resolve.
+    // Warm id→name catalog cache so roleChipLabels resolve. Shared across
+    // instances: the representatives roster warms the same catalog on the same
+    // screen, and both used to fetch it. The entries come back off the cache the
+    // warm populates, so a warm skipped as already-done still yields them —
+    // and on failure `catalog` stays null exactly as it did before.
     List<PersonFacilityRoleCatalogEntry>? catalog;
     final catalogRepo = PersonFacilityRolesCatalogRepository(client: _client);
     try {
-      catalog = await catalogRepo.listActive();
+      await catalogRepo.ensureCatalogWarm();
+      catalog = PersonFacilityRoleCatalogCache.entries;
     } catch (_) {
       // Labels stay empty until a roles sheet loads catalog.
     } finally {
