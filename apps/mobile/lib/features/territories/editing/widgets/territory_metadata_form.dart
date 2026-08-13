@@ -133,12 +133,6 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                     textCapitalization: TextCapitalization.words,
                     decoration: const InputDecoration(
                       hintText: 'Ex.: Zona Oncologia Norte',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide(color: AppColors.gray200),
-                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
