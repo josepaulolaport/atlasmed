@@ -64,9 +64,9 @@ void main() {
       final repo = FacilityAssociateRepository(9, client: client);
       addTearDown(repo.dispose);
 
-      final result = await repo.importCnesProfessional(
-        professionalCnesId: 'SUS999',
-      );
+      final result = await repo.importCnesProfessional({
+        'professionalCnesId': 'SUS999',
+      });
 
       expect(
         client.requests.single.url.path,
@@ -105,9 +105,9 @@ void main() {
         final repo = FacilityAssociateRepository(9, client: client);
         addTearDown(repo.dispose);
 
-        final result = await repo.importCnesProfessional(
-          professionalCnesId: 'SUS999',
-        );
+        final result = await repo.importCnesProfessional({
+          'professionalCnesId': 'SUS999',
+        });
 
         expect(result.personId, 5150);
         expect(result.alreadyExisted, isTrue);
@@ -123,9 +123,9 @@ void main() {
       final repo = FacilityAssociateRepository(9, client: client);
       addTearDown(repo.dispose);
 
-      final result = await repo.importCnesProfessional(
-        professionalCnesId: 'SUS999',
-      );
+      final result = await repo.importCnesProfessional({
+        'professionalCnesId': 'SUS999',
+      });
 
       expect(result.personId, 41);
       expect(result.alreadyExisted, isTrue);
@@ -140,9 +140,9 @@ void main() {
       final repo = FacilityAssociateRepository(9, client: client);
       addTearDown(repo.dispose);
 
-      final result = await repo.importCnesProfessional(
-        professionalCnesId: 'SUS999',
-      );
+      final result = await repo.importCnesProfessional({
+        'professionalCnesId': 'SUS999',
+      });
       expect(result.personId, 777);
     });
 
@@ -157,7 +157,7 @@ void main() {
       addTearDown(repo.dispose);
 
       expect(
-        () => repo.importCnesProfessional(professionalCnesId: 'SUS999'),
+        () => repo.importCnesProfessional({'professionalCnesId': 'SUS999'}),
         throwsA(isA<FacilityAssociateException>()),
       );
     });
@@ -170,7 +170,7 @@ void main() {
       addTearDown(repo.dispose);
 
       expect(
-        () => repo.importCnesProfessional(professionalCnesId: 'SUS999'),
+        () => repo.importCnesProfessional({'professionalCnesId': 'SUS999'}),
         throwsA(isA<FacilityAssociateException>()),
       );
     });

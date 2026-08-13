@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/cnes_import_wizard.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Builds the repository the sheet talks through.
@@ -56,12 +57,18 @@ class AssociateDoctorsSheet extends StatefulWidget {
     required this.alreadyAssociatedDoctors,
     this.facilityId,
     this.repositoryBuilder,
+    this.importCatalogues,
   });
 
   final Set<int> alreadyAssociatedIds;
   final List<ProfessionalRoster> alreadyAssociatedDoctors;
   final int? facilityId;
   final FacilityAssociateRepositoryBuilder? repositoryBuilder;
+
+  /// Passed straight to the import wizard. Present only so a widget test can
+  /// mount the wizard the sheet pushes without reaching the network for the
+  /// specialty and role catalogues.
+  final CnesImportCatalogues? importCatalogues;
 
   @override
   State<AssociateDoctorsSheet> createState() => _AssociateDoctorsSheetState();
@@ -107,20 +114,13 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
   /// precisely what makes them an import rather than an association.
   final Set<String> _selectedCnesIds = {};
 
-  /// Occupations the rep unticked, keyed by SUS id.
+  /// What an association will record this person doing here.
   ///
-  /// Stores the *removals* rather than the selection: CNES's claim is the
-  /// default, so an untouched row needs no entry, and a suggestion list that
-  /// refreshes cannot silently discard a choice nobody made.
-  final Map<String, Set<int>> _droppedOccupations = {};
-
-  List<int> _occupationsFor(CnesSuggestion s) {
-    final dropped = _droppedOccupations[s.professionalCnesId] ?? const {};
-    return s.occupationOptions
-        .where((o) => !dropped.contains(o.id))
-        .map((o) => o.id)
-        .toList(growable: false);
-  }
+  /// CNES's claim as it stands: associating is one tap on a row the rep is
+  /// confirming, not a form. Editing which occupations get written belongs to
+  /// the import wizard, where the rep is already filling in a profile.
+  List<int> _occupationsFor(CnesSuggestion s) =>
+      s.occupationOptions.map((o) => o.id).toList(growable: false);
 
   /// Everything the confirm button would act on, from both selection sets.
   ///
@@ -753,23 +753,6 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
             ].join(' · '),
             style: const TextStyle(fontSize: 12, color: AppColors.gray500),
           ),
-          // Only once the row is selected: these are what the import will
-          // record, and offering them on a row nobody picked is noise.
-          if (selected && s.occupationOptions.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            _OccupationChips(
-              options: s.occupationOptions,
-              dropped: _droppedOccupations[s.professionalCnesId] ?? const {},
-              enabled: !_saving,
-              onToggle: (id) => setState(() {
-                final dropped = _droppedOccupations.putIfAbsent(
-                  s.professionalCnesId,
-                  () => <int>{},
-                );
-                if (!dropped.remove(id)) dropped.add(id);
-              }),
-            ),
-          ],
         ],
       ),
       activeColor: AppColors.navyBright,
@@ -839,39 +822,32 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
       }
 
       /*
-       * Import, then associate. Two calls because they are two facts: that this
-       * person exists in our database, and that they work here. The first is
-       * idempotent and the second is what the rep actually asked for, so a
-       * failure between them leaves a real professional who simply is not
-       * linked yet — recoverable by tapping again, unlike a half-written person.
+       * Importing leaves the sheet.
+       *
+       * Ticking a name here is a request to create a person, and a person
+       * created from the four fields CNES ships is one somebody has to finish
+       * later — specialty and role are missing, and every commercial view needs
+       * them. The wizard collects the profile and performs the import itself,
+       * one doctor at a time, so a rep who quits halfway keeps the ones already
+       * confirmed.
        */
       var reused = 0;
-      for (final suggestion in toImport) {
-        final result = await repo.importCnesProfessional(
-          professionalCnesId: suggestion.professionalCnesId,
-          occupationIds: _occupationsFor(suggestion),
+      if (toImport.isNotEmpty) {
+        if (!mounted) return;
+        final outcome = await Navigator.of(context).push<CnesImportOutcome>(
+          MaterialPageRoute(
+            builder: (_) => CnesImportWizard(
+              facilityId: widget.facilityId!,
+              suggestions: toImport,
+              repositoryBuilder: widget.repositoryBuilder ?? _defaultRepository,
+              catalogues: widget.importCatalogues,
+            ),
+          ),
         );
-        /*
-         * The import links them here too — occupations hang off the
-         * affiliation, so creating the person and the affiliation in one
-         * transaction is what lets the CBO be written at all.
-         *
-         * A person the server resolved to instead of creating is a different
-         * case: they existed before this clinic, so they still need linking.
-         */
-        if (result.alreadyExisted) {
-          reused += 1;
-          if (!alreadyLinked.contains(result.personId)) {
-            // Through the CNES endpoint, not the generic one: the occupations
-            // the rep just confirmed are still the point, and the server
-            // resolves the person from the registration it refused to duplicate.
-            await repo.associateCnesProfessional(
-              professionalCnesId: suggestion.professionalCnesId,
-              occupationIds: _occupationsFor(suggestion),
-            );
-          }
+        if (outcome != null) {
+          reused = outcome.reused;
+          associated.addAll(outcome.imported);
         }
-        associated.add(suggestion.toRoster(importedAs: result.personId));
       }
 
       if (!mounted) return;
@@ -910,61 +886,6 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     } finally {
       repo.dispose();
     }
-  }
-}
-
-/// What CNES records this person doing at this clinic, as togglable chips.
-///
-/// Everything starts selected. CNES already states it, so the rep is confirming
-/// rather than filling a form, and unticking is the cheaper gesture than
-/// picking from a list of 66.
-class _OccupationChips extends StatelessWidget {
-  const _OccupationChips({
-    required this.options,
-    required this.dropped,
-    required this.enabled,
-    required this.onToggle,
-  });
-
-  final List<CnesOccupationOption> options;
-  final Set<int> dropped;
-  final bool enabled;
-  final void Function(int occupationId) onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (final option in options)
-          _chip(option, selected: !dropped.contains(option.id)),
-      ],
-    );
-  }
-
-  Widget _chip(CnesOccupationOption option, {required bool selected}) {
-    return GestureDetector(
-      onTap: enabled ? () => onToggle(option.id) : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.navyBright : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? AppColors.navyBright : AppColors.gray300,
-          ),
-        ),
-        child: Text(
-          option.name,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : AppColors.gray500,
-          ),
-        ),
-      ),
-    );
   }
 }
 

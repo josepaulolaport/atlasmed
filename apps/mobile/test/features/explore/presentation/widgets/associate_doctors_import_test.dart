@@ -1,12 +1,15 @@
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/cnes_import_wizard.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../cnes_catalogue_fixtures.dart';
 
 /// Importing a CNES professional from the sheet (spec 0012 §6).
 ///
@@ -97,6 +100,7 @@ Future<void> _pumpSheet(
           facilityId: 9,
           repositoryBuilder: (facilityId) =>
               FacilityAssociateRepository(facilityId, client: client),
+          importCatalogues: testCatalogues(),
         ),
       ),
     ),
@@ -147,103 +151,27 @@ void main() {
     expect(find.text('Conhecida Silva'), findsOneWidget);
   });
 
-  testWidgets('imports in one call, sending what CNES records here', (
+  testWidgets('sends someone we do not hold to the wizard, not to the API', (
     tester,
   ) async {
+    /*
+     * Ticking a name here is a request to create a person, and CNES ships four
+     * fields — no specialty, no role, no contact. Importing straight from the
+     * sheet produced a record somebody had to finish later, so the confirm
+     * button now opens the wizard and nothing is written until it completes.
+     */
     final client = RecordingClient(defaultHandler);
     await _pumpSheet(tester, client: client);
     await _openCnesTab(tester);
 
     await tester.tap(find.text('DESCONHECIDO SOUZA'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.byType(FilledButton).first);
     await tester.pumpAndSettle();
 
-    final importRequest = client.requests.firstWhere(
-      (r) => r.url.path.endsWith('/cnes-imports'),
-    );
-    final body = importRequest.body as Map;
-    expect(body['professionalCnesId'], 'SUS999');
-    // Preselected, in CNES's order — the rep confirms rather than fills a form.
-    expect(body['occupationIds'], [10, 20]);
-
-    /*
-     * No association request follows. The import creates the person and the
-     * affiliation in one transaction, because occupations hang off
-     * person_facility_id and cannot be written before it exists. A separate
-     * associate call would either race that or need a third request.
-     */
-    expect(
-      client.paths.where(
-        (p) => p.endsWith('/facilities/9/healthcare-professionals'),
-      ),
-      isEmpty,
-    );
-  });
-
-  testWidgets('sends only the occupations still ticked', (tester) async {
-    final client = RecordingClient(defaultHandler);
-    await _pumpSheet(tester, client: client);
-    await _openCnesTab(tester);
-
-    await tester.tap(find.text('DESCONHECIDO SOUZA'));
-    await tester.pumpAndSettle();
-    // The chips appear once the row is selected; unticking one drops it.
-    await tester.tap(find.text('Intensivista'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
-    await tester.pumpAndSettle();
-
-    final importRequest = client.requests.firstWhere(
-      (r) => r.url.path.endsWith('/cnes-imports'),
-    );
-    expect((importRequest.body as Map)['occupationIds'], [10]);
-  });
-
-  testWidgets('associates the existing person when the CRM is already held', (
-    tester,
-  ) async {
-    /*
-     * Full silent. The server refuses to create a second record for a
-     * registration somebody already holds and names them instead, so the sheet
-     * associates that person and reports it afterwards rather than asking
-     * first — of 1 039 confirmed-same people, five disagree on spelling and
-     * none is a different human.
-     */
-    final client = RecordingClient((request) {
-      if (request.url.path.endsWith('/cnes-imports')) {
-        return _json({
-          'code': 'CNES_REGISTRATION_ALREADY_HELD',
-          'personId': 5150,
-          'registrationLabel': 'CRM 100200/SP',
-        }, statusCode: 409);
-      }
-      return defaultHandler(request);
-    });
-    await _pumpSheet(tester, client: client);
-    await _openCnesTab(tester);
-
-    await tester.tap(find.text('DESCONHECIDO SOUZA'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
-    await tester.pumpAndSettle();
-
-    // It associated the person the server named, rather than creating another —
-    // through the CNES endpoint, so the occupations the rep confirmed survive
-    // the detour.
-    final associate = client.requests.lastWhere(
-      (r) => r.url.path.endsWith('/cnes-associations'),
-    );
-    expect((associate.body as Map)['professionalCnesId'], 'SUS999');
-    expect((associate.body as Map)['occupationIds'], [10, 20]);
-    // Not the generic upsert: it cannot see the registry, so it would have
-    // written the affiliation and dropped the CBO.
-    expect(
-      client.paths.where(
-        (p) => p.endsWith('/facilities/9/healthcare-professionals'),
-      ),
-      isEmpty,
-    );
+    expect(find.byType(CnesImportWizard), findsOneWidget);
+    expect(find.text('Identidade e contato'), findsOneWidget);
+    expect(client.paths.where((p) => p.endsWith('/cnes-imports')), isEmpty);
   });
 
   testWidgets('associating a CNES row records what they do here', (

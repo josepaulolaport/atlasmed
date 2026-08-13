@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+// ignore: unused_import — referenced from a doc comment on importCnesProfessional.
+import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_import_draft.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
@@ -222,27 +224,21 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   /// confirmed-same people, five disagree on spelling and none is a different
   /// human, so a confirmation would be answered yes every time and would train
   /// people to tap through it.
-  Future<CnesImportResult> importCnesProfessional({
-    required String professionalCnesId,
-    String? firstName,
-    String? lastName,
-    List<int>? occupationIds,
-  }) async {
+  /// [body] is the wizard's draft, already shaped for the endpoint.
+  ///
+  /// A map rather than twenty named parameters: the wizard collects a profile,
+  /// the payload is that profile, and restating every field here would be a
+  /// second place to forget one. [CnesImportDraft.toImportBody] is where the
+  /// shape is decided and where it is tested.
+  Future<CnesImportResult> importCnesProfessional(
+    Map<String, dynamic> draft,
+  ) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse('$_healthcarePath/cnes-imports'),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'professionalCnesId': professionalCnesId,
-          if (firstName != null && firstName.trim().isNotEmpty)
-            'firstName': firstName.trim(),
-          if (lastName != null && lastName.trim().isNotEmpty)
-            'lastName': lastName.trim(),
-          // Sent even when empty: `[]` means the rep cleared them, which is a
-          // different answer from omitting the field and taking CNES's.
-          'occupationIds': ?occupationIds,
-        },
+        body: draft,
       ),
     );
 
