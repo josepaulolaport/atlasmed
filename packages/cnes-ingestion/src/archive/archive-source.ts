@@ -97,6 +97,18 @@ async function withClient<T>(
       password: location.password ?? "anonymous@",
       secure: location.secure ?? false,
     });
+    /**
+     * Force binary before any transfer.
+     *
+     * Correct practice for a ZIP either way — an ASCII transfer rewrites line
+     * endings and shortens the payload silently.
+     *
+     * **It did not fix the truncation this reader hits**, so do not read it as
+     * the explanation: with `TYPE I` set, the same range still returned 59744 of
+     * 65536 bytes on eight consecutive attempts, while curl read all 65536 of
+     * the identical range minutes earlier. Kept as hardening, not as a fix.
+     */
+    await client.send("TYPE I");
     return await run(client);
   } finally {
     client.close();
@@ -146,17 +158,6 @@ async function readRange(input: {
   path: string;
   from: number;
   length: number;
-  /**
-   * Accept fewer bytes than asked for.
-   *
-   * Set when reading to end of file. FTP `SIZE` is transfer-mode dependent and
-   * the DATASUS server reports a value up to a few KB larger than a binary
-   * transfer delivers — so a tail computed from `size()` asks for bytes past the
-   * real EOF and gets a deterministic short read. Observed: wanted 65536 from
-   * 725097909, got 59744, identically on every attempt, while entry reads (whose
-   * lengths come from the central directory, not `size()`) were unaffected.
-   */
-  toEndOfFile?: boolean;
 }): Promise<Uint8Array> {
   return withClient(input.location, async (client) => {
     const sink = collector(input.length);
@@ -168,13 +169,17 @@ async function readRange(input: {
       if (!sink.isComplete) throw error;
     }
     const bytes = sink.bytes();
-    if (!sink.isComplete && !input.toEndOfFile) {
+    /**
+     * Always strict. This origin truncates transfers intermittently, and a
+     * short read that is quietly accepted becomes a wrong answer later rather
+     * than a retry now — a truncated tail stopped covering the central
+     * directory, which sent the reader down a slower path against the same
+     * unreliable server instead of simply trying again.
+     */
+    if (!sink.isComplete) {
       throw new Error(
         `short read: wanted ${input.length} bytes from ${input.from}, got ${bytes.length}`
       );
-    }
-    if (bytes.length === 0) {
-      throw new Error(`empty read at ${input.from} of ${input.path}`);
     }
     return bytes;
   });
@@ -215,6 +220,9 @@ async function* streamRange(input: {
       password: input.location.password ?? "anonymous@",
       secure: input.location.secure ?? false,
     });
+    // Binary, for the same reason as in `withClient`: an ASCII transfer of a ZIP
+    // silently delivers fewer bytes than it was asked for.
+    await client.send("TYPE I");
     // Not awaited: the bytes have to be consumed for the transfer to progress.
     // The rejection is kept rather than dropped — closing the client early is how
     // a bounded read *ends*, so the rejection is usually meaningless, but when the
@@ -428,14 +436,20 @@ export async function openCnesArchive(
     withClient(location, (client) => client.size(path))
   );
   const tailFrom = Math.max(0, size - TAIL_BYTES);
+  /**
+   * Strict, deliberately.
+   *
+   * This used to pass `toEndOfFile`, on the theory that FTP `SIZE` overstates
+   * what a binary transfer delivers. It does not: byte `size - 1` is readable
+   * and is the last byte of the end-of-central-directory record. So a tail
+   * shorter than asked for is a **truncated transfer**, and tolerating it turned
+   * a retryable read into an unrecoverable path — the short tail no longer
+   * covered the directory, so the code fell through to fetching the directory
+   * separately, which is a smaller and less reliable read against the same
+   * flaky origin. Retrying the tail is both simpler and likelier to succeed.
+   */
   const tail = await withRetry(maxAttempts, "central directory tail", log, () =>
-    readRange({
-      location,
-      path,
-      from: tailFrom,
-      length: size - tailFrom,
-      toEndOfFile: true,
-    })
+    readRange({ location, path, from: tailFrom, length: size - tailFrom })
   );
 
   const cdLocation = readEndOfCentralDirectory(tail);
