@@ -21,6 +21,21 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("does not run MinIO in production", () => {
+    // Retired 2026-08-12: production object storage is Cloudflare R2, and MinIO
+    // was still deployed alongside it — running, holding a volume, and exposed
+    // publicly at storage.tdomains.uk while serving nobody. Local development
+    // still uses MinIO through docker-compose.dev.yml; this is about the cluster.
+    const { compose, workflow } = readDeploymentConfig();
+
+    expect(compose).not.toContain("atlasmed-minio:");
+    // A depends_on naming a service that no longer exists fails the deploy.
+    expect(compose).not.toContain("- atlasmed-minio");
+    expect(compose).not.toContain("storage.tdomains.uk");
+    // The server credentials provisioned the container; nothing provisions R2.
+    expect(workflow).not.toContain("MINIO_ROOT_");
+  });
+
   it("compresses every public API response", () => {
     // Measured 2026-08-12: the edge compresses what it sends to the client, but
     // the origin was answering Cloudflare in raw JSON — so the long leg, Brazil

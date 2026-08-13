@@ -43,7 +43,6 @@ services:
     depends_on:
       - atlasmed-redis
       - atlasmed-meilisearch
-      - atlasmed-minio
       - atlasmed-temporal
     x-caddy: |
       atlasmed-api.b1ixob.uncld.dev {
@@ -97,7 +96,6 @@ services:
     depends_on:
       - atlasmed-redis
       - atlasmed-meilisearch
-      - atlasmed-minio
       - atlasmed-temporal
 
   atlasmed-temporal-worker:
@@ -136,7 +134,6 @@ services:
       - OTEL_SERVICE_NAME=atlasmed-temporal-worker
     depends_on:
       - atlasmed-temporal
-      - atlasmed-minio
 
   atlasmed-temporal-db:
     x-machines: oracle-luis
@@ -195,26 +192,13 @@ services:
     volumes:
       - atlasmed_meilisearch_data_v148:/meili_data
 
-  atlasmed-minio:
-    x-machines: oracle-luis
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      # Public base URL for clients (presigned PUT/GET). Console stays cluster-private.
-      - MINIO_SERVER_URL=${STORAGE_PUBLIC_ENDPOINT:-https://storage.tdomains.uk}
-    volumes:
-      - atlasmed_minio_data:/data
-    x-caddy: |
-      storage.tdomains.uk {
-        reverse_proxy {{upstreams 9000}}
-      }
-
 volumes:
   atlasmed_temporal_postgres_data:
   atlasmed_redis_data:
   # Retain the v1.13 volume unchanged for rollback after the dump migration.
   atlasmed_meilisearch_data:
   atlasmed_meilisearch_data_v148:
+  # Retained deliberately. The service is gone; the volume outlives it so the
+  # 29 MB of pre-R2 objects can still be recovered until someone decides
+  # otherwise. Delete it as a separate, deliberate act.
   atlasmed_minio_data:
