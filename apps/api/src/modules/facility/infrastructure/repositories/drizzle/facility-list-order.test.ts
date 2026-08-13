@@ -1,10 +1,46 @@
 import { describe, expect, it } from "bun:test";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+import type { FacilityRepository } from "../../../application/interfaces/facility.repository.interface";
 import {
   buildFacilityListConditions,
   buildFacilityListOrderBy,
 } from "./drizzle-facility.repository";
+
+/**
+ * Compile-time only: every filter the list endpoint accepts must be declared on
+ * both repository entry points.
+ *
+ * `findAllByIds` is the one that gets forgotten — it serves the Meilisearch
+ * hydrate path, so a filter missing there fails only for searches, and only by
+ * returning a plausible unfiltered page.
+ *
+ * This cannot be asserted at runtime: these are types. If a field is dropped
+ * from either signature, this file stops compiling and `bun run typecheck`
+ * fails, which is the point.
+ */
+type ListParams = Parameters<FacilityRepository["findAll"]>[0];
+type HydrateParams = Parameters<FacilityRepository["findAllByIds"]>[0];
+
+type Accepts<T, K extends keyof T> = Pick<T, K>;
+type _ListAcceptsEveryFilter = Accepts<
+  ListParams,
+  | "productIds"
+  | "clinicalFocusIds"
+  | "unitTypeIds"
+  | "legalDocumentType"
+  | "purchaseFunnelStages"
+  | "purchaseProfile"
+>;
+type _HydrateAcceptsEveryFilter = Accepts<
+  HydrateParams,
+  | "productIds"
+  | "clinicalFocusIds"
+  | "unitTypeIds"
+  | "legalDocumentType"
+  | "purchaseFunnelStages"
+  | "purchaseProfile"
+>;
 
 /**
  * Explorar offers "Nome A–Z" and "Nome Z–A" for clinics, and neither worked.

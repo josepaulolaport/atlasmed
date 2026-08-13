@@ -36,6 +36,21 @@ import type {
   FacilityVerticalProfileRecord,
 } from "../../../application/interfaces/facility.repository.interface";
 import { normalizeLegalDocument } from "../../../application/utils/facility-tax-id.utils";
+/**
+ * Taken from the interface rather than restated here.
+ *
+ * These two used to be hand-copied shapes, and they had already drifted: the
+ * interface accepted `unitTypeIds` and `legalDocumentType` while neither copy
+ * mentioned them. Nothing broke, because the whole `params` object is handed to
+ * `buildFacilityListConditions` and TypeScript checks method parameters
+ * bivariantly — so the filters worked while the class claimed not to accept
+ * them. The next filter would have been added the same way, and a refactor that
+ * destructured `params` instead of passing it whole would have dropped every
+ * undeclared one with no compiler error and no failing test.
+ */
+type FacilityListParams = Parameters<FacilityRepository["findAll"]>[0];
+type FacilityHydrateParams = Parameters<FacilityRepository["findAllByIds"]>[0];
+
 type FacilityRow = typeof facilities.$inferSelect;
 
 /** Row shape after JOIN municipalities/states for display city + UF. */
@@ -760,27 +775,9 @@ export function buildFacilityListOrderBy(params: {
 }
 
 export class DrizzleFacilityRepository implements FacilityRepository {
-  async findAll(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
-    purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: number[];
-    clinicalFocusIds?: number[];
-    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
-    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
-    purchaseIntervalMinDays?: number;
-    purchaseIntervalMaxDays?: number;
-    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
-    order?: "asc" | "desc";
-    userId: number;
-    scope: FacilityListScopeFilter;
-    candidateIds?: number[];
-  }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
+  async findAll(
+    params: FacilityListParams,
+  ): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const referencePoint =
       params.latitude === undefined
         ? undefined
@@ -905,24 +902,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     };
   }
 
-  async findAllByIds(params: {
-    ids: number[];
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
-    purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: number[];
-    clinicalFocusIds?: number[];
-    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
-    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
-    purchaseIntervalMinDays?: number;
-    purchaseIntervalMaxDays?: number;
-    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
-    order?: "asc" | "desc";
-    userId: number;
-    scope: FacilityListScopeFilter;
-  }): Promise<FacilityListRecord[]> {
+  async findAllByIds(
+    params: FacilityHydrateParams,
+  ): Promise<FacilityListRecord[]> {
     if (params.ids.length === 0) {
       return [];
     }
