@@ -247,6 +247,12 @@ const importCnesProfessionalRoute = (
           ),
           email: t.Optional(t.Union([t.String(), t.Null()])),
           mobilePhone: t.Optional(t.Union([t.String(), t.Null()])),
+          /*
+           * What this person does at this clinic. Absent means "what CNES
+           * records"; the server narrows whatever arrives to that same set, so
+           * this can drop or reorder but never invent.
+           */
+          occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
         }),
       }
     );

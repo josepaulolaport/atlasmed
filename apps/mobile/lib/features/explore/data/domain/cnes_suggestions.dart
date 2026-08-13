@@ -32,6 +32,22 @@ enum CnesSuggestionsStatus {
   }
 }
 
+/// One occupation an import can save, as our catalogue names it.
+class CnesOccupationOption {
+  const CnesOccupationOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
+
+  static CnesOccupationOption? tryFromMap(Object? raw) {
+    if (raw is! Map) return null;
+    final id = _asInt(raw['id']);
+    final name = _nonEmpty(raw['name']);
+    if (id == null || name == null) return null;
+    return CnesOccupationOption(id: id, name: name);
+  }
+}
+
 /// One professional CNES links to this clinic.
 class CnesSuggestion {
   const CnesSuggestion({
@@ -39,9 +55,17 @@ class CnesSuggestion {
     required this.professionalCnesId,
     required this.displayName,
     this.occupation,
+    this.occupationOptions = const [],
     this.registrationLabel,
     this.alreadyLinked = false,
   });
+
+  /// What CNES records them doing here, in the form an import can save.
+  ///
+  /// Preselected rather than asked for: CNES already states it, and a rep who
+  /// disagrees unticks. A CBO our catalogue does not carry shows in
+  /// [occupation] but is absent here — displayable, not saveable.
+  final List<CnesOccupationOption> occupationOptions;
 
   /// Null when we do not hold this person under any identity.
   ///
@@ -90,6 +114,12 @@ class CnesSuggestion {
           ? map['displayName'] as String
           : 'Sem nome',
       occupation: _nonEmpty(map['occupation']),
+      occupationOptions: map['occupationOptions'] is List
+          ? (map['occupationOptions'] as List)
+                .map(CnesOccupationOption.tryFromMap)
+                .whereType<CnesOccupationOption>()
+                .toList(growable: false)
+          : const [],
       registrationLabel: _nonEmpty(map['registrationLabel']),
       alreadyLinked: map['alreadyLinked'] == true,
     );

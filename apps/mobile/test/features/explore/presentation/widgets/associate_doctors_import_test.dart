@@ -72,6 +72,11 @@ Object _suggestionsPayload() => {
       'professionalCnesId': 'SUS999',
       'displayName': 'DESCONHECIDO SOUZA',
       'registrationLabel': 'CRM 100200/SP',
+      // What CNES records them doing at this clinic, as our catalogue names it.
+      'occupationOptions': [
+        {'id': 10, 'name': 'Anestesiologista'},
+        {'id': 20, 'name': 'Intensivista'},
+      ],
     },
   ],
 };
@@ -136,7 +141,9 @@ void main() {
     expect(find.text('Conhecida Silva'), findsOneWidget);
   });
 
-  testWidgets('imports the person, then associates them', (tester) async {
+  testWidgets('imports in one call, sending what CNES records here', (
+    tester,
+  ) async {
     final client = RecordingClient(defaultHandler);
     await _pumpSheet(tester, client: client);
     await _openCnesTab(tester);
@@ -149,22 +156,42 @@ void main() {
     final importRequest = client.requests.firstWhere(
       (r) => r.url.path.endsWith('/cnes-imports'),
     );
-    expect((importRequest.body as Map)['professionalCnesId'], 'SUS999');
+    final body = importRequest.body as Map;
+    expect(body['professionalCnesId'], 'SUS999');
+    // Preselected, in CNES's order — the rep confirms rather than fills a form.
+    expect(body['occupationIds'], [10, 20]);
 
     /*
-     * Import first, associate second. They are two facts — that the person
-     * exists, and that they work here — and in this order a failure between
-     * them leaves a real professional who is merely not linked yet, which the
-     * rep fixes by tapping again.
+     * No association request follows. The import creates the person and the
+     * affiliation in one transaction, because occupations hang off
+     * person_facility_id and cannot be written before it exists. A separate
+     * associate call would either race that or need a third request.
      */
-    final importAt = client.paths.indexWhere(
-      (p) => p.endsWith('/cnes-imports'),
+    expect(
+      client.paths.where(
+        (p) => p.endsWith('/facilities/9/healthcare-professionals'),
+      ),
+      isEmpty,
     );
-    final associateAt = client.paths.lastIndexWhere(
-      (p) => p.endsWith('/healthcare-professionals'),
+  });
+
+  testWidgets('sends only the occupations still ticked', (tester) async {
+    final client = RecordingClient(defaultHandler);
+    await _pumpSheet(tester, client: client);
+    await _openCnesTab(tester);
+
+    await tester.tap(find.text('DESCONHECIDO SOUZA'));
+    await tester.pumpAndSettle();
+    // The chips appear once the row is selected; unticking one drops it.
+    await tester.tap(find.text('Intensivista'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    final importRequest = client.requests.firstWhere(
+      (r) => r.url.path.endsWith('/cnes-imports'),
     );
-    expect(importAt, greaterThanOrEqualTo(0));
-    expect(associateAt, greaterThan(importAt));
+    expect((importRequest.body as Map)['occupationIds'], [10]);
   });
 
   testWidgets('associates the existing person when the CRM is already held', (
@@ -197,7 +224,7 @@ void main() {
 
     // It associated the person the server named, rather than creating another.
     final associate = client.requests.lastWhere(
-      (r) => r.url.path.endsWith('/healthcare-professionals'),
+      (r) => r.url.path.endsWith('/facilities/9/healthcare-professionals'),
     );
     expect((associate.body as Map)['personId'], 5150);
   });

@@ -35,6 +35,8 @@ export interface CnesSuggestion {
   registrySocialName: string | null;
   /** CBOs CNES records for this person **at this clinic**, not globally. */
   occupations: string[];
+  /** The subset our catalogue carries, which is what an import can write. */
+  occupationOptions: Array<{ id: number; name: string }>;
   registrationNumber: string | null;
   registrationStateCode: string | null;
   registrationCouncil: string | null;
@@ -146,10 +148,29 @@ export class DrizzleCnesSuggestionRepository {
         p.social_name                      as social_name,
         rp.full_name                       as registry_full_name,
         rp.social_name                     as registry_social_name,
+        /*
+         * Our name for the CBO where we carry it, CNES's otherwise. Ours is
+         * the short one written for a chip; CNES ships titles like
+         * "MEDICO EM RADIOLOGIA E DIAGNOSTICO POR IMAGEM".
+         */
         coalesce(
-          array_agg(distinct ro.name) filter (where ro.name is not null),
+          array_agg(distinct coalesce(o.name, ro.name))
+            filter (where ro.name is not null),
           '{}'
         )                                  as occupations,
+        /*
+         * The same occupations as {id, name}, for the ones our catalogue holds.
+         *
+         * An import can only write a person_facility_occupations row against
+         * an occupation id, so a CBO we do not carry is displayable but not
+         * selectable — and the client needs to know which is which rather than
+         * offering a chip that cannot be saved.
+         */
+        coalesce(
+          jsonb_agg(distinct jsonb_build_object('id', o.id, 'name', o.name))
+            filter (where o.id is not null),
+          '[]'::jsonb
+        )                                  as occupation_options,
         max(rr.registration_number)        as registration_number,
         max(rr.state_code)                 as registration_state_code,
         max(rc.abbreviation)               as registration_council,
@@ -186,6 +207,14 @@ export class DrizzleCnesSuggestionRepository {
        and fo.professional_cnes_id = fp.professional_cnes_id
       left join registry.occupations ro
         on ro.cnes_id = fo.occupation_cnes_id
+      /*
+       * On the CBO itself. occupations.cnes_id is that code, unique on both
+       * sides, so the surrogate registry.occupations.atlasmed_id is a second
+       * answer to a question the natural key already answers — and one that can
+       * disagree with itself.
+       */
+      left join occupations o
+        on o.cnes_id = ro.cnes_id
       left join registry.professional_registrations rr
         on rr.professional_cnes_id = rp.cnes_id
       left join registry.professional_councils rc
@@ -240,6 +269,7 @@ export class DrizzleCnesSuggestionRepository {
       registry_full_name: string;
       registry_social_name: string | null;
       occupations: string[] | null;
+      occupation_options: Array<{ id: number | string; name: string }> | null;
       registration_number: string | null;
       registration_state_code: string | null;
       registration_council: string | null;
@@ -263,6 +293,10 @@ export class DrizzleCnesSuggestionRepository {
       registryFullName: row.registry_full_name,
       registrySocialName: row.registry_social_name,
       occupations: row.occupations ?? [],
+      occupationOptions: (row.occupation_options ?? []).map((option) => ({
+        id: Number(option.id),
+        name: option.name,
+      })),
       registrationNumber: row.registration_number,
       registrationStateCode: row.registration_state_code,
       registrationCouncil: row.registration_council,

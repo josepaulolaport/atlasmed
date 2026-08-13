@@ -6,6 +6,7 @@ import { isDatabaseReachable } from "../../../../test-utils/db-harness";
 import {
   CnesRegistrationAlreadyHeldError,
   ImportCnesProfessionalUseCase,
+  resolveOccupations,
   splitRegistryName,
 } from "./cnes-import.use-cases";
 
@@ -151,6 +152,20 @@ async function seed(): Promise<Fixture> {
     `);
   }
 
+  /**
+   * Two CBOs CNES records for SUS_NEW **at this clinic**, both in our
+   * catalogue: Anestesiologista (225151) and Intensivista (225150). Both were
+   * seeded by migration 0102, which is what makes them writable at all.
+   */
+  for (const cbo of ["225151", "225150"]) {
+    await db.execute(sql`
+      insert into registry.facility_professional_occupations
+        (facility_cnes_id, professional_cnes_id, occupation_cnes_id)
+        values (${CNES_CODE}, ${SUS_NEW}, ${cbo})
+        on conflict do nothing;
+    `);
+  }
+
   // Someone on our side already holds SUS_HELD's CRM. The import must find them
   // rather than attempt an insert the unique index would refuse.
   await db.execute(sql`
@@ -187,6 +202,37 @@ describe("splitRegistryName", () => {
     // missing, so this should never arrive — but returning "" lets the use case
     // report a validation error instead of writing a nameless person.
     expect(splitRegistryName("   ")).toEqual({ firstName: "", lastName: "" });
+  });
+});
+
+describe("resolveOccupations", () => {
+  const professional = { occupationIds: [10, 20, 30] } as never;
+
+  it("defaults to what CNES records when nothing is specified", () => {
+    expect(resolveOccupations(undefined, professional)).toEqual([10, 20, 30]);
+  });
+
+  it("keeps the order the rep chose, because the first is primary", () => {
+    expect(resolveOccupations([30, 10], professional)).toEqual([30, 10]);
+  });
+
+  it("honours an empty list as a deliberate answer", () => {
+    // Distinct from `undefined`: the rep cleared them, which is a decision.
+    expect(resolveOccupations([], professional)).toEqual([]);
+  });
+
+  it("refuses an occupation CNES does not record here", () => {
+    /**
+     * The CBO is a sourced fact about this clinic. Letting a client post any
+     * occupation id would turn it into free text that still looks sourced —
+     * and assigning an occupation nobody claimed is a roster action, not a
+     * side effect of importing.
+     */
+    expect(resolveOccupations([10, 999], professional)).toEqual([10]);
+  });
+
+  it("drops a repeat rather than letting it take a second row", () => {
+    expect(resolveOccupations([10, 10, 20], professional)).toEqual([10, 20]);
   });
 });
 
@@ -243,6 +289,53 @@ describe.if(dbUp)("ImportCnesProfessionalUseCase", () => {
     expect(written!.registration_number).toBe("9970001");
     expect(written!.is_primary).toBe(true);
     expect(Number(written!.bridge)).toBe(result.personId);
+  });
+
+  it("records what CNES says they do here, one of them primary", async () => {
+    /**
+     * The CBO is per-clinic — 1 854 of 19 137 professionals carry more than one
+     * across different facilities — so this is a fact about the affiliation,
+     * not about the person, and it lands on `person_facility_occupations`.
+     */
+    const [person] = (await db.execute(sql`
+      select person_id from person_healthcare_profiles where cnes_professional_id = ${SUS_NEW};
+    `)) as unknown as { person_id: number | string }[];
+
+    const rows = (await db.execute(sql`
+      select o.name, pfo.is_primary
+        from person_facility_occupations pfo
+        join person_facilities pf on pf.id = pfo.person_facility_id
+        join occupations o on o.id = pfo.occupation_id
+       where pf.person_id = ${Number(person!.person_id)}
+         and pf.facility_id = ${fixture.facilityId}
+       order by pfo.is_primary desc, o.name;
+    `)) as unknown as { name: string; is_primary: boolean }[];
+
+    expect(rows.map((r) => r.name).sort()).toEqual([
+      "Anestesiologista",
+      "Intensivista",
+    ]);
+    // person_facility_occupations_primary_uidx allows exactly one; the loader
+    // has no ordering to offer, so the first the client sent wins.
+    expect(rows.filter((r) => r.is_primary)).toHaveLength(1);
+  });
+
+  it("links the person to the clinic as a clinician in the same call", async () => {
+    // The affiliation is created by the import rather than a second request:
+    // occupations hang off person_facility_id, which does not exist until the
+    // person works somewhere.
+    const [row] = (await db.execute(sql`
+      select count(*)::int as n
+        from person_facilities pf
+        join person_healthcare_profiles hp on hp.person_id = pf.person_id
+        join person_facility_classification_assignments pfca on pfca.person_facility_id = pf.id
+        join person_facility_classifications c on c.id = pfca.classification_id
+       where hp.cnes_professional_id = ${SUS_NEW}
+         and pf.facility_id = ${fixture.facilityId}
+         and pf.ended_at is null
+         and c.code = 'HEALTHCARE_PROFESSIONAL';
+    `)) as unknown as { n: number }[];
+    expect(row!.n).toBe(1);
   });
 
   it("returns the same person when the import is repeated", async () => {

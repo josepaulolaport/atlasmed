@@ -107,6 +107,21 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
   /// precisely what makes them an import rather than an association.
   final Set<String> _selectedCnesIds = {};
 
+  /// Occupations the rep unticked, keyed by SUS id.
+  ///
+  /// Stores the *removals* rather than the selection: CNES's claim is the
+  /// default, so an untouched row needs no entry, and a suggestion list that
+  /// refreshes cannot silently discard a choice nobody made.
+  final Map<String, Set<int>> _droppedOccupations = {};
+
+  List<int> _occupationsFor(CnesSuggestion s) {
+    final dropped = _droppedOccupations[s.professionalCnesId] ?? const {};
+    return s.occupationOptions
+        .where((o) => !dropped.contains(o.id))
+        .map((o) => o.id)
+        .toList(growable: false);
+  }
+
   /// Everything the confirm button would act on, from both selection sets.
   ///
   /// Counting `_selected` alone left the button dead when the only things
@@ -728,12 +743,34 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
           ),
         ],
       ),
-      subtitle: Text(
-        [
-          if (roster.specialty != null) roster.specialty!,
-          if (roster.crm != null) roster.crm!,
-        ].join(' · '),
-        style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            [
+              if (roster.specialty != null) roster.specialty!,
+              if (roster.crm != null) roster.crm!,
+            ].join(' · '),
+            style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+          ),
+          // Only once the row is selected: these are what the import will
+          // record, and offering them on a row nobody picked is noise.
+          if (selected && s.occupationOptions.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _OccupationChips(
+              options: s.occupationOptions,
+              dropped: _droppedOccupations[s.professionalCnesId] ?? const {},
+              enabled: !_saving,
+              onToggle: (id) => setState(() {
+                final dropped = _droppedOccupations.putIfAbsent(
+                  s.professionalCnesId,
+                  () => <int>{},
+                );
+                if (!dropped.remove(id)) dropped.add(id);
+              }),
+            ),
+          ],
+        ],
       ),
       activeColor: AppColors.navyBright,
     );
@@ -792,10 +829,21 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
       for (final suggestion in toImport) {
         final result = await repo.importCnesProfessional(
           professionalCnesId: suggestion.professionalCnesId,
+          occupationIds: _occupationsFor(suggestion),
         );
-        if (result.alreadyExisted) reused += 1;
-        if (!alreadyLinked.contains(result.personId)) {
-          await repo.associateDoctor(result.personId);
+        /*
+         * The import links them here too — occupations hang off the
+         * affiliation, so creating the person and the affiliation in one
+         * transaction is what lets the CBO be written at all.
+         *
+         * A person the server resolved to instead of creating is a different
+         * case: they existed before this clinic, so they still need linking.
+         */
+        if (result.alreadyExisted) {
+          reused += 1;
+          if (!alreadyLinked.contains(result.personId)) {
+            await repo.associateDoctor(result.personId);
+          }
         }
         associated.add(suggestion.toRoster(importedAs: result.personId));
       }
@@ -836,6 +884,61 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     } finally {
       repo.dispose();
     }
+  }
+}
+
+/// What CNES records this person doing at this clinic, as togglable chips.
+///
+/// Everything starts selected. CNES already states it, so the rep is confirming
+/// rather than filling a form, and unticking is the cheaper gesture than
+/// picking from a list of 66.
+class _OccupationChips extends StatelessWidget {
+  const _OccupationChips({
+    required this.options,
+    required this.dropped,
+    required this.enabled,
+    required this.onToggle,
+  });
+
+  final List<CnesOccupationOption> options;
+  final Set<int> dropped;
+  final bool enabled;
+  final void Function(int occupationId) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final option in options)
+          _chip(option, selected: !dropped.contains(option.id)),
+      ],
+    );
+  }
+
+  Widget _chip(CnesOccupationOption option, {required bool selected}) {
+    return GestureDetector(
+      onTap: enabled ? () => onToggle(option.id) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.navyBright : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? AppColors.navyBright : AppColors.gray300,
+          ),
+        ),
+        child: Text(
+          option.name,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AppColors.gray500,
+          ),
+        ),
+      ),
+    );
   }
 }
 

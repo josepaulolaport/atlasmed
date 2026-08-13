@@ -21,6 +21,8 @@ export interface RegistryProfessional {
   registrations: RegistryRegistration[];
   /** CBOs CNES records for them at this clinic. */
   occupations: string[];
+  /** The subset our catalogue carries — the only ones an import can write. */
+  occupationIds: number[];
 }
 
 export interface RegistryRegistration {
@@ -105,14 +107,21 @@ export class DrizzleCnesImportRepository {
       held_by_name: string | null;
     }[];
 
+    /*
+     * Scoped to this clinic, not to the person. A CBO is what someone does
+     * *here* — 1 854 of 19 137 professionals carry more than one across
+     * different clinics — so importing them into this facility must not drag in
+     * the occupation they hold somewhere else.
+     */
     const occupations = (await db.execute(sql`
-      select distinct ro.name as name
+      select distinct coalesce(o.name, ro.name) as name, o.id as occupation_id
         from registry.facility_professional_occupations fo
         join registry.facilities rf on rf.cnes_id = fo.facility_cnes_id
         join registry.occupations ro on ro.cnes_id = fo.occupation_cnes_id
+        left join occupations o on o.cnes_id = ro.cnes_id
        where fo.professional_cnes_id = ${input.professionalCnesId}
          and rf.atlasmed_id = ${input.facilityId}
-    `)) as unknown as { name: string }[];
+    `)) as unknown as { name: string; occupation_id: number | string | null }[];
 
     return {
       cnesId: row.cnes_id,
@@ -131,6 +140,9 @@ export class DrizzleCnesImportRepository {
         heldByName: r.held_by_name,
       })),
       occupations: occupations.map((o) => o.name),
+      occupationIds: occupations
+        .filter((o) => o.occupation_id != null)
+        .map((o) => Number(o.occupation_id)),
     };
   }
 
@@ -145,12 +157,19 @@ export class DrizzleCnesImportRepository {
    */
   async createFromRegistry(input: {
     professional: RegistryProfessional;
+    facilityId: number;
     firstName: string;
     lastName: string;
     socialName: string | null;
     cpf: string | null;
     email: string | null;
     mobilePhone: string | null;
+    /**
+     * Occupations the rep confirmed — CNES's claim for this clinic by default,
+     * edited on the way in. The first is primary, which
+     * `person_facility_occupations_primary_uidx` allows exactly one of.
+     */
+    occupationIds: number[];
   }): Promise<number> {
     return db.transaction(async (tx) => {
       const [person] = (await tx.execute(sql`
@@ -189,6 +208,45 @@ export class DrizzleCnesImportRepository {
         update registry.professionals set atlasmed_id = ${personId}, updated_at = now()
          where cnes_id = ${input.professional.cnesId}
       `);
+
+      /*
+       * The affiliation lands here rather than in a second request.
+       *
+       * Occupations hang off `person_facility_id`, which does not exist until
+       * the person works somewhere — so splitting the two would either leave
+       * the CBO unwritten or need a third call to attach it. One transaction
+       * also means a failure leaves nothing rather than a professional who is
+       * half-registered.
+       */
+      const [affiliation] = (await tx.execute(sql`
+        insert into person_facilities (person_id, facility_id)
+        values (${personId}, ${input.facilityId})
+        returning id
+      `)) as unknown as { id: number | string }[];
+      const personFacilityId = Number(affiliation!.id);
+
+      await tx.execute(sql`
+        insert into person_facility_classification_assignments (person_facility_id, classification_id)
+          select ${personFacilityId}, c.id
+            from person_facility_classifications c
+           where c.code = 'HEALTHCARE_PROFESSIONAL'
+      `);
+
+      /*
+       * First one primary. CNES gives no ordering, so this is the client's
+       * choice arriving in list order — and a rep who cares reorders before
+       * confirming. `on conflict do nothing` covers the same occupation
+       * arriving twice from a client that deduplicated badly.
+       */
+      let primaryTaken = false;
+      for (const occupationId of input.occupationIds) {
+        await tx.execute(sql`
+          insert into person_facility_occupations (person_facility_id, occupation_id, is_primary)
+          values (${personFacilityId}, ${occupationId}, ${!primaryTaken})
+          on conflict (person_facility_id, occupation_id) do nothing
+        `);
+        primaryTaken = true;
+      }
 
       return personId;
     });

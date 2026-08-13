@@ -27,6 +27,15 @@ export interface CnesSuggestionItem {
   /** "MEDICO ORTOPEDISTA E TRAUMATOLOGISTA" — what makes the row useful. */
   occupation: string | null;
   occupations: string[];
+  /**
+   * The occupations an import can actually save, preselected.
+   *
+   * CNES states what someone does at a clinic; this is that claim expressed in
+   * our own catalogue, so the rep sees it as editable chips rather than as a
+   * fact they cannot touch. A CBO we do not carry appears in `occupations` for
+   * display but not here — it is not something the import could write.
+   */
+  occupationOptions: Array<{ id: number; name: string }>;
   /** "CRM 119508/SP", or null when the registration is incomplete. */
   registrationLabel: string | null;
   /**
@@ -125,6 +134,7 @@ export class ListCnesSuggestionsUseCase {
         displayName: displayNameOf(row),
         occupation: row.occupations[0] ?? null,
         occupations: row.occupations,
+        occupationOptions: row.occupationOptions,
         registrationLabel: registrationLabelOf(row),
         alreadyLinked: row.alreadyLinked,
       })),

@@ -190,6 +190,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     required String professionalCnesId,
     String? firstName,
     String? lastName,
+    List<int>? occupationIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -202,6 +203,9 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
             'firstName': firstName.trim(),
           if (lastName != null && lastName.trim().isNotEmpty)
             'lastName': lastName.trim(),
+          // Sent even when empty: `[]` means the rep cleared them, which is a
+          // different answer from omitting the field and taking CNES's.
+          'occupationIds': ?occupationIds,
         },
       ),
     );

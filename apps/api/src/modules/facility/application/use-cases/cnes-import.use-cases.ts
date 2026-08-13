@@ -64,6 +64,12 @@ export interface ImportCnesProfessionalInput {
   cpf?: string | null;
   email?: string | null;
   mobilePhone?: string | null;
+  /**
+   * What the rep confirmed this person does here. Omitted means "what CNES
+   * says"; an empty array means they cleared it, which is a different answer
+   * and is honoured.
+   */
+  occupationIds?: number[];
 }
 
 /**
@@ -84,6 +90,31 @@ export function splitRegistryName(fullName: string): {
     firstName: parts.slice(0, -1).join(" "),
     lastName: parts[parts.length - 1]!,
   };
+}
+
+/**
+ * What the import will write as this person's occupations here.
+ *
+ * Defaults to CNES's claim, and narrows a supplied list to it. A rep may drop
+ * occupations CNES records or reorder them, but may not invent one: the CBO is
+ * a fact about this clinic taken from the export, and letting the client post
+ * an arbitrary occupation id would turn a sourced claim into free text that
+ * still looks sourced. Deliberate occupations are a separate action on the
+ * roster, not a side effect of importing.
+ *
+ * `undefined` means "unspecified" and takes the CNES default; `[]` means the
+ * rep cleared them, which is an answer and is kept.
+ */
+export function resolveOccupations(
+  requested: number[] | undefined,
+  professional: RegistryProfessional
+): number[] {
+  if (requested === undefined) return professional.occupationIds;
+  const offered = new Set(professional.occupationIds);
+  const seen = new Set<number>();
+  return requested.filter(
+    (id) => offered.has(id) && !seen.has(id) && (seen.add(id), true)
+  );
 }
 
 function registrationLabel(professional: RegistryProfessional): string {
@@ -184,12 +215,14 @@ export class ImportCnesProfessionalUseCase {
 
     const personId = await this.repository.createFromRegistry({
       professional,
+      facilityId: input.facilityId,
       firstName,
       lastName,
       socialName: input.socialName ?? professional.socialName,
       cpf: input.cpf ?? null,
       email: input.email ?? null,
       mobilePhone: input.mobilePhone ?? null,
+      occupationIds: resolveOccupations(input.occupationIds, professional),
     });
 
     return { personId, created: true, occupations: professional.occupations };
