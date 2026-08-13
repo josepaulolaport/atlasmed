@@ -25,7 +25,24 @@ typedef CnesImportCatalogues = ({
 /// through the same seam, and two ways to build it would drift.
 CnesImportCatalogues defaultCnesImportCatalogues() => (
   specialties: () => HealthcareSpecialtiesCatalogRepository().listActive(),
-  roles: () => PersonFacilityRolesCatalogRepository().listActive(),
+  /*
+   * Through the shared warm rather than `listActive`.
+   *
+   * The role catalog is global reference data behind a static cache, and a
+   * clinic open already warms it. Both surfaces that read it here — the chips
+   * on a ticked row and the wizard's role picker — need id→name labels, not the
+   * current server state, so a third fetch per clinic open would buy nothing.
+   * Editing the catalog is what `listActive` is for.
+   */
+  roles: () async {
+    final repository = PersonFacilityRolesCatalogRepository();
+    try {
+      await repository.ensureCatalogWarm();
+      return PersonFacilityRoleCatalogCache.entries;
+    } finally {
+      repository.dispose();
+    }
+  },
   councils: () =>
       PersonProfessionalRegistrationCouncilsRepository().listActive(),
 );

@@ -39,8 +39,6 @@ jobs:
       RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
       TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
       MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
-      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
-      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
       # Required by validate-production-env.yml. A workflow_call missing a
       # required secret fails at startup, before any job runs.
       STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
@@ -169,8 +167,6 @@ jobs:
           MAPBOX_PUBLIC_TOKEN: ${{ secrets.MAPBOX_PUBLIC_TOKEN }}
           TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
           MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
-          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
-          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
           # Storage endpoints are configuration, not credentials — GitHub Variables.
@@ -180,7 +176,7 @@ jobs:
           # them back is the entire rollback. No code change either way.
           STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
           STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
-          # Credentials stay secrets. MINIO_ROOT_* above provision the MinIO server itself;
+          # Credentials stay secrets — the R2 API token id and secret;
           # these are what the API signs with, and they become the R2 API token at cutover.
           STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
           STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}

@@ -91,7 +91,20 @@ class ExploreNotifier extends StateNotifier<ExploreState>
     if (refetch) _invalidatePages();
   }
 
-  Future<void> refreshGpsAndList() async {
+  /// Re-reads GPS and reloads the lists.
+  ///
+  /// Pass [onlyIfMoved] when nobody asked for this — the 90-second tick on the
+  /// Explorar screen. The lists are ordered by distance from [ExploreState.origin],
+  /// so a rep who has not moved gets back the page they are already looking at,
+  /// and both tabs are invalidated, so each tick costs two requests against the
+  /// two slowest endpoints. Measured 2026-08-13: a phone left untouched issued
+  /// `/healthcare-professionals` + `/facilities`, ~1s each, every 90 seconds
+  /// indefinitely — including while its owner was reading a clinic, because
+  /// Explorar stays mounted underneath the detail route.
+  ///
+  /// An explicit pull-to-refresh leaves this false: the rep asked, so they get a
+  /// refetch whether or not they have moved.
+  Future<void> refreshGpsAndList({bool onlyIfMoved = false}) async {
     try {
       await _ref
           .read(locationSessionProvider.notifier)
@@ -102,8 +115,16 @@ class ExploreNotifier extends StateNotifier<ExploreState>
     }
 
     final location = _ref.read(locationSessionProvider).location;
-    if (location != null) state = state.copyWith(origin: location);
-    _invalidatePages();
+    if (location == null) {
+      // No fix to compare against. A tick has learned nothing and should not
+      // spend two requests saying so; an explicit pull still reloads.
+      if (!onlyIfMoved) _invalidatePages();
+      return;
+    }
+
+    // The same guard the GPS stream already applies — a tick is just a slower
+    // way of asking the same question, so it gets the same answer.
+    syncOrigin(location, requireMeaningfulMove: onlyIfMoved);
   }
 
   Future<void> refreshAfterClinicUpdate(FacilityDTO _) async {

@@ -49,6 +49,38 @@ class PersonFacilityRolesCatalogRepository
     return entries;
   }
 
+  /// One in-flight warm across every instance.
+  ///
+  /// The catalog lives in a static cache, but each caller built its own
+  /// repository, fetched, and disposed it — so the cache was written and the
+  /// instance that wrote it thrown away. Two callers warm it on a clinic open
+  /// (the representatives roster and the professionals roster), and they run
+  /// concurrently, so checking the cache alone would not help: both would find
+  /// it empty and both would fetch. Measured 2026-08-13: two
+  /// `/person-facility-roles` requests per clinic open, 39-135ms apart
+  /// depending on which chain won.
+  static Future<void>? _warming;
+
+  /// Populate the shared catalog cache if it is not already populated.
+  ///
+  /// For callers that only need id→name labels to resolve. Anything that needs
+  /// the current server state — the role-editing sheets — should keep calling
+  /// [listActive], which always fetches.
+  Future<void> ensureCatalogWarm() async {
+    if (PersonFacilityRoleCatalogCache.entries.isNotEmpty) return;
+    // Cleared on completion so a failed warm is retried rather than remembered
+    // as done. A successful one needs no flag: the cache is no longer empty.
+    _warming ??= listActive().then((_) {}).whenComplete(() {
+      _warming = null;
+    });
+    await _warming;
+  }
+
+  /// Drops the in-flight warm. Pair with [PersonFacilityRoleCatalogCache.resetForTest].
+  static void resetWarmForTest() {
+    _warming = null;
+  }
+
   Future<List<PersonFacilityRoleCatalogEntry>> listActive() async {
     final response = await client.call(
       request: RepositoryHttpRequest(

@@ -31,6 +31,12 @@
       "outputs": []
     },
 
+    "storage:check": {
+      "cache": false,
+      "outputs": [],
+      "env": ["STORAGE_*"]
+    },
+
     "dev": {
       "cache": false,
       "persistent": true

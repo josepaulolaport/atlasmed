@@ -288,6 +288,64 @@ export class DrizzleCadastroSubmissionRepository
     return rows.map((r) => mapDocument(r.document, r.requirement));
   }
 
+  /**
+   * The checklist's one document query. Same shape and ordering as
+   * `listDocumentsForFacilityRequirement`, minus the requirement filter, so the
+   * caller can group by `requirementId` and get identical per-requirement
+   * ordering without a query each.
+   */
+  async listDocumentsByFacility(facilityId: number) {
+    const rows = await db
+      .select({
+        document: submissionDocuments,
+        requirement: conformityRequirements,
+      })
+      .from(submissionDocuments)
+      .innerJoin(
+        conformityRequirements,
+        eq(submissionDocuments.requirementId, conformityRequirements.id)
+      )
+      .where(eq(submissionDocuments.facilityId, facilityId))
+      .orderBy(
+        desc(submissionDocuments.version),
+        desc(submissionDocuments.updatedAt)
+      );
+    return rows.map((r) => mapDocument(r.document, r.requirement));
+  }
+
+  async listDocumentFilesForDocuments(documentIds: number[]) {
+    // `inArray` with an empty list generates `IN ()`, which Postgres rejects.
+    if (documentIds.length === 0) return [];
+    const rows = await db
+      .select({
+        link: documentFiles,
+        asset: fileAssets,
+        uploaderFirstName: users.firstName,
+        uploaderLastName: users.lastName,
+        uploaderUsername: users.username,
+      })
+      .from(documentFiles)
+      .innerJoin(fileAssets, eq(documentFiles.fileAssetId, fileAssets.id))
+      // Left, not inner, for the same reason as listDocumentFiles: a file whose
+      // uploader was deleted must still appear.
+      .leftJoin(users, eq(fileAssets.uploadedByUserId, users.id))
+      .where(inArray(documentFiles.submissionDocumentId, documentIds))
+      // Document first so each group stays contiguous, then the same `position`
+      // ordering a single-document lookup would give.
+      .orderBy(documentFiles.submissionDocumentId, documentFiles.position);
+    return rows.map((r) =>
+      mapDocumentFile(
+        r.link,
+        r.asset,
+        formatUserDisplayName({
+          firstName: r.uploaderFirstName,
+          lastName: r.uploaderLastName,
+          username: r.uploaderUsername,
+        })
+      )
+    );
+  }
+
   async createDocument(input: {
     facilityId: number;
     facilityVerticalProfileId: number | null;

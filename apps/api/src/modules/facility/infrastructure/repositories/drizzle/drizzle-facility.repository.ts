@@ -804,26 +804,31 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const ids = rows.map((r) => r.id);
 
-    const profilesByFacility = await loadVerticalProfiles(ids, params.scope.verticalIds);
-    const derivedTerritoryIds = ids.map((id) =>
-      deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
-    );
-
+    // Only territory names need the profiles — they are keyed by the territory
+    // each profile derives. Consultants, last visit and clinical focuses are
+    // keyed by facility id, which is known before any of this runs, so waiting
+    // for profiles bought them nothing and cost a round trip on every page of
+    // the app's most-used screen.
     const [
+      profilesByFacility,
       consultantMap,
-      territoryNameById,
       lastVisitAtByFacility,
       clinicalFocusesByFacility,
       countMap,
     ] = await Promise.all([
+      loadVerticalProfiles(ids, params.scope.verticalIds),
       loadConsultantInfo(ids, params.scope.verticalIds),
-      loadTerritoryNames(derivedTerritoryIds),
       loadLastVisitAt(ids, params.userId),
       loadClinicalFocusesByFacilityIds(ids),
       // Was an empty Map declared below and never filled, so every clinic in
       // the list reported "0 médicos" regardless of its roster.
       loadProfessionalCounts(ids),
     ]);
+
+    const derivedTerritoryIds = ids.map((id) =>
+      deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
+    );
+    const territoryNameById = await loadTerritoryNames(derivedTerritoryIds);
 
     return {
       facilities: rows.map((row) => {

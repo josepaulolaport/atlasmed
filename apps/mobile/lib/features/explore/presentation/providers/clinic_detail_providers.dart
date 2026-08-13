@@ -23,6 +23,28 @@ final clinicDetailDisplayFacilityProvider = Provider.autoDispose
           ref.watch(clinicDetailShellFacilityProvider(facilityId));
     });
 
+/// Records which linhas a clinic has, at navigation time.
+///
+/// The active linha resolves from this set, and until it is populated the
+/// potential card cannot even start loading — it needs a verticalId to ask for.
+/// Filling it only from the detail *response* made the card wait for a round
+/// trip that had already been paid: every list and map entry carries the
+/// clinic's profiles, so the answer is in hand before the tap.
+///
+/// Written here rather than read from the shell inside
+/// [clinicDetailActiveLinhaIdProvider], which would make that provider depend
+/// on this file and close a dependency cycle this indirection exists to avoid.
+void _seedKnownProfileIds(
+  WidgetRef ref,
+  int facilityId,
+  List<FacilityVerticalProfileDTO> profiles,
+) {
+  final ids = profiles.map((p) => p.verticalId).where((id) => id > 0).toSet();
+  if (ids.isEmpty) return;
+  ref.read(clinicDetailKnownProfileIdsProvider(facilityId).notifier).state =
+      ids;
+}
+
 /// Widget-side shell seed (WidgetRef ≠ Ref in riverpod 2).
 void seedClinicDetailShellFromDto(
   WidgetRef ref,
@@ -31,6 +53,7 @@ void seedClinicDetailShellFromDto(
 }) {
   ref.read(clinicDetailShellFacilityProvider(dto.id).notifier).state =
       Facility.fromDTO(dto, verticalId: verticalId);
+  _seedKnownProfileIds(ref, dto.id, dto.verticalProfiles);
 }
 
 void seedClinicDetailShellFromEntry(WidgetRef ref, FacilityEntry entry) {
@@ -42,6 +65,8 @@ void seedClinicDetailShellFromEntry(WidgetRef ref, FacilityEntry entry) {
     address: FacilityAddress(
       neighborhood: entry.neighborhood ?? '',
       city: entry.city,
+      lat: entry.lat,
+      lng: entry.lng,
     ),
     commercial: FacilityCommercial(
       commercialStatus: entry.commercialStatus,
@@ -53,6 +78,7 @@ void seedClinicDetailShellFromEntry(WidgetRef ref, FacilityEntry entry) {
     clinicalFocuses: entry.clinicalFocuses,
     verticalProfiles: entry.verticalProfiles,
   );
+  _seedKnownProfileIds(ref, entry.id, entry.verticalProfiles);
 }
 
 void seedClinicDetailShellFromNearby(
@@ -75,6 +101,18 @@ void seedClinicDetailShellFromNearby(
     ),
     distanceKm: nearby.distanceKm,
     verticalProfiles: nearby.verticals
+        .map(
+          (v) => FacilityVerticalProfileDTO(
+            verticalId: v.id,
+            verticalName: v.name,
+          ),
+        )
+        .toList(growable: false),
+  );
+  _seedKnownProfileIds(
+    ref,
+    nearby.id,
+    nearby.verticals
         .map(
           (v) => FacilityVerticalProfileDTO(
             verticalId: v.id,

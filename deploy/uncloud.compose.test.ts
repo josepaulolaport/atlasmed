@@ -21,6 +21,42 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("does not run MinIO in production", () => {
+    // Retired 2026-08-12: production object storage is Cloudflare R2, and MinIO
+    // was still deployed alongside it — running, holding a volume, and exposed
+    // publicly at storage.tdomains.uk while serving nobody. Local development
+    // still uses MinIO through docker-compose.dev.yml; this is about the cluster.
+    const { compose, workflow } = readDeploymentConfig();
+
+    expect(compose).not.toContain("atlasmed-minio:");
+    // A depends_on naming a service that no longer exists fails the deploy.
+    expect(compose).not.toContain("- atlasmed-minio");
+    expect(compose).not.toContain("storage.tdomains.uk");
+    // The server credentials provisioned the container; nothing provisions R2.
+    expect(workflow).not.toContain("MINIO_ROOT_");
+  });
+
+  it("compresses every public API response", () => {
+    // Measured 2026-08-12: the edge compresses what it sends to the client, but
+    // the origin was answering Cloudflare in raw JSON — so the long leg, Brazil
+    // to a US-hosted cluster, carried uncompressed bytes on every request. Caddy
+    // does not compress unless told to, and the omission is invisible: nothing
+    // fails, responses are just bigger than they need to be.
+    const { compose } = readDeploymentConfig();
+
+    const serviceStart = compose.indexOf("  atlasmed-api:");
+    const nextService = compose.indexOf("\n  atlasmed-", serviceStart + 1);
+    const service = compose.slice(serviceStart, nextService);
+
+    const siteBlocks = service.match(/^\s{6}\S+ \{$/gm) ?? [];
+    expect(siteBlocks.length).toBeGreaterThan(0);
+    // Both hostnames, not just the public one: the uncld.dev name is what the
+    // cluster and any internal caller uses.
+    expect(service.match(/encode zstd gzip/g) ?? []).toHaveLength(
+      siteBlocks.length,
+    );
+  });
+
   it("builds application images for the ARM64 deployment machine", () => {
     const { compose } = readDeploymentConfig();
 
