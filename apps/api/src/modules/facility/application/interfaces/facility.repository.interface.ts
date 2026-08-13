@@ -168,6 +168,9 @@ export interface FacilityRepository {
     productIds?: number[];
     /** Clinical focus IDs — facility must offer every selected (AND). */
     clinicalFocusIds?: number[];
+    /** CNES unit type IDs — facility matches any selected (OR). */
+    unitTypeIds?: number[];
+    legalDocumentType?: "CNPJ" | "CPF";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -190,6 +193,8 @@ export interface FacilityRepository {
     purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: number[];
     clinicalFocusIds?: number[];
+    unitTypeIds?: number[];
+    legalDocumentType?: "CNPJ" | "CPF";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -204,6 +209,9 @@ export interface FacilityRepository {
 
   /** Clinical focus catalog for Explorar filters. */
   listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]>;
+
+  /** CNES unit types some active facility has — Explorar filter options. */
+  listUnitTypesInUse(): Promise<FacilityClinicalFocus[]>;
 
   /**
    * Creates the facility **and** its vertical profile atomically.

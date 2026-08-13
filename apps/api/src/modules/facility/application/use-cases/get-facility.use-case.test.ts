@@ -90,6 +90,7 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
     findAllByIds: async () => [],
     findById: async () => facility,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypesInUse: async () => [],
     create: async () => facility ?? ortoOnlyFacility(),
     update: async () => facility ?? ortoOnlyFacility(),
     softDelete: async () => {},

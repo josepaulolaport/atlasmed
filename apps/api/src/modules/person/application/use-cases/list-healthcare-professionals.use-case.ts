@@ -165,8 +165,16 @@ export class ListHealthcareProfessionalsUseCase {
         // not a slow twin of this one, it is what runs whenever Meili is absent,
         // errors, or produces a filter over the length cap — so an exclusion
         // applied here alone would work in testing and lapse under load.
+        //
+        // `clinicalFacilityIds`, not `activeFacilityIds`. The SQL condition is
+        // scoped to the HEALTHCARE_PROFESSIONAL classification, and this one was
+        // not, so the two paths disagreed about who was "already here": a doctor
+        // who is merely an administrative contact at the clinic was offered as a
+        // candidate while browsing and silently withheld the moment the rep
+        // typed a search. Meili exclusion drops the id before hydration, and the
+        // SQL hydrate only removes rows, so nothing downstream could restore it.
         input.excludeFacilityId
-          ? notFilter(eqFilter("activeFacilityIds", input.excludeFacilityId))
+          ? notFilter(eqFilter("clinicalFacilityIds", input.excludeFacilityId))
           : undefined,
       ];
       const scopeFilter = compactPersonMeiliScopeFilter({

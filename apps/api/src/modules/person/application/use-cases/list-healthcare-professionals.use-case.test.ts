@@ -210,7 +210,50 @@ describe("ListHealthcareProfessionalsUseCase Meili resilience", () => {
 
     // `NOT (… = …)` rather than `!=`: the attribute is an array, so `= 685`
     // means "contains 685" and only the whole containment can be negated.
-    expect(filter).toContain("NOT (activeFacilityIds = 685)");
+    //
+    // On `clinicalFacilityIds`, not `activeFacilityIds`. The SQL condition is
+    // scoped to the HEALTHCARE_PROFESSIONAL classification; excluding on every
+    // link made the two paths disagree, so a doctor who is an administrative
+    // contact at 685 was offered while browsing and withheld while searching.
+    expect(filter).toContain("NOT (clinicalFacilityIds = 685)");
+    expect(filter).not.toContain("NOT (activeFacilityIds = 685)");
+  });
+
+  it("keeps scope enforcement on every link, not just the clinical ones", async () => {
+    // The two fields answer different questions and must not be conflated in
+    // the other direction either: scope is about what a user may see, so
+    // narrowing it to clinical links would hide people a rep is entitled to.
+    let filter: string | undefined;
+    const useCase = new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository: {
+        findAll: async () => ({ professionals: [], total: 0 }),
+        findAllByIds: async () => [],
+      } as unknown as HealthcareProfessionalRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>(
+          _index: string,
+          _query: string,
+          options: { filter?: string }
+        ) => {
+          filter = options.filter;
+          return { hits: [] as unknown as T[], estimatedTotalHits: 0 };
+        },
+      } satisfies TestSearchService,
+    });
+
+    await useCase.execute({
+      search: "Ana",
+      scope: {
+        isGlobal: false,
+        facilityIds: [10, 11],
+        territoryIds: [],
+        oversightZoneIds: [],
+      } as unknown as Parameters<typeof useCase.execute>[0]["scope"],
+    });
+
+    expect(filter).toContain("activeFacilityIds IN [10, 11]");
+    expect(filter).not.toContain("clinicalFacilityIds IN");
   });
 
   it("carries the exclusion into the SQL path as well", async () => {

@@ -17,12 +17,34 @@ class SortRow extends StatelessWidget {
     this.includeSort = true,
   });
 
+  /// Human label for a sort key.
+  ///
+  /// Must cover every key [SortSheet] offers. It used to handle four and fall
+  /// through to returning the key itself, so the chip on Explorar read
+  /// "purchase-funnel-desc" and "name-desc" — internal identifiers, shown to
+  /// reps — while the sheet displayed proper labels for the same options.
+  /// `sort_row_labels_test.dart` walks the sheet's real option list, so a new
+  /// option without a label here fails rather than ships.
   static String labelFor(String key) {
     switch (key) {
       case 'name-asc':
         return 'Nome A–Z';
+      case 'name-desc':
+        return 'Nome Z–A';
       case 'distance':
         return 'Mais próximos';
+      case 'purchase-funnel-asc':
+        return 'Status de compras';
+      case 'purchase-funnel-desc':
+        return 'Status de compras — inverso';
+      case 'purchase-interval-asc':
+        return 'Intervalo de compras';
+      case 'purchase-interval-desc':
+        return 'Intervalo de compras — inverso';
+      case 'last-purchase-desc':
+        return 'Última compra';
+      case 'last-purchase-asc':
+        return 'Última compra — antiga';
       case 'oldest-visit':
         return 'Sem visita há mais tempo';
       case 'last-contact':

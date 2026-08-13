@@ -20,6 +20,8 @@ void main() {
       purchaseBucket: 'active',
       productIds: 'product-1,product-2',
       clinicalFocusIds: '1',
+      unitTypeIds: '3,7',
+      legalDocumentType: 'CNPJ',
       purchaseFunnelStages: [PurchaseFunnelStage.purchaseWindow],
       purchaseProfile: PurchaseProfile.monthly,
       purchaseIntervalMinDays: 10,
@@ -41,6 +43,8 @@ void main() {
     expect(pageTwo.purchaseBucket, query.purchaseBucket);
     expect(pageTwo.productIds, query.productIds);
     expect(pageTwo.clinicalFocusIds, query.clinicalFocusIds);
+    expect(pageTwo.unitTypeIds, query.unitTypeIds);
+    expect(pageTwo.legalDocumentType, query.legalDocumentType);
     expect(pageTwo.purchaseFunnelStages, query.purchaseFunnelStages);
     expect(pageTwo.purchaseProfile, query.purchaseProfile);
     expect(pageTwo.purchaseIntervalMinDays, query.purchaseIntervalMinDays);
@@ -48,6 +52,47 @@ void main() {
     expect(pageTwo.sort, query.sort);
     expect(pageTwo.order, query.order);
     expect(pageTwo.verticalId, query.verticalId);
+  });
+
+  /// [ClinicsQuery] is a Riverpod family key. A field missing from `==` or
+  /// `hashCode` makes two different filter selections compare equal, so the
+  /// cached page is reused and the filter silently does nothing — which is
+  /// exactly how the clinic name sort shipped broken.
+  ///
+  /// Verified to fail by dropping either new field from `==`.
+  test('queries differing only by a new filter are not equal', () {
+    const base = ClinicsQuery(page: 1, limit: 20);
+
+    const withUnitType = ClinicsQuery(page: 1, limit: 20, unitTypeIds: '3');
+    expect(withUnitType, isNot(base));
+    expect(withUnitType.hashCode, isNot(base.hashCode));
+    expect(
+      withUnitType,
+      isNot(const ClinicsQuery(page: 1, limit: 20, unitTypeIds: '3,7')),
+    );
+
+    const withLegalType = ClinicsQuery(
+      page: 1,
+      limit: 20,
+      legalDocumentType: 'CNPJ',
+    );
+    expect(withLegalType, isNot(base));
+    expect(withLegalType.hashCode, isNot(base.hashCode));
+    expect(
+      withLegalType,
+      isNot(const ClinicsQuery(page: 1, limit: 20, legalDocumentType: 'CPF')),
+    );
+
+    // Both set is still distinct from either alone.
+    expect(
+      const ClinicsQuery(
+        page: 1,
+        limit: 20,
+        unitTypeIds: '3',
+        legalDocumentType: 'CNPJ',
+      ),
+      isNot(withUnitType),
+    );
   });
 
   test('doctor query copyWith changes only the page', () {
@@ -133,6 +178,43 @@ void main() {
     expect(query.sort, FacilitySort.lastPurchaseDate);
     expect(query.order, SortOrder.desc);
     expect(query.verticalId, 1);
+  });
+
+  test('clinic query builder passes the unit type and legal type filters', () {
+    const state = ExploreState(
+      filters: {
+        'unitTypeIds': ['3', '7'],
+        'legalDocumentType': ['CNPJ'],
+      },
+    );
+
+    final query = buildClinicsQuery(state, verticalId: null);
+
+    expect(query.unitTypeIds, '3,7');
+    expect(query.legalDocumentType, 'CNPJ');
+  });
+
+  test('an unknown legal document type is dropped rather than sent', () {
+    // The API 400s on anything but CNPJ/CPF, which would blank the whole list.
+    // A persisted filter from an older build must degrade to "no filter".
+    const state = ExploreState(
+      filters: {
+        'legalDocumentType': ['MEI'],
+      },
+    );
+
+    expect(
+      buildClinicsQuery(state, verticalId: null).legalDocumentType,
+      isNull,
+    );
+  });
+
+  test('both new filters stay absent when nothing is selected', () {
+    const state = ExploreState(filters: {});
+    final query = buildClinicsQuery(state, verticalId: null);
+
+    expect(query.unitTypeIds, isNull);
+    expect(query.legalDocumentType, isNull);
   });
 
   test('multiple purchase buckets expand into funnel stages', () {

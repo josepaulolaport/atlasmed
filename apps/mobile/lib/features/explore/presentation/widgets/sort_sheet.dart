@@ -18,6 +18,25 @@ class SortSheet extends StatelessWidget {
     required this.onApply,
   });
 
+  /// The keys offered for a given list, without the labels.
+  ///
+  /// Exposed so the chip that renders the current selection can be tested
+  /// against the real option list. Its label map covered four keys and fell
+  /// through to printing the raw key for the rest, so Explorar showed
+  /// "purchase-funnel-desc" in the chip while the sheet showed
+  /// "Status de compras — inverso" for the same selection.
+  static List<String> optionKeysFor({
+    required String kind,
+    required bool hasLocation,
+  }) => SortSheet(
+    kind: kind,
+    sort: '',
+    hasLocation: hasLocation,
+    onApply: _noop,
+  )._options.map((option) => option.key).toList(growable: false);
+
+  static void _noop(String _) {}
+
   List<_SortOption> get _options {
     if (kind == 'clinic') {
       return [
