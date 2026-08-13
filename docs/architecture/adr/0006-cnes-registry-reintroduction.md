@@ -3,6 +3,9 @@
 **Status:** Accepted · **Date:** 2026-08-10
 **Supersedes in part:** the prohibition in `AGENTS.md` § `packages/cnes-ingestion — REMOVED`,
 which requires "an ADR + product decision" before any reintroduction. This is that ADR.
+**Superseded in part by:** ADR 0009 (2026-08-11) — manual loading becomes a Temporal worker, the
+`ingestion` schema is readmitted for a run ledger only, and the `cnes_professional_id` consequence
+below is **reversed**: it was measured at 100 % against the real export and is the join key.
 
 ## Context
 
@@ -41,7 +44,12 @@ Reintroduce a `registry` Postgres schema, **substantially narrower** than what w
 - No FTP adapter, archive storage, or monthly Temporal ingest workflow.
 - No `ingestion` schema, no run/diff/suggestion tables, no suggestion review surface.
 - No `/registry/*` API module.
-- No write-back from registry to `public`.
+- ~~No write-back from registry to `public`.~~ **Narrowed 2026-08-11.** No *automated*
+  reconciliation: the loader never writes to `public`, and no background process promotes registry
+  rows. A user may import a doctor CNES lists at their clinic — creating a `public` person from
+  registry data after confirming it — which is a human act, and which
+  `registry.professionals.atlasmed_id` ("set on link or promote, never by the loader") was always
+  shaped for. Spec 0012 §5.
 
 **No stored link between `public` and `registry` for professionals.** The correspondence is a
 **join on an identifier present in both**, evaluated per query. See spec 0012.
@@ -77,10 +85,14 @@ already exists to host it.
   and **deliberately deferred**.
 - Reintroducing a schema that was recently deleted risks re-accumulating the machinery that made
   the original costly. The scope boundary above is the guard; widening it needs a new ADR.
-- **There is no unique CNES identifier that every professional carries.** The join key must be
+- ~~**There is no unique CNES identifier that every professional carries.** The join key must be
   chosen from what the export actually contains, and its coverage measured before the feature is
   designed around it. Consequence: `person_healthcare_profiles.cnes_professional_id` (unique
-  text since `0076`) is probably dead weight.
+  text since `0076`) is probably dead weight.~~
+  **Reversed by ADR 0009.** The measurement was done: every professional carries
+  `CO_PROFISSIONAL_SUS`, a 16-character hex id, on 100.00 % of the export's 7 761 583 rows, and
+  all 1190 of our populated `cnes_professional_id` values were found in it. It is the join key,
+  not dead weight.
 
 **Neutral**
 - ADR 0004 Q21 is **not** violated: CNES *suggests*, a human *confirms*, so every

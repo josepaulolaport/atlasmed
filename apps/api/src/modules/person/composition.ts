@@ -8,7 +8,9 @@ import { DrizzlePersonProfessionalRegistrationCouncilRepository } from "./infras
 import { DrizzlePersonProfessionalRegistrationRepository } from "./infrastructure/repositories/drizzle/drizzle-person-professional-registration.repository";
 import { DrizzlePersonRepository } from "./infrastructure/repositories/drizzle/drizzle-person.repository";
 import { DrizzleUserPersonRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-person-relationship.repository";
+import { DrizzleHealthcareSpecialtyCatalogRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-specialty-catalog.repository";
 import { ListHealthcareProfessionalsUseCase } from "./application/use-cases/list-healthcare-professionals.use-case";
+import { ListHealthcareSpecialtyCatalogUseCase } from "./application/use-cases/list-healthcare-specialty-catalog.use-case";
 import { ListPersonFacilityRolesUseCase } from "./application/use-cases/list-person-facility-roles.use-case";
 import { ListPersonProfessionalRegistrationCouncilsUseCase } from "./application/use-cases/list-person-professional-registration-councils.use-case";
 import {
@@ -44,6 +46,7 @@ import {
 const projectionRepository = new DrizzlePersonFacilityProjectionRepository();
 const roleCatalogRepository = new DrizzlePersonFacilityRoleCatalogRepository();
 const personNoteRepository = new DrizzlePersonNoteRepository();
+const specialtyCatalogRepository = new DrizzleHealthcareSpecialtyCatalogRepository();
 const personRepository = new DrizzlePersonRepository();
 const registrationCouncilRepository =
   new DrizzlePersonProfessionalRegistrationCouncilRepository();
@@ -119,6 +122,8 @@ export const personUseCases = {
     }),
   listHealthcareSpecialties: () =>
     new ListHealthcareSpecialtiesUseCase({ personRepository }),
+  listHealthcareSpecialtyCatalog: () =>
+    new ListHealthcareSpecialtyCatalogUseCase({ specialtyCatalogRepository }),
 };
 
 export { CLASSIFICATION } from "./application/use-cases/person-facility-projection.use-cases";

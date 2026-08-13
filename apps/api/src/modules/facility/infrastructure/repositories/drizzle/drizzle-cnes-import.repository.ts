@@ -1,0 +1,475 @@
+import { sql } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
+
+/**
+ * Creating one of our people from a registry professional (spec 0012 §6).
+ *
+ * Identity is copied from the registry, never taken from the client: the council
+ * registration is what makes a doctor resolvable, and letting a rep type it
+ * would put the one field that must match CNES under the control of whoever is
+ * in a hurry.
+ */
+
+export interface RegistryProfessional {
+  cnesId: string;
+  fullName: string;
+  socialName: string | null;
+  /** Already one of ours — the loader's bridge, or an earlier import. */
+  atlasmedId: number | null;
+  /**
+   * The person whose healthcare profile carries this SUS id, if anyone's does.
+   *
+   * A second route to the same answer, and not redundant: an old backfill
+   * stamped the SUS id on roughly a thousand profiles, and the suggestion query
+   * resolves through `coalesce(atlasmed_id, hp.person_id)` for exactly that
+   * reason. Reading only the bridge here would make the associate path disagree
+   * with the list the rep is looking at.
+   */
+  profilePersonId: number | null;
+  /** True when CNES places them at the facility being imported into. */
+  atThisFacility: boolean;
+  registrations: RegistryRegistration[];
+  /** CBOs CNES records for them at this clinic. */
+  occupations: string[];
+  /** The subset our catalogue carries — the only ones an import can write. */
+  occupationIds: number[];
+}
+
+export interface RegistryRegistration {
+  councilId: number;
+  councilAbbreviation: string;
+  stateCode: string;
+  registrationNumber: string;
+  /** The person on our side already holding it, if anyone does. */
+  heldByPersonId: number | null;
+  heldByName: string | null;
+}
+
+export class DrizzleCnesImportRepository {
+  /**
+   * Everything the import needs about one registry professional, read in one
+   * pass so the decision is made against a single snapshot.
+   */
+  async findProfessional(input: {
+    professionalCnesId: string;
+    facilityId: number;
+  }): Promise<RegistryProfessional | null> {
+    const [row] = (await db.execute(sql`
+      select
+        rp.cnes_id      as cnes_id,
+        rp.full_name    as full_name,
+        rp.social_name  as social_name,
+        rp.atlasmed_id  as atlasmed_id,
+        (
+          select hp.person_id
+            from person_healthcare_profiles hp
+            join persons p on p.id = hp.person_id
+           where hp.cnes_professional_id = rp.cnes_id
+             and p.deleted_at is null
+        )               as profile_person_id,
+        exists (
+          select 1
+            from registry.facility_professionals fp
+            join registry.facilities rf on rf.cnes_id = fp.facility_cnes_id
+           where fp.professional_cnes_id = rp.cnes_id
+             and rf.atlasmed_id = ${input.facilityId}
+        )               as at_this_facility
+      from registry.professionals rp
+      where rp.cnes_id = ${input.professionalCnesId}
+    `)) as unknown as {
+      cnes_id: string;
+      full_name: string;
+      social_name: string | null;
+      atlasmed_id: number | string | null;
+      profile_person_id: number | string | null;
+      at_this_facility: boolean;
+    }[];
+
+    if (!row) return null;
+
+    /*
+     * Council mapping is by abbreviation, the same correspondence the loader
+     * bridges on. A registry council with no counterpart on our side yields no
+     * row, and the import then refuses rather than inventing a council.
+     */
+    const registrations = (await db.execute(sql`
+      select
+        c.id            as council_id,
+        c.abbreviation  as council_abbreviation,
+        rr.state_code   as state_code,
+        rr.registration_number as registration_number,
+        held.person_id  as held_by_person_id,
+        held.full_name  as held_by_name
+      from registry.professional_registrations rr
+      join registry.professional_councils rc
+        on rc.cnes_id = rr.council_cnes_id
+      join person_professional_registration_councils c
+        on c.abbreviation = rc.abbreviation
+      left join lateral (
+        select ppr.person_id, p.first_name || ' ' || p.last_name as full_name
+          from person_professional_registrations ppr
+          join persons p on p.id = ppr.person_id
+         where ppr.council_id = c.id
+           and ppr.state_code = rr.state_code
+           and ppr.registration_number = rr.registration_number
+         limit 1
+      ) held on true
+      where rr.professional_cnes_id = ${input.professionalCnesId}
+      order by c.abbreviation, rr.state_code
+    `)) as unknown as {
+      council_id: number | string;
+      council_abbreviation: string;
+      state_code: string;
+      registration_number: string;
+      held_by_person_id: number | string | null;
+      held_by_name: string | null;
+    }[];
+
+    /*
+     * Scoped to this clinic, not to the person. A CBO is what someone does
+     * *here* — 1 854 of 19 137 professionals carry more than one across
+     * different clinics — so importing them into this facility must not drag in
+     * the occupation they hold somewhere else.
+     */
+    const occupations = (await db.execute(sql`
+      select distinct coalesce(o.name, ro.name) as name, o.id as occupation_id
+        from registry.facility_professional_occupations fo
+        join registry.facilities rf on rf.cnes_id = fo.facility_cnes_id
+        join registry.occupations ro on ro.cnes_id = fo.occupation_cnes_id
+        left join occupations o on o.cnes_id = ro.cnes_id
+       where fo.professional_cnes_id = ${input.professionalCnesId}
+         and rf.atlasmed_id = ${input.facilityId}
+    `)) as unknown as { name: string; occupation_id: number | string | null }[];
+
+    return {
+      cnesId: row.cnes_id,
+      fullName: row.full_name,
+      socialName: row.social_name,
+      // bigint arrives as a string from this driver.
+      atlasmedId: row.atlasmed_id == null ? null : Number(row.atlasmed_id),
+      profilePersonId:
+        row.profile_person_id == null ? null : Number(row.profile_person_id),
+      atThisFacility: row.at_this_facility === true,
+      registrations: registrations.map((r) => ({
+        councilId: Number(r.council_id),
+        councilAbbreviation: r.council_abbreviation,
+        stateCode: r.state_code,
+        registrationNumber: r.registration_number,
+        heldByPersonId:
+          r.held_by_person_id == null ? null : Number(r.held_by_person_id),
+        heldByName: r.held_by_name,
+      })),
+      occupations: occupations.map((o) => o.name),
+      occupationIds: occupations
+        .filter((o) => o.occupation_id != null)
+        .map((o) => Number(o.occupation_id)),
+    };
+  }
+
+  /** The role catalogue, so a stale client id is an answer rather than a 500. */
+  async listActiveRoleIds(): Promise<number[]> {
+    const rows = (await db.execute(sql`
+      select id from person_facility_roles where is_active
+    `)) as unknown as { id: number | string }[];
+    return rows.map((row) => Number(row.id));
+  }
+
+  /**
+   * Creates the person and everything that makes them the registry professional,
+   * in one transaction.
+   *
+   * All of it or none of it. A person written without their registration is a
+   * person no later import can recognise — the next month's export would offer
+   * to create them again, and only the unique on (council, UF, number) would
+   * stop it, by then as an error rather than a match.
+   */
+  async createFromRegistry(input: {
+    professional: RegistryProfessional;
+    facilityId: number;
+    firstName: string;
+    lastName: string;
+    socialName: string | null;
+    cpf: string | null;
+    birthDate: string | null;
+    email: string | null;
+    mobilePhone: string | null;
+    landlinePhone: string | null;
+    /**
+     * Occupations the rep confirmed — CNES's claim for this clinic by default,
+     * edited on the way in. The first is primary, which
+     * `person_facility_occupations_primary_uidx` allows exactly one of.
+     */
+    occupationIds: number[];
+    /** What they practise. Required by the wizard; 1205 of 1206 doctors have one. */
+    specialtyId: number;
+    /** Prescritor, Comprador… Required; 1749 of 1752 affiliations carry one. */
+    roleIds: number[];
+    /**
+     * Registrations the rep added by hand, on top of what the registry gave.
+     *
+     * Additive only. The registry's are written first and these follow, so a
+     * typed value can never displace or alter a sourced one — the worst a bad
+     * entry does is add a row somebody can delete.
+     */
+    extraRegistrations: Array<{
+      councilId: number;
+      stateCode: string;
+      registrationNumber: string;
+    }>;
+    /** Rapport notes. Optional, and folded into the review step. */
+    personal: {
+      hobbies: string | null;
+      favoriteTeam: string | null;
+      favoriteSport: string | null;
+      languages: string | null;
+    };
+  }): Promise<number> {
+    return db.transaction(async (tx) => {
+      const [person] = (await tx.execute(sql`
+        insert into persons (
+          first_name, last_name, social_name, cpf, birth_date,
+          email, mobile_phone, landline_phone,
+          hobbies, favorite_team, favorite_sport, languages
+        )
+        values (
+          ${input.firstName}, ${input.lastName}, ${input.socialName},
+          ${input.cpf}, ${input.birthDate},
+          ${input.email}, ${input.mobilePhone}, ${input.landlinePhone},
+          ${input.personal.hobbies}, ${input.personal.favoriteTeam},
+          ${input.personal.favoriteSport}, ${input.personal.languages}
+        )
+        returning id
+      `)) as unknown as { id: number | string }[];
+      const personId = Number(person!.id);
+
+      /*
+       * The SUS id goes on the profile as well as the bridge. Both are unique
+       * and both resolve this person, and writing only one would leave the
+       * other route to invent a second answer later.
+       */
+      await tx.execute(sql`
+        insert into person_healthcare_profiles (person_id, cnes_professional_id)
+        values (${personId}, ${input.professional.cnesId})
+      `);
+
+      for (const registration of input.professional.registrations) {
+        await tx.execute(sql`
+          insert into person_professional_registrations
+            (person_id, council_id, state_code, registration_number, is_primary)
+          values (
+            ${personId}, ${registration.councilId}, ${registration.stateCode},
+            ${registration.registrationNumber},
+            ${registration === input.professional.registrations[0]}
+          )
+        `);
+      }
+
+      /*
+       * The rep's own registrations, after the registry's.
+       *
+       * Order matters: the sourced ones claim primary and their
+       * `(council, UF, number)` first, so a typed value can only ever add a
+       * row — never displace, renumber or outrank what CNES supplied.
+       * `on conflict do nothing` absorbs a rep retyping one they already have.
+       */
+      for (const registration of input.extraRegistrations) {
+        await tx.execute(sql`
+          insert into person_professional_registrations
+            (person_id, council_id, state_code, registration_number, is_primary)
+          values (
+            ${personId}, ${registration.councilId}, ${registration.stateCode},
+            ${registration.registrationNumber}, false
+          )
+          on conflict do nothing
+        `);
+      }
+
+      await tx.execute(sql`
+        insert into person_healthcare_profile_specialties (person_id, specialty_id, is_primary)
+        values (${personId}, ${input.specialtyId}, true)
+      `);
+
+      await tx.execute(sql`
+        update registry.professionals set atlasmed_id = ${personId}, updated_at = now()
+         where cnes_id = ${input.professional.cnesId}
+      `);
+
+      /*
+       * The affiliation lands here rather than in a second request.
+       *
+       * Occupations hang off `person_facility_id`, which does not exist until
+       * the person works somewhere — so splitting the two would either leave
+       * the CBO unwritten or need a third call to attach it. One transaction
+       * also means a failure leaves nothing rather than a professional who is
+       * half-registered.
+       */
+      const [affiliation] = (await tx.execute(sql`
+        insert into person_facilities (person_id, facility_id)
+        values (${personId}, ${input.facilityId})
+        returning id
+      `)) as unknown as { id: number | string }[];
+      const personFacilityId = Number(affiliation!.id);
+
+      await tx.execute(sql`
+        insert into person_facility_classification_assignments (person_facility_id, classification_id)
+          select ${personFacilityId}, c.id
+            from person_facility_classifications c
+           where c.code = 'HEALTHCARE_PROFESSIONAL'
+      `);
+
+      /*
+       * First one primary. CNES gives no ordering, so this is the client's
+       * choice arriving in list order — and a rep who cares reorders before
+       * confirming. `on conflict do nothing` covers the same occupation
+       * arriving twice from a client that deduplicated badly.
+       */
+      let primaryTaken = false;
+      for (const occupationId of input.occupationIds) {
+        await tx.execute(sql`
+          insert into person_facility_occupations (person_facility_id, occupation_id, is_primary)
+          values (${personFacilityId}, ${occupationId}, ${!primaryTaken})
+          on conflict (person_facility_id, occupation_id) do nothing
+        `);
+        primaryTaken = true;
+      }
+
+      for (const roleId of input.roleIds) {
+        await tx.execute(sql`
+          insert into person_facility_role_assignments (person_facility_id, role_id)
+          values (${personFacilityId}, ${roleId})
+          on conflict do nothing
+        `);
+      }
+
+      return personId;
+    });
+  }
+
+  /**
+   * Links a person we already hold to a clinic CNES places them at, and records
+   * what CNES says they do there.
+   *
+   * The same write the import performs after creating the person, minus the
+   * person. It exists because associating used to go through the generic
+   * projection upsert, which knows nothing about the registry and therefore
+   * dropped the CBO: the roster gained a doctor with no occupation while the
+   * identical doctor arriving by import gained one.
+   *
+   * Idempotent throughout — a rep tapping twice, or two reps at once, must land
+   * on one affiliation rather than a second row or an error.
+   */
+  async associateAtFacility(input: {
+    professionalCnesId: string;
+    personId: number;
+    facilityId: number;
+    occupationIds: number[];
+    /**
+     * Added to whatever the affiliation already carries, never replacing it.
+     *
+     * Associating is one tap on a row the rep is confirming; taking away a role
+     * somebody set deliberately is not something that gesture should be able to
+     * do. Replacing roles is its own action on the roster.
+     */
+    roleIds: number[];
+  }): Promise<{ personFacilityId: number; affiliationCreated: boolean }> {
+    return db.transaction(async (tx) => {
+      // Being at a clinic as a clinician implies the profile. Import writes it
+      // on creation; a person associated here may predate that.
+      await tx.execute(sql`
+        insert into person_healthcare_profiles (person_id)
+        values (${input.personId})
+        on conflict (person_id) do nothing
+      `);
+
+      /*
+       * Set the bridge while we know the answer.
+       *
+       * The loader would set it next month on the same evidence, so writing it
+       * now only moves the moment. Guarded twice: never overwrite a bridge that
+       * already exists, and never point two professionals at one person — the
+       * conditions the loader's own bridge applies.
+       */
+      await tx.execute(sql`
+        update registry.professionals rp
+           set atlasmed_id = ${input.personId}, updated_at = now()
+         where rp.cnes_id = ${input.professionalCnesId}
+           and rp.atlasmed_id is null
+           and not exists (
+             select 1 from registry.professionals other
+              where other.atlasmed_id = ${input.personId}
+           )
+      `);
+
+      /*
+       * One active affiliation per person per clinic, enforced by
+       * `person_facilities_active_facility_person_uidx`. `on conflict` rather
+       * than check-then-insert so two concurrent associations settle in the
+       * database instead of racing in the application.
+       */
+      const inserted = (await tx.execute(sql`
+        insert into person_facilities (person_id, facility_id)
+        values (${input.personId}, ${input.facilityId})
+        on conflict (facility_id, person_id) where ended_at is null do nothing
+        returning id
+      `)) as unknown as { id: number | string }[];
+
+      let personFacilityId: number;
+      let affiliationCreated: boolean;
+      if (inserted[0]) {
+        personFacilityId = Number(inserted[0].id);
+        affiliationCreated = true;
+      } else {
+        const [existing] = (await tx.execute(sql`
+          select id from person_facilities
+           where person_id = ${input.personId}
+             and facility_id = ${input.facilityId}
+             and ended_at is null
+        `)) as unknown as { id: number | string }[];
+        // The conflict fired, so the row is there; a missing one would mean the
+        // index and this query disagree, which is worth failing loudly over.
+        if (!existing) {
+          throw new Error(
+            `person_facilities row for person ${input.personId} at facility ${input.facilityId} vanished between insert and read`
+          );
+        }
+        personFacilityId = Number(existing.id);
+        affiliationCreated = false;
+      }
+
+      await tx.execute(sql`
+        insert into person_facility_classification_assignments (person_facility_id, classification_id)
+          select ${personFacilityId}, c.id
+            from person_facility_classifications c
+           where c.code = 'HEALTHCARE_PROFESSIONAL'
+        on conflict do nothing
+      `);
+
+      /*
+       * Primary is decided per row against what is already stored, so an
+       * association that predates this call keeps the primary it has and the
+       * new occupations attach beside it. Only a fresh affiliation gives its
+       * first occupation the primary flag.
+       */
+      for (const occupationId of input.occupationIds) {
+        await tx.execute(sql`
+          insert into person_facility_occupations (person_facility_id, occupation_id, is_primary)
+            select ${personFacilityId}, ${occupationId}, not exists (
+              select 1 from person_facility_occupations
+               where person_facility_id = ${personFacilityId} and is_primary
+            )
+          on conflict (person_facility_id, occupation_id) do nothing
+        `);
+      }
+
+      for (const roleId of input.roleIds) {
+        await tx.execute(sql`
+          insert into person_facility_role_assignments (person_facility_id, role_id)
+          values (${personFacilityId}, ${roleId})
+          on conflict do nothing
+        `);
+      }
+
+      return { personFacilityId, affiliationCreated };
+    });
+  }
+}
