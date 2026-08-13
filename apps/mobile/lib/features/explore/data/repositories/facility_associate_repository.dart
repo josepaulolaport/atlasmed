@@ -49,8 +49,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   /// that are not linked here yet — `GET …/healthcare-professionals/cnes-suggestions`.
   ///
   /// The exclusion of already-linked people happens server-side (spec 0012
-  /// AC 3), so this list never needs local filtering the way [searchDoctors]
-  /// does.
+  /// AC 3), as it does in [searchDoctors].
   Future<CnesSuggestions> fetchCnesSuggestions() async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -74,21 +73,31 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     );
   }
 
-  /// Global Explorar search — `GET /healthcare-professionals`.
+  /// Candidates to associate here — `GET /healthcare-professionals`, with the
+  /// people already working at this clinic excluded by the server.
+  ///
+  /// `excludeFacilityId` rather than a `.where` over the result: the filter has
+  /// to run before `LIMIT` or it removes rows without replacing them, and the
+  /// page comes back short by however many of this clinic's own doctors
+  /// happened to rank inside it. There is no second page here, so those
+  /// candidates are simply unreachable — and a short list looks exactly like a
+  /// complete one.
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
   }) async {
-    final repo = DoctorsRepository(page: 1, limit: limit, searchQuery: search);
+    final repo = DoctorsRepository(
+      page: 1,
+      limit: limit,
+      searchQuery: search,
+      excludeFacilityId: facilityId,
+    );
     try {
       final page = await repo.currentValueOrResolve();
       if (page == null) {
         throw const FacilityAssociateException('Falha ao buscar médicos');
       }
-      return page.items
-          .where((d) => !d.facilityIds.contains(facilityId))
-          .map(_doctorFromDTO)
-          .toList(growable: false);
+      return page.items.map(_doctorFromDTO).toList(growable: false);
     } finally {
       repo.dispose();
     }

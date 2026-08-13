@@ -17,6 +17,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     this.limit = 20,
     this.searchQuery,
     this.facilityId,
+    this.excludeFacilityId,
     this.latitude,
     this.longitude,
     this.radiusKm,
@@ -34,6 +35,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
                'search': searchQuery.trim(),
              if (facilityId != null && facilityId > 0)
                'facilityId': facilityId.toString(),
+             if (excludeFacilityId != null && excludeFacilityId > 0)
+               'excludeFacilityId': excludeFacilityId.toString(),
              if (latitude != null) 'latitude': latitude.toString(),
              if (longitude != null) 'longitude': longitude.toString(),
              if (radiusKm != null) 'radiusKm': radiusKm.toString(),
@@ -51,6 +54,13 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   final int limit;
   final String? searchQuery;
   final int? facilityId;
+
+  /// Hide people already working at this facility.
+  ///
+  /// Server-side on purpose: the exclusion has to run before the page is cut,
+  /// or the page comes back short and the candidates past the cutoff are
+  /// unreachable — indistinguishable, on screen, from there being no more.
+  final int? excludeFacilityId;
   final double? latitude;
   final double? longitude;
   final double? radiusKm;
@@ -66,6 +76,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     required int limit,
     String? searchQuery,
     int? facilityId,
+    int? excludeFacilityId,
     double? latitude,
     double? longitude,
     double? radiusKm,
@@ -83,6 +94,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
           'search': searchQuery.trim(),
         if (facilityId != null && facilityId > 0)
           'facilityId': facilityId.toString(),
+        if (excludeFacilityId != null && excludeFacilityId > 0)
+          'excludeFacilityId': excludeFacilityId.toString(),
         if (latitude != null) 'latitude': latitude.toString(),
         if (longitude != null) 'longitude': longitude.toString(),
         if (radiusKm != null) 'radiusKm': radiusKm.toString(),
