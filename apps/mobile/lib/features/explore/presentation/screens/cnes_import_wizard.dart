@@ -654,6 +654,9 @@ class _ClinicalStep extends StatelessWidget {
             final picked = await showModalBottomSheet<HealthcareSpecialty>(
               context: context,
               isScrollControlled: true,
+              // 66 rows fill the screen, and without this the search field
+              // renders under the status bar.
+              useSafeArea: true,
               builder: (_) => _SpecialtyPicker(specialties: specialties),
             );
             if (picked != null) {
