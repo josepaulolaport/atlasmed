@@ -155,7 +155,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       await ref.read(exploreProvider.notifier).refreshGpsAndList();
       _gpsTimer = Timer.periodic(_gpsInterval, (_) {
         if (!mounted) return;
-        ref.read(exploreProvider.notifier).refreshGpsAndList();
+        // Nobody asked for this one, so it only spends requests if the rep has
+        // actually moved. The first load above and pull-to-refresh below are
+        // explicit and always reload.
+        ref.read(exploreProvider.notifier).refreshGpsAndList(onlyIfMoved: true);
       });
     });
   }
