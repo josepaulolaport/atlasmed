@@ -4,7 +4,7 @@ import { environment } from "@atlasmed/config";
 import { cnesRuns } from "@atlasmed/database";
 import { listCnesReferences, type CnesReference } from "@atlasmed/cnes-ingestion";
 import { db } from "../infrastructure/db";
-import { ensureArchive } from "../cnes/archive-object-store";
+import { ensureArchive, pruneArchives } from "../cnes/archive-object-store";
 import {
   failAbandonedCnesRuns,
   finishCnesRun,
@@ -112,6 +112,19 @@ export async function ingestCnesRegistryActivity(input: {
   objectKey: string;
 }): Promise<IngestCnesRegistryOutput> {
   return ingestCnesRegistry(input, (detail) => Context.current().heartbeat(detail));
+}
+
+/**
+ * Deletes archives beyond the ones worth keeping.
+ *
+ * Its own activity, run after the promotion rather than inside the load, so a
+ * failed or refused run never deletes anything.
+ */
+export async function pruneCnesArchivesActivity(input: {
+  reference: CnesReference;
+}): Promise<{ deleted: string[]; kept: string[] }> {
+  const result = await pruneArchives({ protectedReference: input.reference });
+  return { deleted: result.deleted, kept: result.kept };
 }
 
 export async function finishCnesRunActivity(input: {

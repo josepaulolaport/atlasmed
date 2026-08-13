@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   type S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
@@ -10,6 +11,7 @@ import { createStorageClient } from "@atlasmed/storage";
 import {
   archiveFileName,
   openCnesArchiveDownload,
+  selectArchivesToPrune,
   verifyArchive,
   type ArchiveVerification,
   type CnesReference,
@@ -75,6 +77,80 @@ async function objectExists(key: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Competences whose archives are kept.
+ *
+ * Two, not one: if a run is investigated or re-run — a refused promotion, a
+ * question about last month's numbers — the previous archive is already there
+ * and costs nothing to read. One more archive is 725 MB; a re-fetch is 141 s
+ * plus the risk of whatever DATASUS is doing that day.
+ */
+export const ARCHIVES_KEPT = 2;
+
+export interface PruneArchivesResult {
+  deleted: string[];
+  kept: string[];
+  /** Keys under the prefix that are not CNES archives, and were left alone. */
+  ignored: string[];
+}
+
+/**
+ * Deletes archives older than the ones worth keeping.
+ *
+ * Runs only after a promotion, so a failed run never deletes anything, and the
+ * competence just loaded is protected explicitly.
+ *
+ * **Not an S3 lifecycle rule.** This bucket also holds cadastro documents and
+ * avatars, so a bucket-wide expiry would eventually delete user uploads, and a
+ * prefix-scoped one still depends on getting the prefix right in provider
+ * configuration nobody reviews. Choosing in code means the choice is testable
+ * and anything unrecognised is reported rather than removed.
+ */
+export async function pruneArchives(input: {
+  protectedReference: CnesReference;
+  keep?: number;
+}): Promise<PruneArchivesResult> {
+  const listed = await storage().send(
+    new ListObjectsV2Command({ Bucket: bucket(), Prefix: "cnes/" })
+  );
+  const keys = (listed.Contents ?? [])
+    .map((object) => object.Key)
+    .filter((key): key is string => typeof key === "string");
+
+  const decision = selectArchivesToPrune({
+    keys,
+    keep: input.keep ?? ARCHIVES_KEPT,
+    protectedReference: input.protectedReference,
+  });
+
+  for (const archive of decision.prune) {
+    await storage().send(
+      new DeleteObjectCommand({ Bucket: bucket(), Key: archive.key })
+    );
+  }
+
+  if (decision.ignored.length > 0) {
+    // Loud rather than silent: something else is living under this prefix, and
+    // whoever put it there should know pruning walked past it.
+    logger.warn("cnes.archive.prune_ignored_keys", {
+      count: decision.ignored.length,
+      keys: decision.ignored.slice(0, 10).join(","),
+    });
+  }
+  if (decision.prune.length > 0) {
+    logger.info("cnes.archive.pruned", {
+      deleted: decision.prune.map((a) => a.key).join(","),
+      kept: decision.keep.length,
+    });
+  }
+
+  return {
+    deleted: decision.prune.map((a) => a.key),
+    kept: decision.keep.map((a) => a.key),
+    ignored: decision.ignored,
+  };
 }
 
 export interface EnsureArchiveResult {

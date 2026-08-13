@@ -140,6 +140,28 @@ export async function cnesIngestionWorkflow(
       stats,
       archiveManifest,
     });
+
+    /**
+     * Only after the run has promoted, and never in the failure path: a refused
+     * or broken run must leave every archive where it is, because the archive is
+     * the thing you go and look at when a run goes wrong.
+     *
+     * Its own step rather than part of finishing, so a storage problem is
+     * reported as a storage problem and cannot mark a good load as failed.
+     */
+    try {
+      const pruned = await quick.pruneCnesArchivesActivity({ reference });
+      if (pruned.deleted.length > 0) {
+        log.info("cnes.archive.pruned", { deleted: pruned.deleted.join(",") });
+      }
+    } catch (error) {
+      log.warn(
+        `cnes.archive.prune_failed — the load succeeded; storage will need attention: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+
     return { status: "COMPLETED", runId, result };
   } catch (error) {
     // Recorded before rethrowing: a run left RUNNING would block its competence

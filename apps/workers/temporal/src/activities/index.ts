@@ -7,6 +7,7 @@ import {
   ensureCnesArchiveActivity as ensureCnesArchiveActivityImpl,
   finishCnesRunActivity as finishCnesRunActivityImpl,
   ingestCnesRegistryActivity as ingestCnesRegistryActivityImpl,
+  pruneCnesArchivesActivity as pruneCnesArchivesActivityImpl,
   startCnesRunActivity as startCnesRunActivityImpl,
 } from "./cnes-ingestion.activities";
 import {
@@ -89,6 +90,11 @@ export const startCnesRunActivity = wrapActivity(
 export const ingestCnesRegistryActivity = wrapActivity(
   "ingestCnesRegistry",
   ingestCnesRegistryActivityImpl
+);
+
+export const pruneCnesArchivesActivity = wrapActivity(
+  "pruneCnesArchives",
+  pruneCnesArchivesActivityImpl
 );
 
 export const finishCnesRunActivity = wrapActivity(
