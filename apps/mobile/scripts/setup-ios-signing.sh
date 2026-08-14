@@ -13,6 +13,10 @@ set -euo pipefail
 : "${ASC_KEY_BASE64:?ASC_KEY_BASE64 is required}"
 : "${ASC_KEY_ID:?ASC_KEY_ID is required}"
 
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+project_dir="$(cd "$script_dir/.." && pwd)"
+signing_xcconfig="$project_dir/ios/Flutter/CodeSigning.xcconfig"
+
 certificate_path="$RUNNER_TEMP/atlasmed-distribution.p12"
 profile_path="$RUNNER_TEMP/atlasmed-app-store.mobileprovision"
 profile_plist="$RUNNER_TEMP/atlasmed-app-store.plist"
@@ -73,4 +77,21 @@ cp "$profile_path" "$profiles_dir/$profile_uuid.mobileprovision"
 cp "$profile_path" "$xcode_profiles_dir/$profile_uuid.mobileprovision"
 
 echo "Profile instalado: $profile_name ($profile_uuid)"
+
+# Xcode assina automaticamente por padrão, o que exige uma conta Apple na
+# aba Accounts — inexistente no runner. Sobrescrevemos os build settings do
+# alvo Runner (Release) para assinar manualmente com o certificado e o
+# profile que acabamos de instalar. O include é opcional em Release.xcconfig,
+# então máquinas de desenvolvimento seguem no modo automático.
+cat > "$signing_xcconfig" <<EOF
+// Gerado por scripts/setup-ios-signing.sh — não versionar.
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = Apple Distribution
+CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
+DEVELOPMENT_TEAM = $APPLE_TEAM_ID
+PROVISIONING_PROFILE_SPECIFIER = $profile_name
+EOF
+
+echo "Assinatura manual configurada em ios/Flutter/CodeSigning.xcconfig"
+echo "signing_xcconfig_path=$signing_xcconfig" >> "$GITHUB_OUTPUT"
 echo "api_key_path=$api_key_path" >> "$GITHUB_OUTPUT"

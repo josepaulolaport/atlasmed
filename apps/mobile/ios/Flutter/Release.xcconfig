@@ -1,2 +1,5 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+// Gerado em CI por scripts/setup-ios-signing.sh. Ausente localmente, onde o
+// Xcode segue assinando automaticamente.
+#include? "CodeSigning.xcconfig"
