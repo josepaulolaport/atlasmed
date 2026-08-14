@@ -32,6 +32,43 @@ async function ensureSchedules(config: WorkerConfig): Promise<void> {
   }
 }
 
+/**
+ * What this worker is allowed to run at once.
+ *
+ * The SDK's defaults are sized for many small activities: **100** concurrent
+ * activity executions, 100 local ones, and a workflow cache derived from heap.
+ * This worker's activities are the opposite shape — few, long, and heavy. The
+ * CNES ingest alone peaks at ~220 MB RSS and runs for minutes; a search rebuild
+ * holds a 20 000-document page. A hundred of those at once would exhaust the
+ * machine, and on a developer's laptop it shares that machine with Postgres,
+ * four Meilisearch instances and Docker's own ceiling.
+ *
+ * That has never happened, and the reason is worth stating because it is *not* a
+ * limit: every schedule uses `ScheduleOverlapPolicy.SKIP`, and no workflow fans
+ * activities out — they run in sequence. So real demand is at most one activity
+ * per schedule, five of them. The safety comes entirely from workflow design.
+ *
+ * Which is exactly why the ceiling belongs here. The next workflow to reach for
+ * `Promise.all` would inherit 100-way concurrency silently, and the failure
+ * would arrive as a wedged laptop rather than as a queue that waits.
+ *
+ * Eight leaves headroom over the five schedules while bounding the worst case at
+ * something the machine survives. Raise it when an activity is genuinely small
+ * and genuinely parallel, not by default.
+ */
+const CONCURRENCY = {
+  maxConcurrentActivityTaskExecutions: 8,
+  maxConcurrentLocalActivityExecutions: 8,
+  /** Workflow tasks are cheap — they only advance state — but not unbounded. */
+  maxConcurrentWorkflowTaskExecutions: 10,
+  /**
+   * Each cached workflow holds its history in memory. The default scales with
+   * heap and can reach the hundreds; this worker runs a handful of schedules, so
+   * a cache that size buys nothing and reserves memory the machine wants back.
+   */
+  maxCachedWorkflows: 50,
+} as const;
+
 async function run() {
   const config = loadWorkerConfig();
 
@@ -55,11 +92,13 @@ async function run() {
     taskQueue: config.taskQueue,
     workflowsPath,
     activities,
+    ...CONCURRENCY,
   });
 
   logger.info("AtlasMed Temporal worker started", {
     temporalAddress: config.temporalAddress,
     taskQueue: config.taskQueue,
+    ...CONCURRENCY,
   });
 
   try {
