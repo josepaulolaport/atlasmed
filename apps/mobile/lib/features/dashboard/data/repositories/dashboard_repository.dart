@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/member_territory_map.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 /// One metric, one request (spec 0014 §4).
@@ -182,4 +183,18 @@ DashboardMetricRepository<DashboardFilterOptions> filterOptionsRepository(
   path: '/dashboard/filter-options',
   args: args,
   parse: DashboardFilterOptions.fromJson,
+);
+
+/// What a member's territory map draws (spec 0015 §6). One call, because which
+/// sets are populated is a rule about who is looking at whom — and that rule
+/// belongs on the server, not spread across three requests the screen composes.
+DashboardMetricRepository<MemberTerritoryMap> memberTerritoryRepository({
+  required int verticalId,
+  required int userId,
+  int? viaManagerId,
+}) => DashboardMetricRepository(
+  path: '/team/members/$userId/territory-map',
+  args: DashboardScopeArgs(verticalId: verticalId),
+  parse: MemberTerritoryMap.fromJson,
+  extraQuery: {if (viaManagerId != null) 'viaManagerId': '$viaManagerId'},
 );

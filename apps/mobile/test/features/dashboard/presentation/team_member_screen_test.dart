@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/member_territory_map.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_member_screen.dart';
@@ -48,17 +49,56 @@ TeamMemberProfile _profile({
   outOfTerritoryCount: outOfTerritory,
 );
 
+/// A territory map that is already loaded, so the profile's minimap does not
+/// reach for the network in a widget test.
+class _LoadedTerritory extends Repository<MemberTerritoryMap> {
+  _LoadedTerritory(this.map)
+    : super(
+        name: 'FakeTerritoryRepository',
+        endpoint: Uri.parse('http://localhost/territory-map'),
+        resolveOnCreate: false,
+      ) {
+    emit(data: map);
+  }
+
+  final MemberTerritoryMap map;
+
+  @override
+  Future<MemberTerritoryMap?> currentValueOrResolve() async {
+    await emit(data: map);
+    return map;
+  }
+}
+
+const _noTerritory = MemberTerritoryMap(
+  subject: [],
+  context: [],
+  taken: [],
+  canEdit: true,
+);
+
 Future<void> _pump(
   WidgetTester tester,
   TeamMemberProfile profile, {
   UserRoleName role = UserRoleName.manager,
+  MemberTerritoryMap territory = _noTerritory,
 }) async {
+  // Tall enough to build the whole profile. A ListView does not lay out what is
+  // off screen, and the cards these tests assert on sit below a phone's fold
+  // now that the territory card is above them.
+  tester.view.physicalSize = const Size(1200, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         dashboardSelectedVerticalIdProvider.overrideWith((ref) => 1),
         currentUserRoleProvider.overrideWithValue(role),
         teamMemberProvider.overrideWith((ref, args) => _LoadedProfile(profile)),
+        memberTerritoryProvider.overrideWith(
+          (ref, args) => _LoadedTerritory(territory),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light,
@@ -103,6 +143,25 @@ void main() {
 
     expect(find.text('Clínicas fora do território'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
+  });
+
+  testWidgets('a rep with no patch is told what that costs them', (
+    tester,
+  ) async {
+    // The single most useful thing this screen can say. A rep with no patch has
+    // no manager, appears on no team, and can hold no clinics — an empty grey
+    // map would state none of that.
+    await _pump(tester, _profile());
+
+    expect(find.text('Sem território'), findsOneWidget);
+    expect(find.text('Desenhar área'), findsOneWidget);
+  });
+
+  testWidgets('a manager with no zone gets the manager wording', (
+    tester,
+  ) async {
+    await _pump(tester, _profile(role: 'MANAGER'), role: UserRoleName.admin);
+    expect(find.text('Sem zona nesta linha'), findsOneWidget);
   });
 
   testWidgets('a rep has no team to open', (tester) async {

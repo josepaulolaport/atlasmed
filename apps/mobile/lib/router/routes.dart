@@ -19,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/member_territory_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/out_of_territory_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
@@ -555,6 +556,36 @@ class AssignClinicRoute extends GoRouteData with $AssignClinicRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return AssignClinicScreen(userId: userId, memberName: memberName);
+  }
+}
+
+/// A member's territory, full screen (spec 0015 R9/R10).
+@TypedGoRoute<MemberTerritoryRoute>(path: '/team/profile/:userId/territory')
+class MemberTerritoryRoute extends GoRouteData with $MemberTerritoryRoute {
+  const MemberTerritoryRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+    @TypedQueryParameter(name: 'viaManagerId') this.viaManagerId,
+    @TypedQueryParameter(name: 'isRep') this.isRep,
+  });
+
+  final int userId;
+  final String? memberName;
+  final int? viaManagerId;
+
+  /// Decides what "nova área" draws — a patch or a zone.
+  final bool? isRep;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return MemberTerritoryScreen(
+      userId: userId,
+      memberName: memberName,
+      viaManagerId: viaManagerId,
+      isRep: isRep ?? true,
+    );
   }
 }
 

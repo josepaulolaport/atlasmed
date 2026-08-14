@@ -15,6 +15,7 @@ List<RouteBase> get $appRoutes => [
   $agendaOccurrenceEditRoute,
   $subjectDashboardRoute,
   $assignClinicRoute,
+  $memberTerritoryRoute,
   $outOfTerritoryRoute,
   $teamMemberProfileRoute,
   $teamMemberRoute,
@@ -815,6 +816,68 @@ mixin $AssignClinicRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $memberTerritoryRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/territory',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: MemberTerritoryRoute.$parentNavigatorKey,
+  factory: $MemberTerritoryRoute._fromState,
+);
+
+mixin $MemberTerritoryRoute on GoRouteData {
+  static MemberTerritoryRoute _fromState(GoRouterState state) =>
+      MemberTerritoryRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+        viaManagerId: _$convertMapValue(
+          'viaManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        isRep: _$convertMapValue(
+          'isRep',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ),
+      );
+
+  MemberTerritoryRoute get _self => this as MemberTerritoryRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/territory',
+    queryParams: {
+      if (_self.memberName != null) 'memberName': _self.memberName,
+      if (_self.viaManagerId != null)
+        'viaManagerId': _self.viaManagerId!.toString(),
+      if (_self.isRep != null) 'isRep': _self.isRep!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }
 
 RouteBase get $outOfTerritoryRoute => GoRouteData.$route(

@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/member_territory_map.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,6 +85,40 @@ final teamMemberProvider = Provider.autoDispose
 final repsWithoutPatchProvider =
     Provider.autoDispose<Repository<List<TeamMember>>>((ref) {
       final repository = RepsWithoutPatchRepository();
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
+/// A member's territory map, keyed by who is looking through whose team.
+class MemberTerritoryArgs {
+  const MemberTerritoryArgs({
+    required this.verticalId,
+    required this.userId,
+    this.viaManagerId,
+  });
+
+  final int verticalId;
+  final int userId;
+  final int? viaManagerId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MemberTerritoryArgs &&
+      other.verticalId == verticalId &&
+      other.userId == userId &&
+      other.viaManagerId == viaManagerId;
+
+  @override
+  int get hashCode => Object.hash(verticalId, userId, viaManagerId);
+}
+
+final memberTerritoryProvider = Provider.autoDispose
+    .family<Repository<MemberTerritoryMap>, MemberTerritoryArgs>((ref, args) {
+      final repository = memberTerritoryRepository(
+        verticalId: args.verticalId,
+        userId: args.userId,
+        viaManagerId: args.viaManagerId,
+      );
       ref.onDispose(repository.dispose);
       return repository;
     });
