@@ -740,8 +740,15 @@
     {
       "idx": 105,
       "version": "7",
-      "when": 1786683841154,
-      "tag": "0105_emultec_order_import_pending",
+      "when": 1786744335603,
+      "tag": "0105_is_valid_cpf",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1786690702241,
+      "tag": "0106_emultec_order_import_pending",
       "breakpoints": true
     }
   ]

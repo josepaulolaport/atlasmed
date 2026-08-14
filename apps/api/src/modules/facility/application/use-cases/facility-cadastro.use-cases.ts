@@ -5,7 +5,10 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
-import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+import type {
+  FacilityRepository,
+  FacilityVerticalProfileRecord,
+} from "../interfaces/facility.repository.interface";
 import type {
   CadastroSubmissionRepository,
   DocumentFileRecord,
@@ -216,6 +219,14 @@ export class GetFacilityCadastroChecklistUseCase {
         facilityId: input.facilityId,
         legalDocumentType,
         scope: input.scope,
+        // `findById` above already loaded this clinic's vertical profiles to
+        // build its record, through the same helper this used to call again a
+        // few lines later — the identical query, twice per request. Both are
+        // locally reasonable (the repository owes a complete DTO; a use case
+        // cannot know what the repository already fetched), which is why it
+        // survived: the response is byte-identical either way and no test
+        // could see it.
+        verticalProfiles: facility.verticalProfiles,
       })
     );
     const records = await this.deps.conformityRepository.findRecordsByFacility(
@@ -407,12 +418,26 @@ export class GetFacilityCadastroChecklistUseCase {
     facilityId: number;
     legalDocumentType: ReturnType<typeof resolveFacilityLegalDocumentType>;
     scope: ScopeContext;
+    /**
+     * The caller's already-loaded profiles, when it has them.
+     *
+     * Unfiltered, exactly as the repository returns them — `loadVerticalProfiles`
+     * selects `is_active` rather than filtering on it, so the `isActive` test
+     * below still decides which linhas count. Falls back to a query when a
+     * caller has none, so a repository that does not populate the field behaves
+     * as it always did.
+     */
+    verticalProfiles?: FacilityVerticalProfileRecord[];
   }) {
     const profiles =
-      await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
-        input.facilityId,
-      ]);
-    const clinicVerticalIds = (profiles.get(input.facilityId) ?? [])
+      input.verticalProfiles ??
+      (
+        await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
+          input.facilityId,
+        ])
+      ).get(input.facilityId) ??
+      [];
+    const clinicVerticalIds = profiles
       .filter((profile) => profile.isActive)
       .map((profile) => profile.verticalId);
 

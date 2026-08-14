@@ -60,6 +60,12 @@ const listFacilitiesRoute = new Elysia()
         legalDocumentType: t.Optional(
           t.String({ description: "CNPJ or CPF" }),
         ),
+        cpfStatus: t.Optional(
+          t.String({
+            description:
+              "Desempenho drill-down over CPF clinics: 'missing' (no CPF on file) or 'invalid' (fails the módulo-11 check)",
+          }),
+        ),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),

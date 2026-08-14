@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/purchase_bucket_facilities_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/facility_drill_down_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
@@ -18,35 +18,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Clinics list for one Desempenho purchase-status bucket.
-/// Same list UX as Explorar clinics, without commercial-status / funnel filters.
-class PurchaseBucketFacilitiesScreen extends ConsumerStatefulWidget {
-  const PurchaseBucketFacilitiesScreen({
+/// Clinics list for one Desempenho drill-down.
+///
+/// Same list UX as Explorar clinics, without commercial-status / funnel
+/// filters. Serves every card that opens a filtered list — the purchase-status
+/// buckets and the CPF warning — because the difference between them is which
+/// parameter goes to the API, not how a list of clinics behaves.
+class FacilityDrillDownScreen extends ConsumerStatefulWidget {
+  const FacilityDrillDownScreen({
     super.key,
-    required this.bucket,
+    this.bucket,
+    this.cpfStatus,
+    this.title,
     this.verticalId,
-  });
+  }) : assert(
+         (bucket == null) != (cpfStatus == null),
+         'a drill-down is one slice: pass a bucket or a cpfStatus, never both',
+       );
 
-  final String bucket;
+  final String? bucket;
+  final String? cpfStatus;
+
+  /// Heading. Defaults to the purchase-bucket label when a bucket is given.
+  final String? title;
   final int? verticalId;
 
   @override
-  ConsumerState<PurchaseBucketFacilitiesScreen> createState() =>
-      _PurchaseBucketFacilitiesScreenState();
+  ConsumerState<FacilityDrillDownScreen> createState() =>
+      _FacilityDrillDownScreenState();
 }
 
-class _PurchaseBucketFacilitiesScreenState
-    extends ConsumerState<PurchaseBucketFacilitiesScreen> {
-  PurchaseBucketFacilitiesArgs get _args => PurchaseBucketFacilitiesArgs(
+class _FacilityDrillDownScreenState
+    extends ConsumerState<FacilityDrillDownScreen> {
+  FacilityDrillDownArgs get _args => FacilityDrillDownArgs(
     bucket: widget.bucket,
+    cpfStatus: widget.cpfStatus,
     verticalId: widget.verticalId,
   );
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(purchaseBucketFacilitiesProvider(_args));
-    final notifier = ref.read(purchaseBucketFacilitiesProvider(_args).notifier);
-    final title = PurchaseBucketFilter.label(widget.bucket);
+    final state = ref.watch(facilityDrillDownProvider(_args));
+    final notifier = ref.read(facilityDrillDownProvider(_args).notifier);
+    final bucket = widget.bucket;
+    final title =
+        widget.title ??
+        (bucket == null ? 'Clínicas' : PurchaseBucketFilter.label(bucket));
     final items = state.visibleClinics
         .map((clinic) => Left<FacilityEntry, ProfessionalEntry>(clinic))
         .toList();
@@ -157,8 +174,8 @@ class _PurchaseBucketFacilitiesScreenState
   }
 
   List<FilterChipData> _buildFilterChips(
-    PurchaseBucketFacilitiesState state,
-    PurchaseBucketFacilitiesNotifier notifier,
+    FacilityDrillDownState state,
+    FacilityDrillDownNotifier notifier,
   ) {
     final chips = <FilterChipData>[];
 
@@ -218,8 +235,8 @@ class _PurchaseBucketFacilitiesScreenState
   }
 
   Future<void> _showSortSheet(
-    PurchaseBucketFacilitiesState state,
-    PurchaseBucketFacilitiesNotifier notifier,
+    FacilityDrillDownState state,
+    FacilityDrillDownNotifier notifier,
   ) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -236,8 +253,8 @@ class _PurchaseBucketFacilitiesScreenState
   }
 
   Future<void> _showFilterSheet(
-    PurchaseBucketFacilitiesState state,
-    PurchaseBucketFacilitiesNotifier notifier,
+    FacilityDrillDownState state,
+    FacilityDrillDownNotifier notifier,
   ) async {
     await showModalBottomSheet<void>(
       context: context,

@@ -50,6 +50,26 @@ export type DashboardTerritoryFeature = {
 };
 
 /**
+ * CPF clinics whose document cannot be used, split by why.
+ *
+ * Two numbers rather than one because the fixes differ: `missing` needs
+ * somebody to find out the CPF, `invalid` needs somebody to correct a number
+ * already on file. A merged count would send a rep into the list to work out
+ * which they were looking at.
+ */
+export type CpfIssueCounts = {
+  /** `legal_document` is NULL or blank. */
+  missing: number;
+  /** Present, but fails the módulo-11 check. */
+  invalid: number;
+};
+
+export const EMPTY_CPF_ISSUE_COUNTS: CpfIssueCounts = {
+  missing: 0,
+  invalid: 0,
+};
+
+/**
  * Facilities are soft-deleted through `facilities.deactivated_at`. Spec 0014
  * §4/§7.5: deactivated facilities are excluded from every dashboard count, so
  * they never inflate a denominator (and therefore never deflate `coveragePercent`).
@@ -97,6 +117,53 @@ export function buildPurchaseBucketsQuery(input: {
       UNKNOWN:
         sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
       total: sql<number>`COUNT(*)::int`,
+    })
+    .from(facilityVerticalProfiles)
+    .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+    .where(and(...conditions));
+}
+
+/**
+ * CPF clinics with an unusable document, in the given verticals.
+ *
+ * Deliberately built from the same conditions as [buildPurchaseBucketsQuery] —
+ * same vertical join, same `is_active`, same `liveFacility`, same optional
+ * facility set. The two numbers sit next to each other on Desempenho, and a
+ * warning scoped differently from the donut beside it would read as a bug in
+ * whichever one the rep checked second.
+ *
+ * `COUNT(DISTINCT facilities.id)`, unlike the bucket counts, which count
+ * *profiles*: a clinic in two linhas has two profiles but only one CPF, so
+ * counting rows would report one problem twice and send the rep to a list
+ * shorter than the number that opened it.
+ *
+ * The two filters are mutually exclusive by construction — `invalid` requires a
+ * non-blank document — so no clinic lands in both.
+ *
+ * Exported for query-shape tests; callers use the repository method.
+ */
+export function buildCpfIssueCountsQuery(input: {
+  verticalIds: number[];
+  facilityIds: number[] | null;
+}) {
+  const conditions = [
+    inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
+    eq(facilityVerticalProfiles.isActive, true),
+    liveFacility(),
+    eq(facilities.legalDocumentType, "CPF"),
+  ];
+  if (input.facilityIds !== null) {
+    conditions.push(
+      inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
+    );
+  }
+
+  const blank = sql`(${facilities.legalDocument} is null or btrim(${facilities.legalDocument}) = '')`;
+
+  return db
+    .select({
+      missing: sql<number>`COUNT(DISTINCT ${facilities.id}) FILTER (WHERE ${blank})::int`,
+      invalid: sql<number>`COUNT(DISTINCT ${facilities.id}) FILTER (WHERE NOT ${blank} AND NOT is_valid_cpf(${facilities.legalDocument}))::int`,
     })
     .from(facilityVerticalProfiles)
     .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
@@ -163,6 +230,25 @@ export class DrizzleDashboardRepository {
         UNKNOWN: Number(row?.UNKNOWN ?? 0),
       },
       total: Number(row?.total ?? 0),
+    };
+  }
+
+  async countCpfIssues(input: {
+    verticalIds: number[];
+    facilityIds: number[] | null;
+  }): Promise<CpfIssueCounts> {
+    // Same guards as the bucket counts: no accessible vertical, or an empty
+    // facility set, means nothing is in scope — not "count everything".
+    if (input.verticalIds.length === 0) return { ...EMPTY_CPF_ISSUE_COUNTS };
+    if (input.facilityIds !== null && input.facilityIds.length === 0) {
+      return { ...EMPTY_CPF_ISSUE_COUNTS };
+    }
+
+    const [row] = await buildCpfIssueCountsQuery(input);
+
+    return {
+      missing: Number(row?.missing ?? 0),
+      invalid: Number(row?.invalid ?? 0),
     };
   }
 
