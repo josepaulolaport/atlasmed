@@ -54,6 +54,8 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
       const [facility] = await tx
         .insert(facilities)
         .values({
+          // Spec 0015: every facility carries the CNES establishment it came from.
+          cnesCode: crypto.randomUUID(),
           displayName: "CLINICA TESTE",
           legalDocumentType: "CNPJ",
           stateId: state!.id,

@@ -1002,6 +1002,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     });
   }
 
+  /**
+   * Read against `registry.facilities` rather than a join, because the two
+   * schemas have no foreign key between them on purpose (spec 0012) — the
+   * registry is reloaded and pruned on its own schedule, and a hard reference
+   * would let that reach into `public`.
+   */
+  async registryHasEstablishment(cnesCode: string): Promise<boolean> {
+    const [row] = (await db.execute(sql`
+      select 1 as found from registry.facilities where cnes_id = ${cnesCode} limit 1
+    `)) as unknown as { found: number }[];
+    return row != null;
+  }
+
   async create(data: {
     name: string;
     stateId: number;
@@ -1010,6 +1023,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
+    cnesCode: string;
     verticalId: number;
   }): Promise<FacilityRecord> {
     const [mun] = await db
@@ -1058,6 +1072,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           legalDocumentType: data.legalDocumentType,
           legalDocument: normalizeLegalDocument(data.legalDocument ?? null),
           location: locationPointSql(lat, lng),
+          cnesCode: data.cnesCode,
         })
         .returning({ id: facilities.id });
 

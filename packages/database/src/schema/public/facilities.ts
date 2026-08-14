@@ -45,7 +45,13 @@ export const facilities = pgTable(
     tradeName: text("trade_name"),
 
     // --- Registry provenance ---
-    cnesCode: text("cnes_code"),
+    /**
+     * Required. Importing from the CNES registry is the only way a facility
+     * comes into existence (spec 0015), so every row carries the establishment
+     * it came from. Enforced here rather than in the import use case: a check in
+     * one code path holds only while that path is the only writer.
+     */
+    cnesCode: text("cnes_code").notNull(),
     /** Emultec `clientes.Id` — facility↔client link for order import. */
     idClienteEmultec: bigint("id_cliente_emultec", { mode: "number" }),
     // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
@@ -124,9 +130,14 @@ export const facilities = pgTable(
       columns: [t.municipalityId, t.stateId],
       foreignColumns: [municipalities.id, municipalities.stateId],
     }).onDelete("restrict"),
-    uniqueIndex("facilities_cnes_code_uidx")
-      .on(t.cnesCode)
-      .where(sql`${t.cnesCode} IS NOT NULL AND ${t.deactivatedAt} IS NULL`),
+    /**
+     * Total, not partial. It once excluded deactivated rows, which meant a
+     * deactivated facility holding a code did not stop that code being imported
+     * again — two rows for one establishment, and a registry bridge that can
+     * only point at one. Re-importing a deactivated clinic can now only
+     * reactivate the row that exists.
+     */
+    uniqueIndex("facilities_cnes_code_uidx").on(t.cnesCode),
     uniqueIndex("facilities_id_cliente_emultec_uidx")
       .on(t.idClienteEmultec)
       .where(sql`${t.idClienteEmultec} IS NOT NULL`),

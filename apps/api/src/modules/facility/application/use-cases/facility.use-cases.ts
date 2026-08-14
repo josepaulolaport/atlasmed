@@ -383,11 +383,38 @@ export class CreateFacilityUseCase {
      */
     lat: number;
     lng: number;
+    /**
+     * Spec 0015: required, and it must name an establishment the registry holds.
+     *
+     * Importing from CNES is the only way a facility comes into existence, so a
+     * create with no registry behind it is not a partially-filled record but one
+     * the model has no meaning for. `facilities.cnes_code` is NOT NULL, which
+     * makes "every facility came from CNES" true regardless of this check; the
+     * check adds that the code names something real rather than any string.
+     *
+     * Optional in the type so a missing one is reported as a field error rather
+     * than failing to compile at the route, which passes the body through whole.
+     */
+    cnesCode?: string;
     /** Required unless the caller has exactly one accessible vertical. */
     verticalId?: number;
     scope: ScopeContext;
     role: string;
   }) {
+    const cnesCode = input.cnesCode?.trim();
+    if (!cnesCode) {
+      throw new ValidationError([
+        { field: "cnesCode", message: "cnesCode is required" },
+      ]);
+    }
+    if (!(await this.deps.facilityRepository.registryHasEstablishment(cnesCode))) {
+      throw new ValidationError([
+        {
+          field: "cnesCode",
+          message: `CNES ${cnesCode} is not an establishment the registry knows`,
+        },
+      ]);
+    }
     // A facility with no vertical profile is invisible to every non-global
     // scope, so creation must resolve exactly one vertical (spec 0010 §1.7).
     // resolveVerticalIds wraps resolveAccessibleVerticalIds: it throws
@@ -428,6 +455,7 @@ export class CreateFacilityUseCase {
       legalDocument: input.legalDocument,
       lat: coordinates.lat,
       lng: coordinates.lng,
+      cnesCode,
       verticalId,
     });
 

@@ -60,6 +60,7 @@ function fakeRepository(
   return {
     findAll,
     findAllByIds: async () => [],
+    registryHasEstablishment: async () => true,
     findById: async () => null,
     listClinicalFocusCatalog: async () => [],
     listUnitTypesInUse: async () => [],
