@@ -31,6 +31,7 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Flutter mobile ap
 ## Mobile Architecture
 
 - Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
+- The user-facing product routes (`/products`, `/products/:familyId`) read the API-backed catalog through `CatalogRepository` and Riverpod's `catalogFamiliesProvider`; no local product fixture is used. The route opens a product family from any of its variant IDs, preserving deep links if the API reorders presentations.
 - ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
 ## Data Architecture
