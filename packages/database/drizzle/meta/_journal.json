@@ -750,6 +750,13 @@
       "when": 1786690702241,
       "tag": "0106_emultec_order_import_pending",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1786694957782,
+      "tag": "0107_user_bookmarks",
+      "breakpoints": true
     }
   ]
 }
