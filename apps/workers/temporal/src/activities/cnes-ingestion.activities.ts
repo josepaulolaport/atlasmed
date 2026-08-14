@@ -110,12 +110,67 @@ export async function ensureCnesArchiveActivity(input: {
   };
 }
 
+/**
+ * How often the load says it is alive, regardless of what it is doing.
+ *
+ * Well inside the activity's 5-minute `heartbeatTimeout`, so a worker has to be
+ * genuinely gone — not merely busy — before Temporal gives up on it.
+ */
+const LOAD_HEARTBEAT_INTERVAL_MS = 30_000;
+
+/**
+ * Runs `work`, heartbeating on a timer rather than on progress.
+ *
+ * The load only reported between steps, and its steps are long: staging the
+ * national workload rows runs for minutes without reading another byte of the
+ * archive. Temporal saw silence, called the worker dead, and killed it — then
+ * the retry restarted the load from the top and reached the same silence, so
+ * one slow step consumed both attempts and no competence could ever load.
+ *
+ * Progress-driven heartbeats cannot fix that on their own: they only fire where
+ * somebody thought to add them, and the stall was in a stretch nobody had
+ * instrumented. A timer is indifferent to what the work is doing, so the only
+ * thing that stops it is the process actually dying — which is the condition
+ * `heartbeatTimeout` exists to detect.
+ *
+ * `report` still exists and still heartbeats immediately: the timer keeps the
+ * activity alive, the reports say where it got to.
+ */
+export async function withHeartbeatPump<T>(options: {
+  heartbeat: (detail: unknown) => void;
+  initial: unknown;
+  intervalMs?: number;
+  work: (report: (detail: unknown) => void) => Promise<T>;
+}): Promise<T> {
+  let latest = options.initial;
+  const pump = setInterval(() => {
+    try {
+      options.heartbeat(latest);
+    } catch {
+      // The activity is already finishing; a heartbeat here is noise, not news.
+    }
+  }, options.intervalMs ?? LOAD_HEARTBEAT_INTERVAL_MS);
+
+  try {
+    return await options.work((detail) => {
+      latest = detail;
+      options.heartbeat(detail);
+    });
+  } finally {
+    clearInterval(pump);
+  }
+}
+
 export async function ingestCnesRegistryActivity(input: {
   runId: number;
   reference: CnesReference;
   objectKey: string;
 }): Promise<IngestCnesRegistryOutput> {
-  return ingestCnesRegistry(input, (detail) => Context.current().heartbeat(detail));
+  return withHeartbeatPump({
+    heartbeat: (detail) => Context.current().heartbeat(detail),
+    initial: { reference: input.reference, step: "starting" },
+    work: (report) => ingestCnesRegistry(input, report),
+  });
 }
 
 /**
