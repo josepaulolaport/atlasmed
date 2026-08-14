@@ -34,6 +34,9 @@ const STRANGER_GESTOR = "355030";
 const STRANGER_OWN_MUNICIPALITY = "355040";
 const JUNK_COORDS_CNES = "9990003";
 const JUNK_COORDS_UNIT = "3550309990003";
+const STRANGER_SUS = "9900003";
+const UNREFERENCED_SUS = "9900004";
+const STRANGER_CRM = "9967890";
 const FACILITY_NAME = "T-CNES-LOADER fixture";
 const PERSON_MARK = "T-CNES-LOADER-PERSON";
 const DOCTOR_CRM = "9912345";
@@ -167,6 +170,22 @@ function buildNationalDump(subdir: string) {
     ["CO_UNIDADE", "CO_TIPO_UNIDADE", "CO_SUB_TIPO_UNIDADE"],
     [UNIT_CODE, "36", "009"],
   ]);
+  writeCsv(subdir, "tbDadosProfissionalSus", [
+    ["CO_PROFISSIONAL_SUS", "NO_PROFISSIONAL", "CO_CNS", "CO_CPF"],
+    [DOCTOR_SUS, "DOUTOR FIXTURE", "700000000009901", "XXX.392.286.XX"],
+    [NURSE_SUS, "ENFERMEIRO FIXTURE", "700000000009902", "XXX.111.222.XX"],
+    [STRANGER_SUS, "DOUTOR ESTRANHO", "700000000009903", "XXX.333.444.XX"],
+    // Nobody's vínculo refers to this one; staging must prune it.
+    [UNREFERENCED_SUS, "NINGUEM FIXTURE", "700000000009904", "XXX.555.666.XX"],
+  ]);
+  writeCsv(subdir, "tbCargaHorariaSus", [
+    ["CO_UNIDADE", "CO_PROFISSIONAL_SUS", "CO_CBO", "CO_CONSELHO_CLASSE", "NU_REGISTRO", "SG_UF_CRM"],
+    [UNIT_CODE, DOCTOR_SUS, "225125", "71", DOCTOR_CRM, "SP"],
+    // A clinic we do not operate: staged all the same, which is the point.
+    [`${STRANGER_OWN_MUNICIPALITY}${STRANGER_CNES}`, STRANGER_SUS, "225125", "71", STRANGER_CRM, "SP"],
+    // No registration — dropped at load, not at read.
+    [UNIT_CODE, NURSE_SUS, "223505", "71", "", ""],
+  ]);
 }
 
 /**
@@ -192,10 +211,11 @@ async function purgeFixtures(database: AnyDatabase) {
   `);
   await database.execute(sql`
     delete from registry.professional_registrations
-      where professional_cnes_id in (${DOCTOR_SUS}, ${NURSE_SUS});
+      where professional_cnes_id in (${DOCTOR_SUS}, ${NURSE_SUS}, ${STRANGER_SUS}, ${UNREFERENCED_SUS});
   `);
   await database.execute(sql`
-    delete from registry.professionals where cnes_id in (${DOCTOR_SUS}, ${NURSE_SUS});
+    delete from registry.professionals
+      where cnes_id in (${DOCTOR_SUS}, ${NURSE_SUS}, ${STRANGER_SUS}, ${UNREFERENCED_SUS});
   `);
   await database.execute(
     sql`delete from registry.facilities where cnes_id in (${CNES_CODE}, ${STRANGER_CNES}, ${JUNK_COORDS_CNES});`
@@ -446,6 +466,109 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
         expect(result.auxUnitSubtypes).toBe(1);
         expect(result.auxDeactivationReasons).toBe(1);
         expect(result.establishmentSubtypes).toBe(1);
+      });
+    });
+  });
+
+  /**
+   * Spec 0015 §6.7. Staging is what lets an import derive a clinic's roster with
+   * a query instead of a background job re-reading 1.8 GB of archive — so a
+   * clinic imported the day after an ingestion has its doctors immediately,
+   * rather than up to a month later.
+   */
+  describe("staging the national workload rows", () => {
+    async function stagedCarga(tx: AnyDatabase, unitCode: string) {
+      const rows = (await tx.execute(sql`
+        select professional_sus_id, council_code, registration_uf,
+               registration_number, occupation_code
+          from ingestion.carga_staging
+         where reference_year = ${REFERENCE.year}
+           and reference_month = ${REFERENCE.month}
+           and unit_code = ${unitCode}
+      `)) as unknown as Record<string, unknown>[];
+      return rows;
+    }
+
+    it("stages rows for clinics we do not operate", async () => {
+      await rolledBack(async (tx) => {
+        const result = await loadRegistryFromCsv({
+          db: tx, csvDir: join(dir, "national"), reference: REFERENCE,
+        });
+
+        // The whole point: this establishment is nobody's, and its roster is
+        // staged anyway so importing it later is a query rather than a job.
+        const stranger = await stagedCarga(tx, `${STRANGER_OWN_MUNICIPALITY}${STRANGER_CNES}`);
+        expect(stranger).toHaveLength(1);
+        expect(stranger[0]!.professional_sus_id).toBe(STRANGER_SUS);
+        expect(stranger[0]!.registration_number).toBe(STRANGER_CRM);
+
+        expect(result.cargaStaged).toBe(2);
+      });
+    });
+
+    it("applies the registration gate at load, not at read", async () => {
+      await rolledBack(async (tx) => {
+        const result = await loadRegistryFromCsv({
+          db: tx, csvDir: join(dir, "national"), reference: REFERENCE,
+        });
+
+        // The nurse has no registration. Storing them would keep 37 % of the
+        // real file — 2 500 334 rows — that nothing could ever select.
+        const ours = await stagedCarga(tx, UNIT_CODE);
+        expect(ours).toHaveLength(1);
+        expect(ours[0]!.professional_sus_id).toBe(DOCTOR_SUS);
+
+        // The counter still has to work, even though step 3 never sees the row.
+        expect(result.cargaRowsWithoutRegistration).toBe(1);
+      });
+    });
+
+    it("prunes staged people no vínculo refers to", async () => {
+      await rolledBack(async (tx) => {
+        const result = await loadRegistryFromCsv({
+          db: tx, csvDir: join(dir, "national"), reference: REFERENCE,
+        });
+
+        const kept = (await tx.execute(sql`
+          select professional_sus_id from ingestion.professional_staging
+           where reference_year = ${REFERENCE.year}
+             and reference_month = ${REFERENCE.month}
+             and professional_sus_id in (${DOCTOR_SUS}, ${STRANGER_SUS}, ${UNREFERENCED_SUS}, ${NURSE_SUS})
+           order by professional_sus_id
+        `)) as unknown as { professional_sus_id: string }[];
+
+        // The doctor and the stranger are referenced; the nurse lost their row
+        // to the registration gate, and nobody ever referred to UNREFERENCED.
+        expect(kept.map((k) => k.professional_sus_id)).toEqual([DOCTOR_SUS, STRANGER_SUS]);
+        expect(result.professionalsStagedPruned).toBeGreaterThanOrEqual(2);
+      });
+    });
+
+    it("re-running one competência replaces its rows rather than doubling them", async () => {
+      await rolledBack(async (tx) => {
+        await loadRegistryFromCsv({ db: tx, csvDir: join(dir, "national"), reference: REFERENCE });
+        const first = await stagedCarga(tx, UNIT_CODE);
+        await loadRegistryFromCsv({ db: tx, csvDir: join(dir, "national"), reference: REFERENCE });
+        const second = await stagedCarga(tx, UNIT_CODE);
+
+        // A retry after a partial write would otherwise double every roster, and
+        // the duplicates read exactly like a doctor holding two posts at once.
+        expect(second).toHaveLength(first.length);
+      });
+    });
+
+    it("still derives the scoped roster once staging is the source", async () => {
+      await rolledBack(async (tx) => {
+        const result = await loadRegistryFromCsv({
+          db: tx, csvDir: join(dir, "national"), reference: REFERENCE,
+        });
+        // Steps 3-6 read staging now. The doctor at our clinic must still arrive
+        // in the registry with their name from tbDadosProfissionalSus, and the
+        // stranger's clinic must still be out of scope.
+        expect(result.professionalsSeen).toBe(1);
+        expect(await professionalExists(tx, DOCTOR_SUS)).toBe(true);
+        expect(await professionalExists(tx, STRANGER_SUS)).toBe(false);
+        expect(await vinculoCount(tx)).toBe(1);
       });
     });
   });

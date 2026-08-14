@@ -181,6 +181,16 @@ export const cnesProfessionalStaging = ingestionSchema.table(
     referenceMonth: integer("reference_month").notNull(),
     professionalSusId: text("professional_sus_id").notNull(),
     name: text("name").notNull(),
+    /** NO_SOCIAL, when the export carries one — it is not a required column. */
+    socialName: text("social_name"),
+    /**
+     * CO_CPF, **masked** in the public dump (`XXX.392.286.XX`, 5 of 11 digits
+     * redacted, on 100 % of rows). It matches nobody and never will; it is
+     * staged only so `registry.professionals` keeps the column it has always
+     * had, rather than losing it as a side effect of changing where the loader
+     * reads from. The join key is the council registration.
+     */
+    taxId: text("tax_id"),
     /** NO_CNS — the national health card number, when the export carries one. */
     cns: text("cns"),
   },

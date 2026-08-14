@@ -10,6 +10,8 @@ import {
   registryProfessionalRegistrations,
   registryProfessionals,
   registryStates,
+  cnesCargaStaging,
+  cnesProfessionalStaging,
   registryUnitTypes,
   registryUnitSubtypes,
   registryDeactivationReasons,
@@ -98,6 +100,12 @@ export interface LoadRegistryResult {
   auxMunicipalities: number;
   auxOccupations: number;
   auxUnitTypes: number;
+  /** Rows written to `ingestion.carga_staging` for this competência. */
+  cargaStaged: number;
+  /** Rows kept in `ingestion.professional_staging` after pruning. */
+  professionalsStaged: number;
+  /** Staged people no staged vínculo refers to, removed again. */
+  professionalsStagedPruned: number;
   /** `rlEstabSubTipo` rows linked onto an establishment. */
   establishmentSubtypes: number;
   auxUnitSubtypes: number;
@@ -134,6 +142,13 @@ export interface LoadRegistryResult {
 }
 
 const BATCH = 1_000;
+
+/**
+ * Staging writes millions of narrow rows, where `BATCH` would mean thousands of
+ * round trips. Wider batches are safe here precisely because the rows are dumb:
+ * no conflict target, no foreign key, nothing to resolve per row.
+ */
+const STAGING_BATCH = 5_000;
 
 function chunk<T>(items: readonly T[], size = BATCH): T[][] {
   const out: T[][] = [];
@@ -249,6 +264,9 @@ export async function loadRegistryFromCsv(
     auxMunicipalities: 0,
     auxOccupations: 0,
     auxUnitTypes: 0,
+    cargaStaged: 0,
+    professionalsStaged: 0,
+    professionalsStagedPruned: 0,
     establishmentSubtypes: 0,
     auxUnitSubtypes: 0,
     auxDeactivationReasons: 0,
@@ -670,7 +688,164 @@ export async function loadRegistryFromCsv(
     });
   }
 
-  // ── Step 3 — Scan scoped carga ───────────────────────────────────────────
+  // ── Step 2c — Stage the national workload rows ────────────────────────────
+  //
+  // Spec 0015 §6.7. `tbCargaHorariaSus` and `tbDadosProfissionalSus` are staged
+  // for **every** establishment, so importing a clinic can derive its roster
+  // with a query in the same transaction that creates it. Without this, a clinic
+  // imported the day after an ingestion has no doctors until the next monthly
+  // run — up to a month of an empty feature on exactly the clinics somebody just
+  // went to the trouble of adding.
+  //
+  // These are staging tables and the distinction is what makes them affordable:
+  // no foreign keys, no `atlasmed_id`, no roster semantics, no bridge to
+  // `public.people`. Derived and never authoritative (invariant 9) — they can be
+  // dropped and rebuilt from the archive without losing a fact.
+  //
+  // Rows carry their competência and are never updated in place. This writes the
+  // new one alongside whatever is already there; readers take the competência
+  // the run ledger marks COMPLETED, so an import landing mid-reload cannot read
+  // a half-loaded table and derive a partial roster. Superseded competências are
+  // dropped after promotion, by the caller, not here.
+  const { year: referenceYear, month: referenceMonth } = reference;
+
+  /*
+   * A re-run of the same competência starts clean. Without this a retry after a
+   * partial write doubles every roster, and the duplicates look exactly like a
+   * doctor holding two posts at one clinic.
+   */
+  await db
+    .delete(cnesCargaStaging)
+    .where(
+      and(
+        eq(cnesCargaStaging.referenceYear, referenceYear),
+        eq(cnesCargaStaging.referenceMonth, referenceMonth)
+      )
+    );
+  await db
+    .delete(cnesProfessionalStaging)
+    .where(
+      and(
+        eq(cnesProfessionalStaging.referenceYear, referenceYear),
+        eq(cnesProfessionalStaging.referenceMonth, referenceMonth)
+      )
+    );
+
+  const cargaBuffer: (typeof cnesCargaStaging.$inferInsert)[] = [];
+  async function flushCarga() {
+    if (cargaBuffer.length === 0) return;
+    await db.insert(cnesCargaStaging).values(cargaBuffer);
+    result.cargaStaged += cargaBuffer.length;
+    cargaBuffer.length = 0;
+  }
+
+  for await (const r of source.records("workload")) {
+    const unitCode = clean(r.CO_UNIDADE);
+    const sus = clean(r.CO_PROFISSIONAL_SUS);
+    if (!unitCode || !sus) continue;
+
+    /*
+     * The registration is the gate, not the CBO (ADR 0009 §5), and it is applied
+     * here rather than at read. A row without one describes a person we could
+     * never act on, and dropping them now removes 2 500 334 of 6 734 280 rows —
+     * 37 % — that nothing would ever have selected.
+     */
+    const council = clean(r.CO_CONSELHO_CLASSE);
+    const uf = clean(r.SG_UF_CRM).toUpperCase();
+    const number = clean(r.NU_REGISTRO);
+    if (!knownCouncils.has(council) || uf.length !== 2 || !number) {
+      /*
+       * Counted here, where the row is still visible. Step 3 reads staging, and
+       * staging has already dropped these — so counting there would report zero
+       * for ever and quietly retire a signal the operator relies on.
+       */
+      if (cnesIdByUnitCode.has(unitCode)) result.cargaRowsWithoutRegistration += 1;
+      continue;
+    }
+
+    cargaBuffer.push({
+      referenceYear,
+      referenceMonth,
+      unitCode,
+      professionalSusId: sus,
+      councilCode: council,
+      registrationUf: uf,
+      registrationNumber: number,
+      occupationCode: clean(r.CO_CBO) || null,
+    });
+    if (cargaBuffer.length >= STAGING_BATCH) await flushCarga();
+  }
+  await flushCarga();
+
+  const stagedProfessionalBuffer: (typeof cnesProfessionalStaging.$inferInsert)[] = [];
+  async function flushStagedProfessionals() {
+    if (stagedProfessionalBuffer.length === 0) return;
+    await db
+      .insert(cnesProfessionalStaging)
+      .values(stagedProfessionalBuffer)
+      .onConflictDoNothing();
+    result.professionalsStaged += stagedProfessionalBuffer.length;
+    stagedProfessionalBuffer.length = 0;
+  }
+
+  for await (const r of source.records("professionals")) {
+    const sus = clean(r.CO_PROFISSIONAL_SUS);
+    const name = clean(r.NO_PROFISSIONAL);
+    if (!sus || !name) continue;
+    stagedProfessionalBuffer.push({
+      referenceYear,
+      referenceMonth,
+      professionalSusId: sus,
+      name,
+      socialName: clean(r.NO_SOCIAL) || null,
+      // Masked in the public dump; carried so the derived table keeps its column.
+      taxId: clean(r.CO_CPF) || null,
+      cns: clean(r.CO_CNS) || null,
+    });
+    if (stagedProfessionalBuffer.length >= STAGING_BATCH) await flushStagedProfessionals();
+  }
+  await flushStagedProfessionals();
+
+  /*
+   * Keep only the people some staged vínculo refers to.
+   *
+   * Done in SQL rather than by holding 2.5 M SUS ids in a Set while the file
+   * streams — the point of staging is that the load stops growing with the data.
+   * The intermediate rows are transient; what remains is the 2 502 725 the spec
+   * budgets for.
+   */
+  const pruned = await db.execute(sql`
+    delete from ingestion.professional_staging p
+     where p.reference_year = ${referenceYear}
+       and p.reference_month = ${referenceMonth}
+       and not exists (
+         select 1 from ingestion.carga_staging c
+          where c.reference_year = p.reference_year
+            and c.reference_month = p.reference_month
+            and c.professional_sus_id = p.professional_sus_id
+       )
+  `);
+  result.professionalsStagedPruned =
+    (pruned as unknown as { count?: number }).count ?? 0;
+  result.professionalsStaged -= result.professionalsStagedPruned;
+
+  log("workload staged", {
+    competence: `${referenceYear}-${String(referenceMonth).padStart(2, "0")}`,
+    carga: result.cargaStaged,
+    professionals: result.professionalsStaged,
+    prunedProfessionals: result.professionalsStagedPruned,
+  });
+
+  // ── Step 3 — Build the scoped roster from staging ─────────────────────────
+  //
+  // Reads `ingestion.carga_staging`, not the archive. The rows are already there
+  // from step 2c, and streaming 875 MB a second time to select the ~25 000 that
+  // concern us would double the heaviest I/O in the pipeline to no purpose.
+  //
+  // Still scoped to establishments we operate (invariant 5), and the maps below
+  // are still built in memory — see spec 0015 §6.7 on why that ceiling matters
+  // as the base grows, and why moving this accumulation into SQL is the next
+  // step rather than this one.
 
   /** facilityCnesId → set of professional SUS ids. */
   const staffByFacility = new Map<string, Set<string>>();
@@ -680,32 +855,46 @@ export async function loadRegistryFromCsv(
   const registrationsBySus = new Map<string, Map<string, string>>();
   const susIds = new Set<string>();
 
-  for await (const r of source.records("workload")) {
-    const facilityCnesId = cnesIdByUnitCode.get(clean(r.CO_UNIDADE));
+  const scopedUnitCodes = [...cnesIdByUnitCode.keys()];
+  /*
+   * One text parameter split server-side, not a JS array.
+   *
+   * Drizzle's `sql` template flattens an array into one placeholder per element,
+   * so `any(${codes})` binds a single scalar and Postgres rejects it. Splitting
+   * a delimited string keeps this to one parameter however large the scope
+   * grows — an `in (...)` list would be one placeholder per clinic, and this is
+   * the query whose scope this spec is designed to let grow. The delimiter is
+   * `chr(1)`, which no CNES identifier can contain.
+   */
+  const scopedUnitCodeList = scopedUnitCodes.join("\u0001");
+  const stagedCarga = scopedUnitCodes.length === 0
+    ? []
+    : ((await db.execute(sql`
+        select unit_code, professional_sus_id, council_code,
+               registration_uf, registration_number, occupation_code
+          from ingestion.carga_staging
+         where reference_year = ${referenceYear}
+           and reference_month = ${referenceMonth}
+           and unit_code = any(string_to_array(${scopedUnitCodeList}, chr(1)))
+      `)) as unknown as {
+        unit_code: string;
+        professional_sus_id: string;
+        council_code: string;
+        registration_uf: string;
+        registration_number: string;
+        occupation_code: string | null;
+      }[]);
+
+  for (const r of stagedCarga) {
+    const facilityCnesId = cnesIdByUnitCode.get(r.unit_code);
     if (facilityCnesId === undefined) continue;
 
-    const sus = clean(r.CO_PROFISSIONAL_SUS);
-    if (!sus) continue;
-
-    /**
-     * The registration is the gate, not the CBO (ADR 0009 § 5).
-     *
-     * An earlier version kept rows whose CBO started with `225` and treated the
-     * registration as optional. That inferred "is a doctor" from an occupation
-     * code, when what actually makes someone resolvable against `public` is
-     * holding a council registration. A row without one describes a person we
-     * cannot act on, so it never enters the registry.
-     */
-    const council = clean(r.CO_CONSELHO_CLASSE);
-    const uf = clean(r.SG_UF_CRM).toUpperCase();
-    const number = clean(r.NU_REGISTRO);
-    if (!knownCouncils.has(council) || uf.length !== 2 || !number) {
-      result.cargaRowsWithoutRegistration += 1;
-      continue;
-    }
-
+    const sus = r.professional_sus_id;
+    const council = r.council_code;
+    const uf = r.registration_uf;
+    const number = r.registration_number;
     // Captured for display; no longer decides who is imported.
-    const cbo = clean(r.CO_CBO);
+    const cbo = clean(r.occupation_code ?? "");
 
     susIds.add(sus);
 
@@ -768,18 +957,49 @@ export async function loadRegistryFromCsv(
     professionalBuffer.length = 0;
   }
 
-  for await (const r of source.records("professionals")) {
-    const sus = clean(r.CO_PROFISSIONAL_SUS);
+  /*
+   * From staging, not the archive — the same reason as step 3. Selecting the
+   * ~19 000 people at our clinics out of a second 962 MB pass is work the
+   * staging tables exist to make unnecessary.
+   */
+  /*
+   * Scoped by joining staging to staging rather than by passing ~19 000 SUS ids
+   * back down: the set is already expressed by the unit codes.
+   */
+  const stagedProfessionals = susIds.size === 0
+    ? []
+    : ((await db.execute(sql`
+        select p.professional_sus_id, p.name, p.social_name, p.tax_id, p.cns
+          from ingestion.professional_staging p
+         where p.reference_year = ${referenceYear}
+           and p.reference_month = ${referenceMonth}
+           and exists (
+             select 1 from ingestion.carga_staging c
+              where c.reference_year = p.reference_year
+                and c.reference_month = p.reference_month
+                and c.professional_sus_id = p.professional_sus_id
+                and c.unit_code = any(string_to_array(${scopedUnitCodeList}, chr(1)))
+           )
+      `)) as unknown as {
+        professional_sus_id: string;
+        name: string;
+        social_name: string | null;
+        tax_id: string | null;
+        cns: string | null;
+      }[]);
+
+  for (const r of stagedProfessionals) {
+    const sus = r.professional_sus_id;
     if (!susIds.has(sus) || foundSus.has(sus)) continue;
     foundSus.add(sus);
 
     professionalBuffer.push({
       cnesId: sus,
-      fullName: clean(r.NO_PROFISSIONAL) || sus,
-      socialName: clean(r.NO_SOCIAL) || null,
+      fullName: r.name || sus,
+      socialName: r.social_name,
       // Masked in the public dump (`XXX.392.286.XX`); stored, never matched on.
-      taxId: clean(r.CO_CPF) || null,
-      healthCardNumber: clean(r.CO_CNS) || null,
+      taxId: r.tax_id,
+      healthCardNumber: r.cns,
     });
     if (professionalBuffer.length >= BATCH) await flushProfessionals();
   }
