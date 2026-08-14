@@ -28,7 +28,14 @@ export async function getTemporalClient(): Promise<Client> {
   return clientPromise;
 }
 
-export type SearchSyncEntity = "facilities" | "persons";
+/**
+ * `facility_candidates` is here because the monthly CNES load replaces every row
+ * of `registry.facilities`, and that index is otherwise maintained only by
+ * per-import upserts. The ingestion workflow rebuilds it itself; this is the
+ * repair path for when that step failed, and it existed as a worker capability
+ * with no way to reach it.
+ */
+export type SearchSyncEntity = "facilities" | "persons" | "facility_candidates";
 type StartWorkflowResult = { workflowId: string; runId: string; existing: boolean };
 
 type SearchSyncWorkflowDescriptionHandle = {
@@ -305,6 +312,7 @@ export async function startMetricSnapshotTriggerWorkflow(
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
   return workflowId === fullSearchSyncWorkflowId("facilities")
     || workflowId === fullSearchSyncWorkflowId("persons")
+    || workflowId === fullSearchSyncWorkflowId("facility_candidates")
     || workflowId === purchaseRecurrenceBackfillWorkflowId()
     || workflowId === emultecOrderImportWorkflowId()
     || workflowId === "emultec-order-import-every-10m"

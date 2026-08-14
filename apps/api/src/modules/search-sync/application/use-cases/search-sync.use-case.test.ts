@@ -7,7 +7,7 @@ import {
 
 describe("search sync use cases", () => {
   test("starts full search rebuilds without accepting selective ids", async () => {
-    const started: Array<"facilities" | "persons"> = [];
+    const started: Array<"facilities" | "persons" | "facility_candidates"> = [];
     const useCase = new StartSearchSyncUseCase({
       start: async (entity) => {
         started.push(entity);
@@ -36,6 +36,21 @@ describe("search sync use cases", () => {
       existing: false,
     });
     expect(started).toEqual(["facilities"]);
+
+    /*
+     * The CNES import list. The worker has always supported rebuilding it; the
+     * API exposed only facilities and persons, so the one index that goes stale
+     * on a schedule — the monthly load replaces every registry row — had no
+     * operational way to be rebuilt.
+     */
+    await expect(
+      useCase.execute(parseSearchSyncRequest({ entity: "facility_candidates" }))
+    ).resolves.toEqual({
+      workflowId: "search-sync-facility_candidates-full",
+      runId: "run-1",
+      existing: false,
+    });
+    expect(started).toEqual(["facilities", "facility_candidates"]);
     expect(() => parseSearchSyncRequest({ entity: "facilities", ids: ["x"] })).toThrow(
       "Request validation failed"
     );

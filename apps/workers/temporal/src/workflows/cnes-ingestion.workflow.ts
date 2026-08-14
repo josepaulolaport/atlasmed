@@ -49,6 +49,20 @@ const fetchArchive = proxyActivities<typeof import("../activities/index")>({
 });
 
 /**
+ * The candidate index rebuild.
+ *
+ * Measured at 49.7 s for 373 435 documents against a local Meilisearch, so the
+ * hour is slack for a slower instance rather than an expectation. One attempt
+ * beyond the first, because a rebuild writes into a temporary index and swaps —
+ * a retry repeats the whole thing rather than resuming, and the on-demand
+ * `POST /sync {"entity":"facility_candidates"}` is the real repair path.
+ */
+const rebuild = proxyActivities<typeof import("../activities/index")>({
+  startToCloseTimeout: "1 hour",
+  retry: { maximumAttempts: 2 },
+});
+
+/**
  * Flattens Temporal's failure chain into something worth storing.
  *
  * An activity that throws surfaces here as `ActivityFailure: Activity task
@@ -184,6 +198,39 @@ export async function cnesIngestionWorkflow(
         `cnes.staging.prune_failed — the load succeeded; staging will keep a superseded competência: ${
           error instanceof Error ? error.message : String(error)
         }`
+      );
+    }
+
+    /**
+     * Rebuild the offer list.
+     *
+     * **This is not optional bookkeeping.** The load just replaced all 631 973
+     * rows of `registry.facilities` — new establishments, closures, corrected
+     * addresses, changed unit types — and the candidate index is maintained only
+     * by per-import upserts. Without a rebuild here it keeps answering from last
+     * month's registry: clinics that closed stay offerable, clinics that opened
+     * are invisible, and nothing about it looks wrong.
+     *
+     * Only `facility_candidates`. The load writes `registry.*` and does not touch
+     * `public.facilities` or `public.people`, so the other two indexes are not
+     * stale and rebuilding them would be ~20 minutes of work for no change.
+     *
+     * Not fatal, and deliberately so: the competência is already promoted, and
+     * failing the workflow here would mark a good load FAILED — which would take
+     * it out of the COMPLETED set that `deriveRosterFromStaging` reads, breaking
+     * roster derivation to report a search problem. A stale index is the smaller
+     * wrong, and it is repairable from the endpoint.
+     */
+    try {
+      await rebuild.rebuildSearchIndexActivity({ target: "facility_candidates" });
+      log.info("cnes.candidates.reindexed");
+    } catch (error) {
+      log.warn(
+        `cnes.candidates.reindex_failed — the load succeeded and is promoted, but the import ` +
+          `list still answers from the previous competência. Rebuild with ` +
+          `POST /sync {"entity":"facility_candidates"}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
       );
     }
 

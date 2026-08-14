@@ -23,6 +23,7 @@ export const searchSyncRoutes = new Elysia()
         entity: t.Union([
           t.Literal("facilities"),
           t.Literal("persons"),
+          t.Literal("facility_candidates"),
           t.Literal("orders"),
           t.Literal("emultec-orders"),
           t.Literal("cnes"),

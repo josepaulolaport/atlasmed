@@ -5,10 +5,19 @@ import { ResourceNotFoundError, ValidationError } from "../../../../shared/error
 export type SearchSyncEntity =
   | "facilities"
   | "persons"
+  | "facility_candidates"
   | "orders"
   | "emultec-orders"
   | "cnes";
-type SearchSyncTarget = "facilities" | "persons";
+/**
+ * The three Meilisearch indexes a full rebuild can target.
+ *
+ * `facility_candidates` is the CNES import list. The monthly load replaces every
+ * row of `registry.facilities`, and that index is otherwise only maintained by
+ * per-import upserts — so it goes stale once a month unless something rebuilds
+ * it. The ingestion workflow does; this is the repair path.
+ */
+type SearchSyncTarget = "facilities" | "persons" | "facility_candidates";
 type StartResult = { workflowId: string; runId: string; existing: boolean };
 
 export interface SearchSyncRequest {
@@ -33,7 +42,14 @@ export interface SearchSyncRequest {
  */
 const searchSyncRequestSchema = z
   .object({
-    entity: z.enum(["facilities", "persons", "orders", "emultec-orders", "cnes"]),
+    entity: z.enum([
+      "facilities",
+      "persons",
+      "facility_candidates",
+      "orders",
+      "emultec-orders",
+      "cnes",
+    ]),
     reference: z
       .object({
         year: z.number().int().min(2000).max(2100),
