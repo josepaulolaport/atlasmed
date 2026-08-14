@@ -10,6 +10,9 @@ import {
   registryProfessionalRegistrations,
   registryProfessionals,
   registryStates,
+  registryUnitTypes,
+  registryUnitSubtypes,
+  registryDeactivationReasons,
   type AnyDatabase,
 } from "@atlasmed/database";
 import {
@@ -94,6 +97,11 @@ export interface LoadRegistryResult {
   auxStates: number;
   auxMunicipalities: number;
   auxOccupations: number;
+  auxUnitTypes: number;
+  /** `rlEstabSubTipo` rows linked onto an establishment. */
+  establishmentSubtypes: number;
+  auxUnitSubtypes: number;
+  auxDeactivationReasons: number;
   auxCouncils: number;
   professionalsSeen: number;
   professionalsUpserted: number;
@@ -135,6 +143,45 @@ function chunk<T>(items: readonly T[], size = BATCH): T[][] {
 
 function clean(value: string | undefined): string {
   return (value ?? "").trim();
+}
+
+/**
+ * CNES ships `TP_UNIDADE` both zero-padded and not — `"1"` on 66 rows and `"2"`
+ * on 2, out of 184 359 sampled, where the catalogue says `01` and `02`. Every
+ * read and write of a unit-type code goes through here, because storing both
+ * forms creates two catalogue rows for one type and splits every lookup with no
+ * error to notice.
+ *
+ * Codes that are not a bare number are returned untouched: the export contains
+ * two rows where a date landed in `TP_UNIDADE` (`30-set-2025`, `12-fev-2029`),
+ * and padding those would invent a code rather than fail to resolve one.
+ */
+function padUnitTypeCode(value: string): string {
+  const code = clean(value);
+  if (!/^\d{1,2}$/.test(code)) return code;
+  return code.padStart(2, "0");
+}
+
+/**
+ * `NU_LATITUDE` / `NU_LONGITUDE` as a number Postgres will accept, or null.
+ *
+ * The column is `numeric`, and CNES does not consistently ship one. Measured on
+ * 202607: **992 values use a comma decimal separator** (`-13,8553786`) and a few
+ * are truncated to a trailing point (`-41.`, `-22.`). Handing any of those to a
+ * numeric column raises `22P02` and takes the whole 1 000-row batch with it, so
+ * one malformed coordinate would cost a thousand establishments.
+ *
+ * Out-of-range values are dropped too. A latitude of 900 is not a bad
+ * coordinate, it is not a coordinate — and this one ends up as a pin on a map
+ * that decides which territory a clinic belongs to (spec 0009), so a plausible
+ * wrong number is worse than a missing one the importer must supply.
+ */
+function parseCoordinate(value: string, limit: number): string | null {
+  const raw = clean(value).replace(",", ".");
+  if (!/^-?\d+(\.\d+)?$/.test(raw)) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || Math.abs(n) > limit) return null;
+  return raw;
 }
 
 /**
@@ -201,6 +248,10 @@ export async function loadRegistryFromCsv(
     auxStates: 0,
     auxMunicipalities: 0,
     auxOccupations: 0,
+    auxUnitTypes: 0,
+    establishmentSubtypes: 0,
+    auxUnitSubtypes: 0,
+    auxDeactivationReasons: 0,
     auxCouncils: 0,
     professionalsSeen: 0,
     professionalsUpserted: 0,
@@ -317,6 +368,62 @@ export async function loadRegistryFromCsv(
   result.auxOccupations = occupationRows.length;
   const knownOccupations = new Set(occupationRows.map((o) => o.cnesId));
 
+  /*
+   * Establishment catalogues (spec 0015 §3.2). Insert-new-only like the rest:
+   * `atlasmed_id` on `registry.unit_types` is the import allowlist, and an
+   * upsert that rewrote it would undo an operator's decision on every run.
+   *
+   * `CO_TIPO_UNIDADE` is padded on the way in. CNES ships the code both ways —
+   * 68 rows of 184 359 carry `"1"` where the catalogue says `01` — and storing
+   * both forms would create two catalogue rows for one type and split every
+   * lookup silently.
+   */
+  const unitTypeRows: { cnesId: string; name: string }[] = [];
+  for await (const r of source.records("unitTypes")) {
+    const cnesId = padUnitTypeCode(clean(r.CO_TIPO_UNIDADE));
+    if (!cnesId) continue;
+    unitTypeRows.push({ cnesId, name: clean(r.DS_TIPO_UNIDADE) || cnesId });
+  }
+  for (const part of chunk(unitTypeRows)) {
+    await db.insert(registryUnitTypes).values(part).onConflictDoNothing();
+  }
+  result.auxUnitTypes = unitTypeRows.length;
+  const knownUnitTypes = new Set(unitTypeRows.map((u) => u.cnesId));
+
+  const unitSubtypeRows: { unitTypeCnesId: string; cnesId: string; name: string }[] = [];
+  for await (const r of source.records("unitSubtypes")) {
+    const unitTypeCnesId = padUnitTypeCode(clean(r.CO_TIPO_UNIDADE));
+    const cnesId = clean(r.CO_SUB_TIPO);
+    // A subtype whose parent type is absent would violate the FK and abort the batch.
+    if (!cnesId || !knownUnitTypes.has(unitTypeCnesId)) continue;
+    unitSubtypeRows.push({
+      unitTypeCnesId,
+      cnesId,
+      name: clean(r.DS_SUB_TIPO) || cnesId,
+    });
+  }
+  for (const part of chunk(unitSubtypeRows)) {
+    await db.insert(registryUnitSubtypes).values(part).onConflictDoNothing();
+  }
+  result.auxUnitSubtypes = unitSubtypeRows.length;
+
+  const deactivationReasonRows: { cnesId: string; name: string }[] = [];
+  for await (const r of source.records("deactivationReasons")) {
+    const cnesId = clean(r.CD_MOTIVO_DESAB);
+    if (!cnesId) continue;
+    deactivationReasonRows.push({ cnesId, name: clean(r.DS_MOTIVO_DESAB) || cnesId });
+  }
+  for (const part of chunk(deactivationReasonRows)) {
+    await db.insert(registryDeactivationReasons).values(part).onConflictDoNothing();
+  }
+  result.auxDeactivationReasons = deactivationReasonRows.length;
+
+  log("establishment catalogues loaded", {
+    unitTypes: result.auxUnitTypes,
+    unitSubtypes: result.auxUnitSubtypes,
+    deactivationReasons: result.auxDeactivationReasons,
+  });
+
   /**
    * Councils are **read**, never written (ADR 0009 § 6).
    *
@@ -350,10 +457,17 @@ export async function loadRegistryFromCsv(
     councils: result.auxCouncils,
   });
 
-  // ── Step 2 — Upsert scoped facilities, and learn their CO_UNIDADE ─────────
+  // ── Step 2 — Upsert every establishment, and learn their CO_UNIDADE ───────
   //
-  // `tbCargaHorariaSus` joins on CO_UNIDADE, not CO_CNES, so the staff scan is
-  // impossible without this mapping.
+  // Spec 0015: **no `atlasmed_id` gate**. The registry mirrors all 631 973
+  // establishments so the import surface can answer "does this clinic exist at
+  // all", which the scoped mirror never could. The establishment file was
+  // already read in full every run, so this changes what is written, not what is
+  // read.
+  //
+  // `cnesIdByUnitCode` stays scoped to facilities we operate: it exists to join
+  // `tbCargaHorariaSus`, and steps 3-6 remain gated on `atlasmed_id IS NOT NULL`
+  // (invariant 5). Mapping all 631 973 would hold a map we never look most of up.
   const cnesIdByUnitCode = new Map<string, string>();
   const facilitiesFoundInDump = new Set<string>();
   const facilityBuffer: (typeof registryFacilities.$inferInsert)[] = [];
@@ -367,7 +481,14 @@ export async function loadRegistryFromCsv(
         target: registryFacilities.cnesId,
         set: {
           cnesUnitCode: sql`excluded.cnes_unit_code`,
-          atlasmedId: sql`excluded.atlasmed_id`,
+          /*
+           * Coalesce, never overwrite (invariant 4). Now that every establishment
+           * is mirrored, the incoming `atlasmed_id` is null for all but the ~1 400
+           * we operate — and a plain `excluded.atlasmed_id` would wipe the bridge
+           * off every facility on the first unscoped run, including the ones a
+           * user established by hand.
+           */
+          atlasmedId: sql`coalesce(excluded.atlasmed_id, ${registryFacilities.atlasmedId})`,
           legalName: sql`excluded.legal_name`,
           tradeName: sql`excluded.trade_name`,
           taxIdCnpj: sql`excluded.tax_id_cnpj`,
@@ -378,9 +499,15 @@ export async function loadRegistryFromCsv(
           neighborhood: sql`excluded.neighborhood`,
           postalCode: sql`excluded.postal_code`,
           municipalityCnesId: sql`excluded.municipality_cnes_id`,
+          managingMunicipalityCnesId: sql`excluded.managing_municipality_cnes_id`,
           phoneNumber: sql`excluded.phone_number`,
           email: sql`excluded.email`,
           unitTypeCode: sql`excluded.unit_type_code`,
+          latitude: sql`excluded.latitude`,
+          longitude: sql`excluded.longitude`,
+          legalPersonType: sql`excluded.legal_person_type`,
+          maintainerTaxId: sql`excluded.maintainer_tax_id`,
+          deactivationReasonCode: sql`excluded.deactivation_reason_code`,
           updatedAt: sql`now()`,
         },
       });
@@ -390,27 +517,43 @@ export async function loadRegistryFromCsv(
 
   for await (const r of source.records("establishments")) {
     const cnesId = clean(r.CO_CNES);
-    const atlasmedId = atlasIdByCnes.get(cnesId);
-    if (atlasmedId === undefined) continue;
+    if (!cnesId) continue;
 
-    facilitiesFoundInDump.add(cnesId);
+    const atlasmedId = atlasIdByCnes.get(cnesId) ?? null;
+    const isOurs = atlasmedId !== null;
+    if (isOurs) facilitiesFoundInDump.add(cnesId);
+
+    const unitCode = clean(r.CO_UNIDADE);
+    /*
+     * Only ours goes in the map: it feeds the carga join, which stays scoped.
+     */
+    if (unitCode && isOurs) cnesIdByUnitCode.set(unitCode, cnesId);
+    else if (!unitCode && isOurs) result.scopedFacilitiesWithoutUnitCode += 1;
 
     /**
+     * The establishment's own município, then the gestor, then nothing (§4.4).
+     *
+     * `CO_UNIDADE` is município(6) + `CO_CNES`(7) on 184 301 of 184 351 rows, and
+     * where its prefix disagrees with `CO_MUNICIPIO_GESTOR` — 218 rows, 0.12 % —
+     * it is usually the gestor that is malformed, carrying a two-digit state code
+     * where a six-digit município belongs. The old scope hid this: across the
+     * 1 423 clinics we operate the two never differed, which was a property of
+     * the scope rather than of the data.
+     *
      * Null rather than a código the FK would reject: `ON DELETE restrict` means
      * an unknown município aborts the whole batch, and one unmappable code is
      * not worth losing a thousand clinics over.
      */
     const gestor = clean(r.CO_MUNICIPIO_GESTOR);
+    const ownPrefix = unitCode.length === 13 ? unitCode.slice(0, 6) : "";
     let municipalityCnesId: string | null = null;
-    if (knownMunicipalities.has(gestor)) {
+    if (knownMunicipalities.has(ownPrefix)) {
+      municipalityCnesId = ownPrefix;
+    } else if (knownMunicipalities.has(gestor)) {
       municipalityCnesId = gestor;
     } else {
       result.facilitiesWithoutMunicipality += 1;
     }
-
-    const unitCode = clean(r.CO_UNIDADE);
-    if (unitCode) cnesIdByUnitCode.set(unitCode, cnesId);
-    else result.scopedFacilitiesWithoutUnitCode += 1;
 
     facilityBuffer.push({
       cnesId,
@@ -426,9 +569,15 @@ export async function loadRegistryFromCsv(
       neighborhood: clean(r.NO_BAIRRO) || null,
       postalCode: clean(r.CO_CEP) || null,
       municipalityCnesId,
+      managingMunicipalityCnesId: knownMunicipalities.has(gestor) ? gestor : null,
       phoneNumber: clean(r.NU_TELEFONE) || null,
       email: clean(r.NO_EMAIL) || null,
-      unitTypeCode: clean(r.TP_UNIDADE) || null,
+      unitTypeCode: padUnitTypeCode(clean(r.TP_UNIDADE)) || null,
+      latitude: parseCoordinate(r.NU_LATITUDE ?? "", 90),
+      longitude: parseCoordinate(r.NU_LONGITUDE ?? "", 180),
+      legalPersonType: clean(r.TP_PFPJ) || null,
+      maintainerTaxId: clean(r.NU_CNPJ_MANTENEDORA) || null,
+      deactivationReasonCode: clean(r.CO_MOTIVO_DESAB) || null,
     });
     if (facilityBuffer.length >= BATCH) await flushFacilities();
   }
@@ -449,6 +598,75 @@ export async function loadRegistryFromCsv(
       cnesCodes: [...atlasIdByCnes.keys()]
         .filter((code) => !facilitiesFoundInDump.has(code))
         .slice(0, 20),
+    });
+  }
+
+  // ── Step 2b — Subtypes, and the import allowlist on a fresh database ──────
+
+  /*
+   * `rlEstabSubTipo` carries exactly one row per establishment (134 640 of
+   * 134 640 in 202607), which is why `unit_subtype_code` is a single column
+   * rather than a collection.
+   *
+   * Note the column name: this file says `CO_SUB_TIPO_UNIDADE` where
+   * `tbSubTipo` says `CO_SUB_TIPO`. Joining on the wrong one finds nothing and
+   * reports success.
+   */
+  const subtypeByUnitCode = new Map<string, string>();
+  for await (const r of source.records("establishmentSubtypes")) {
+    const unitCode = clean(r.CO_UNIDADE);
+    const subtype = clean(r.CO_SUB_TIPO_UNIDADE);
+    if (!unitCode || !subtype) continue;
+    subtypeByUnitCode.set(unitCode, subtype);
+  }
+  if (subtypeByUnitCode.size > 0) {
+    const pairs = [...subtypeByUnitCode.entries()];
+    for (const part of chunk(pairs)) {
+      const values = sql.join(
+        part.map(([unitCode, subtype]) => sql`(${unitCode}, ${subtype})`),
+        sql`, `
+      );
+      await db.execute(sql`
+        update registry.facilities f
+           set unit_subtype_code = v.subtype, updated_at = now()
+          from (values ${values}) as v(unit_code, subtype)
+         where f.cnes_unit_code = v.unit_code
+           and f.unit_subtype_code is distinct from v.subtype
+      `);
+    }
+  }
+  result.establishmentSubtypes = subtypeByUnitCode.size;
+  log("establishment subtypes linked", { rows: result.establishmentSubtypes });
+
+  /*
+   * Bootstrap the import allowlist, once, and only on a database where nobody
+   * has set one.
+   *
+   * Migration 0108 seeds it from `public.unit_types`, but a fresh environment
+   * has no catalogues at that point — they arrive here, with the first load — so
+   * without this the allowlist would stay empty and the import surface would
+   * offer nothing while looking perfectly healthy.
+   *
+   * The guard is "no unit type is bridged **at all**", not "this type is
+   * unbridged". Re-applying the list per type would silently undo an operator
+   * who removed one, and §3.2 promises that widening or narrowing the set is one
+   * UPDATE with no deploy. Bootstrap once; never argue with a human afterwards.
+   */
+  const [allowlisted] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(registryUnitTypes)
+    .where(isNotNull(registryUnitTypes.atlasmedId));
+  if ((allowlisted?.n ?? 0) === 0) {
+    const seeded = await db.execute(sql`
+      update registry.unit_types r
+         set atlasmed_id = t.id, updated_at = now()
+        from public.unit_types t
+       where lpad(btrim(t.cnes_id), 2, '0') = r.cnes_id
+         and r.cnes_id in ('22','36','39','04','05','73','62','07','15','20','21')
+         and r.atlasmed_id is null
+    `);
+    log("import allowlist bootstrapped", {
+      types: (seeded as unknown as { count?: number }).count ?? null,
     });
   }
 
