@@ -135,7 +135,7 @@ POST /sync
 { "entity": "emultec-orders" }
 ```
 
-Schedule runs every 10 minutes as paged **BACKFILL** (`BUFFER_ONE` catch-up; `pageSize` 200). Hard upsert failures go to `ops.emultec_order_import_dead_letters`; replay via API/CLI `HYBRID` / `DLQ_REPLAY` (schedule BACKFILL does not auto-replay DLQ).
+Schedule runs every 10 minutes as **HYBRID** (`SKIP` overlap; `pageSize` 200, `maxPages` 50), so it replays dead letters and re-checks cleared skips on its own. Hard upsert failures go to `ops.emultec_order_import_dead_letters`; orders blocked on our own reference data go to `ops.emultec_order_import_pending` and re-import automatically once the blocker clears.
 
 Start the initial purchase-recurrence backfill through the authorized endpoint:
 
