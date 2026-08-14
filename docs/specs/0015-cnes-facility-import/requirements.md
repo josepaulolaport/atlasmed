@@ -761,8 +761,8 @@ SQL removes it: the accumulation moves into Postgres, which is built for it.
 - **Importing decides territory.** Ownership is geometric (spec 0009): the point places the clinic
   in a manager zone and inside or outside a rep's patch. A rep can therefore import a clinic that
   immediately belongs to somebody else — and, if territory scoping hides it, one they cannot see
-  afterwards. Whether that is acceptable, or whether the offer list should be bounded by the rep's
-  own patch, is unresolved (§9.6).
+  afterwards. Bounding the list by territory is rejected and access is limited to managers and
+  admins in the meantime; whether reps get it, and on what terms, is still open (§9.5).
 
 ## 9. Open questions
 
