@@ -33,6 +33,18 @@ export type TeamMemberProfile = TeamMemberRow & {
   status: string;
   memberSince: string;
   /**
+   * The last time a person actually used the app (spec 0015 §4.1).
+   *
+   * Not "the last request this session made": the token refresh runs on a timer
+   * and would keep an untouched phone looking alive. The client marks requests
+   * that follow a real interaction, and only those move this.
+   *
+   * Null when nobody has ever used it. It still answers "is this account being
+   * used", not "is this person working" — that is fieldwork, and no amount of
+   * app telemetry substitutes for it.
+   */
+  lastSeenAt: string | null;
+  /**
    * Active assignments carrying an override — clinics this person holds that
    * no patch of theirs covers (spec 0009 R2, I2's second limb).
    *
@@ -386,6 +398,9 @@ export class DrizzleTeamRepository {
              u.avatar_url,
              u.status,
              u.created_at AS member_since,
+             (SELECT MAX(s.last_seen_at)
+                FROM sessions s
+               WHERE s.user_id = u.id) AS last_seen_at,
              r.name AS role_name,
              COALESCE(
                (SELECT JSON_AGG(DISTINCT JSONB_BUILD_OBJECT('id', t.id, 'name', t.name))
@@ -421,6 +436,7 @@ export class DrizzleTeamRepository {
       avatar_url: string | null;
       status: string;
       member_since: Date | string;
+      last_seen_at: Date | string | null;
       role_name: string;
       territories: Array<{ id: number; name: string }> | string;
       out_of_territory_count: number | string;
@@ -438,6 +454,10 @@ export class DrizzleTeamRepository {
       roleName: row.role_name,
       status: row.status,
       memberSince: new Date(row.member_since).toISOString(),
+      lastSeenAt:
+        row.last_seen_at == null
+          ? null
+          : new Date(row.last_seen_at).toISOString(),
       territories:
         typeof row.territories === "string"
           ? (JSON.parse(row.territories) as Array<{ id: number; name: string }>)

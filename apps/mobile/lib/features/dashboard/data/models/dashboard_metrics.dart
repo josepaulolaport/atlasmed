@@ -320,6 +320,7 @@ class TeamMemberProfile {
     required this.roleName,
     required this.status,
     required this.memberSince,
+    this.lastSeenAt,
     required this.territories,
     required this.assignedClinicCount,
     required this.outOfTerritoryCount,
@@ -337,6 +338,12 @@ class TeamMemberProfile {
   final String roleName;
   final String status;
   final DateTime memberSince;
+
+  /// The last time a person actually used the app. Null if never.
+  ///
+  /// Says the account is being used, not that the person is working — that is
+  /// fieldwork, and app telemetry cannot stand in for it.
+  final DateTime? lastSeenAt;
   final List<({int id, String name})> territories;
   final int assignedClinicCount;
 
@@ -365,6 +372,7 @@ class TeamMemberProfile {
       memberSince:
           DateTime.tryParse(json['memberSince'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      lastSeenAt: DateTime.tryParse(json['lastSeenAt'] as String? ?? ''),
       territories: (json['territories'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(

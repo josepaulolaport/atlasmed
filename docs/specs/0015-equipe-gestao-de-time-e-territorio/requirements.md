@@ -106,11 +106,22 @@ Nome · avatar · e-mail · telefone · função · status da conta · membro de
 
 **Excluded:** `birth_date` — personal, no operational use.
 
-**Deferred:** *último acesso*. `sessions.last_seen_at` is written once at session creation and
-never updated in production, so it means "when this session began", not "recently active".
-`users.last_login_at` is genuinely maintained but, with long-lived sessions, a daily user can
-look dormant for weeks. Making `last_seen_at` real — touched in the auth plugin, throttled to a
-5-minute window against the cached session — is agreed but out of scope here.
+**Último acesso.** `sessions.last_seen_at` **was** already maintained by the auth plugin on a
+5-minute throttle — an earlier draft of this spec said it was written once at session creation
+and never updated, which was wrong. What was wrong with it is subtler: *every* authenticated
+request moved it, and the session token refreshes on an 8-minute timer, so a phone left
+untouched reported its owner as active forever.
+
+The client now marks requests that follow a real interaction (`X-Client-Activity`), and only
+those move the timestamp. It is client-declared on purpose: this is telemetry about our own
+reps rather than an authorisation input, and a build that never sends the header simply stops
+moving the field instead of silently reporting timer traffic as activity.
+
+Throttled against the session already in memory rather than a Redis key, which removes a
+round-trip from every authenticated request in the app. Two instances writing at once is
+harmless — near-identical timestamps, last one wins.
+
+It answers "is this account being used", never "is this person working". That is fieldwork.
 
 **Not included:** field activity (visitas no mês, última visita, visitas não realizadas). The
 data is indexed per user and would answer "is this person working", which nothing else does —
@@ -294,7 +305,6 @@ unapplied until the key was dropped. This design has four surfaces reading one f
 ## 10. Out of scope
 
 - **Field activity on the profile** — pending the visits module (§4.1).
-- **`last_seen_at` made real** — agreed, 5-minute throttle, not here (§4.1).
 - **Whether Territórios stays visible to managers.** If it is hidden, this map becomes their
   only way to draw a patch and must carry the full editor. Deferred deliberately.
 - **Uncovered ground as a zone-level report** (§6.3).

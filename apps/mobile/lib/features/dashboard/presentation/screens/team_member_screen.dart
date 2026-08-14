@@ -110,6 +110,14 @@ class _Profile extends ConsumerWidget {
               'Membro desde',
               _monthYear(member.memberSince),
             ),
+            // Absent rather than "nunca" when there is nothing: an account that
+            // has never been opened is better said by the PENDING chip above.
+            if (member.lastSeenAt != null)
+              (
+                Icons.schedule_rounded,
+                'Último acesso',
+                _sinceLabel(member.lastSeenAt!),
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -228,6 +236,24 @@ class _Profile extends ConsumerWidget {
         ],
       ],
     );
+  }
+
+  /// "há 2 dias" rather than a date.
+  ///
+  /// The question this answers is "is this person still using the app", and a
+  /// timestamp makes the reader do the subtraction — which is the whole content
+  /// of the answer.
+  static String _sinceLabel(DateTime when) {
+    final elapsed = DateTime.now().difference(when);
+    if (elapsed.inMinutes < 5) return 'agora';
+    if (elapsed.inHours < 1) return 'há ${elapsed.inMinutes} min';
+    if (elapsed.inHours < 24) {
+      return 'há ${elapsed.inHours} ${elapsed.inHours == 1 ? 'hora' : 'horas'}';
+    }
+    if (elapsed.inDays < 30) {
+      return 'há ${elapsed.inDays} ${elapsed.inDays == 1 ? 'dia' : 'dias'}';
+    }
+    return _monthYear(when);
   }
 
   static String _monthYear(DateTime date) {

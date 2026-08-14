@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
+import 'package:atlasmed_mobile_app/core/session/user_activity.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_logger.dart';
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,12 @@ class HttpRepositoryHttpClient extends RepositoryHttpClient {
 
       if (tokenWithBearerPrefix != null && tokenWithBearerPrefix.isNotEmpty) {
         headers['Authorization'] = 'Bearer $tokenWithBearerPrefix';
+      }
+
+      // Spec 0015 §4.1: only requests a person set in motion move
+      // `last_seen_at`. Absent on timer traffic, which is the point.
+      if (UserActivity.instance.isActive) {
+        headers['X-Client-Activity'] = '1';
       }
 
       final encodedBody = request.body == null
