@@ -38,7 +38,11 @@ export async function finishEmultecImportRunActivity(input: {
   status: EmultecImportRunStatus;
   fetched: number;
   upserted: number;
+  /** Of `upserted`, how many actually wrote a row. Log-only in the digest. */
+  changed?: number;
   skipped: number;
+  /** Best-effort `facility_emultec_clients` writes that failed. Normally 0. */
+  linkFailures?: number;
   skipReasons: Record<string, number>;
   watermarkAfter?: number | null;
   errorMessage?: string | null;
