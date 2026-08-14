@@ -359,10 +359,20 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     });
 
     for (const rep of reps) {
-      const canonical = await repository.countProfiles(
-        filter({ repUserIds: [rep.userId], zoneIds: zones }),
-      );
+      const scope = filter({ repUserIds: [rep.userId], zoneIds: zones });
+      const canonical = await repository.countProfiles(scope);
       expect(batched.get(rep.userId)!.assignedClinics).toBe(canonical);
+
+      // Cobertura, by the same definition `GetCoverageMetricUseCase` uses:
+      // everything that has ever bought, over the denominator. The batch listed
+      // stages instead and left INACTIVE out, so the Equipe header showed 3%
+      // where the manager's own Desempenho showed 4% over the very same
+      // clinics — two screens, one question, two answers.
+      const buckets = await repository.countPurchaseBuckets(scope);
+      const covered =
+        buckets.total - buckets.stages.NEVER_PURCHASED - buckets.stages.UNKNOWN;
+      const expected = buckets.total > 0 ? covered / buckets.total : null;
+      expect(batched.get(rep.userId)!.coveragePercent).toBe(expected);
     }
   });
 

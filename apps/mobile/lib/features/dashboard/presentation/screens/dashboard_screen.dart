@@ -354,21 +354,19 @@ class _CpfWarningSection extends ConsumerWidget {
           children: [
             CpfWarningCard(
               issues: issues,
-              onTapStatus: (cpfStatus) => CpfIssueFacilitiesRoute(
-                cpfStatus: cpfStatus,
-                // Passed explicitly so the list matches the number that opened
-                // it: the list would otherwise fall back to the active-vertical
-                // header, which this count does not read.
-                //
-                // KNOWN GAP: only the linha travels. The count is scoped by the
-                // filter bar like every other card, and this list is not — so
-                // with a state or manager filter applied, the list opens wider
-                // than the number that opened it. They agree exactly in the
-                // default, unfiltered state, which is what the db test pins.
-                // Closing it needs the drill-down to take the same scope args
-                // the other metric breakdowns already carry.
-                verticalId: scope.verticalId,
-              ).push(context),
+              // Through the same breakdown every other card uses, so the list
+              // is scoped exactly like the count that opened it.
+              //
+              // It first went to the shared Explorar list with only the linha
+              // attached, and that list scopes a manager by rep assignment
+              // while this count scopes them by zone — so a manager saw "1 sem
+              // CPF" open onto "Nenhum resultado". Both screens looked right
+              // alone; only tapping one from the other showed it.
+              onTapStatus: (cpfStatus) => _openBreakdown(
+                context,
+                cpfStatus == 'missing' ? 'cpf-missing' : 'cpf-invalid',
+                scope,
+              ),
             ),
             const SizedBox(height: 12),
           ],

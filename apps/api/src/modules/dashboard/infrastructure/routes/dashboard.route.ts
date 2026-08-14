@@ -106,6 +106,8 @@ const METRIC_KEYS: DashboardMetricKey[] = [
   "bucket-active",
   "bucket-inactive",
   "bucket-never-bought",
+  "cpf-missing",
+  "cpf-invalid",
 ];
 
 type Executable = { execute(input: never): Promise<unknown> };

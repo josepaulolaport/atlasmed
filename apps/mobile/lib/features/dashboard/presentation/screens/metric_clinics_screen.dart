@@ -17,6 +17,8 @@ const _metricTitles = <String, String>{
   'bucket-active': 'Clientes ativos',
   'bucket-inactive': 'Clientes inativos',
   'bucket-never-bought': 'Nunca compraram',
+  'cpf-missing': 'Sem CPF cadastrado',
+  'cpf-invalid': 'CPF inválido',
 };
 
 /// The per-clinic breakdown behind a metric card (spec 0014 §4.1).

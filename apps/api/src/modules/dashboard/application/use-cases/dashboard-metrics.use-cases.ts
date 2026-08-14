@@ -437,7 +437,37 @@ export type DashboardMetricKey =
   | "unassigned-clinics"
   | "bucket-active"
   | "bucket-inactive"
-  | "bucket-never-bought";
+  | "bucket-never-bought"
+  | "cpf-missing"
+  | "cpf-invalid";
+
+/**
+ * Which funnel stages each donut slice is made of — the **one** definition.
+ *
+ * The donut counts stages and groups them on the client; this breakdown filters
+ * rows on the server. Those are two expressions of the same rule, and when they
+ * were written independently they disagreed the moment the grouping moved: the
+ * card read "26 Ativas" and the list it opened held 15, because the card had
+ * already been regrouped to include OUTSIDE_WINDOW and this predicate had not.
+ *
+ * Stated here so the drift is impossible to reintroduce silently, and pinned by
+ * a database test asserting each slice equals the rows its own drill-down
+ * returns. `UNKNOWN` (a profile the funnel has not calculated) is null in SQL
+ * and belongs with NEVER_PURCHASED — "no purchase on record", never a lapsed
+ * customer.
+ *
+ * Deliberately not shared with `purchaseBucketToFunnelFilter` in the facility
+ * module, which expresses the same three groups for Explorar's filter: they are
+ * one rule today and reaching across module boundaries to prove it would couple
+ * Desempenho to Explorar's query layer. Kept honest by tests on both sides
+ * rather than by an import — if they ever need to differ, nothing has to be
+ * untangled first.
+ */
+export const PURCHASE_BUCKET_STAGES = {
+  "bucket-active": ["OUTSIDE_WINDOW", "PURCHASE_WINDOW"],
+  "bucket-inactive": ["CHURN", "INACTIVE"],
+  "bucket-never-bought": ["NEVER_PURCHASED"],
+} as const;
 
 /**
  * The per-clinic breakdown behind a metric card (spec 0014 §4.1).
@@ -504,6 +534,10 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
  * denominator itself, which is exactly what a user drilling into "247 clínicas"
  * expects to see.
  */
+export function metricPredicateForTest(metric: DashboardMetricKey) {
+  return metricPredicate(metric);
+}
+
 function metricPredicate(metric: DashboardMetricKey) {
   switch (metric) {
     case "cadastro-completion":
@@ -514,15 +548,34 @@ function metricPredicate(metric: DashboardMetricKey) {
          WHERE a.facility_vertical_profile_id = facility_vertical_profiles.id
            AND a.ended_at IS NULL)`;
     case "bucket-active":
-      return sql`facility_vertical_profiles.purchase_funnel_stage = 'PURCHASE_WINDOW'`;
     case "bucket-inactive":
-      return sql`facility_vertical_profiles.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')`;
+      return sql`facility_vertical_profiles.purchase_funnel_stage IN ${stageList(metric)}`;
     case "bucket-never-bought":
-      return sql`(facility_vertical_profiles.purchase_funnel_stage IN ('NEVER_PURCHASED', 'INACTIVE')
+      // The only slice that also owns the nulls, so it cannot be expressed by
+      // the stage list alone.
+      return sql`(facility_vertical_profiles.purchase_funnel_stage IN ${stageList(metric)}
                   OR facility_vertical_profiles.purchase_funnel_stage IS NULL)`;
+    case "cpf-missing":
+      return sql`(facilities.legal_document_type = 'CPF'
+                  AND (facilities.legal_document IS NULL
+                       OR btrim(facilities.legal_document) = ''))`;
+    case "cpf-invalid":
+      return sql`(facilities.legal_document_type = 'CPF'
+                  AND facilities.legal_document IS NOT NULL
+                  AND btrim(facilities.legal_document) <> ''
+                  AND NOT is_valid_cpf(facilities.legal_document))`;
     default:
       return undefined;
   }
+}
+
+/** The slice's stages as a SQL list, from the single definition above. */
+function stageList(metric: keyof typeof PURCHASE_BUCKET_STAGES) {
+  const stages = PURCHASE_BUCKET_STAGES[metric];
+  return sql`(${sql.join(
+    stages.map((stage) => sql`${stage}`),
+    sql`, `,
+  )})`;
 }
 
 /**

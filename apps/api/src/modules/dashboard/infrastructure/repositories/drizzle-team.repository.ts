@@ -319,9 +319,17 @@ export class DrizzleTeamRepository {
       profile_stats AS (
         SELECT s.user_id,
                COUNT(*)::int AS assigned,
+               -- Cobertura: has this clinic ever bought? Everything that is not
+               -- NEVER_PURCHASED and not a profile the funnel has yet to
+               -- calculate. Written as an exclusion rather than a list of
+               -- stages so it stays in step with GetCoverageMetricUseCase,
+               -- which is the same question asked of the manager: listing
+               -- stages here left INACTIVE out, and the Equipe header read 3%
+               -- where the manager's own Desempenho read 4% over identical
+               -- clinics.
                COUNT(*) FILTER (
-                 WHERE p.purchase_funnel_stage
-                   IN ('PURCHASE_WINDOW', 'OUTSIDE_WINDOW', 'CHURN')
+                 WHERE p.purchase_funnel_stage IS NOT NULL
+                   AND p.purchase_funnel_stage <> 'NEVER_PURCHASED'
                )::int AS covered,
                COUNT(*) FILTER (
                  WHERE p.conformity_status = 'REGISTERED'
