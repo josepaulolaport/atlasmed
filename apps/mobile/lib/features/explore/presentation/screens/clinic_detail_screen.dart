@@ -19,6 +19,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recur
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/bookmarks_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bookmark_icon_button.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
@@ -168,17 +170,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_border_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Favoritos — em breve'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
+          BookmarkIconButton(kind: BookmarkKind.clinic, id: clinicId),
           const SizedBox(width: 6),
         ],
       ),

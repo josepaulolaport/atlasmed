@@ -20,6 +20,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/facility_drill_down_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
@@ -522,6 +523,18 @@ class CpfIssueFacilitiesRoute extends GoRouteData
       title: cpfStatus == 'invalid' ? 'CPF inválido' : 'Sem CPF cadastrado',
       verticalId: verticalId,
     );
+  }
+}
+
+@TypedGoRoute<FavoritosRoute>(path: '/explore/favoritos')
+class FavoritosRoute extends GoRouteData with $FavoritosRoute {
+  const FavoritosRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return const FavoritosScreen();
   }
 }
 

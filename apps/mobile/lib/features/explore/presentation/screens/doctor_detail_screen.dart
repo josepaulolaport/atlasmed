@@ -24,6 +24,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/bookmarks_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bookmark_icon_button.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
@@ -60,6 +62,10 @@ class DoctorDetailScreen extends ConsumerWidget {
           appBar: AppBar(
             backgroundColor: detail?.primaryColor ?? AppColors.navyBright,
             foregroundColor: Colors.white,
+            actions: [
+              BookmarkIconButton(kind: BookmarkKind.doctor, id: doctorId),
+              const SizedBox(width: 6),
+            ],
           ),
           body: FutureBuilder<ProfessionalDTO?>(
             future: initialLoad,

@@ -27,6 +27,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specia
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
@@ -205,7 +206,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AtlasAppBar(page: 'Explorar'),
+      // Favoritos is reachable only from Explorar, where clinics and doctors
+      // are browsed — it is a shortcut into the same two lists, not a new
+      // top-level destination.
+      appBar: const AtlasAppBar(
+        page: 'Explorar',
+        actions: [FavoritosAppBarButton()],
+      ),
       body: Column(
         children: [
           const SizedBox(height: 16),
