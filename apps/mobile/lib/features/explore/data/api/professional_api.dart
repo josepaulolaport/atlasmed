@@ -29,6 +29,9 @@ class ProfessionalFacilityRef {
 /// - `PATCH /api/v1/persons/:id` (update)
 /// - Embedded in facility professional items
 class ProfessionalDTO {
+  /// Whether the caller has this doctor in Favoritos (detail responses only).
+  final bool isBookmarked;
+
   final int id;
   final String firstName;
   final String lastName;
@@ -68,6 +71,7 @@ class ProfessionalDTO {
   final List<ProfessionalRegistration> registrations;
 
   const ProfessionalDTO({
+    this.isBookmarked = false,
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -101,6 +105,7 @@ class ProfessionalDTO {
 
   factory ProfessionalDTO.fromMap(Map<String, dynamic> map) {
     return ProfessionalDTO(
+      isBookmarked: map['isBookmarked'] == true,
       id: readCrmId(map['id'], 'id'),
       firstName: readString(map['firstName']),
       lastName: readString(map['lastName']),

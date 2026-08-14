@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 
 class Professional {
+  /// Whether the caller has this doctor in Favoritos (detail responses only).
+  final bool isBookmarked;
+
   final int id;
   final String name;
   final String initials;
@@ -61,6 +64,7 @@ class Professional {
         ? name[0]
         : '?';
     return Professional(
+      isBookmarked: dto.isBookmarked,
       id: dto.id,
       name: name,
       initials: initials.toUpperCase(),
@@ -101,6 +105,7 @@ class Professional {
   double get hue => (name.hashCode.abs() % 360).toDouble();
 
   const Professional({
+    this.isBookmarked = false,
     required this.id,
     required this.name,
     required this.initials,

@@ -50,7 +50,12 @@ function orderSearchResultsById<T extends { id: number }>(
   });
 }
 
-function serializeSummary(
+/**
+ * Exported so the Favoritos list returns byte-identical doctor summaries.
+ * A second, hand-written serializer would drift the moment a field is added
+ * here — and the app would render saved doctors differently from searched ones.
+ */
+export function serializeSummary(
   professional: HealthcareProfessionalRecord,
   relationshipLevel?: number
 ) {

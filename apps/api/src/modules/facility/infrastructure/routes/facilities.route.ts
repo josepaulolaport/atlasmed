@@ -9,6 +9,7 @@ import { cadastroDocumentsRoute } from "./cadastro-documents.route";
 import { createCnesFacilityImportRoutes } from "./cnes-facility-import.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
+import { facilityBookmarksRoute } from "./facility-bookmarks.route";
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -168,6 +169,7 @@ const getFacilityRoute = new Elysia()
         scope,
         role: actor.role.name,
         verticalId: query.verticalId,
+        userId: actor.id,
       });
 
       if (!clinic) {
@@ -986,4 +988,5 @@ export const facilitiesRoute = new Elysia()
   .use(listCadastroSubmissionsRoute)
   .use(listFacilityOrdersRoute)
   .use(listFacilityVisitsRoute)
-  .use(createFacilityVisitRoute);
+  .use(createFacilityVisitRoute)
+  .use(facilityBookmarksRoute);

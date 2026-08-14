@@ -17,6 +17,7 @@ import {
 } from "../../../../infrastructure/search/meili-filter";
 import { reportSearchMeiliFallback } from "../../../../infrastructure/search/search-resilience";
 import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
+import type { FacilityBookmarkRepository } from "../interfaces/facility-bookmark.repository.interface";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
@@ -66,6 +67,14 @@ interface Dependencies {
   /** Keep Meili facilities index in sync after create/update (best-effort). */
   onFacilityChanged?: (facilityId: number) => Promise<void>;
   purchaseRecurrenceService?: PurchaseRecurrenceService;
+  /**
+   * Optional: when wired, the detail response carries `isBookmarked`.
+   *
+   * Inline rather than a second request, so the icon renders in its true state
+   * on first paint. Fetching it separately would show every saved clinic as
+   * unsaved for a frame and then flip.
+   */
+  facilityBookmarkRepository?: FacilityBookmarkRepository;
 }
 
 export class ListFacilitiesUseCase {
@@ -334,7 +343,13 @@ export class ListClinicalFocusesUseCase {
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: number; scope: ScopeContext; role: string; verticalId?: number }) {
+  async execute(input: {
+    facilityId: number;
+    scope: ScopeContext;
+    role: string;
+    verticalId?: number;
+    userId?: number;
+  }) {
     const listScope = buildFacilityListScope({
       scope: input.scope,
       role: input.role,
@@ -371,9 +386,23 @@ export class GetFacilityUseCase {
         ? assignedVerticalIds
         : listScope.verticalIds;
 
-    return serializeFacility(clinic, listScope.verticalIds, {
-      exposeProfileVerticalIds,
-    });
+    const bookmarkRepository = this.deps.facilityBookmarkRepository;
+    const isBookmarked =
+      bookmarkRepository && input.userId
+        ? (
+            await bookmarkRepository.findBookmarkedIds({
+              userId: input.userId,
+              facilityIds: [clinic.id],
+            })
+          ).length > 0
+        : false;
+
+    return {
+      ...serializeFacility(clinic, listScope.verticalIds, {
+        exposeProfileVerticalIds,
+      }),
+      isBookmarked,
+    };
   }
 }
 
