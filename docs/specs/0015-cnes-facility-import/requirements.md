@@ -296,21 +296,29 @@ the data.
 
 ### 4.5 Geography bridge
 
-`public.states.cnes_code` and `public.municipalities.cnes_code` **already exist and are 100 %
-populated** (27/27 and 5 571/5 571), and they join `registry.municipalities.cnes_id` on
-**5 571 of 5 571**. No code arithmetic is needed; earlier drafts of this analysis proposed
-truncating the IBGE check digit, which is unnecessary.
+Only the registry-side pointer was ever missing: `registry.states.atlasmed_id` and
+`registry.municipalities.atlasmed_id` were **null on every row**. Migration `0108` backfills both,
+and the loader maintains them from there.
 
-What is missing is only the registry-side pointer: `registry.states.atlasmed_id` and
-`registry.municipalities.atlasmed_id` are **null on every row**. They are backfilled from
-`cnes_code` and then maintained by the loader.
+**The two levels join on different keys.** An earlier draft of this section claimed both matched on
+`cnes_code`; that was an extrapolation from the município measurement and it is wrong. Measured:
 
-**Missing municípios are created.** The registry carries 5 604 municípios against public's 5 571.
-When an import needs a município we do not have, the import creates it from
-`registry.municipalities` (name, código, parent state) rather than refusing — a real clinic in a
-real município is not a data error to reject.
+| level | registry key | public key | matches |
+|---|---|---|---|
+| município | `cnes_id` = IBGE code | `cnes_code` | **5 571 / 5 571** |
+| **state** | `cnes_id` = **sigla** (`AC`, `SP`), from `tbEstado.CO_SIGLA` | `abbreviation` | **27 / 27** |
 
-### 4.5 CNPJ and CPF
+`public.states.cnes_code` holds the *numeric* code (`12`, `35`), so joining states on it matches
+**zero** rows — which is exactly what `0108` did on its first run before this was caught. No code
+arithmetic is needed on either level; an even earlier draft proposed truncating the IBGE check
+digit, which would have mismatched everything.
+
+**Missing municípios are created.** The registry carries 5 604 municípios against public's 5 571,
+and after the backfill **33 registry rows have no `atlasmed_id`** — precisely that gap. When an
+import needs one of them it is created from `registry.municipalities` (name, código, parent state)
+rather than refused: a real clinic in a real município is not a data error to reject.
+
+### 4.6 CNPJ and CPF
 
 `TP_PFPJ` has exactly two values and maps cleanly: **`1` = pessoa física** (170 204 rows, 26.9 %)
 and **`3` = pessoa jurídica** (461 769, 73.1 %). Cross-tabulated against the document columns it is

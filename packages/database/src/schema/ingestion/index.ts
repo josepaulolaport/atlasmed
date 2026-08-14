@@ -7,6 +7,7 @@ import {
   bigint,
   index,
   uniqueIndex,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -90,5 +91,103 @@ export const cnesRuns = ingestionSchema.table(
       .on(t.temporalWorkflowId)
       .where(sql`${t.temporalWorkflowId} IS NOT NULL`),
     index("cnes_runs_status_started_at_idx").on(t.status, t.startedAt),
+  ]
+);
+
+// ─── Staging — the national workload rows, replaced per competência ──────────
+//
+// Spec 0015 §6.7. `tbCargaHorariaSus` and `tbDadosProfissionalSus` are loaded for
+// **every** establishment, not just ours, so that importing a clinic can derive
+// its roster with a query instead of re-reading a 1.8 GB archive in a background
+// job. A clinic imported the day after an ingestion gets its doctors in the same
+// transaction that creates it, rather than waiting up to a month.
+//
+// This is staging, and the distinction from `registry.*` is the whole reason it
+// is affordable: no foreign keys, no `atlasmed_id`, no roster semantics, no
+// bridge to `public.people`. Spec 0015 §2 rejected mirroring 7.7 M workload rows,
+// but that objection conflated *storing* them with *bridging* them — storing the
+// six columns that matter costs ~700 MB and no semantics, while bridging is what
+// would have been expensive, and bridging stays scoped in `registry.*`.
+//
+// **Derived, never authoritative** (invariant 9): both tables can be dropped and
+// rebuilt from the archive without losing a fact. Nothing writes here but the
+// loader.
+//
+// Rows carry the competência they came from and are never updated in place. A
+// reload writes the new competência alongside the old and readers only ever see
+// the one the run ledger marks COMPLETED, so an import landing mid-reload cannot
+// read a half-loaded table and derive a partial roster. The previous competência
+// is deleted once the new one is promoted.
+
+/**
+ * `tbCargaHorariaSus`, filtered at load to rows that carry a council
+ * registration.
+ *
+ * The registration is the gate, not the CBO (ADR 0009 §5): what makes someone
+ * resolvable against `public` is holding a council registration, and a row
+ * without one describes a person we could never act on. Applying it here rather
+ * than at read drops 2 500 334 of 6 734 280 rows — 37 % — that nothing would ever
+ * have selected.
+ */
+export const cnesCargaStaging = ingestionSchema.table(
+  "carga_staging",
+  {
+    referenceYear: integer("reference_year").notNull(),
+    referenceMonth: integer("reference_month").notNull(),
+    /** CO_UNIDADE — joins `registry.facilities.cnes_unit_code`, not `cnes_id`. */
+    unitCode: text("unit_code").notNull(),
+    /** CO_PROFISSIONAL_SUS. */
+    professionalSusId: text("professional_sus_id").notNull(),
+    /** CO_CONSELHO_CLASSE — órgão emissor, resolved against registry councils. */
+    councilCode: text("council_code").notNull(),
+    /** SG_UF_CRM, always two characters after the load gate. */
+    registrationUf: text("registration_uf").notNull(),
+    /** NU_REGISTRO. */
+    registrationNumber: text("registration_number").notNull(),
+    /** CO_CBO. Captured for display; it decides nothing. */
+    occupationCode: text("occupation_code"),
+  },
+  (t) => [
+    /**
+     * The import's only read: one establishment's rows for one competência.
+     * 421 050 distinct unit codes over 4 233 946 rows, so roughly ten each.
+     */
+    index("cnes_carga_staging_reference_unit_idx").on(
+      t.referenceYear,
+      t.referenceMonth,
+      t.unitCode
+    ),
+    /** The monthly derivation joins the other way, by person. */
+    index("cnes_carga_staging_reference_professional_idx").on(
+      t.referenceYear,
+      t.referenceMonth,
+      t.professionalSusId
+    ),
+  ]
+);
+
+/**
+ * `tbDadosProfissionalSus`, restricted to the SUS ids that survive the carga
+ * gate — 2 502 725 of them.
+ *
+ * `tax_id` is deliberately absent: CNES masks CPF in the public dump on 100 % of
+ * rows, so it cannot match anybody and storing it would only invite someone to
+ * try.
+ */
+export const cnesProfessionalStaging = ingestionSchema.table(
+  "professional_staging",
+  {
+    referenceYear: integer("reference_year").notNull(),
+    referenceMonth: integer("reference_month").notNull(),
+    professionalSusId: text("professional_sus_id").notNull(),
+    name: text("name").notNull(),
+    /** NO_CNS — the national health card number, when the export carries one. */
+    cns: text("cns"),
+  },
+  (t) => [
+    primaryKey({
+      name: "cnes_professional_staging_pkey",
+      columns: [t.referenceYear, t.referenceMonth, t.professionalSusId],
+    }),
   ]
 );

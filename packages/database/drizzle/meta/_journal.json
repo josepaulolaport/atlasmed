@@ -757,6 +757,13 @@
       "when": 1786657935606,
       "tag": "0107_realign_facility_unit_types_with_cnes",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1786657935607,
+      "tag": "0108_cnes_national_registry_and_staging",
+      "breakpoints": true
     }
   ]
 }
