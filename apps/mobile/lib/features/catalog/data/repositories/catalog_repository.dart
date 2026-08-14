@@ -89,9 +89,9 @@ class CatalogRepository {
     return byFamily.entries.map((entry) {
       final familyVariants = entry.value;
       final first = familyVariants.first;
-      final publishedAt = familyVariants
-          .map((v) => v.brasindiceUpdatedAt)
-          .reduce((a, b) => a.isAfter(b) ? a : b);
+      final publishedAt = _latestDate(
+        familyVariants.map((v) => v.brasindiceUpdatedAt),
+      );
       return CatalogFamily(
         id: first.id,
         name: entry.key,
@@ -102,6 +102,18 @@ class CatalogRepository {
         simproPublishedAt: publishedAt,
       );
     }).toList();
+  }
+
+  /// Latest non-null date, or `null` when every variant ships without one
+  /// (no Brasíndice record yet).
+  DateTime? _latestDate(Iterable<DateTime?> dates) {
+    DateTime? latest;
+    for (final date in dates) {
+      if (date != null && (latest == null || date.isAfter(latest))) {
+        latest = date;
+      }
+    }
+    return latest;
   }
 
   /// Returns the "Comparativo" for a single AtlasMed variant: the variant
@@ -162,7 +174,7 @@ class CatalogRepository {
   /// has no dedicated column on the API, so it's folded into the name sent
   /// to the server (see [CatalogVariant.comparisonLabel]).
   Future<CatalogVariant> createVariant(CatalogVariant draft) async {
-    final response = await _send(_uri('/products'), RepositoryHttpMethod.post, {
+    final body = <String, dynamic>{
       'code': draft.code,
       'name': draft.comparisonLabel,
       'verticalIds': draft.verticalIds,
@@ -175,8 +187,12 @@ class CatalogRepository {
       'price17': draft.price17,
       'price18': draft.price18,
       'price20': draft.price20,
-      'brasindiceUpdatedAt': _dateOnly(draft.brasindiceUpdatedAt),
-    });
+    };
+    final response = await _send(
+      _uri('/products'),
+      RepositoryHttpMethod.post,
+      _withBrasindiceDate(body, draft.brasindiceUpdatedAt),
+    );
     _throwIfError(response);
     return CatalogVariant.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -188,7 +204,7 @@ class CatalogRepository {
     final response = await _send(
       _uri('/products/${variant.id}'),
       RepositoryHttpMethod.patch,
-      {
+      _withBrasindiceDate({
         'code': variant.code,
         'name': variant.comparisonLabel,
         'verticalIds': variant.verticalIds,
@@ -201,8 +217,7 @@ class CatalogRepository {
         'price17': variant.price17,
         'price18': variant.price18,
         'price20': variant.price20,
-        'brasindiceUpdatedAt': _dateOnly(variant.brasindiceUpdatedAt),
-      },
+      }, variant.brasindiceUpdatedAt),
     );
     _throwIfError(response);
     return CatalogVariant.fromJson(
@@ -230,17 +245,19 @@ class CatalogRepository {
   Future<CompetitorProduct> createCompetitorProduct(
     CompetitorProduct draft,
   ) async {
-    final response =
-        await _send(_uri('/competitor-products'), RepositoryHttpMethod.post, {
-          'name': draft.name,
-          'manufacturer': draft.manufacturer,
-          'brand': draft.brand,
-          'countryOfOrigin': draft.countryOfOrigin,
-          'price17': draft.price17,
-          'price18': draft.price18,
-          'price20': draft.price20,
-          'brasindiceUpdatedAt': _dateOnly(draft.brasindiceUpdatedAt),
-        });
+    final response = await _send(
+      _uri('/competitor-products'),
+      RepositoryHttpMethod.post,
+      _withBrasindiceDate({
+        'name': draft.name,
+        'manufacturer': draft.manufacturer,
+        'brand': draft.brand,
+        'countryOfOrigin': draft.countryOfOrigin,
+        'price17': draft.price17,
+        'price18': draft.price18,
+        'price20': draft.price20,
+      }, draft.brasindiceUpdatedAt),
+    );
     _throwIfError(response);
     return CompetitorProduct.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -255,7 +272,7 @@ class CatalogRepository {
     final response = await _send(
       _uri('/competitor-products/${competitor.id}'),
       RepositoryHttpMethod.patch,
-      {
+      _withBrasindiceDate({
         'name': competitor.name,
         'manufacturer': competitor.manufacturer,
         'brand': competitor.brand,
@@ -263,8 +280,7 @@ class CatalogRepository {
         'price17': competitor.price17,
         'price18': competitor.price18,
         'price20': competitor.price20,
-        'brasindiceUpdatedAt': _dateOnly(competitor.brasindiceUpdatedAt),
-      },
+      }, competitor.brasindiceUpdatedAt),
     );
     _throwIfError(response);
     return CompetitorProduct.fromJson(
@@ -308,6 +324,19 @@ class CatalogRepository {
   }
 
   /// Formats [date] as `YYYY-MM-DD` — the API's `brasindiceUpdatedAt`
-  /// column is a plain SQL `date`, not a timestamp.
-  String _dateOnly(DateTime date) => date.toIso8601String().split('T').first;
+  /// column is a plain SQL `date`, not a timestamp. `null` when the product
+  /// has no Brasíndice record.
+  String? _dateOnly(DateTime? date) => date?.toIso8601String().split('T').first;
+
+  /// Adds `brasindiceUpdatedAt` to [body], omitting the key entirely when the
+  /// date is null — the API's PATCH schema is `t.Optional(t.String())`, which
+  /// rejects an explicit JSON `null`.
+  Map<String, dynamic> _withBrasindiceDate(
+    Map<String, dynamic> body,
+    DateTime? brasindiceUpdatedAt,
+  ) {
+    final date = _dateOnly(brasindiceUpdatedAt);
+    if (date == null) return body;
+    return {...body, 'brasindiceUpdatedAt': date};
+  }
 }

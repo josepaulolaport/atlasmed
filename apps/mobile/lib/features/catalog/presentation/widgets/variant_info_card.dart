@@ -277,7 +277,7 @@ class _CodesPanel extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            value,
+            value.isEmpty ? '—' : value,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
