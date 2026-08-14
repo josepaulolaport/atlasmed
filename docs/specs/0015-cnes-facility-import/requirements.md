@@ -161,8 +161,22 @@ warehouse case), 68 Central de Gestão (6 538), 64/76/81/82 centrais de regulaç
 públicos, 74 Polo Academia, 83 Polo Prevenção, 85 Centro de Imunização, 78 Regime Residencial.
 **Excluded as public primary care:** 01 Posto, 02 UBS, 69/70/71/72.
 
-**Open:** 79 Oficina Ortopédica (57 active, none ours — makes orthoses, may be a gap rather than an
-exclusion) and 77 Home Care (2 083 active, 1 ours).
+**79 Oficina Ortopédica and 77 Home Care are excluded** (decided 2026-08-14). The deciding evidence
+is what we sell: the catalogue is **viscosupplementation** — intra-articular hyaluronic acid
+(Osteonil, Monovisc, Euflexxa) — injected by a physician into a joint, in a consulting room or day
+clinic. There is one vertical, ORTOPEDIA.
+
+- **79** makes and fits orthoses and prostheses. No physician, no joint injection. It shares the
+  word *ortopédica* with our vertical and nothing else. 57 active, none ours.
+- **77** delivers nursing at the patient's home; the injection is an aseptic clinic procedure.
+  2 083 active. Our apparent counter-example evaporated on inspection: facility 516 was our only
+  type 77, and CNES classifies it as **36** — it is *Acceb Clínica Popular*, misfiled by the seed
+  and corrected by migration `0107` (§3.1). The evidence for including Home Care is zero examples,
+  not one weak one.
+
+Both stay mirrored and are never offered. Reversing either is one `UPDATE` on
+`registry.unit_types.atlasmed_id`, with no deploy — which is the whole reason the allowlist lives
+on the bridge.
 
 ### Why 60 (cooperativa) and 68 (central de gestão) are excluded
 
@@ -358,23 +372,62 @@ resolves to zero, or catalogues that come back empty, is a failed run rather tha
 ## 6. The import flow
 
 ```
-CNES ingestion  →  every establishment in registry
+CNES ingestion  →  every establishment in registry  →  candidates index
                         ↓
-        rep searches, does not find the clinic
+        user searches Explorar, does not find the clinic
                         ↓
-        offered: active CNES establishments not yet ours
+        opens the CNES list (manager/admin, §6.0)
                         ↓
-              import wizard — rep confirms and completes
-                        ↓
-   public.facilities row + vertical profile + registry.atlasmed_id set
+        ┌─────────────── two cases, two writes ───────────────┐
+        ↓                                                     ↓
+  no atlasmed_id                                    ours, not in my vertical
+        ↓                                                     ↓
+  import wizard — confirm and complete            one confirmation, no editing
+        ↓                                                     ↓
+  facility + profile + bridge                       vertical profile only
+        └──────────────── candidates index upserted ──────────┘
 ```
+
+### 6.0 The entry point
+
+**Explorar shows only our facilities and must keep doing so.** The Meili facility index is built
+`.from(facilities)`; `registry.facilities` is read today by exactly three things — the professional
+suggestion query, the `cnesCode` existence check, and the import repository — and none of them
+lists registry clinics. That separation is deliberate and stays: a rep's clinic list is their
+*working set*, and folding ~373 000 national rows into a list of ~1 442 would destroy the primary
+use to serve an occasional one.
+
+The CNES list is therefore **its own surface, behind a deliberate action** in Explorar → Clínicas,
+placed in two spots:
+
+- persistently in the Clínicas tab, and
+- in the **no-results state** of a search, which is the exact moment §6 describes: *rep searches,
+  does not find the clinic*.
+
+It must read as **search CNES**, never as *add clinic*. Hand-typing is gone (§6.5), so a generic
+"+" would promise an action that no longer exists.
+
+**Who may open it: managers and admins only, for now** (decided 2026-08-14). Not a permanent rule —
+it is the interim answer to "may a rep import outside their patch" (§9.5), pending a team
+discussion. Bounding the list by territory was considered and rejected: too much of the geometry is
+wrong today for a territory bound to be a correctness gate rather than an obstacle.
+
+**Name the two wizards apart.** `apps/mobile/lib/features/explore/presentation/screens/`
+`cnes_import_wizard.dart` already exists and imports a **professional** into a facility (spec
+0012). A facility-import wizard named anything close to it will be confused with it on every future
+read. Both get names that say which entity they import.
 
 ### 6.1 What is offered
 
 Only establishments that are **active** — no `CO_MOTIVO_DESAB`. A deactivated unit stays mirrored
 (deactivation is information, and units reactivate) but is never offered.
 
-Three cases the surface must tell apart, because they end in different writes:
+The list is exactly two things:
+
+- **registry rows with no `atlasmed_id`** — never imported by anybody, and
+- **facilities we hold that have no profile for the user's vertical** — ours, but invisible to them.
+
+Three cases, and they end in different writes:
 
 | case | condition | what import does |
 |---|---|---|
@@ -382,8 +435,60 @@ Three cases the surface must tell apart, because they end in different writes:
 | **ours already, invisible to this rep** | `atlasmed_id` set, facility has no profile for any vertical the rep holds | **create only the vertical profile.** Never a second facility |
 | **ours and visible** | profile exists for the rep's vertical | not offered — it is already in their list |
 
-The second case is why "already imported" cannot be a simple exclusion. A clinic another vertical
-already owns is invisible to this rep today, and the fix is a profile, not a duplicate.
+**Why the second case must be routed differently, and it is not about confusing the rep.** The
+outcome they want — the clinic in their list — is reached either way. The reason is that **a
+facility record is shared across verticals**: `location`, name, CNPJ, address and unit type live on
+`facilities`, not on the profile. Running the full wizard for case 2 would let this rep overwrite
+another vertical's curated record with raw CNES values, and re-placing the pin would move the
+clinic for *every* vertical, re-triggering territory assignment on profiles that are not theirs.
+
+So case 2 is **not a wizard**. It is a single confirmation — *add to my vertical* — with no field
+editing, because the facility already exists and is not this rep's to rewrite. The list needs to
+know which case a row is in only in order to route it; no label is required.
+
+### 6.1.1 The candidates index
+
+The list is served by **a Meili index over `registry.facilities`**, not by the existing facility
+index and not by SQL.
+
+One index covers both halves, with no union and no merged pagination, because **`registry` is a
+complete superset of `public`**: `0106` makes `cnes_code` NOT NULL on every facility, and this spec
+mirrors every establishment. (It is not a superset *today* — 19 facilities have no registry row,
+all 19 deactivated, because the loader scopes to `deactivated_at IS NULL`. Removing that gate fixes
+them; it is an artifact, not bad data.)
+
+Denormalise the linked facility's `verticalIds` onto the registry document and the whole list is
+one filter:
+
+```
+atlasmedId NOT EXISTS            → never imported
+OR verticalIds NOT IN [my verticals] → ours, but not in my vertical
+```
+
+**Membership rule:** a document exists when *(the unit type is allowlisted AND the establishment is
+active)* **OR** *`atlasmed_id` is set*. The second clause is load-bearing — without it our nine
+type-60 facilities would be unreachable for a rep who legitimately needs a profile on one.
+
+| | |
+|---|---|
+| size | ~373 000 documents — the allowlist, not the 494 273 active |
+| searchable | trade name, legal name, CNES code, legal document digits, município, bairro, logradouro |
+| filterable | `unitTypeId`, `legalDocumentType`, `municipalityId`, `stateId`, `active`, `atlasmedId`, `verticalIds`, `_geo` |
+| sortable | name, distance |
+
+Geosearch earns its place: "a rep standing outside a clinic we have never heard of" is the
+motivating case in §1.
+
+**Freshness is the part most likely to be got wrong.** Two writers, and only one is obvious:
+
+1. **The monthly ingestion** — rebuilds the index wholesale.
+2. **An import** — the row must leave the list *immediately*. `atlasmed_id` is set, or `verticalIds`
+   gains the rep's vertical, and the document must be upserted in the same operation.
+
+If the second is missed, the rep imports a clinic, still sees it as importable, taps again, and
+hits a bare unique-index violation on `cnes_code` with no explanation. This is the same drift that
+migration `0107` exposed on `unit_type_id` — the index is maintained only by writers that go
+through the application — except here it is user-facing and reproducible on the first use.
 
 ### 6.2 What the rep confirms
 
@@ -521,9 +626,10 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
 - The establishment file is already read in full every run (298 MB uncompressed); dropping the
   gate changes what is *written*, not what is *read*, so the load's runtime cost is upserts rather
   than I/O.
-- Every rep can now see every clinic in Brazil as an import candidate. Scope isolation applies to
-  what a rep may *read of our data*, not to what CNES publishes — but the offer list is still a
-  facility-creation surface, and it should be searchable by município rather than open-ended.
+- Every clinic in Brazil becomes an import candidate. Scope isolation applies to what a user may
+  *read of our data*, not to what CNES publishes — but the list is still a facility-creation
+  surface, which is why it is searched rather than browsed (§6.1.1) and, for now, restricted to
+  managers and admins (§6.0).
 - **Importing decides territory.** Ownership is geometric (spec 0009): the point places the clinic
   in a manager zone and inside or outside a rep's patch. A rep can therefore import a clinic that
   immediately belongs to somebody else — and, if territory scoping hides it, one they cannot see
@@ -532,8 +638,9 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
 
 ## 9. Open questions
 
-1. **Search shape.** 136 500 active candidates cannot be a list. Search by name + município is the
-   obvious answer; whether it should also be geographic (near me) is a product call.
+1. ~~**Search shape.**~~ **Resolved** (§6.0, §6.1.1) — its own surface behind a deliberate action in
+   Explorar, served by a Meili index over the registry, with geosearch. Still to settle in build:
+   ranking between name relevance and distance.
 2. **Reactivation.** A CNES establishment that gains a `CO_MOTIVO_DESAB` after we imported it —
    does the facility deactivate, or does it only stop being offered? Today nothing reads
    `deactivation_reason_code`.
@@ -542,10 +649,12 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
    *keeps* them aligned: `0107` is a one-shot repair and the loader must own the rule from here.
 4. **`NU_CNPJ_MANTENEDORA`** — the maintaining organisation's CNPJ, unexamined here. It may be the
    right answer for clinic chains, which the model has no concept of yet.
-5. **Can a rep import outside their patch?** §8 — the geometry decides ownership, so an import may
-   hand a clinic to another rep, or to nobody the importer can see. Bounding the offer list by the
-   rep's own territory is the conservative answer; letting anyone import anywhere is the useful
-   one. This needs a product decision before the offer list is built.
+5. **Can a rep import outside their patch?** **Deferred, with an interim answer** (2026-08-14): the
+   list is **not** bounded by territory — too much of the geometry is wrong today for that bound to
+   be a correctness gate rather than an obstacle — and it is **open to managers and admins only**
+   until the team has discussed it. What stays open is whether reps get it, and on what terms. §8
+   still holds: the geometry decides ownership, so an import can hand a clinic to another rep, or
+   to nobody the importer can see.
 6. **Provenance of a rep-placed point.** `facilities.location` records no source, so a pin the rep
    dropped is indistinguishable from CNES's own. That matters if a later export supplies
    coordinates for the same establishment: overwriting a rep's correction would be wrong,

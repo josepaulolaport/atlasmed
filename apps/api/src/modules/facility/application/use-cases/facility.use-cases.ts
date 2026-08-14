@@ -176,7 +176,13 @@ export class ListFacilitiesUseCase {
           : undefined,
         // OR across the selected unit types, matching the SQL. Both of these
         // are plain facility columns, so the indexed value cannot drift from
-        // the row the way an order-derived field would.
+        // the row *as long as every writer goes through the application* —
+        // the index is maintained by `upsertFacilitySearchDocument` on change,
+        // and nothing else refreshes it. A data migration is a writer that
+        // does not, and migration 0107 proved it: it corrected seven rows'
+        // `unit_type_id` in SQL, and those documents kept answering the old
+        // filter until the index was rebuilt. Any migration touching an
+        // indexed facility column needs a rebuild alongside it.
         input.unitTypeIds?.length
           ? inFilter("unitTypeId", input.unitTypeIds)
           : undefined,
