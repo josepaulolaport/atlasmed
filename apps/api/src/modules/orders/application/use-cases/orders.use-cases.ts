@@ -12,7 +12,18 @@ import type {
   OrderDetailRecord,
   OrderRepository,
   OrderStatus,
+  OrderStatusCounts,
 } from "../interfaces/order.repository.interface";
+
+/** Every status present at zero, so a client never has to read a missing key. */
+const EMPTY_STATUS_COUNTS: OrderStatusCounts = {
+  DRAFT: 0,
+  PENDING: 0,
+  APPROVED: 0,
+  INVOICED: 0,
+  REJECTED: 0,
+  NO_BILLING: 0,
+};
 
 const CREATE_ORDER_TYPES = ["SALE", "CONSIGNMENT", "DONATION", "OTHER"] as const;
 const CREATE_ORDER_STATUSES = ["DRAFT", "PENDING"] as const;
@@ -94,6 +105,7 @@ function serializeOrder(order: OrderDetailRecord) {
     facility: order.facility,
     person: order.person,
     seller: order.seller,
+    interactionId: order.interactionId,
     surgeryType: order.surgeryType,
     surgerySubtype: order.surgerySubtype,
     notes: order.notes,
@@ -102,13 +114,17 @@ function serializeOrder(order: OrderDetailRecord) {
     netWeight: order.netWeight,
     currency: order.currency,
     usdExchangeRate: order.usdExchangeRate,
+    finalizedBy: order.finalizedBy,
     finalizedById: order.finalizedById,
     finalizedAt: iso(order.finalizedAt),
+    rejectedBy: order.rejectedBy,
     rejectedById: order.rejectedById,
     rejectionReason: order.rejectionReason,
+    noBillingBy: order.noBillingBy,
     noBillingById: order.noBillingById,
     noBillingAt: iso(order.noBillingAt),
     noBillingNotes: order.noBillingNotes,
+    expenseAuthorizedBy: order.expenseAuthorizedBy,
     expenseAuthorizedById: order.expenseAuthorizedById,
     expenseAuthorizedAt: iso(order.expenseAuthorizedAt),
     itemCount: order.items.length,
@@ -155,13 +171,14 @@ export class ListOrdersUseCase {
       return {
         data: [],
         pagination: { page, limit, total: 0, totalPages: 1 },
+        statusCounts: { ...EMPTY_STATUS_COUNTS },
       };
     }
 
     const sellerId =
       input.actor?.roleName === Role.REP ? input.actor.userId : undefined;
 
-    const { orders, total } = await this.deps.orderRepository.findAll({
+    const { orders, total, statusCounts } = await this.deps.orderRepository.findAll({
       page,
       limit,
       statuses: input.statuses,
@@ -177,6 +194,7 @@ export class ListOrdersUseCase {
     return {
       data: orders.map(serializeListOrder),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      statusCounts,
     };
   }
 }

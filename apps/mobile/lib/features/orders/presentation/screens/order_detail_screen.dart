@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/payment_method.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/product.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+/// One order, built only from columns that exist.
+///
+/// What this screen used to show, and no longer does: a delivery ETA banner, a
+/// courier tracking card, a payment-method card, an invoice number, a clinic
+/// address and a doctor's CRM. None of those are stored anywhere — there is no
+/// shipping, payment or invoice table in the schema. They were empty strings
+/// and one synthesized timeline entry, except the payment method, which was
+/// read out of the order's free-text `notes` and defaulted to "credit".
 class OrderDetailScreen extends ConsumerWidget {
   final int orderId;
 
@@ -31,59 +34,25 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       data: (apiDetail) {
         final detail = orderDetailForApi(apiDetail);
-        final resolvedItems = detail.items
-            .map(
-              (item) => MapEntry(
-                Product(
-                  id: item.productId,
-                  name: item.name ?? item.productId.toString(),
-                  sub: '',
-                  unit: item.unitPrice ?? 0,
-                  category: '',
-                ),
-                item.qty,
-              ),
-            )
-            .toList(growable: false);
-        final subtotal = resolvedItems.fold<double>(
-          0,
-          (sum, entry) => sum + (entry.key.unit * entry.value),
-        );
-        final total = subtotal + detail.shipping;
-        final hasTracking =
-            detail.status == OrderStatus.approved && detail.tracking.isNotEmpty;
 
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(orderDetailProvider(orderId)),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
                   _Header(detail: detail),
                   const SizedBox(height: 14),
-                  _DeliveryBanner(detail: detail),
+                  _CardShell(child: _SummaryCard(detail: detail)),
                   const SizedBox(height: 14),
-                  _CardShell(child: _TimelineCard(detail: detail)),
-                  if (hasTracking) ...[
+                  _CardShell(child: _ItemsCard(detail: detail)),
+                  if (detail.notes != null) ...[
                     const SizedBox(height: 14),
-                    _CardShell(child: _TrackingCard(tracking: detail.tracking)),
+                    _CardShell(child: _NotesCard(notes: detail.notes!)),
                   ],
-                  const SizedBox(height: 14),
-                  _CardShell(child: _DestinationCard(detail: detail)),
-                  const SizedBox(height: 14),
-                  _CardShell(child: _ItemsCard(items: resolvedItems)),
-                  const SizedBox(height: 14),
-                  _CardShell(
-                    child: _PaymentCard(
-                      detail: detail,
-                      subtotal: subtotal,
-                      total: total,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _ActionButton(label: 'Suporte', filled: true, onTap: () {}),
                 ],
               ),
             ),
@@ -125,7 +94,9 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  detail.id.toString(),
+                  // The Emultec number when there is one, so this matches the
+                  // number the clinic and the invoice use.
+                  detail.displayId,
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -134,7 +105,7 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '· ${detail.placedAt}',
+                  detail.placedAt,
                   style: const TextStyle(
                     fontSize: 12.5,
                     color: AppColors.gray400,
@@ -164,9 +135,27 @@ class _CardShell extends StatelessWidget {
   );
 }
 
-class _TimelineCard extends StatelessWidget {
+/// Portuguese for the `order_type` enum. Every current row is SALE, but a
+/// consignment reads very differently to a rep looking at the same total.
+String orderTypeLabel(String type) {
+  switch (type) {
+    case 'SALE':
+      return 'Venda';
+    case 'CONSIGNMENT':
+      return 'Consignação';
+    case 'DONATION':
+      return 'Doação';
+    case 'OTHER':
+      return 'Outro';
+    default:
+      return type;
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
   final OrderDetail detail;
-  const _TimelineCard({required this.detail});
+  const _SummaryCard({required this.detail});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -174,249 +163,17 @@ class _TimelineCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Acompanhamento',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...detail.timeline.asMap().entries.map((entry) {
-            final i = entry.key;
-            final step = entry.value;
-            final last = i == detail.timeline.length - 1;
-            return _TimelineRow(step: step, last: last);
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimelineRow extends StatelessWidget {
-  final TimelineStep step;
-  final bool last;
-  const _TimelineRow({required this.step, required this.last});
-  @override
-  Widget build(BuildContext context) {
-    final circleColor = step.done
-        ? AppColors.green
-        : (step.current ? AppColors.navyDeep : Colors.white);
-    final borderColor = step.done || step.current
-        ? circleColor
-        : AppColors.gray200;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 24,
-            child: Column(
-              children: [
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: circleColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: borderColor,
-                      width: step.current ? 2 : 1.2,
-                    ),
-                    boxShadow: step.current
-                        ? const [
-                            BoxShadow(
-                              color: Color(0x330a2f7f),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: step.done
-                      ? const Icon(Icons.check, size: 9, color: Colors.white)
-                      : (step.current
-                            ? Center(
-                                child: Container(
-                                  width: 5,
-                                  height: 5,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              )
-                            : null),
-                ),
-                if (!last)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: AppColors.surfaceSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.step,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    step.date,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.gray400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrackingCard extends StatelessWidget {
-  final String tracking;
-  const _TrackingCard({required this.tracking});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          _MiniIcon(
-            icon: Icons.local_shipping_outlined,
-            bg: const Color(0x1A0a2f7f),
-            fg: AppColors.navyDeep,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'CÓDIGO DE RASTREIO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  tracking,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    fontFamily: 'monospace',
-                    color: AppColors.gray900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () async =>
-                Clipboard.setData(ClipboardData(text: tracking)),
-            child: const Text('Copiar'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DestinationCard extends StatelessWidget {
-  final OrderDetail detail;
-  const _DestinationCard({required this.detail});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _MiniIcon(
-                icon: Icons.local_hospital_outlined,
-                bg: const Color(0x1A1e40af),
-                fg: AppColors.navyBright,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      detail.clinic,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      detail.clinicAddress,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.gray500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _AvatarInitials(name: detail.doctor),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    detail.doctor,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    detail.doctorCrm,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.gray400,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          const _CardTitle('Pedido'),
+          const SizedBox(height: 12),
+          _DetailRow(label: 'Clínica', value: detail.clinic),
+          _DetailRow(label: 'Tipo', value: orderTypeLabel(detail.type)),
+          if (detail.seller != null)
+            _DetailRow(label: 'Vendedor', value: detail.seller!),
+          _DetailRow(label: 'Data do pedido', value: detail.placedAt),
+          if (detail.updatedAt != null)
+            _DetailRow(label: 'Última atualização', value: detail.updatedAt!),
+          if (detail.currency != 'BRL')
+            _DetailRow(label: 'Moeda', value: detail.currency),
         ],
       ),
     );
@@ -424,183 +181,187 @@ class _DestinationCard extends StatelessWidget {
 }
 
 class _ItemsCard extends StatelessWidget {
-  final List<MapEntry<Product, int>> items;
-  const _ItemsCard({required this.items});
+  final OrderDetail detail;
+  const _ItemsCard({required this.detail});
+
   @override
   Widget build(BuildContext context) {
+    final count = detail.items.length;
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'ITENS (${items.length} produtos)',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
+          _CardTitle('Itens ($count)'),
+          const SizedBox(height: 12),
+          if (detail.items.isEmpty)
+            const Text(
+              'Nenhum item registrado neste pedido.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
-          ),
-          const SizedBox(height: 14),
-          ...items.map((entry) {
-            final p = entry.key;
-            final qty = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  ProductIcon(name: p.name, size: 38),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p.name,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.gray800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          p.sub,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.gray400,
-                          ),
-                        ),
-                      ],
-                    ),
+          ...detail.items.map((item) => _ItemRow(item: item)),
+          const SizedBox(height: 6),
+          const Divider(height: 18, color: AppColors.surfaceSecondary),
+          _TotalRow(label: 'Subtotal', value: detail.itemsTotal),
+          const SizedBox(height: 6),
+          // No freight line. It is 1.00 on every imported order — a placeholder,
+          // not a shipping cost — so a "Frete R$ 1,00" row would read as a fact.
+          // It stays inside this total, which is what reconciles with Emultec.
+          _TotalRow(label: 'Total', value: detail.total, bold: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemRow extends StatelessWidget {
+  final OrderDetailItem item;
+  const _ItemRow({required this.item});
+
+  /// `2` not `2.000`, but `1.5` survives — quantity is numeric(12,3) and a
+  /// fractional line is legitimate.
+  String get _quantity {
+    final rounded = item.qty.roundToDouble();
+    return rounded == item.qty
+        ? rounded.toStringAsFixed(0)
+        : item.qty.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name ?? 'Produto não identificado',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray900,
                   ),
-                  Text(
-                    'R\$ ${p.unit.toStringAsFixed(2).replaceAll('.', ',')} · × $qty',
-                    style: const TextStyle(
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    '$_quantity × ${formatOrderCurrency(item.unitPrice)}',
+                    if (item.code != null) 'Cód. ${item.code}',
+                    if (item.batchNumber != null) 'Lote ${item.batchNumber}',
+                  ].join(' · '),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                if (item.writtenOff) ...[
+                  const SizedBox(height: 4),
+                  // Supplied without being billed — it changes what the line
+                  // means, so it is stated rather than left to the total.
+                  const Text(
+                    'Baixado',
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.gray400,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    brl(p.unit * qty),
-                    style: const TextStyle(
-                      fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.navyDeep,
+                      color: AppColors.amber,
                     ),
                   ),
                 ],
-              ),
-            );
-          }),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            formatOrderCurrency(item.lineTotal),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray800,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _PaymentCard extends StatelessWidget {
-  final OrderDetail detail;
-  final double subtotal;
-  final double total;
-  const _PaymentCard({
-    required this.detail,
-    required this.subtotal,
-    required this.total,
-  });
+class _NotesCard extends StatelessWidget {
+  final String notes;
+  const _NotesCard({required this.notes});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Pagamento',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
-                ),
-              ),
-              Text(
-                detail.invoice,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.gray400,
-                ),
-              ),
-            ],
+          const _CardTitle('Observações'),
+          const SizedBox(height: 10),
+          Text(
+            notes,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.4,
+              color: AppColors.gray700,
+            ),
           ),
-          const SizedBox(height: 12),
-          _moneyRow('Método', detail.paymentMethod.label),
-          const SizedBox(height: 8),
-          _moneyRow('Subtotal', brl(subtotal)),
-          const SizedBox(height: 8),
-          _moneyRow(
-            'Frete',
-            detail.shipping == 0 ? 'Grátis' : brl(detail.shipping),
-          ),
-          const Divider(height: 24),
-          _moneyRow('Total', brl(total), bold: true),
         ],
       ),
     );
   }
+}
 
-  Widget _moneyRow(String label, String value, {bool bold = false}) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 12.5,
-          color: bold ? AppColors.gray900 : AppColors.gray500,
-          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-        ),
-      ),
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: 12.5,
-          color: bold ? AppColors.navyDeep : AppColors.gray700,
-          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-        ),
-      ),
-    ],
+class _CardTitle extends StatelessWidget {
+  const _CardTitle(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      color: AppColors.gray900,
+    ),
   );
 }
 
-class _DeliveryBanner extends StatelessWidget {
-  final OrderDetail detail;
-  const _DeliveryBanner({required this.detail});
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
   @override
   Widget build(BuildContext context) {
-    final delivered = detail.status == OrderStatus.invoiced;
-    final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
-    final fg = delivered ? AppColors.green600 : AppColors.navyDeep;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: bg),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.schedule_outlined, size: 18, color: fg),
-          const SizedBox(width: 10),
+          SizedBox(
+            width: 132,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.gray500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
           Expanded(
             child: Text(
-              detail.estimate,
-              style: TextStyle(
+              value,
+              style: const TextStyle(
                 fontSize: 12.5,
+                color: AppColors.gray800,
                 fontWeight: FontWeight.w600,
-                color: fg,
               ),
             ),
           ),
@@ -610,77 +371,39 @@ class _DeliveryBanner extends StatelessWidget {
   }
 }
 
-class _MiniIcon extends StatelessWidget {
-  final IconData icon;
-  final Color bg;
-  final Color fg;
-  const _MiniIcon({required this.icon, required this.bg, required this.fg});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 34,
-    height: 34,
-    decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-    child: Icon(icon, size: 18, color: fg),
-  );
-}
+class _TotalRow extends StatelessWidget {
+  const _TotalRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+  });
 
-class _AvatarInitials extends StatelessWidget {
-  final String name;
-  const _AvatarInitials({required this.name});
+  final String label;
+  final double value;
+  final bool bold;
+
   @override
   Widget build(BuildContext context) {
-    final parts = name.trim().split(' ');
-    final initials = parts.length >= 2
-        ? '${parts.first[0]}${parts.last[0]}'
-        : parts.first.substring(0, 1);
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: const BoxDecoration(
-        color: AppColors.blueLight,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initials.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: AppColors.navyDeep,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            color: bold ? AppColors.gray900 : AppColors.gray500,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          ),
         ),
-      ),
+        Text(
+          formatOrderCurrency(value),
+          style: TextStyle(
+            fontSize: bold ? 15 : 12.5,
+            color: bold ? AppColors.navyDeep : AppColors.gray700,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final bool filled;
-  final VoidCallback onTap;
-  const _ActionButton({
-    required this.label,
-    required this.filled,
-    required this.onTap,
-  });
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 46,
-    child: OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: filled ? Colors.white : Colors.white,
-        foregroundColor: filled ? AppColors.gray950 : AppColors.navyDeep,
-        side: const BorderSide(color: AppColors.surfaceSecondary),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: filled ? AppColors.gray950 : AppColors.navyDeep,
-        ),
-      ),
-    ),
-  );
 }

@@ -373,7 +373,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('agenda-search')), 'inexistente');
+    await tester.enterText(
+      find.byKey(const Key('agenda-search')),
+      'inexistente',
+    );
     await tester.pump();
     expect(find.text('Visita de acompanhamento'), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
