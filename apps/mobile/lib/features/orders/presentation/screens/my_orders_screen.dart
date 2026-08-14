@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
@@ -17,167 +16,268 @@ class MyOrdersScreen extends ConsumerStatefulWidget {
   ConsumerState<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
+/// The order statuses that exist, and the words for them.
+///
+/// The chips used to send SHIPPED, DELIVERED and CANCELLED — none of which are
+/// in the `order_status` enum, so three of the five tabs failed validation and
+/// showed the error state rather than a list. The vocabulary is the database's
+/// now: DRAFT, PENDING, APPROVED, INVOICED, REJECTED, NO_BILLING.
+class _OrderFilter {
+  const _OrderFilter(this.label, this.statuses);
+
+  final String label;
+
+  /// Null means every status.
+  final List<String>? statuses;
+}
+
+const _filters = <_OrderFilter>[
+  _OrderFilter('Todos', null),
+  _OrderFilter('Faturados', ['INVOICED']),
+  _OrderFilter('Sem faturamento', ['NO_BILLING']),
+  _OrderFilter('Pendentes', ['DRAFT', 'PENDING']),
+  _OrderFilter('Aprovados', ['APPROVED']),
+  _OrderFilter('Rejeitados', ['REJECTED']),
+];
+
 class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
+  final _scrollController = ScrollController();
   String selectedFilter = 'Todos';
 
-  static const _filters = <String>[
-    'Todos',
-    'Em trânsito',
-    'Pendente',
-    'Entregue',
-    'Cancelado',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Fetches the next page while the rep is still 600px from the bottom, so
+  /// the list grows before they reach the end of it.
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 600) {
+      ref.read(ordersListProvider.notifier).loadMore();
+    }
+  }
+
+  void _selectFilter(_OrderFilter filter) {
+    if (filter.label == selectedFilter) return;
+    setState(() => selectedFilter = filter.label);
+    ref.read(ordersListProvider.notifier).setStatuses(filter.statuses);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final statuses = _apiStatusesFor(selectedFilter);
-    final ordersAsync = ref.watch(meusOrdersProvider(statuses));
+    final ordersAsync = ref.watch(ordersListProvider);
+    final listState = ordersAsync.valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Pedidos'),
       body: SafeArea(
         top: false,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                    children: [
-                      const Text(
-                        'Meus Pedidos',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep,
-                        ),
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(ordersListProvider.notifier).refresh(),
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const Text(
+                      'Meus Pedidos',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navyDeep,
                       ),
-                      const SizedBox(height: 16),
-                      _SummaryStrip(
-                        transitCount:
-                            ordersAsync.valueOrNull
-                                ?.where(
-                                  (order) =>
-                                      order.status == OrderStatus.approved,
-                                )
-                                .length ??
-                            0,
-                        pendingCount:
-                            ordersAsync.valueOrNull
-                                ?.where(
-                                  (order) =>
-                                      order.status == OrderStatus.pending,
-                                )
-                                .length ??
-                            0,
-                        deliveredCount:
-                            ordersAsync.valueOrNull
-                                ?.where(
-                                  (order) =>
-                                      order.status == OrderStatus.invoiced,
-                                )
-                                .length ??
-                            0,
+                    ),
+                    const SizedBox(height: 16),
+                    _SummaryStrip(counts: listState?.statusCounts ?? const {}),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _filters.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final filter = _filters[index];
+                          return _FilterChip(
+                            label: filter.label,
+                            selected: filter.label == selectedFilter,
+                            onTap: () => _selectFilter(filter),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        height: 36,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _filters.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (context, index) {
-                            final filter = _filters[index];
-                            final selected = filter == selectedFilter;
-                            return _FilterChip(
-                              label: filter,
-                              selected: selected,
-                              onTap: () =>
-                                  setState(() => selectedFilter = filter),
-                            );
-                          },
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (listState != null && listState.orders.isNotEmpty)
+                      _ResultCount(
+                        shown: listState.orders.length,
+                        total: listState.total,
                       ),
-                      const SizedBox(height: 16),
-                      ...ordersAsync.when(
-                        loading: () => const [OrderListSkeleton()],
-                        error: (_, _) => const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: Center(
-                              child: Text(
-                                'Não foi possível carregar os pedidos.',
-                              ),
-                            ),
-                          ),
-                        ],
-                        data: (orders) => orders.isEmpty
-                            ? const [_EmptyState()]
-                            : orders
-                                  .map(
-                                    (order) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 12,
-                                      ),
-                                      child: _OrderCard(
-                                        order: order,
-                                        onTap: () => OrderDetailRoute(
-                                          id: order.id,
-                                        ).push(context),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 8),
+                  ]),
                 ),
-              ],
-            ),
-          ],
+              ),
+              ...ordersAsync.when(
+                loading: () => const [
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverToBoxAdapter(child: OrderListSkeleton()),
+                  ),
+                ],
+                error: (_, _) => const [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text('Não foi possível carregar os pedidos.'),
+                      ),
+                    ),
+                  ),
+                ],
+                data: (state) => state.orders.isEmpty
+                    ? const [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: _EmptyState(),
+                          ),
+                        ),
+                      ]
+                    : [
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          // Builder, not a materialized list: 1131 orders can
+                          // all end up here now that the list pages.
+                          sliver: SliverList.separated(
+                            itemCount: state.orders.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final order = state.orders[index];
+                              return _OrderCard(
+                                order: order,
+                                onTap: () => OrderDetailRoute(
+                                  id: order.id,
+                                ).push(context),
+                              );
+                            },
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _ListFooter(
+                            isLoadingMore: state.isLoadingMore,
+                            hasMore: state.hasMore,
+                          ),
+                        ),
+                      ],
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-List<String>? _apiStatusesFor(String filter) {
-  switch (filter) {
-    case 'Em trânsito':
-      return const ['SHIPPED'];
-    case 'Pendente':
-      return const ['DRAFT', 'PENDING'];
-    case 'Entregue':
-      return const ['DELIVERED'];
-    case 'Cancelado':
-      return const ['CANCELLED', 'REJECTED'];
-    default:
-      return null;
-  }
-}
+/// "20 de 1131 pedidos" — the count the screen could never show before, since
+/// it discarded `pagination` and had no way to say more existed.
+class _ResultCount extends StatelessWidget {
+  const _ResultCount({required this.shown, required this.total});
 
-class _SummaryStrip extends StatelessWidget {
-  final int transitCount;
-  final int pendingCount;
-  final int deliveredCount;
-
-  const _SummaryStrip({
-    required this.transitCount,
-    required this.pendingCount,
-    required this.deliveredCount,
-  });
+  final int shown;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
+    final text = shown >= total
+        ? '$total ${total == 1 ? 'pedido' : 'pedidos'}'
+        : '$shown de $total pedidos';
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        color: AppColors.gray500,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _ListFooter extends StatelessWidget {
+  const _ListFooter({required this.isLoadingMore, required this.hasMore});
+
+  final bool isLoadingMore;
+  final bool hasMore;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (hasMore) return const SizedBox(height: 20);
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Text(
+          'Fim da lista',
+          style: TextStyle(fontSize: 12, color: AppColors.gray400),
+        ),
+      ),
+    );
+  }
+}
+
+/// Totals for the whole scoped set, from the API.
+///
+/// These were counted from the loaded page, and mislabelled on top of it:
+/// APPROVED read "Em trânsito" and INVOICED read "Entregue", neither of which
+/// is what those statuses mean. Nothing in the system tracks a delivery.
+class _SummaryStrip extends StatelessWidget {
+  const _SummaryStrip({required this.counts});
+
+  final Map<String, int> counts;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = (counts['DRAFT'] ?? 0) + (counts['PENDING'] ?? 0);
     return Row(
       children: [
         Expanded(
           child: _SummaryCard(
-            label: 'Em trânsito',
-            count: transitCount,
+            label: 'Faturados',
+            count: counts['INVOICED'] ?? 0,
+            color: AppColors.green,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Sem faturamento',
+            count: counts['NO_BILLING'] ?? 0,
             color: AppColors.navyDeep,
           ),
         ),
@@ -185,16 +285,8 @@ class _SummaryStrip extends StatelessWidget {
         Expanded(
           child: _SummaryCard(
             label: 'Pendentes',
-            count: pendingCount,
+            count: pending,
             color: AppColors.amber,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SummaryCard(
-            label: 'Entregues',
-            count: deliveredCount,
-            color: AppColors.green,
           ),
         ),
       ],
@@ -304,7 +396,9 @@ class _OrderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${order.id} • ${order.date}',
+              // PED-1234 for an imported order — the number a rep reads back
+              // over the phone. This was the raw database id.
+              '${order.displayId} • ${order.date}',
               style: const TextStyle(
                 fontSize: 11,
                 color: AppColors.gray400,
@@ -314,17 +408,21 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               order.clinic,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.gray800,
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              order.doctor,
-              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
-            ),
+            if (order.seller != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                order.seller!,
+                style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+              ),
+            ],
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
             const SizedBox(height: 12),

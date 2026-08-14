@@ -12,7 +12,8 @@ void main() {
   }) => {
     'id': 10,
     'code': code,
-    'name': 'EVISC 1.0% - ARTIGO ORTOP PARA LUB E ABSOR DE CHOQUE DA ARTICULACAO',
+    'name':
+        'EVISC 1.0% - ARTIGO ORTOP PARA LUB E ABSOR DE CHOQUE DA ARTICULACAO',
     'productGroup': productGroup,
     'manufacturer': 'TRB PHARMA',
     'countryOfOrigin': 'Brasil',
@@ -36,7 +37,10 @@ void main() {
     expect(variant.simproCode, '0359465');
     expect(variant.brasindiceCode, '028063');
     expect(variant.tissCode, '0000092106');
-    expect(variant.brasindiceUpdatedAt, DateTime.parse('2025-07-14T00:00:00.000Z'));
+    expect(
+      variant.brasindiceUpdatedAt,
+      DateTime.parse('2025-07-14T00:00:00.000Z'),
+    );
   });
 
   test('parses a product with null coding columns instead of throwing', () {

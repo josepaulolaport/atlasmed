@@ -7,15 +7,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _EmptyOrdersList extends OrdersListNotifier {
+  @override
+  Future<OrdersListState> build() async => const OrdersListState();
+}
+
 void main() {
   testWidgets('orders page keeps history without a new-order action', (
     tester,
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          meusOrdersProvider.overrideWith((ref, statuses) async => const []),
-        ],
+        overrides: [ordersListProvider.overrideWith(_EmptyOrdersList.new)],
         child: const MaterialApp(home: MyOrdersScreen()),
       ),
     );
@@ -44,13 +47,13 @@ void main() {
       id: 1,
       idAvulsaEmultec: 1,
       verticalId: null,
-      status: 'DELIVERED',
-      type: 'STANDARD',
+      // A status the enum actually has. "DELIVERED" is not one of them.
+      status: 'INVOICED',
+      type: 'SALE',
       orderedAt: DateTime.utc(2026, 1, 2),
       createdAt: DateTime.utc(2026, 1, 1),
       updatedAt: DateTime.utc(2026, 1, 3),
       facility: const ApiOrderIdentity(id: 1, name: 'Clínica Um'),
-      professional: null,
       seller: null,
       itemCount: 0,
       itemsTotal: 0,
@@ -71,7 +74,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('1'), findsOneWidget);
+    // PED-1, not the bare database id.
+    expect(find.text('PED-1'), findsOneWidget);
     expect(find.text('Repetir pedido'), findsNothing);
   });
 }

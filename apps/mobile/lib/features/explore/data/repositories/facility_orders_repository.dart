@@ -8,18 +8,41 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 class FacilityOrdersPage {
-  const FacilityOrdersPage({required this.orders});
+  const FacilityOrdersPage({
+    required this.orders,
+    this.page = 1,
+    this.total = 0,
+    this.totalPages = 1,
+  });
 
   final List<FacilityOrderSummary> orders;
+  final int page;
+
+  /// Every order this clinic has, not the handful on this page. The section
+  /// fetched five and its header badge counted the five it had, so a clinic
+  /// with eighty orders advertised "5".
+  final int total;
+  final int totalPages;
+
+  bool get hasNextPage => page < totalPages;
 
   factory FacilityOrdersPage.fromJson(Map<String, dynamic> json) {
     final data = json['data'];
     final list = data is List ? data : const [];
+    final orders = list
+        .whereType<Map>()
+        .map((row) => _mapOrder(Map<String, dynamic>.from(row)))
+        .toList(growable: false);
+    final pagination = json['pagination'];
+    if (pagination is! Map) {
+      // Older payloads had no pagination block; one page of whatever arrived.
+      return FacilityOrdersPage(orders: orders, total: orders.length);
+    }
     return FacilityOrdersPage(
-      orders: list
-          .whereType<Map>()
-          .map((row) => _mapOrder(Map<String, dynamic>.from(row)))
-          .toList(growable: false),
+      orders: orders,
+      page: (pagination['page'] as num?)?.toInt() ?? 1,
+      total: (pagination['total'] as num?)?.toInt() ?? orders.length,
+      totalPages: (pagination['totalPages'] as num?)?.toInt() ?? 1,
     );
   }
 }
@@ -107,5 +130,12 @@ class FacilityOrdersRepository extends Repository<FacilityOrdersPage>
   Future<List<FacilityOrderSummary>> loadOrders() async {
     final pageData = await currentValueOrResolve();
     return pageData?.orders ?? const [];
+  }
+
+  /// The page with its counts, for callers that need to know more exists.
+  /// [loadOrders] stays for the call sites that only want the rows.
+  Future<FacilityOrdersPage> loadPage() async {
+    return await currentValueOrResolve() ??
+        const FacilityOrdersPage(orders: []);
   }
 }

@@ -974,7 +974,14 @@ class _ClinicDetailContent extends ConsumerWidget {
                   title: 'Histórico de pedidos',
                   badge: effectiveOrders.isEmpty
                       ? null
-                      : _CountBadge(count: effectiveOrders.length),
+                      // Every order the clinic has, not the page loaded so far.
+                      // This counted the loaded list, so a clinic with eighty
+                      // orders wore a badge reading "5".
+                      : _CountBadge(
+                          count: ordersState.total > 0
+                              ? ordersState.total
+                              : effectiveOrders.length,
+                        ),
                   trailing: effectiveOrders.isEmpty
                       ? null
                       : _HeaderLinkButton(
@@ -996,6 +1003,11 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ClinicOrdersSection(
                     orders: effectiveOrders,
                     facilityId: clinicId,
+                    hasMore: ordersState.hasMore,
+                    loadingMore: ordersState.loadingMore,
+                    onLoadMore: () => ref
+                        .read(facilityOrdersProvider(clinicId).notifier)
+                        .loadMore(),
                   ),
                 const ClinicSectionHeader(title: 'Equipe responsável'),
                 sectionsAsync.when(
