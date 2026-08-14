@@ -180,9 +180,13 @@ class _PublicationCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text('Brasíndice: ${formatDate(family.brasindicePublishedAt)}'),
+        Text(
+          'Brasíndice: ${family.brasindicePublishedAt == null ? '—' : formatDate(family.brasindicePublishedAt!)}',
+        ),
         const SizedBox(height: 2),
-        Text('Simpro: ${formatDate(family.simproPublishedAt)}'),
+        Text(
+          'Simpro: ${family.simproPublishedAt == null ? '—' : formatDate(family.simproPublishedAt!)}',
+        ),
       ],
     ),
   );

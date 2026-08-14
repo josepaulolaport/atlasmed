@@ -18,8 +18,10 @@ class CatalogFamily {
   final String manufacturer;
   final String countryOfOrigin;
   final List<CatalogVariant> variants;
-  final DateTime brasindicePublishedAt;
-  final DateTime simproPublishedAt;
+
+  /// Null when no variant in the family has a Brasíndice/Simpro record.
+  final DateTime? brasindicePublishedAt;
+  final DateTime? simproPublishedAt;
 
   double get minPrice =>
       variants.map((v) => v.price).reduce((a, b) => a < b ? a : b);
