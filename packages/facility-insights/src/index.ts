@@ -48,3 +48,10 @@ export type {
   FacilityProfileFunnelData,
   FacilitySearchDocument,
 } from "./facility-search-document";
+export {
+  ADDRESS_ABBREVIATION_GROUPS,
+  MAX_ADDRESS_QUERY_VARIANTS,
+  buildAddressSearchSynonyms,
+  expandAddressAbbreviations,
+  normalizeAddressToken,
+} from "./address-abbreviations";

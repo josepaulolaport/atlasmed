@@ -16,6 +16,7 @@ import {
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
 import {
+  buildAddressSearchSynonyms,
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
   type FacilityProfileFunnelData,
@@ -282,6 +283,11 @@ export const FACILITY_SETTINGS = {
   ],
   sortableAttributes: ["_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin", "hasLastValidPurchase", "lastValidPurchaseSortAt", "id"],
   rankingRules: ["sort", "words", "typo", "proximity", "attribute", "exactness"],
+  // Street types, so "Avenida das Americas" reaches the 436 addresses stored
+  // as "Av.". Typo tolerance cannot bridge that on its own: it allows one edit
+  // at seven characters and "Av."→"Avenida" is five. Like every other setting
+  // here, this only takes effect on a full rebuild.
+  synonyms: buildAddressSearchSynonyms(),
 };
 
 type ActiveFacilityProfiles = {
