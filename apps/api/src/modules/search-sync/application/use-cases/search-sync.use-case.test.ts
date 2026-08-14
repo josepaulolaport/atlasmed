@@ -23,6 +23,11 @@ describe("search sync use cases", () => {
         runId: "run-emultec",
         existing: false,
       }),
+      startCnesIngestion: async () => ({
+        workflowId: "unexpected-cnes",
+        runId: "unexpected",
+        existing: false,
+      }),
     });
 
     await expect(useCase.execute(parseSearchSyncRequest({ entity: "facilities" }))).resolves.toEqual({
@@ -46,6 +51,11 @@ describe("search sync use cases", () => {
       },
       startEmultecOrderImport: async () => ({
         workflowId: "unexpected-emultec",
+        runId: "unexpected",
+        existing: false,
+      }),
+      startCnesIngestion: async () => ({
+        workflowId: "unexpected-cnes",
         runId: "unexpected",
         existing: false,
       }),
@@ -76,6 +86,11 @@ describe("search sync use cases", () => {
           existing: false,
         };
       },
+      startCnesIngestion: async () => ({
+        workflowId: "unexpected-cnes",
+        runId: "unexpected",
+        existing: false,
+      }),
     });
 
     await expect(
@@ -86,6 +101,72 @@ describe("search sync use cases", () => {
       existing: false,
     });
     expect(emultecStarts).toBe(1);
+  });
+
+  /**
+   * Until now nothing could start a CNES ingestion at all: the API had no
+   * starter for it, and `worker.ts` never provisioned its schedule. The load
+   * only ever ran from `archive-load.ts`, which bypasses the workflow entirely.
+   */
+  test("starts a CNES ingestion, passing the competência through", async () => {
+    const requests: Array<{ reference?: { year: number; month: number }; force?: boolean }> = [];
+    const useCase = new StartSearchSyncUseCase({
+      start: async () => ({ workflowId: "unexpected", runId: "unexpected", existing: false }),
+      startOrdersBackfill: async () => ({
+        workflowId: "unexpected-orders",
+        runId: "unexpected",
+        existing: false,
+      }),
+      startEmultecOrderImport: async () => ({
+        workflowId: "unexpected-emultec",
+        runId: "unexpected",
+        existing: false,
+      }),
+      startCnesIngestion: async (input) => {
+        requests.push(input);
+        return {
+          workflowId: "cnes-ingestion-trigger-202607",
+          runId: "run-cnes",
+          existing: false,
+        };
+      },
+    });
+
+    await expect(
+      useCase.execute(
+        parseSearchSyncRequest({
+          entity: "cnes",
+          reference: { year: 2026, month: 7 },
+          force: true,
+        })
+      )
+    ).resolves.toEqual({
+      workflowId: "cnes-ingestion-trigger-202607",
+      runId: "run-cnes",
+      existing: false,
+    });
+    expect(requests).toEqual([{ reference: { year: 2026, month: 7 }, force: true }]);
+
+    // Neither supplied is the ordinary case: discover the newest published.
+    await useCase.execute(parseSearchSyncRequest({ entity: "cnes" }));
+    expect(requests[1]).toEqual({ reference: undefined, force: undefined });
+  });
+
+  /*
+   * `reference` and `force` mean nothing to the other entities. Accepting and
+   * ignoring them would let "reload facilities for 2026-07" report success while
+   * doing something else entirely.
+   */
+  test("refuses a competência on an entity that has none", () => {
+    expect(() =>
+      parseSearchSyncRequest({ entity: "facilities", reference: { year: 2026, month: 7 } })
+    ).toThrow("Request validation failed");
+    expect(() => parseSearchSyncRequest({ entity: "orders", force: true })).toThrow(
+      "Request validation failed"
+    );
+    expect(() => parseSearchSyncRequest({ entity: "cnes", reference: { year: 2026, month: 13 } })).toThrow(
+      "Request validation failed"
+    );
   });
 
   test("returns the Temporal status for a workflow id", async () => {
@@ -102,6 +183,21 @@ describe("search sync use cases", () => {
       workflowId: "emultec-order-import-hybrid",
       runId: "run-2",
       status: "RUNNING",
+    });
+    // Started by this endpoint, so readable from it — both the on-demand
+    // trigger and the weekly schedule's own run.
+    await expect(useCase.execute("cnes-ingestion-trigger-202607")).resolves.toMatchObject({
+      status: "RUNNING",
+    });
+    await expect(useCase.execute("cnes-ingestion-trigger-latest")).resolves.toMatchObject({
+      status: "RUNNING",
+    });
+    await expect(useCase.execute("cnes-ingestion-weekly")).resolves.toMatchObject({
+      status: "RUNNING",
+    });
+    // Still an allowlist: a plausible-looking id is not one we started.
+    await expect(useCase.execute("cnes-ingestion-trigger-20260")).rejects.toMatchObject({
+      code: "RESOURCE_NOT_FOUND",
     });
     await expect(useCase.execute("other-workflow")).rejects.toMatchObject({
       code: "RESOURCE_NOT_FOUND",
