@@ -109,6 +109,11 @@ Filters apply uniformly to every metric endpoint.
 
 ## 6. Equipe
 
+> **Superseded in part by spec 0015.** This section defines Equipe as a roster of metrics.
+> Spec 0015 makes it the people ↔ territory surface — member profiles, clinic assignment, and
+> territory editing — and changes the scope rule below: a manager sees only their own share of
+> a rep who holds patches under two managers, and that scope carries into Desempenho.
+
 Manager sees their reps; admin sees managers and drills into each manager's team. Each row
 carries the person, their assigned clinics, their territories, and basic information.
 
