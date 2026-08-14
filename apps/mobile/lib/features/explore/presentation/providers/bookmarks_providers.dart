@@ -77,6 +77,11 @@ final bookmarkedIdsProvider = NotifierProvider<BookmarkedIds, Set<String>>(
   BookmarkedIds.new,
 );
 
+/// One provider per page.
+///
+/// The Favoritos tabs accumulate pages as the user scrolls rather than showing
+/// only the first: a rep who saves more than a page of clinics would otherwise
+/// have the rest silently missing, with nothing on screen to say so.
 final clinicBookmarksProvider = FutureProvider.autoDispose
     .family<PaginatedFacilities, int>((ref, page) async {
       final repository = ClinicBookmarksRepository(page: page);

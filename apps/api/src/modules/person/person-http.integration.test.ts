@@ -285,7 +285,7 @@ describe("Person HTTP routes", () => {
     expect(await personResponse.json()).toEqual(
       expect.objectContaining({ id: 10, firstName: "Ana", lastName: "Silva" })
     );
-    expect(getPerson).toHaveBeenCalledWith({ personId: 10 });
+    expect(getPerson).toHaveBeenCalledWith({ personId: 10, userId: 1 });
 
     const notesResponse = await authRequest(
       application,

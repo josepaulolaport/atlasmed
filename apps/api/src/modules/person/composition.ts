@@ -99,7 +99,11 @@ export const personUseCases = {
     new ListPersonFacilityRolesUseCase({ roleCatalogRepository }),
 
   getPerson: () =>
-    new GetPersonUseCase({ personRepository, registrationRepository }),
+    new GetPersonUseCase({
+      personRepository,
+      registrationRepository,
+      personBookmarkRepository,
+    }),
   patchPerson: () =>
     new PatchPersonUseCase({ personRepository, registrationRepository }),
 

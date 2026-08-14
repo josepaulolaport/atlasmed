@@ -63,7 +63,11 @@ class DoctorDetailScreen extends ConsumerWidget {
             backgroundColor: detail?.primaryColor ?? AppColors.navyBright,
             foregroundColor: Colors.white,
             actions: [
-              BookmarkIconButton(kind: BookmarkKind.doctor, id: doctorId),
+              BookmarkIconButton(
+                kind: BookmarkKind.doctor,
+                id: doctorId,
+                serverState: detail?.isBookmarked,
+              ),
               const SizedBox(width: 6),
             ],
           ),

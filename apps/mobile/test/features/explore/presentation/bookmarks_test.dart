@@ -170,6 +170,54 @@ void main() {
     });
   });
 
+  group('BookmarkIconButton server state', () {
+    testWidgets('paints filled when the server says the clinic is saved', (
+      tester,
+    ) async {
+      final fake = _FakeToggleRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [bookmarkToggleRepositoryProvider.overrideWithValue(fake)],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: BookmarkIconButton(
+                kind: BookmarkKind.clinic,
+                id: 1,
+                serverState: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The defect this fixes: before the detail response carried the flag,
+      // a saved clinic opened cold showed a hollow icon.
+      expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
+      expect(fake.calls, isEmpty);
+    });
+
+    testWidgets('stays hollow while the server answer is unknown', (
+      tester,
+    ) async {
+      final fake = _FakeToggleRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [bookmarkToggleRepositoryProvider.overrideWithValue(fake)],
+          child: const MaterialApp(
+            home: Scaffold(
+              // null = detail request still in flight, which must not be
+              // treated as "not saved".
+              body: BookmarkIconButton(kind: BookmarkKind.clinic, id: 1),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.bookmark_border_rounded), findsOneWidget);
+    });
+  });
+
   group('FavoritosScreen', () {
     testWidgets(
       'shows an empty state per tab, naming the gesture that fills it',
@@ -204,6 +252,32 @@ void main() {
         );
       },
     );
+
+    testWidgets('is a pushed screen: back arrow and title, no nav shell', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clinicBookmarksProvider.overrideWith(
+              (ref, page) async => _emptyFacilities,
+            ),
+            doctorBookmarksProvider.overrideWith(
+              (ref, page) async => _emptyProfessionals,
+            ),
+          ],
+          child: const MaterialApp(home: FavoritosScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Reached by pushing from Explorar, so it gets a back arrow and its own
+      // title — not the top-level nav shell, whose hamburger would imply
+      // Favoritos is a destination of its own.
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      expect(find.text('Favoritos'), findsOneWidget);
+      expect(find.byIcon(Icons.menu), findsNothing);
+    });
 
     testWidgets('renders saved clinics and doctors in their tabs', (
       tester,

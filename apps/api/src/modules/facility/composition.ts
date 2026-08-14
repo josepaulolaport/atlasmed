@@ -171,6 +171,7 @@ const facilityMembershipDeps = {
   purchaseRecurrenceService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
   onFacilityChanged: handleFacilityChanged,
+  facilityBookmarkRepository: facilityRepositories.bookmark,
 };
 
 export const facilityUseCases = {

@@ -20,6 +20,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/esta
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/bookmarks_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/bookmarks_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bookmark_icon_button.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
@@ -170,7 +171,13 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
-          BookmarkIconButton(kind: BookmarkKind.clinic, id: clinicId),
+          BookmarkIconButton(
+            kind: BookmarkKind.clinic,
+            id: clinicId,
+            // Null until the detail response lands, so the icon does not claim
+            // "not saved" before anyone has asked the server.
+            serverState: displayFallback?.isBookmarked,
+          ),
           const SizedBox(width: 6),
         ],
       ),
@@ -178,6 +185,23 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         repository: repo,
         builder: (context, data, repository) {
           final zipFacility = data?.facility;
+          if (zipFacility != null && zipFacility.id > 0) {
+            // Seed Favoritos state from the detail response itself, rather than
+            // from `clinicDetailDisplayFacilityProvider`: that one falls back
+            // to the navigation shell built from a list DTO, which never
+            // carries `isBookmarked` and would keep a saved clinic looking
+            // unsaved.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              ref
+                  .read(bookmarkedIdsProvider.notifier)
+                  .set(
+                    BookmarkKind.clinic,
+                    clinicId,
+                    bookmarked: zipFacility.isBookmarked,
+                  );
+            });
+          }
           if (zipFacility != null &&
               zipFacility.id > 0 &&
               _shouldUpdateLoadedFacility(

@@ -86,6 +86,9 @@ describe("GetPersonUseCase", () => {
       hasHealthcareProfile: true,
       registrations: [],
       primaryRegistrationDisplay: null,
+      // Defaults to false when no bookmark repository is wired, so the flag
+      // can never read "saved" on a caller we know nothing about.
+      isBookmarked: false,
     });
   });
 

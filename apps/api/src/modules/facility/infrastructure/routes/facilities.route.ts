@@ -161,6 +161,7 @@ const getFacilityRoute = new Elysia()
         scope,
         role: actor.role.name,
         verticalId: query.verticalId,
+        userId: actor.id,
       });
 
       if (!clinic) {

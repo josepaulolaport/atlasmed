@@ -92,6 +92,13 @@ String resolveTerritoryAssignmentStatus({
 class FacilityDTO {
   final int id;
   final String name;
+
+  /// Whether the caller has this clinic in Favoritos.
+  ///
+  /// Comes inline on the detail response so the bookmark icon paints in its
+  /// true state, instead of rendering hollow and flipping once a separate
+  /// request lands. Absent on list responses, where it defaults to false.
+  final bool isBookmarked;
   final String? neighborhood;
   final String? city;
   final String? state;
@@ -135,6 +142,7 @@ class FacilityDTO {
     required this.id,
     required this.name,
     required this.professionalCount,
+    this.isBookmarked = false,
     this.neighborhood,
     this.city,
     this.state,
@@ -188,6 +196,7 @@ class FacilityDTO {
     return FacilityDTO(
       id: readCrmId(map['id'], 'id'),
       name: readString(map['name']),
+      isBookmarked: map['isBookmarked'] == true,
       neighborhood: readNullableString(map['neighborhood']),
       city: readNullableString(map['city']),
       state: readNullableString(map['state']),
