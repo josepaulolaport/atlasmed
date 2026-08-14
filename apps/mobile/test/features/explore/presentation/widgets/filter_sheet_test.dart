@@ -95,9 +95,12 @@ void main() {
     expect(find.text('Automático'), findsOneWidget);
   });
 
-  testWidgets('selects several unit types and one legal document type', (
+  testWidgets('picks unit types through the drawer, like especialidades', (
     tester,
   ) async {
+    // Chips before: twelve CNES names such as "Unidade De Apoio Diagnose E
+    // Terapia (sadt Isolado)" wrapped into a wall that pushed the rest of the
+    // sheet off screen. It is a drawer now, the same one Especialidade opens.
     Map<String, List<String>>? applied;
 
     await tester.pumpWidget(
@@ -115,20 +118,141 @@ void main() {
         ),
       ),
     );
-
     await tester.pumpAndSettle();
 
-    // Names arrive from CNES in caps; the sheet title-cases them.
-    await tapOption(tester, 'Clinica/Centro De Especialidade');
-    await tapOption(tester, 'Hospital Geral');
-    await tapOption(tester, 'Pessoa jurídica (CNPJ)');
+    // The sheet shows a row, not the catalogue.
+    expect(find.text('Escolher tipos de unidade'), findsOneWidget);
+    expect(find.text('Hospital Geral'), findsNothing);
 
+    await tapOption(tester, 'Escolher tipos de unidade');
+    await tester.pumpAndSettle();
+
+    // Drawer chrome speaks about unit types, not specialties.
+    expect(find.text('Tipo de unidade'), findsOneWidget);
+    await tester.tap(find.text('Clinica/Centro De Especialidade'));
+    await tester.pump();
+    await tester.tap(find.text('Hospital Geral'));
+    await tester.pump();
+    await tester.tap(find.text('Aplicar (2)'));
+    await tester.pumpAndSettle();
+
+    // Back on the sheet, the row counts what was chosen.
+    expect(find.text('2 selecionados'), findsOneWidget);
+
+    await tapOption(tester, 'Pessoa jurídica (CNPJ)');
     await tester.tap(find.text('Aplicar (3)'));
     await tester.pump();
 
-    // Unit type is multi-select; legal type is single.
     expect(applied?['unitTypeIds'], ['3', '7']);
     expect(applied?['legalDocumentType'], ['CNPJ']);
+  });
+
+  testWidgets('the drawer can search a long catalogue', (tester) async {
+    // The reason for the drawer: finding one of twelve long names.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: stubUnitTypesOverrides(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: FilterSheet(
+              kind: 'clinic',
+              filters: const {},
+              radiusKm: null,
+              onApply: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapOption(tester, 'Escolher tipos de unidade');
+    await tester.pumpAndSettle();
+
+    // By hint, not `.first`: the sheet's own "Mínimo"/"Máximo" interval fields
+    // come earlier in the tree, and typing into one of those would filter
+    // nothing and still pass a laxer assertion.
+    final search = find.byWidgetPredicate(
+      (w) =>
+          w is TextField && w.decoration?.hintText == 'Buscar tipo de unidade…',
+    );
+    expect(search, findsOneWidget);
+    await tester.enterText(search, 'hospital');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hospital Geral'), findsOneWidget);
+    expect(find.text('Clinica/Centro De Especialidade'), findsNothing);
+  });
+
+  testWidgets('the purchase buckets use the compact chip', (tester) async {
+    /**
+     * Font-independent, deliberately.
+     *
+     * The obvious test — "all three chips share a dy" — cannot work: widget
+     * tests render in Ahem, where every glyph is a square, so "Nunca
+     * compraram" measures 184pt against roughly 90pt in the real font. That
+     * test failed while the real layout was fine, and satisfying it would have
+     * meant shrinking the UI to fit a font nobody sees.
+     *
+     * So this pins the styling that makes one line possible, and whether it
+     * actually fits is a question for a screenshot.
+     */
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: stubUnitTypesOverrides(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: FilterSheet(
+              kind: 'clinic',
+              filters: const {},
+              radiusKm: null,
+              onApply: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    double fontOf(String label) =>
+        tester.widget<Text>(find.text(label)).style!.fontSize!;
+
+    // Compact, against the 13pt used by Situação cadastral beneath it.
+    expect(fontOf('Nunca compraram'), 12);
+    expect(fontOf('Operante'), 13);
+  });
+
+  testWidgets('Situação cadastral comes after Status de compras', (
+    tester,
+  ) async {
+    // Order matters to the rep: the buckets they filter by most often are at
+    // the top, and Natureza jurídica sits directly under them.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: stubUnitTypesOverrides(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: FilterSheet(
+              kind: 'clinic',
+              filters: const {},
+              radiusKm: null,
+              onApply: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    double top(String label) => tester.getTopLeft(find.text(label)).dy;
+
+    // Renamed from the bare "STATUS", which said nothing about which status.
+    expect(find.text('SITUAÇÃO CADASTRAL'), findsOneWidget);
+    expect(find.text('STATUS'), findsNothing);
+
+    expect(top('STATUS DE COMPRAS'), lessThan(top('NATUREZA JURÍDICA')));
+    expect(top('NATUREZA JURÍDICA'), lessThan(top('ESPECIALIDADE')));
+    expect(top('ESPECIALIDADE'), lessThan(top('SITUAÇÃO CADASTRAL')));
+    expect(top('SITUAÇÃO CADASTRAL'), lessThan(top('PERFIL DE COMPRA')));
   });
 
   testWidgets('a second legal document type replaces the first', (
