@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
-import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_data.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Compact family card for the Produtos list — brand-level intro only.
-/// Concentrations and pricing live on the detail screen.
+/// Compact family card for the Produtos list — brand-level introduction with
+/// presentation count and the lowest current price. The selected presentation
+/// and its full pricing live on the detail screen.
 class ProductsProductCard extends StatelessWidget {
-  final MockProductFamily family;
+  final CatalogFamily family;
   final VoidCallback? onTap;
 
   const ProductsProductCard({super.key, required this.family, this.onTap});
@@ -79,6 +81,15 @@ class ProductsProductCard extends StatelessWidget {
                         value: family.countryOfOrigin,
                       ),
                     ],
+                    const SizedBox(height: 6),
+                    Text(
+                      '${family.variants.length} ${family.variants.length == 1 ? 'apresentação' : 'apresentações'} · a partir de ${brl(family.minPrice)}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.navyBright,
+                      ),
+                    ),
                   ],
                 ),
               ),
