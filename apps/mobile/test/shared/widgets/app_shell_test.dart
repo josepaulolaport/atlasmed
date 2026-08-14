@@ -41,6 +41,58 @@ void main() {
     });
   });
 
+  group('BranchHistory', () {
+    test('nothing to go back to until a branch is left', () {
+      final history = BranchHistory();
+      expect(history.canGoBack, isFalse);
+      expect(history.pop(), isNull);
+    });
+
+    test('remembers the branch it came from', () {
+      final history = BranchHistory();
+      history.push(leaving: 0, entering: 11);
+
+      expect(history.canGoBack, isTrue);
+      expect(history.pop(), 0);
+      expect(history.canGoBack, isFalse);
+    });
+
+    test('re-selecting the open branch is not a move', () {
+      // Otherwise tapping Equipe while already on Equipe would make "back"
+      // return to Equipe, which is the one destination it cannot usefully have.
+      final history = BranchHistory();
+      history.push(leaving: 11, entering: 11);
+
+      expect(history.canGoBack, isFalse);
+    });
+
+    test('walks back in the order visited', () {
+      final history = BranchHistory();
+      history.push(leaving: 0, entering: 1);
+      history.push(leaving: 1, entering: 11);
+
+      expect(history.pop(), 1);
+      expect(history.pop(), 0);
+      expect(history.pop(), isNull);
+    });
+
+    test('forgets the oldest rather than growing without bound', () {
+      final history = BranchHistory();
+      for (var i = 0; i <= BranchHistory.maxEntries; i++) {
+        history.push(leaving: i, entering: i + 1);
+      }
+
+      // The first entry is gone; the most recent is still the next step back.
+      expect(history.pop(), BranchHistory.maxEntries);
+      final remaining = <int>[];
+      for (var next = history.pop(); next != null; next = history.pop()) {
+        remaining.add(next);
+      }
+      expect(remaining.length, BranchHistory.maxEntries - 1);
+      expect(remaining.contains(0), isFalse);
+    });
+  });
+
   group('appNavigationItems', () {
     test('keeps order history available in the main navigation', () {
       expect(

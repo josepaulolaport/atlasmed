@@ -1,3 +1,5 @@
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
@@ -9,29 +11,8 @@ import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _sortLabels = <String, String>{
-  'name': 'Nome',
-  'assigned-clinics': 'Clínicas',
-  'coverage': 'Cobertura',
-  'cadastro-completion': 'Cadastro',
-  'orders-month': 'Pedidos no mês',
-  'penetration': 'Penetração',
-  'unassigned-clinics': 'Sem representante',
-};
-
 /// Above this many people, scanning stops working and you need to search.
 const _searchThreshold = 8;
-
-/// The sorts worth offering for a given roster.
-///
-/// "Sem representante" counts the clinics inside someone's zones that nobody
-/// holds — a rep has no zones, so on a rep roster the API can only answer null
-/// for everyone. Offering it there is offering an order that does not exist.
-List<MapEntry<String, String>> _sortOptions({required bool isManagerRoster}) {
-  return _sortLabels.entries
-      .where((e) => isManagerRoster || e.key != 'unassigned-clinics')
-      .toList(growable: false);
-}
 
 /// Equipe (spec 0014 §6) — the roster, and the way into a person's Desempenho.
 ///
@@ -62,23 +43,24 @@ class TeamScreen extends ConsumerStatefulWidget {
 }
 
 class _TeamScreenState extends ConsumerState<TeamScreen> {
-  String _sortBy = 'name';
-  String _order = 'asc';
   String _search = '';
 
   @override
   Widget build(BuildContext context) {
     final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
+    final role = ref.watch(currentUserRoleProvider);
 
     if (verticalId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // Always by name. `sortBy` still exists on the API and still orders on the
+    // batched metrics; nothing on this screen chooses another one any more.
     final args = TeamArgs(
       verticalId: verticalId,
       managerId: widget.managerId,
-      sortBy: _sortBy,
-      order: _order,
+      sortBy: 'name',
+      order: 'asc',
     );
 
     return Scaffold(
@@ -104,16 +86,17 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             }
             final members = roster.members;
             final invites = roster.pendingInvites;
-            // Read off the roster itself rather than inferred from the viewer's
-            // role. `role != manager` treats *not yet loaded* as admin, and the
-            // role arrives a beat after a fresh sign-in — so a manager who had
-            // just logged in saw their three reps headed "3 gestores", and was
-            // offered a sort ("Sem representante") that only exists for zones.
-            // Who is in the list is a fact about the response; who is looking is
-            // a fact still in flight.
-            final isManagerRoster = widget.managerId == null
-                ? members.any((member) => member.roleName != 'REP')
-                : false;
+            // Only the empty state asks this, and only an empty roster can
+            // reach it — so there are never rows to read the kind from, and the
+            // viewer is the only signal. Safe here for the reason it was not
+            // when the header used it on every render: by the time an empty
+            // response has arrived, the role has had the same trip to resolve.
+            //
+            // The distinction earns its keep: "nenhum gestor com zona" and
+            // "nenhum representante nesta equipe" have different causes and
+            // different fixes.
+            final isManagerRoster =
+                widget.managerId == null && role == UserRoleName.admin;
             if (members.isEmpty && invites.isEmpty) {
               // A ListView rather than a Center: an empty roster is exactly
               // when someone reaches for pull-to-refresh, and a non-scrollable
@@ -136,16 +119,9 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return _RosterHeader(
-                    isManagerRoster: isManagerRoster,
                     showSearch: members.length >= _searchThreshold,
                     search: _search,
                     onSearch: (value) => setState(() => _search = value),
-                    sortBy: _sortBy,
-                    order: _order,
-                    onSort: (sortBy, order) => setState(() {
-                      _sortBy = sortBy;
-                      _order = order;
-                    }),
                   );
                 }
                 if (visible.isEmpty && invites.isEmpty) {
@@ -187,51 +163,31 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
   }
 }
 
-/// What sits above the roster: search, and the order.
+/// What sits above the roster: the search, when there are enough people to
+/// need one.
 ///
-/// It used to open with the team totalled in one line. That line answered a
-/// Desempenho question on an Equipe screen, and it is the same question the
-/// viewer's own Desempenho already answers for the same population.
+/// It opened with the team totalled in one line and a sort control beside it.
+/// Both answered a Desempenho question on an Equipe screen — the totals for the
+/// team, the sort for ranking colleagues against each other. Equipe answers
+/// *who*, and a roster of three to nine people in alphabetical order needs no
+/// help being read.
 class _RosterHeader extends StatelessWidget {
   const _RosterHeader({
-    required this.isManagerRoster,
     required this.showSearch,
     required this.search,
     required this.onSearch,
-    required this.sortBy,
-    required this.order,
-    required this.onSort,
   });
 
-  final bool isManagerRoster;
   final bool showSearch;
   final String search;
   final ValueChanged<String> onSearch;
-  final String sortBy;
-  final String order;
-  final void Function(String sortBy, String order) onSort;
 
   @override
   Widget build(BuildContext context) {
+    if (!showSearch) return const SizedBox(height: 8);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: Row(
-        children: [
-          if (showSearch)
-            Expanded(
-              child: _SearchField(value: search, onChanged: onSearch),
-            )
-          else
-            const Spacer(),
-          const SizedBox(width: 8),
-          _SortButton(
-            sortBy: sortBy,
-            order: order,
-            onSort: onSort,
-            isManagerRoster: isManagerRoster,
-          ),
-        ],
-      ),
+      child: _SearchField(value: search, onChanged: onSearch),
     );
   }
 }
@@ -270,126 +226,6 @@ class _SearchField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.surfaceSecondary),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One control instead of seven chips.
-///
-/// The chips took a full scrolling row to say something the roster is not
-/// mainly about: order. Now that every row shows its figures whatever the sort,
-/// the sort is a preference, and a preference belongs behind a button.
-class _SortButton extends StatelessWidget {
-  const _SortButton({
-    required this.sortBy,
-    required this.order,
-    required this.onSort,
-    required this.isManagerRoster,
-  });
-
-  final String sortBy;
-  final String order;
-  final void Function(String sortBy, String order) onSort;
-  final bool isManagerRoster;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: () => _open(context),
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.surfaceSecondary),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              order == 'asc'
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
-              size: 15,
-              color: AppColors.navyBright,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              _sortLabels[sortBy] ?? 'Nome',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.gray900,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _open(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Ordenar por',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray900,
-                  ),
-                ),
-              ),
-            ),
-            for (final entry in _sortOptions(isManagerRoster: isManagerRoster))
-              ListTile(
-                dense: true,
-                title: Text(
-                  entry.value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: sortBy == entry.key
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: AppColors.gray900,
-                  ),
-                ),
-                // The active row shows which way it currently runs, and tapping
-                // it flips that. A different row starts ascending.
-                trailing: sortBy == entry.key
-                    ? Icon(
-                        order == 'asc'
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
-                        size: 17,
-                        color: AppColors.navyBright,
-                      )
-                    : null,
-                onTap: () {
-                  onSort(
-                    entry.key,
-                    sortBy == entry.key && order == 'asc' ? 'desc' : 'asc',
-                  );
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-          ],
         ),
       ),
     );

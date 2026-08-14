@@ -83,41 +83,20 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('reads its kind from its own rows, not from the viewer', (
+  testWidgets('an empty roster still says which kind of empty it is', (
     tester,
   ) async {
-    // `currentUserRoleProvider` resolves a beat after sign-in, and this used to
-    // ask `role != manager` — so an unresolved role counted as admin. The
-    // visible cost was a sort ("Sem representante") that counts clinics inside
-    // a manager's zones and can only be null for every rep on the list.
-    await _pump(tester, [
-      _member(userId: 5, name: 'Ana'),
-      _member(userId: 6, name: 'Bruno'),
-    ], role: null);
-
-    await tester.tap(find.text('Nome'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sem representante'), findsNothing);
+    // No rows to read the kind from — and this is where it matters most, since
+    // the two empty states have different causes and different fixes.
+    await _pump(tester, const [], role: UserRoleName.admin);
+    expect(find.text('Nenhum gestor com zona nesta linha'), findsOneWidget);
   });
 
-  testWidgets('a roster of managers is offered the sorts only it has', (
+  testWidgets('an empty rep roster reads as a manager\'s, not an admin\'s', (
     tester,
   ) async {
-    // A phone-sized surface: the manager sheet carries seven options and the
-    // 800x600 default is shorter than any device this ships to.
-    tester.view.physicalSize = const Size(1200, 2400);
-    tester.view.devicePixelRatio = 3;
-    addTearDown(tester.view.reset);
-
-    await _pump(tester, [
-      _member(userId: 2, name: 'Silvio', role: 'MANAGER'),
-    ], role: null);
-
-    await tester.tap(find.text('Nome'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sem representante'), findsOneWidget);
+    await _pump(tester, const [], role: UserRoleName.manager);
+    expect(find.text('Nenhum representante nesta equipe'), findsOneWidget);
   });
 
   testWidgets('a card never mentions territory, however much someone holds', (

@@ -35,8 +35,61 @@ class AppShellScreen extends StatefulWidget {
   State<AppShellScreen> createState() => AppShellScreenState();
 }
 
+/// The branches visited before the current one, most recent last.
+///
+/// `StatefulNavigationShell` gives each branch its own stack and no order
+/// between them, so at the root of a branch there is nothing to go back to: you
+/// land on Equipe from Desempenho and the only way out is the drawer again.
+/// This is that memory, and it is the whole of it — enough to answer "where was
+/// I", not a second navigator.
+class BranchHistory {
+  /// Bounded because this is a convenience, not a record. Somebody moving
+  /// between two sections all afternoon should not accumulate an afternoon of
+  /// history to walk back through.
+  static const maxEntries = 12;
+
+  final List<int> _entries = [];
+
+  bool get canGoBack => _entries.isNotEmpty;
+
+  /// Records leaving [current]. Re-selecting the open branch is not a move, so
+  /// it remembers nothing — otherwise tapping Equipe twice would make "back"
+  /// return to Equipe.
+  void push({required int leaving, required int entering}) {
+    if (leaving == entering) return;
+    _entries.add(leaving);
+    if (_entries.length > maxEntries) _entries.removeAt(0);
+  }
+
+  /// The branch to return to, or null when there is none.
+  int? pop() => _entries.isEmpty ? null : _entries.removeLast();
+}
+
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  final BranchHistory _branchHistory = BranchHistory();
+
+  bool get canGoBackBranch => _branchHistory.canGoBack;
+
+  /// Switches branch, remembering the one being left.
+  void selectBranch(int branchIndex) {
+    final current = widget.navigationShell.currentIndex;
+    _branchHistory.push(leaving: current, entering: branchIndex);
+    widget.navigationShell.goBranch(
+      branchIndex,
+      initialLocation: branchIndex == current,
+    );
+    setState(() {});
+  }
+
+  /// Returns to the branch this one was opened from.
+  void goBackBranch() {
+    final previous = _branchHistory.pop();
+    if (previous == null) return;
+    widget.navigationShell.goBranch(previous);
+    setState(() {});
+  }
 
   static const Color _defaultShellChromeColor = AppColors.background;
 
@@ -68,10 +121,7 @@ class AppShellScreenState extends State<AppShellScreen> {
         backgroundColor: _defaultShellChromeColor,
         drawer: AtlasDrawer(
           activeBranchIndex: navigationShell.currentIndex,
-          onSelectBranch: (branchIndex) => navigationShell.goBranch(
-            branchIndex,
-            initialLocation: branchIndex == navigationShell.currentIndex,
-          ),
+          onSelectBranch: selectBranch,
         ),
         body: Stack(
           children: [
@@ -201,10 +251,56 @@ class _AtlasTopBarContent extends StatelessWidget {
         height: 40,
         child: Row(
           children: [
+            // Shown only once there is somewhere to return to. At the root of a
+            // branch the leading control is a menu, which opens a list of
+            // destinations rather than retracing the one step you took — so
+            // arriving on Equipe from Desempenho left no way back but choosing
+            // Desempenho again from that list.
+            if (_branchBackAvailable(context)) ...[
+              _branchBackButton(context),
+              const SizedBox(width: 8),
+            ],
             _hamburgerButton(context),
             if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
             if (compact) const Spacer(),
           ],
+        ),
+      ),
+    );
+  }
+
+  static bool _branchBackAvailable(BuildContext context) =>
+      AppShellScreenState.of(context)?.canGoBackBranch ?? false;
+
+  /// Back to the section you came from, drawn like the leading control so the
+  /// pair reads as one bar rather than as a button bolted onto one.
+  Widget _branchBackButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => AppShellScreenState.of(context)?.goBackBranch(),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: AppColors.surfaceSecondary),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A0f1729),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+            BoxShadow(
+              color: Color(0x0D0f1729),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: AppColors.navyDeep,
+          size: 15,
         ),
       ),
     );
