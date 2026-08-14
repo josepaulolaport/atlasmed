@@ -5,6 +5,13 @@ import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 ///
 /// Several variants sharing the same [familyName] (`productGroup` in the DB)
 /// are grouped into a [CatalogFamily] for display.
+///
+/// [code], [simproCode], [brasindiceCode], [tissCode] and
+/// [brasindiceUpdatedAt] are nullable on the API (spec 0013 §2: the coding
+/// columns are NULLABLE by correctness — e.g. a product whose Brasíndice
+/// record has not been imported yet). They parse to `''` / `null` here, never
+/// to a thrown cast, so one incomplete product cannot take down the whole
+/// list.
 class CatalogVariant {
   const CatalogVariant({
     required this.id,
@@ -46,7 +53,10 @@ class CatalogVariant {
   final double price17;
   final double price18;
   final double price20;
-  final DateTime brasindiceUpdatedAt;
+
+  /// Null when the product has no Brasíndice record yet (it ships with no
+  /// [brasindiceCode]) — the API column is nullable.
+  final DateTime? brasindiceUpdatedAt;
   final bool isActive;
 
   /// Commercial sectors this product belongs to (`verticalIds` on the
@@ -64,13 +74,16 @@ class CatalogVariant {
       String v => double.tryParse(v) ?? 0,
       _ => 0,
     };
+    // Coding columns are nullable by design (spec 0013 §2) — the API sends
+    // JSON null for a product without them, never a string.
+    String readCode(Object? value) => (value as String?)?.trim() ?? '';
 
     final productGroup = json['productGroup'] as String?;
     final name = json['name'] as String;
 
     return CatalogVariant(
       id: readCrmId(json['id'], 'id'),
-      code: json['code'] as String,
+      code: readCode(json['code']),
       name: name,
       familyName: (productGroup?.trim().isNotEmpty ?? false)
           ? productGroup!.trim()
@@ -79,15 +92,15 @@ class CatalogVariant {
       presentation: '',
       manufacturer: json['manufacturer'] as String,
       countryOfOrigin: json['countryOfOrigin'] as String,
-      simproCode: json['simproCode'] as String,
-      brasindiceCode: json['brasindiceCode'] as String,
-      tissCode: json['tissCode'] as String,
+      simproCode: readCode(json['simproCode']),
+      brasindiceCode: readCode(json['brasindiceCode']),
+      tissCode: readCode(json['tissCode']),
       price: readPrice(json['price']),
       price17: readPrice(json['price17']),
       price18: readPrice(json['price18']),
       price20: readPrice(json['price20']),
-      brasindiceUpdatedAt: DateTime.parse(
-        json['brasindiceUpdatedAt'] as String,
+      brasindiceUpdatedAt: DateTime.tryParse(
+        json['brasindiceUpdatedAt'] as String? ?? '',
       ),
       isActive: json['isActive'] as bool? ?? true,
       verticalIds: readCrmIdList(json['verticalIds'], 'verticalIds'),

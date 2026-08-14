@@ -49,6 +49,56 @@ void main() {
     expect(find.text('Brasíndice: 01/08/2026'), findsOneWidget);
     expect(find.text('Simpro: 02/08/2026'), findsOneWidget);
   });
+
+  testWidgets('a family without coding columns still renders, with dashes', (
+    tester,
+  ) async {
+    // Mirrors the production row that broke the screen: EVISC 1.0% ships
+    // with null simpro/brasindice/tiss codes and no publication date.
+    final bareFamily = CatalogFamily(
+      id: 10,
+      name: 'Eviscer',
+      manufacturer: 'TRB PHARMA',
+      countryOfOrigin: 'Brasil',
+      variants: [
+        CatalogVariant(
+          id: 10,
+          code: '4064544237823',
+          name: 'Eviscer 1.0%',
+          familyName: 'Eviscer',
+          presentation: '',
+          manufacturer: 'TRB PHARMA',
+          countryOfOrigin: 'Brasil',
+          simproCode: '',
+          brasindiceCode: '',
+          tissCode: '',
+          price: 2855,
+          price17: 2855,
+          price18: 2855,
+          price20: 2855,
+          brasindiceUpdatedAt: null,
+        ),
+      ],
+      brasindicePublishedAt: null,
+      simproPublishedAt: null,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogFamiliesProvider.overrideWith((ref) async => [bareFamily]),
+        ],
+        child: MaterialApp(home: const ProductDetailScreen(familyId: 10)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Codes panel shows dashes instead of throwing on the missing codes.
+    expect(find.text('SIMPRO'), findsOneWidget);
+    expect(find.text('—'), findsNWidgets(3));
+    expect(find.text('Brasíndice: —'), findsOneWidget);
+    expect(find.text('Simpro: —'), findsOneWidget);
+  });
 }
 
 final _variant = CatalogVariant(
