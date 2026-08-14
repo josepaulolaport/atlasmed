@@ -60,8 +60,10 @@ function fakeRepository(
   return {
     findAll,
     findAllByIds: async () => [],
+    registryHasEstablishment: async () => true,
     findById: async () => null,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypesInUse: async () => [],
     listUnitTypeCatalog: async () => [],
     create: async () => facilityRecord(100),
     update: async () => facilityRecord(101),
@@ -386,6 +388,64 @@ describe("ListFacilitiesUseCase", () => {
       sort: ["_geoPoint(-23.55, -46.63):asc"],
     });
     expect(findAllCalls).toBe(1);
+  });
+
+  it("prefilters textual search by unit type and legal document type", async () => {
+    // Before these were indexed, a search combined with either filter sent an
+    // unfiltered query to Meili, lost rows in the SQL hydrate, and re-ran the
+    // whole thing as SQL. Correct results, two round trips, every request.
+    let options: { filter?: string } | undefined;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.findAllByIds = async () => [];
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [], estimatedTotalHits: 0 };
+        },
+      },
+    });
+
+    await useCase.execute(withRole({
+      search: "central",
+      unitTypeIds: [7, 3, 3],
+      legalDocumentType: "CNPJ" as const,
+      clinicalFocusIds: [5, 4],
+      scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    }));
+
+    // De-duplicated and sorted, so the expression is stable. Note the shapes
+    // differ on purpose: unit types are OR (a facility has exactly one),
+    // clinical focuses are AND (it must offer all of them).
+    expect(options?.filter).toBe(
+      "unitTypeId IN [3, 7] AND legalDocumentType = 'CNPJ'"
+        + " AND (clinicalFocusIds = 4 AND clinicalFocusIds = 5)",
+    );
+  });
+
+  it("sends no unit type or legal type clause when neither is asked for", async () => {
+    let options: { filter?: string } | undefined;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.findAllByIds = async () => [];
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [], estimatedTotalHits: 0 };
+        },
+      },
+    });
+
+    await useCase.execute(withRole({
+      search: "central",
+      scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    }));
+
+    expect(options?.filter).toBeUndefined();
   });
 
   it("prefilters an empty non-global facility scope then falls back to SQL on empty Meili", async () => {

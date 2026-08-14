@@ -8,7 +8,12 @@ import {
 import { sql } from "drizzle-orm";
 import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
+import {
+  EMPTY_CPF_ISSUE_COUNTS,
+  EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS,
+} from "../../infrastructure/repositories/drizzle-dashboard.repository";
 import type {
+  CpfIssueCounts,
   DashboardClinicRow,
   DashboardFilterOption,
   DashboardPenetrationRow,
@@ -155,10 +160,15 @@ export class GetAssignedClinicsMetricUseCase extends DashboardMetricUseCase {
 /**
  * Cobertura — clinics that have **ever bought**, over the denominator.
  *
- * `(active + inactive) ÷ denominator`, where the buckets come from
- * `purchase_funnel_stage`. Percent is null rather than 0 when the denominator
- * is empty: a rep with no clinics has no coverage figure, and 0% would read as
- * a failure rather than an absence.
+ * Everything that is not NEVER_PURCHASED, and not a profile the funnel has yet
+ * to calculate, over the denominator. Stated that way rather than as
+ * `active + inactive` over the old three buckets, which silently excluded the
+ * INACTIVE stage — a clinic that bought for two years and then lapsed counted
+ * as never having bought, and coverage read lower than reality.
+ *
+ * Percent is null rather than 0 when the denominator is empty: a rep with no
+ * clinics has no coverage figure, and 0% would read as a failure rather than an
+ * absence.
  */
 export class GetCoverageMetricUseCase extends DashboardMetricUseCase {
   async execute(request: DashboardMetricRequest): Promise<{
@@ -171,9 +181,10 @@ export class GetCoverageMetricUseCase extends DashboardMetricUseCase {
     const context = await this.resolve(request);
     const buckets: PurchaseStatusBuckets = context.filter
       ? await this.deps.repository.countPurchaseBuckets(context.filter)
-      : { active: 0, inactive: 0, neverBought: 0, total: 0 };
+      : { stages: { ...EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS }, total: 0 };
 
-    const covered = buckets.active + buckets.inactive;
+    const covered =
+      buckets.total - buckets.stages.NEVER_PURCHASED - buckets.stages.UNKNOWN;
     return {
       verticalId: context.verticalId,
       buckets,
@@ -195,7 +206,29 @@ export class GetPurchaseBucketsMetricUseCase extends DashboardMetricUseCase {
       verticalId: context.verticalId,
       buckets: context.filter
         ? await this.deps.repository.countPurchaseBuckets(context.filter)
-        : { active: 0, inactive: 0, neverBought: 0, total: 0 },
+        : { stages: { ...EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS }, total: 0 },
+    };
+  }
+}
+
+/**
+ * CPF clinics whose document is unusable — the warning above the donut.
+ *
+ * A metric like any other rather than a field on a composite payload, so it is
+ * scoped by the same filter as the cards it sits with and fails on its own: a
+ * warning that cannot be counted should not blank the screen behind it.
+ */
+export class GetCpfIssuesMetricUseCase extends DashboardMetricUseCase {
+  async execute(request: DashboardMetricRequest): Promise<{
+    verticalId: number;
+    issues: CpfIssueCounts;
+  }> {
+    const context = await this.resolve(request);
+    return {
+      verticalId: context.verticalId,
+      issues: context.filter
+        ? await this.deps.repository.countCpfIssues(context.filter)
+        : { ...EMPTY_CPF_ISSUE_COUNTS },
     };
   }
 }

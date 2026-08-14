@@ -14,6 +14,7 @@ import {
   GetFacilityUseCase,
   ListFacilitiesUseCase,
   ListClinicalFocusesUseCase,
+  ListFacilityUnitTypesUseCase,
   ListUnitTypesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
@@ -75,6 +76,12 @@ import { FacilityLocationService } from "./application/services/facility-locatio
 import { DrizzleFacilityLocationRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-location.repository";
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
+import { DrizzleFacilityBookmarkRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-bookmark.repository";
+import {
+  AddFacilityBookmarkUseCase,
+  ListFacilityBookmarksUseCase,
+  RemoveFacilityBookmarkUseCase,
+} from "./application/use-cases/facility-bookmark.use-cases";
 import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 import { searchService } from "../../infrastructure/search/search.service";
 
@@ -87,6 +94,12 @@ export const facilityRepositories = {
   conformity: new DrizzleConformityRepository(),
   cadastroSubmission: new DrizzleCadastroSubmissionRepository(),
   visit: new DrizzleVisitRepository(),
+  bookmark: new DrizzleFacilityBookmarkRepository(),
+};
+
+const facilityBookmarkDeps = {
+  facilityBookmarkRepository: facilityRepositories.bookmark,
+  facilityRepository: facilityRepositories.facility,
 };
 
 const facilityPhotoStorage = new AvatarStorageAdapter();
@@ -159,6 +172,7 @@ const facilityMembershipDeps = {
   purchaseRecurrenceService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
   onFacilityChanged: handleFacilityChanged,
+  facilityBookmarkRepository: facilityRepositories.bookmark,
 };
 
 export const facilityUseCases = {
@@ -169,11 +183,18 @@ export const facilityUseCases = {
     }),
   listClinicalFocuses: () =>
     new ListClinicalFocusesUseCase(facilityMembershipDeps),
+  listFacilityUnitTypes: () =>
+    new ListFacilityUnitTypesUseCase(facilityMembershipDeps),
   listUnitTypes: () => new ListUnitTypesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),
   deleteFacility: () => new DeleteFacilityUseCase(facilityMembershipDeps),
+  addFacilityBookmark: () => new AddFacilityBookmarkUseCase(facilityBookmarkDeps),
+  removeFacilityBookmark: () =>
+    new RemoveFacilityBookmarkUseCase(facilityBookmarkDeps),
+  listFacilityBookmarks: () =>
+    new ListFacilityBookmarksUseCase(facilityBookmarkDeps),
   listFacilityNotes: () =>
     new ListFacilityNotesUseCase({
       facilityNoteRepository: facilityRepositories.note,

@@ -40,6 +40,8 @@ async function seedProfiles(tx: Tx, suffix: string, count: number) {
   const [facility] = await tx
     .insert(facilities)
     .values({
+      // Spec 0015: every facility carries the CNES establishment it came from.
+      cnesCode: crypto.randomUUID(),
       displayName: `W-CLINIC-${suffix}`,
       legalDocumentType: "CNPJ",
       stateId: state!.id,

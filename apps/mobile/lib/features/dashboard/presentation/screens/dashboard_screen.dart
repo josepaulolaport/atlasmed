@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/cpf_warning_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_filter_bar.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_metric_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_territory_card.dart';
@@ -154,6 +155,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             else ...[
               DashboardFilterBar(scope: scope),
               const SizedBox(height: 12),
+              // Above the donut: it is the only card here asking the rep to do
+              // something, and it renders nothing when there is nothing to do.
+              _CpfWarningSection(scope: scope),
               // The two cards that were already here keep the top of the
               // screen: this is the view reps open every day, and spec 0014
               // added metrics to it rather than replacing what they read first.
@@ -325,6 +329,49 @@ class _DonutSection extends ConsumerWidget {
             'inactive' => 'bucket-inactive',
             _ => 'bucket-never-bought',
           }, scope),
+        );
+      },
+    );
+  }
+}
+
+/// Renders nothing at all while loading or on failure — an empty slot, not a
+/// spinner. A warning that has not arrived is indistinguishable from no warning
+/// to the rep, and a skeleton above the donut would shift the whole screen down
+/// on every load for the majority of scopes that have nothing pending.
+class _CpfWarningSection extends ConsumerWidget {
+  const _CpfWarningSection({required this.scope});
+
+  final DashboardScopeArgs scope;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RepositoryBuilder(
+      repository: ref.watch(cpfIssuesMetricProvider(scope)),
+      builder: (context, issues, repo) {
+        if (issues == null || issues.isClear) return const SizedBox.shrink();
+        return Column(
+          children: [
+            CpfWarningCard(
+              issues: issues,
+              onTapStatus: (cpfStatus) => CpfIssueFacilitiesRoute(
+                cpfStatus: cpfStatus,
+                // Passed explicitly so the list matches the number that opened
+                // it: the list would otherwise fall back to the active-vertical
+                // header, which this count does not read.
+                //
+                // KNOWN GAP: only the linha travels. The count is scoped by the
+                // filter bar like every other card, and this list is not — so
+                // with a state or manager filter applied, the list opens wider
+                // than the number that opened it. They agree exactly in the
+                // default, unfiltered state, which is what the db test pins.
+                // Closing it needs the drill-down to take the same scope args
+                // the other metric breakdowns already carry.
+                verticalId: scope.verticalId,
+              ).push(context),
+            ),
+            const SizedBox(height: 12),
+          ],
         );
       },
     );

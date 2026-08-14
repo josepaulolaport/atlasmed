@@ -30,7 +30,20 @@ function fakeRepository(overrides: Partial<Repo> = {}) {
     },
     countPurchaseBuckets: async (filter: DashboardProfileFilter) => {
       seen.push(filter);
-      return { active: 3, inactive: 2, neverBought: 5, total: 10 };
+      // 5 have bought at some point (3 in the window, 1 outside it, 1 churned),
+      // 5 never have — so Cobertura is 5/10. INACTIVE sits on the "has bought"
+      // side, which is the half the old three-bucket grouping got wrong.
+      return {
+        stages: {
+          NEVER_PURCHASED: 5,
+          OUTSIDE_WINDOW: 1,
+          PURCHASE_WINDOW: 3,
+          CHURN: 1,
+          INACTIVE: 0,
+          UNKNOWN: 0,
+        },
+        total: 10,
+      };
     },
     countRegisteredProfiles: async (filter: DashboardProfileFilter) => {
       seen.push(filter);
@@ -197,9 +210,14 @@ describe("cobertura (spec 0014 §4)", () => {
   it("reports no percentage — not 0% — when there are no clinics", async () => {
     const { repository } = fakeRepository({
       countPurchaseBuckets: async () => ({
-        active: 0,
-        inactive: 0,
-        neverBought: 0,
+        stages: {
+          NEVER_PURCHASED: 0,
+          OUTSIDE_WINDOW: 0,
+          PURCHASE_WINDOW: 0,
+          CHURN: 0,
+          INACTIVE: 0,
+          UNKNOWN: 0,
+        },
         total: 0,
       }),
     });

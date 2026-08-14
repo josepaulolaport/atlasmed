@@ -49,6 +49,7 @@ production, so the filter currently renders with no options.
 ## Mobile Architecture
 
 - Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
+- The user-facing product routes (`/products`, `/products/:familyId`) read the API-backed catalog through `CatalogRepository` and Riverpod's `catalogFamiliesProvider`; no local product fixture is used. The route opens a product family from any of its variant IDs, preserving deep links if the API reorders presentations.
 - ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
 ## Data Architecture
@@ -59,8 +60,10 @@ PostgreSQL named schemas in use:
 
 - `public` — CRM and operational data (users, sessions, facilities, persons / person_facilities, territories, catalog, orders, field suggestions, cadastro, CNES lookup catalogs, etc.).
 - `audit` — `audit_logs` compliance trail.
+- `registry` — read-only mirror of the monthly CNES export, scoped to clinics we operate. Loaded by the ingestion worker; never written by the application. ADR 0006, narrowed; ADR 0009.
+- `ingestion` — one table, `cnes_runs`: the ingestion run ledger. Not the diff/suggestion warehouse that was deleted in `a3e32ac5`, and that is not coming back.
 
-There is **no** `registry` or `ingestion` schema. CNES FTP/archive warehouse ingest and registry READ/confirm were removed. Public CNES lookup tables and `facilities.cnes_code` remain. Do not reintroduce a registry warehouse without a new ADR and product decision.
+The registry resolves to `public` by **join, never by a stored link**: `registry.professionals.cnes_id` = `person_healthcare_profiles.cnes_professional_id`, measured at 100 % coverage against the 202605 export. A reload therefore changes the answer with no migration and no relink step.
 
 ### Geometry
 

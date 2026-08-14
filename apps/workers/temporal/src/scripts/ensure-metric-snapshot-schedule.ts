@@ -29,7 +29,13 @@ export const METRIC_SNAPSHOT_SCHEDULES = [
   {
     scheduleId: "facility-metric-snapshot-hourly",
     workflowId: "facility-metric-snapshot-hourly",
-    calendar: { minute: 0 },
+    /**
+     * `hour: "*"` is load-bearing — Temporal defaults an omitted calendar field
+     * to 0, so `{ minute: 0 }` means midnight daily, not hourly. This ran at
+     * 00:00 in production until 2026-08-14, colliding with the nightly pass the
+     * 03:00 above was chosen to stay clear of.
+     */
+    calendar: { minute: 0, hour: "*" },
     mode: "RECONCILE",
   },
   {

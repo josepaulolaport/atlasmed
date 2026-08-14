@@ -20,6 +20,11 @@ final canReadTeamProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canReadTeam),
 );
 
+/// Whether the CNES import entry point is shown at all.
+final canImportFacilityFromCnesProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canImportFacilityFromCnes),
+);
+
 final canManageUserAdminProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canManageUserAdmin),
 );

@@ -94,6 +94,9 @@ final coverageMetricProvider = _metricFamily<DashboardRatioMetric>(
 final purchaseBucketsMetricProvider = _metricFamily<DashboardBuckets>(
   purchaseBucketsRepository,
 );
+final cpfIssuesMetricProvider = _metricFamily<DashboardCpfIssues>(
+  cpfIssuesRepository,
+);
 final cadastroCompletionMetricProvider = _metricFamily<DashboardRatioMetric>(
   cadastroCompletionRepository,
 );

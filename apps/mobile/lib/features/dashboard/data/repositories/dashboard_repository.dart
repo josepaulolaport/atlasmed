@@ -66,6 +66,17 @@ DashboardMetricRepository<DashboardBuckets> purchaseBucketsRepository(
   ),
 );
 
+/// The CPF warning above the donut. Its own request like every other metric, so
+/// a failure here leaves the rest of Desempenho intact.
+DashboardMetricRepository<DashboardCpfIssues> cpfIssuesRepository(
+  DashboardScopeArgs args,
+) => DashboardMetricRepository(
+  path: '/dashboard/metrics/cpf-issues',
+  args: args,
+  parse: (json) =>
+      DashboardCpfIssues.fromJson(json['issues'] as Map<String, dynamic>?),
+);
+
 DashboardMetricRepository<DashboardRatioMetric> cadastroCompletionRepository(
   DashboardScopeArgs args,
 ) => DashboardMetricRepository(

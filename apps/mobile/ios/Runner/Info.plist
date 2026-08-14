@@ -91,5 +91,20 @@
 		<string>https</string>
 		<string>http</string>
 	</array>
+	<!--
+	  Export compliance. Without this key App Store Connect asks the encryption
+	  question on every upload and holds the build in "Missing Compliance" until
+	  someone answers it by hand — which defeats an automated TestFlight upload.
+
+	  Declared false because the app uses only HTTPS/TLS provided by the
+	  platform, plus `crypto` (Dart) for hashing — SHA/HMAC, not encryption.
+	  There is no AES, cipher, or custom cryptography anywhere in lib/. That is
+	  the standard exemption.
+
+	  If the app ever ships its own encryption, proprietary or otherwise, this
+	  has to be revisited: it is a declaration to Apple, not a build setting.
+	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

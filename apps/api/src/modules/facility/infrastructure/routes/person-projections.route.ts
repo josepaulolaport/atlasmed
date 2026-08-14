@@ -7,6 +7,9 @@ import {
   CLASSIFICATION,
   personUseCases,
 } from "../../../person/composition";
+import { ListCnesSuggestionsUseCase } from "../../application/use-cases/cnes-suggestion.use-cases";
+import { ImportCnesProfessionalUseCase } from "../../application/use-cases/cnes-import.use-cases";
+import { AssociateCnesProfessionalUseCase } from "../../application/use-cases/cnes-association.use-cases";
 
 type Executable = { execute(input: any): Promise<any> };
 
@@ -17,6 +20,12 @@ export interface PersonProjectionsHttpUseCases {
   patchFacilityProjection(): Executable;
   replaceFacilityProjectionRoles(): Executable;
   endFacilityAffiliation(): Executable;
+}
+
+/** Query values arrive as strings; anything unusable falls back to the default. */
+function parsePositiveInt(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -184,6 +193,181 @@ const patchHealthcareRoute = (
         },
         params: affiliationParams,
         body: t.Object(patchBody),
+      }
+    );
+
+/**
+ * Create one of our people from a professional CNES places here (spec 0012 §6).
+ *
+ * `create PERSON` + `read FACILITY`, the same pair the sibling create route
+ * carries — this creates a person and links them, so it is that action with the
+ * identity taken from the registry instead of from the request.
+ *
+ * **Any role may import.** The gate is access to the clinic, not seniority: a
+ * rep standing in a clinic is the person who knows whether CNES is right, and
+ * routing it through someone else's queue means the roster stays wrong until
+ * they get to it.
+ */
+const importCnesProfessionalRoute = (
+  useCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("create", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .post(
+      "/facilities/:id/healthcare-professionals/cnes-imports",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCase.execute({
+          facilityId: params.id,
+          scope,
+          ...body,
+        });
+      },
+      {
+        detail: {
+          summary: "Create a person from a CNES-registered professional",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object({
+          professionalCnesId: t.String({ minLength: 1 }),
+          /*
+           * Names only. The council registration is deliberately absent: it is
+           * copied from the registry, because it is the field that has to match
+           * CNES and the one a hurried rep is most likely to mistype.
+           */
+          firstName: t.Optional(t.String({ minLength: 1 })),
+          lastName: t.Optional(t.String({ minLength: 1 })),
+          socialName: t.Optional(t.Union([t.String(), t.Null()])),
+          cpf: t.Optional(
+            t.Union([t.String({ minLength: 11, maxLength: 11 }), t.Null()])
+          ),
+          email: t.Optional(t.Union([t.String(), t.Null()])),
+          mobilePhone: t.Optional(t.Union([t.String(), t.Null()])),
+          /*
+           * What this person does at this clinic. Absent means "what CNES
+           * records"; the server narrows whatever arrives to that same set, so
+           * this can drop or reorder but never invent.
+           */
+          occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          birthDate: t.Optional(t.Union([t.String(), t.Null()])),
+          landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
+          /*
+           * `specialtyId` is required by the use case, optional in the schema so
+           * the failure is a domain error naming the field rather than a 422 the
+           * client renders as "invalid request". `roleIds` is genuinely
+           * optional: not every person at a clinic has a role.
+           */
+          specialtyId: t.Optional(t.Integer({ minimum: 1 })),
+          roleIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          /*
+           * Added to the registry's, never replacing them. There is still no
+           * way to send the CNES registration itself.
+           */
+          extraRegistrations: t.Optional(
+            t.Array(
+              t.Object({
+                councilId: t.Integer({ minimum: 1 }),
+                stateCode: t.String({ minLength: 2, maxLength: 2 }),
+                registrationNumber: t.String({ minLength: 1 }),
+              })
+            )
+          ),
+          hobbies: t.Optional(t.Union([t.String(), t.Null()])),
+          favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
+          favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
+          languages: t.Optional(t.Union([t.String(), t.Null()])),
+        }),
+      }
+    );
+
+/**
+ * Link a professional we already hold to a clinic CNES places them at.
+ *
+ * `update PERSON` rather than `create PERSON`: nothing is created here. It is
+ * the sibling of the generic create route, chosen over it because that one
+ * cannot see the registry and therefore cannot record the CBO.
+ */
+const associateCnesProfessionalRoute = (
+  useCase: AssociateCnesProfessionalUseCase = new AssociateCnesProfessionalUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .post(
+      "/facilities/:id/healthcare-professionals/cnes-associations",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCase.execute({
+          facilityId: params.id,
+          scope,
+          ...body,
+        });
+      },
+      {
+        detail: {
+          summary: "Link a CNES-registered professional we already hold",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object({
+          /*
+           * The SUS id, not a person id. Identity is resolved server-side from
+           * the same registry the suggestion came from, so a client cannot
+           * attach one doctor's occupations to another.
+           */
+          professionalCnesId: t.String({ minLength: 1 }),
+          occupationIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+          // Optional, and additive: associating may say what someone is to this
+          // clinic, but it never takes away a role somebody set deliberately.
+          roleIds: t.Optional(t.Array(t.Integer({ minimum: 1 }))),
+        }),
+      }
+    );
+
+/**
+ * CNES-suggested professionals for a clinic (spec 0012 §5).
+ *
+ * Read-only and scoped to one facility, so it carries the same permissions as
+ * the roster it sits beside — a suggestion reveals that a person exists and
+ * where they work, which is exactly what `read PERSON` + `read FACILITY` gate.
+ */
+const listCnesSuggestionsRoute = (
+  useCase: Executable = new ListCnesSuggestionsUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .get(
+      "/facilities/:id/healthcare-professionals/cnes-suggestions",
+      async ({ params, query }) =>
+        useCase.execute({
+          facilityId: params.id,
+          // Parsed here rather than declared as a `query` schema. Every sibling
+          // route in this file declares none and therefore tolerates whatever
+          // the client attaches; a strict `t.Object` on this one route would
+          // turn any extra parameter into a 422, which the app renders as
+          // "não foi possível consultar" — indistinguishable from CNES being
+          // down. The use case clamps the value, so the edge check bought
+          // nothing.
+          limit: parsePositiveInt((query as Record<string, unknown>)?.limit),
+        }),
+      {
+        detail: {
+          summary: "Professionals CNES associates with this facility, not yet linked",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
       }
     );
 
@@ -435,9 +619,26 @@ const deleteAdminRoute = (
 
 export function createPersonProjectionsRoutes(
   useCases: PersonProjectionsHttpUseCases = personUseCases,
-  authPlugin: any = auth
+  authPlugin: any = auth,
+  cnesSuggestionsUseCase: Executable = new ListCnesSuggestionsUseCase(),
+  cnesImportUseCase: ImportCnesProfessionalUseCase = new ImportCnesProfessionalUseCase(),
+  cnesAssociationUseCase: AssociateCnesProfessionalUseCase = new AssociateCnesProfessionalUseCase()
 ) {
   return new Elysia()
+    /**
+     * `cnes-suggestions` occupies the same path slot as `:personFacilityId` in
+     * `getHealthcareRoute`, which is typed as an integer — so if the dynamic
+     * route won the match, this endpoint would 422 instead of answering.
+     *
+     * It does not: Elysia's router prefers the static segment, verified by
+     * registering this route last and watching the integration test still pass.
+     * The order here is only for readability, and the test is the real guard.
+     */
+    .use(listCnesSuggestionsRoute(cnesSuggestionsUseCase, authPlugin))
+    // Static segment, same as `cnes-suggestions` above, and registered before
+    // the `:personFacilityId` routes for the same reason.
+    .use(importCnesProfessionalRoute(cnesImportUseCase, authPlugin))
+    .use(associateCnesProfessionalRoute(cnesAssociationUseCase, authPlugin))
     .use(listHealthcareRoute(useCases, authPlugin))
     .use(createHealthcareRoute(useCases, authPlugin))
     .use(getHealthcareRoute(useCases, authPlugin))

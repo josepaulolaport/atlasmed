@@ -102,3 +102,13 @@ bool canMutateAgenda(UserRoleName role) =>
 bool canManageCatalog(UserRoleName role) => role == UserRoleName.admin;
 
 bool isAdmin(UserRoleName role) => role == UserRoleName.admin;
+
+/// Whether this role may import a clinic from CNES (spec 0015 §6.0).
+///
+/// Managers and admins only, for now. Not a permanent rule — it is the interim
+/// answer to "may a rep import outside their patch", pending a product
+/// decision. The API enforces the same rule independently; this only decides
+/// whether the entry point is shown, so a rep is never offered an action that
+/// would answer 403.
+bool canImportFacilityFromCnes(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.manager;

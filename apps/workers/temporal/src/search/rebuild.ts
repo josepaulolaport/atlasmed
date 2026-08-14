@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   facilities,
+  facilityClinicalFocuses,
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
   healthcareSpecialties,
@@ -15,6 +16,7 @@ import {
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
 import {
+  buildAddressSearchSynonyms,
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
   type FacilityProfileFunnelData,
@@ -26,8 +28,12 @@ import {
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
+import {
+  FACILITY_CANDIDATE_SETTINGS,
+  facilityCandidatePages,
+} from "./facility-candidates";
 
-export type SearchSyncTarget = "facilities" | "persons";
+export type SearchSyncTarget = "facilities" | "persons" | "facility_candidates";
 
 /** Re-export shared Meili facility document helpers (SoT: @atlasmed/facility-insights). */
 export {
@@ -49,7 +55,26 @@ export type PersonSearchDocument = {
   cpf: string | null;
   specialty: string | null;
   specialtyNormalized: string | null;
+  /**
+   * Every active facility link, whatever its nature.
+   *
+   * Deliberately NOT classification-scoped: this backs Meili scope enforcement
+   * and the `facilityId` roster filter, both of which ask "is this person
+   * attached to this clinic", not "do they practise there".
+   */
   activeFacilityIds: number[];
+  /**
+   * Active links carrying the `HEALTHCARE_PROFESSIONAL` classification.
+   *
+   * Separate from [activeFacilityIds] because the two questions differ: a
+   * person can be an administrative contact at a clinic without ever having
+   * been clinically associated there. The associate-doctors picker excludes on
+   * this one, matching its SQL condition — excluding on `activeFacilityIds`
+   * hid such a doctor from the only screen able to add them, but only when the
+   * rep typed a search (the Meili path), so the same sheet disagreed with
+   * itself about who was already there.
+   */
+  clinicalFacilityIds: number[];
   activeTerritoryIds: number[];
   /** Active regs as `CRM/SP 123456` — searchable (multi-reg UI). */
   registrationDisplays: string[];
@@ -97,7 +122,12 @@ export function mapPersonSearchDocument(row: {
   socialName: string | null;
   cpf: string | null;
   primarySpecialtyLabel: string | null;
-  activeAssociations: Array<{ facilityId: number; territoryId: number | null }>;
+  activeAssociations: Array<{
+    facilityId: number;
+    territoryId: number | null;
+    /** Carries the HEALTHCARE_PROFESSIONAL classification at that facility. */
+    isClinical?: boolean;
+  }>;
   registrationDisplays?: string[];
   deletedAt: Date | null;
 }): PersonSearchDocument | null {
@@ -106,6 +136,11 @@ export function mapPersonSearchDocument(row: {
   const activeFacilityIds = [...new Set(row.activeAssociations.map((association) => association.facilityId))].sort(
     (a, b) => a - b,
   );
+  const clinicalFacilityIds = [...new Set(
+    row.activeAssociations.flatMap((association) =>
+      association.isClinical ? [association.facilityId] : []
+    )
+  )].sort((a, b) => a - b);
   const activeTerritoryIds = [...new Set(
     row.activeAssociations.flatMap((association) => association.territoryId ? [association.territoryId] : [])
   )].sort((a, b) => a - b);
@@ -120,6 +155,7 @@ export function mapPersonSearchDocument(row: {
       ? normalizeSearchFilterValue(row.primarySpecialtyLabel)
       : null,
     activeFacilityIds,
+    clinicalFacilityIds,
     activeTerritoryIds,
     registrationDisplays: row.registrationDisplays ?? [],
   };
@@ -144,12 +180,30 @@ export async function rebuildSearchIndex(input: {
     (await input.search.updateSettings(input.temporaryIndex, input.settings)).taskUid
   );
 
+  /*
+   * Enqueue every page, then wait once.
+   *
+   * Waiting per page serialises the whole rebuild *and* defeats Meilisearch's
+   * own batching: it merges consecutive queued documentAdditionOrUpdate tasks
+   * into one indexing pass, but only if several are sitting in the queue. Waiting
+   * guaranteed one task per batch — measured on 1.48.3 as `totalNbTasks: 1` on
+   * every batch and 4.8-7.1 s each, which is where a nineteen-minute rebuild of
+   * 373 435 narrow documents went.
+   *
+   * The tasks are still all awaited before the swap below, so a failure is still
+   * fatal to the rebuild — it just surfaces at the end. That costs nothing: this
+   * writes into a temporary index that only becomes live on success.
+   */
+  const pending: number[] = [];
   for await (const page of input.pages) {
     if (page.length > 0) {
-      await input.search.waitForTask(
+      pending.push(
         (await input.search.addDocuments(input.temporaryIndex, page, { primaryKey: "id" })).taskUid
       );
     }
+  }
+  for (const taskUid of pending) {
+    await input.search.waitForTask(taskUid);
   }
 
   const hasStableIndex = await indexExists(input.search, input.target);
@@ -244,10 +298,18 @@ export const FACILITY_SETTINGS = {
     "verticalManualPurchaseProfiles",
     "purchaseFunnelStagesAny",
     "purchaseIntervalDaysMin",
+    "unitTypeId",
+    "legalDocumentType",
+    "clinicalFocusIds",
     "_geo",
   ],
   sortableAttributes: ["_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin", "hasLastValidPurchase", "lastValidPurchaseSortAt", "id"],
   rankingRules: ["sort", "words", "typo", "proximity", "attribute", "exactness"],
+  // Street types, so "Avenida das Americas" reaches the 436 addresses stored
+  // as "Av.". Typo tolerance cannot bridge that on its own: it allows one edit
+  // at seven characters and "Av."→"Avenida" is five. Like every other setting
+  // here, this only takes effect on a full rebuild.
+  synonyms: buildAddressSearchSynonyms(),
 };
 
 type ActiveFacilityProfiles = {
@@ -256,6 +318,61 @@ type ActiveFacilityProfiles = {
   repUserIds: Map<number, number[]>;
   funnelData: Map<number, FacilityProfileFunnelData[]>;
 };
+
+/** The row shape [facilityPages] selects, kept structural for testability. */
+type FacilityPageRow = Parameters<typeof mapFacilitySearchDocument>[0];
+
+/**
+ * Joins a page of facility rows to its separately-loaded associations.
+ *
+ * Split out of [facilityPages] so it can be tested without a database. It was
+ * inline, and a field could then be added to the document type and to the
+ * index settings while the rebuild never populated it — which fails in the
+ * worst direction available: the attribute is filterable, every document has
+ * it empty, and matching facilities silently vanish from search results
+ * instead of erroring.
+ */
+export function buildFacilityPageDocuments(
+  rows: FacilityPageRow[],
+  profiles: ActiveFacilityProfiles,
+  clinicalFocusIds: Map<number, number[]>,
+): FacilitySearchDocument[] {
+  return rows
+    .map((row) =>
+      mapFacilitySearchDocument({
+        ...row,
+        verticalIds: profiles.verticalIds.get(row.id) ?? [],
+        territoryIds: profiles.territoryIds.get(row.id) ?? [],
+        repUserIds: profiles.repUserIds.get(row.id) ?? [],
+        clinicalFocusIds: clinicalFocusIds.get(row.id) ?? [],
+        profileFunnelData: profiles.funnelData.get(row.id) ?? [],
+      }),
+    )
+    .filter((row): row is FacilitySearchDocument => row !== null);
+}
+
+/** One query per page, not per facility. */
+async function loadClinicalFocusIds(
+  facilityIds: number[],
+): Promise<Map<number, number[]>> {
+  const map = new Map<number, number[]>();
+  if (facilityIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      facilityId: facilityClinicalFocuses.facilityId,
+      clinicalFocusId: facilityClinicalFocuses.clinicalFocusId,
+    })
+    .from(facilityClinicalFocuses)
+    .where(inArray(facilityClinicalFocuses.facilityId, facilityIds));
+
+  for (const row of rows) {
+    const current = map.get(row.facilityId) ?? [];
+    current.push(row.clinicalFocusId);
+    map.set(row.facilityId, current);
+  }
+  return map;
+}
 
 async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<ActiveFacilityProfiles> {
   const verticalIds = new Map<number, number[]>();
@@ -347,7 +464,12 @@ export const PERSON_SETTINGS = {
     "specialty",
     "registrationDisplays",
   ],
-  filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"],
+  filterableAttributes: [
+    "specialtyNormalized",
+    "activeFacilityIds",
+    "clinicalFacilityIds",
+    "activeTerritoryIds",
+  ],
 };
 
 async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
@@ -366,6 +488,8 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         state: states.abbreviation,
         streetAddress: facilities.streetAddress,
         neighborhood: facilities.neighborhood,
+        unitTypeId: facilities.unitTypeId,
+        legalDocumentType: facilities.legalDocumentType,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
@@ -379,24 +503,24 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
     if (rows.length === 0) return;
 
     lastId = rows.at(-1)!.id;
-    const profiles = await loadActiveFacilityProfiles(rows.map((row) => row.id));
-    yield rows
-      .map((row) =>
-        mapFacilitySearchDocument({
-          ...row,
-          verticalIds: profiles.verticalIds.get(row.id) ?? [],
-          territoryIds: profiles.territoryIds.get(row.id) ?? [],
-          repUserIds: profiles.repUserIds.get(row.id) ?? [],
-          profileFunnelData: profiles.funnelData.get(row.id) ?? [],
-        })
-      )
-      .filter((row): row is FacilitySearchDocument => row !== null);
+    const facilityIds = rows.map((row) => row.id);
+    const [profiles, clinicalFocusIds] = await Promise.all([
+      loadActiveFacilityProfiles(facilityIds),
+      loadClinicalFocusIds(facilityIds),
+    ]);
+    yield buildFacilityPageDocuments(rows, profiles, clinicalFocusIds);
   }
 }
 
+type PersonAssociation = {
+  facilityId: number;
+  territoryId: number | null;
+  isClinical?: boolean;
+};
+
 async function loadActivePersonAssociations(
   personIds: number[]
-): Promise<Map<number, Array<{ facilityId: number; territoryId: number | null }>>> {
+): Promise<Map<number, PersonAssociation[]>> {
   if (personIds.length === 0) return new Map();
 
   const rows = await db
@@ -404,6 +528,17 @@ async function loadActivePersonAssociations(
       personId: personFacilities.personId,
       facilityId: personFacilities.facilityId,
       territoryId: facilityVerticalProfiles.managerZoneId,
+      // Correlated rather than joined: joining the classification tables would
+      // multiply the association rows, and every consumer here wants one row
+      // per (person, facility, territory).
+      isClinical: sql<boolean>`exists (
+        select 1
+        from person_facility_classification_assignments pfca
+        join person_facility_classifications pfc
+          on pfc.id = pfca.classification_id
+        where pfca.person_facility_id = ${personFacilities.id}
+          and pfc.code = 'HEALTHCARE_PROFESSIONAL'
+      )`,
     })
     .from(personFacilities)
     .innerJoin(facilities, eq(personFacilities.facilityId, facilities.id))
@@ -420,16 +555,46 @@ async function loadActivePersonAssociations(
       isNull(facilities.deactivatedAt)
     ));
 
-  const associations = new Map<number, Array<{ facilityId: number; territoryId: number | null }>>();
+  return mergePersonAssociations(rows);
+}
+
+/**
+ * Collapses association rows per person.
+ *
+ * Split from the query so the flag can be tested without a database. It carries
+ * `isClinical` from the row into the document, and dropping that one line makes
+ * `clinicalFacilityIds` empty on every document — at which point the
+ * associate-doctors exclusion matches nobody, and the only symptom is that the
+ * search path quietly falls back to SQL for every request.
+ */
+export function mergePersonAssociations(
+  rows: Array<{
+    personId: number;
+    facilityId: number;
+    territoryId: number | null;
+    isClinical: boolean;
+  }>
+): Map<number, PersonAssociation[]> {
+  const associations = new Map<number, PersonAssociation[]>();
   for (const row of rows) {
     const current = associations.get(row.personId) ?? [];
-    const already = current.some(
+    const already = current.find(
       (entry) => entry.facilityId === row.facilityId && entry.territoryId === row.territoryId
     );
-    if (!already) {
-      current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
-      associations.set(row.personId, current);
+    if (already) {
+      // Someone can hold more than one link to the same clinic — an
+      // administrative one and a clinical one. Dropping the duplicate must not
+      // drop the clinical flag with it, so it is OR-ed rather than overwritten;
+      // otherwise whether they count as a doctor there depends on row order.
+      already.isClinical = already.isClinical || row.isClinical;
+      continue;
     }
+    current.push({
+      facilityId: row.facilityId,
+      territoryId: row.territoryId,
+      isClinical: row.isClinical,
+    });
+    associations.set(row.personId, current);
   }
   return associations;
 }
@@ -567,6 +732,18 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
   }
 }
 
+function settingsFor(target: SearchSyncTarget): Record<string, unknown> {
+  if (target === "facilities") return FACILITY_SETTINGS;
+  if (target === "persons") return PERSON_SETTINGS;
+  return FACILITY_CANDIDATE_SETTINGS;
+}
+
+function pagesFor(target: SearchSyncTarget) {
+  if (target === "facilities") return facilityPages();
+  if (target === "persons") return personPages();
+  return facilityCandidatePages();
+}
+
 export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<void> {
   const temporaryIndex = `${target}__rebuild_${crypto.randomUUID().replaceAll("-", "")}`;
 
@@ -574,7 +751,7 @@ export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<
     target,
     temporaryIndex,
     search: createSearchClient(),
-    settings: target === "facilities" ? FACILITY_SETTINGS : PERSON_SETTINGS,
-    pages: target === "facilities" ? facilityPages() : personPages(),
+    settings: settingsFor(target),
+    pages: pagesFor(target),
   });
 }

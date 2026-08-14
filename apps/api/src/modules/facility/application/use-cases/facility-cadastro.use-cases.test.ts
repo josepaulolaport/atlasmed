@@ -60,6 +60,102 @@ function requirement(
 }
 
 describe("GetFacilityCadastroChecklistUseCase", () => {
+  it("reuses the profiles findById already loaded", async () => {
+    /**
+     * `findById` loads the clinic's vertical profiles to build its record, and
+     * this use case used to ask the repository for them again a few lines
+     * later — the same helper, the same query, twice per request. Both calls
+     * were locally reasonable, the response was byte-identical either way, and
+     * no assertion on the payload could see it. Only counting calls can.
+     *
+     * Measured against a real database: 9 round trips before, 8 after.
+     */
+    const findVerticalProfilesByFacilityIds = mock(async () => new Map());
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => ({
+          ...facility({ legalDocumentType: "CPF" }),
+          verticalProfiles: [
+            { id: 1, verticalId: 7, isActive: true },
+            // Inactive, and deliberately present: the repository returns
+            // profiles unfiltered, so the `isActive` test has to stay in this
+            // use case. Handing it a pre-filtered list would change which
+            // linhas count.
+            { id: 2, verticalId: 9, isActive: false },
+          ],
+        }),
+        findVerticalProfilesByFacilityIds,
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    expect(findVerticalProfilesByFacilityIds).not.toHaveBeenCalled();
+  });
+
+  it("still counts only the active linhas when reusing them", async () => {
+    // The saving must not change which requirements a rep sees.
+    const findActiveRequirements = mock(async () => []);
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => ({
+          ...facility({ legalDocumentType: "CPF" }),
+          verticalProfiles: [
+            { id: 1, verticalId: 7, isActive: true },
+            { id: 2, verticalId: 9, isActive: false },
+          ],
+        }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements,
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    // Vertical 7 only — never 9.
+    expect(findActiveRequirements).toHaveBeenCalledWith({
+      legalDocumentType: "CPF",
+      verticalId: 7,
+    });
+    expect(findActiveRequirements).not.toHaveBeenCalledWith({
+      legalDocumentType: "CPF",
+      verticalId: 9,
+    });
+  });
+
+  it("still queries when the record carries no profiles", async () => {
+    // A repository that does not populate the field must behave as before,
+    // rather than silently treating the clinic as having no linhas.
+    const findVerticalProfilesByFacilityIds = mock(async () => new Map());
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds,
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    expect(findVerticalProfilesByFacilityIds).toHaveBeenCalled();
+  });
+
   it("filters requirements by CPF legal document type", async () => {
     const findActiveRequirements = mock(async () => [
       requirement(1, "identidade", "CPF"),
@@ -161,26 +257,27 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
   // `files: []`; the mobile compose screen matches poll results on
   // `files[].fileAssetId`, never matched, and "Enviar" stayed disabled forever.
   it("returns the DRAFT document's files and status in the checklist", async () => {
-    const listDocumentFiles = mock(async (documentId: number) =>
-      documentId === 100
-        ? [
-            {
-              id: 1,
-              submissionDocumentId: 100,
-              fileAssetId: 501,
-              position: 1,
-              role: "PAGE",
-              createdAt: now,
-              fileAsset: {
-                id: 501,
-                originalFilename: "rg-frente.jpg",
-                status: "READY",
-                declaredMimeType: "image/jpeg",
-                detectedMimeType: "image/jpeg",
-              },
-            },
-          ]
-        : []
+    const files = [
+      {
+        id: 1,
+        submissionDocumentId: 100,
+        fileAssetId: 501,
+        position: 1,
+        role: "PAGE",
+        createdAt: now,
+        fileAsset: {
+          id: 501,
+          originalFilename: "rg-frente.jpg",
+          status: "READY",
+          declaredMimeType: "image/jpeg",
+          detectedMimeType: "image/jpeg",
+        },
+      },
+    ];
+    // Filters by the ids it is handed, so asking for the wrong document shows
+    // up as missing files rather than passing on a fake that ignores its input.
+    const listDocumentFilesForDocuments = mock(async (ids: number[]) =>
+      files.filter((f) => ids.includes(f.submissionDocumentId))
     );
 
     const result = await new GetFacilityCadastroChecklistUseCase({
@@ -199,20 +296,23 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         }),
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
-        findWorkingDocument: async () => ({
-          id: 100,
-          facilityId: 1,
-          facilityVerticalProfileId: null,
-          requirementId: 1,
-          title: "Identidade",
-          status: "DRAFT",
-          version: 1,
-          reviewComment: null,
-          submittedAt: null,
-        }),
-        // Nothing has been sent for review yet.
-        listDocumentsForFacilityRequirement: async () => [],
-        listDocumentFiles,
+        // One DRAFT and nothing else: DRAFT is an open status so it is the
+        // working document, and it is absent from the submitted set so the
+        // history stays empty — no separate "nothing reviewed yet" fake needed.
+        listDocumentsByFacility: async () => [
+          {
+            id: 100,
+            facilityId: 1,
+            facilityVerticalProfileId: null,
+            requirementId: 1,
+            title: "Identidade",
+            status: "DRAFT",
+            version: 1,
+            reviewComment: null,
+            submittedAt: null,
+          },
+        ],
+        listDocumentFilesForDocuments,
       } as never,
     }).execute({ facilityId: 1, scope: globalScope });
 
@@ -245,47 +345,41 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
   // — as this test used to assert — left the compose screen's poll with
   // nothing to match, so "Enviar" never enabled on a re-upload.
   it("returns the draft as the working document over an approved one", async () => {
-    const listDocumentFiles = mock(async (documentId: number) => {
-      if (documentId === 200) {
-        return [
-          {
-            id: 2,
-            submissionDocumentId: 200,
-            fileAssetId: 900,
-            position: 1,
-            role: "PAGE",
-            createdAt: now,
-            fileAsset: {
-              id: 900,
-              originalFilename: "aprovado.pdf",
-              status: "READY",
-              declaredMimeType: "application/pdf",
-              detectedMimeType: "application/pdf",
-            },
-          },
-        ];
-      }
-      if (documentId === 101) {
-        return [
-          {
-            id: 3,
-            submissionDocumentId: 101,
-            fileAssetId: 901,
-            position: 1,
-            role: "PAGE",
-            createdAt: now,
-            fileAsset: {
-              id: 901,
-              originalFilename: "renovacao.pdf",
-              status: "READY",
-              declaredMimeType: "application/pdf",
-              detectedMimeType: "application/pdf",
-            },
-          },
-        ];
-      }
-      return [];
-    });
+    const allFiles = [
+      {
+        id: 2,
+        submissionDocumentId: 200,
+        fileAssetId: 900,
+        position: 1,
+        role: "PAGE",
+        createdAt: now,
+        fileAsset: {
+          id: 900,
+          originalFilename: "aprovado.pdf",
+          status: "READY",
+          declaredMimeType: "application/pdf",
+          detectedMimeType: "application/pdf",
+        },
+      },
+      {
+        id: 3,
+        submissionDocumentId: 101,
+        fileAssetId: 901,
+        position: 1,
+        role: "PAGE",
+        createdAt: now,
+        fileAsset: {
+          id: 901,
+          originalFilename: "renovacao.pdf",
+          status: "READY",
+          declaredMimeType: "application/pdf",
+          detectedMimeType: "application/pdf",
+        },
+      },
+    ];
+    const listDocumentFilesForDocuments = mock(async (ids: number[]) =>
+      allFiles.filter((f) => ids.includes(f.submissionDocumentId))
+    );
 
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
@@ -303,19 +397,22 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         }),
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
-        // A brand-new draft version replacing an already approved one.
-        findWorkingDocument: async () => ({
-          id: 101,
-          facilityId: 1,
-          facilityVerticalProfileId: null,
-          requirementId: 1,
-          title: "Identidade",
-          status: "DRAFT",
-          version: 2,
-          reviewComment: null,
-          submittedAt: null,
-        }),
-        listDocumentsForFacilityRequirement: async () => [
+        // A brand-new draft version over an already approved one, in the order
+        // the repository returns them: version DESC. The use case picks the
+        // working document by scanning this list, so the order is part of the
+        // contract being exercised, not incidental setup.
+        listDocumentsByFacility: async () => [
+          {
+            id: 101,
+            facilityId: 1,
+            facilityVerticalProfileId: null,
+            requirementId: 1,
+            title: "Identidade",
+            status: "DRAFT",
+            version: 2,
+            reviewComment: null,
+            submittedAt: null,
+          },
           {
             id: 200,
             facilityId: 1,
@@ -328,7 +425,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
             submittedAt: now,
           },
         ],
-        listDocumentFiles,
+        listDocumentFilesForDocuments,
       } as never,
     }).execute({ facilityId: 1, scope: globalScope });
 
@@ -365,26 +462,25 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
   });
 
   it("falls back to the approved document when there is no draft", async () => {
-    const listDocumentFiles = mock(async (documentId: number) =>
-      documentId === 200
-        ? [
-            {
-              id: 2,
-              submissionDocumentId: 200,
-              fileAssetId: 900,
-              position: 1,
-              role: "PAGE",
-              createdAt: now,
-              fileAsset: {
-                id: 900,
-                originalFilename: "aprovado.pdf",
-                status: "READY",
-                declaredMimeType: "application/pdf",
-                detectedMimeType: "application/pdf",
-              },
-            },
-          ]
-        : []
+    const files = [
+      {
+        id: 2,
+        submissionDocumentId: 200,
+        fileAssetId: 900,
+        position: 1,
+        role: "PAGE",
+        createdAt: now,
+        fileAsset: {
+          id: 900,
+          originalFilename: "aprovado.pdf",
+          status: "READY",
+          declaredMimeType: "application/pdf",
+          detectedMimeType: "application/pdf",
+        },
+      },
+    ];
+    const listDocumentFilesForDocuments = mock(async (ids: number[]) =>
+      files.filter((f) => ids.includes(f.submissionDocumentId))
     );
 
     const result = await new GetFacilityCadastroChecklistUseCase({
@@ -403,9 +499,9 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         }),
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
-        // Nothing in progress — the rep has not started a new version.
-        findWorkingDocument: async () => null,
-        listDocumentsForFacilityRequirement: async () => [
+        // Nothing in progress — APPROVED is a closed status, so there is no
+        // working document and the checklist falls through to the approved one.
+        listDocumentsByFacility: async () => [
           {
             id: 200,
             facilityId: 1,
@@ -418,7 +514,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
             submittedAt: now,
           },
         ],
-        listDocumentFiles,
+        listDocumentFilesForDocuments,
       } as never,
     }).execute({ facilityId: 1, scope: globalScope });
 
@@ -428,6 +524,78 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     expect(doc.documentStatus).toBe("APPROVED");
     expect(doc.files.map((f) => f.fileAssetId)).toEqual([900]);
     expect(doc.currentApproved?.files.map((f) => f.fileAssetId)).toEqual([900]);
+  });
+
+  // The checklist used to ask per requirement: the working document, the
+  // history, then the files of each — up to four round trips per row, which
+  // made /cadastro the slowest endpoint on the clinic screen at ~1.7s measured
+  // against production. Counting the calls is the only thing that stops that
+  // returning, because the output is identical either way: an N+1 reintroduced
+  // here would pass every other test in this file.
+  it("reads documents and files once, whatever the requirement count", async () => {
+    const documents = [
+      // Three requirements, each with two versions: a superseded one and a
+      // current one, so grouping and per-requirement ordering both get used.
+      { id: 11, requirementId: 1, status: "APPROVED", version: 2 },
+      { id: 12, requirementId: 1, status: "SUPERSEDED", version: 1 },
+      { id: 21, requirementId: 2, status: "DRAFT", version: 2 },
+      { id: 22, requirementId: 2, status: "REJECTED", version: 1 },
+      { id: 31, requirementId: 3, status: "SUBMITTED", version: 1 },
+    ].map((d) => ({
+      ...d,
+      facilityId: 1,
+      facilityVerticalProfileId: null,
+      title: "Doc",
+      reviewComment: null,
+      submittedAt: now,
+    }));
+
+    const listDocumentsByFacility = mock(async () => documents);
+    const listDocumentFilesForDocuments = mock(async (_ids: number[]) => []);
+
+    const result = await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [
+          requirement(1, "identidade", "CPF"),
+          requirement(2, "crm", "CPF"),
+          requirement(3, "comprovante_endereco", "CPF"),
+        ],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({
+          complete: false,
+          commercialStatus: null,
+        }),
+      } as unknown as FacilityCadastroCompletionService,
+      cadastroRepository: {
+        listDocumentsByFacility,
+        listDocumentFilesForDocuments,
+      } as never,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    expect(result.documents).toHaveLength(3);
+    expect(listDocumentsByFacility).toHaveBeenCalledTimes(1);
+    expect(listDocumentFilesForDocuments).toHaveBeenCalledTimes(1);
+
+    // Grouping still resolves each requirement independently: APPROVED with no
+    // open version is the working document, DRAFT wins over the REJECTED one
+    // beneath it, and SUBMITTED stands alone.
+    const byRequirement = new Map(
+      result.documents.map((d) => [d.requirementId, d])
+    );
+    expect(byRequirement.get(1)?.documentId).toBe(11);
+    expect(byRequirement.get(2)?.documentId).toBe(21);
+    expect(byRequirement.get(3)?.documentId).toBe(31);
+
+    // Only the documents actually rendered are fetched — the superseded and
+    // rejected versions underneath are history, and nothing reads their files.
+    const requestedIds = listDocumentFilesForDocuments.mock.calls[0]![0] as number[];
+    expect([...requestedIds].sort((a, b) => a - b)).toEqual([11, 21, 31]);
   });
 });
 

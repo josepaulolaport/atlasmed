@@ -712,8 +712,113 @@
     {
       "idx": 101,
       "version": "7",
-      "when": 1786573373647,
-      "tag": "0101_ortopedia_managers_and_zone_geometry",
+      "when": 1786574840028,
+      "tag": "0101_cnes_registry_and_ingestion",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1786574841028,
+      "tag": "0102_seed_cnes_occupations",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1786574842028,
+      "tag": "0103_shorten_remaining_occupations",
+      "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1786657935603,
+      "tag": "0104_emultec_client_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1786744335603,
+      "tag": "0105_is_valid_cpf",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1786690702241,
+      "tag": "0106_emultec_order_import_pending",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1786744335604,
+      "tag": "0107_remove_facility_without_cnes_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1786744335605,
+      "tag": "0108_facilities_require_a_cnes_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1786744335606,
+      "tag": "0109_realign_facility_unit_types_with_cnes",
+      "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1786744335607,
+      "tag": "0110_cnes_national_registry_and_staging",
+      "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1786744335608,
+      "tag": "0111_stage_professional_social_name_and_tax_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1786744335609,
+      "tag": "0112_df_localities_resolve_to_brasilia",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1786713799311,
+      "tag": "0113_user_bookmarks",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1786744335610,
+      "tag": "0114_apply_user_bookmarks_where_0113_was_skipped",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1786744335611,
+      "tag": "0115_apply_emultec_pending_where_0106_was_skipped",
+      "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1786744335612,
+      "tag": "0116_ortopedia_managers_and_zone_geometry",
       "breakpoints": true
     }
   ]

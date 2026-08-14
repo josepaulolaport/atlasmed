@@ -19,6 +19,9 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recur
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/bookmarks_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/bookmarks_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bookmark_icon_button.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
@@ -41,6 +44,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_linha_bar.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_cpf_warning.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
@@ -166,16 +171,12 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_border_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Favoritos — em breve'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+          BookmarkIconButton(
+            kind: BookmarkKind.clinic,
+            id: clinicId,
+            // Null until the detail response lands, so the icon does not claim
+            // "not saved" before anyone has asked the server.
+            serverState: displayFallback?.isBookmarked,
           ),
           const SizedBox(width: 6),
         ],
@@ -184,6 +185,23 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         repository: repo,
         builder: (context, data, repository) {
           final zipFacility = data?.facility;
+          if (zipFacility != null && zipFacility.id > 0) {
+            // Seed Favoritos state from the detail response itself, rather than
+            // from `clinicDetailDisplayFacilityProvider`: that one falls back
+            // to the navigation shell built from a list DTO, which never
+            // carries `isBookmarked` and would keep a saved clinic looking
+            // unsaved.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              ref
+                  .read(bookmarkedIdsProvider.notifier)
+                  .set(
+                    BookmarkKind.clinic,
+                    clinicId,
+                    bookmarked: zipFacility.isBookmarked,
+                  );
+            });
+          }
           if (zipFacility != null &&
               zipFacility.id > 0 &&
               _shouldUpdateLoadedFacility(
@@ -732,6 +750,20 @@ class _ClinicDetailContent extends ConsumerWidget {
                     // select. An order belongs to an interaction; it is started
                     // from the interaction screen, which passes all three.
                   ],
+                ),
+                // Below the quick actions, not above them: that widget paints
+                // its own blue top half so it continues the header seamlessly
+                // and the white card straddles the seam. Anything inserted
+                // between the two detaches that blue and leaves a floating band
+                // across the screen.
+                ClinicCpfWarning(
+                  legalDocumentType: detail.registration?.legalDocumentType,
+                  legalDocument: detail.registration?.legalDocument,
+                  onOpenAdminInfo: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClinicAdminInfoScreen(detail: detail),
+                    ),
+                  ),
                 ),
                 ClinicTopShortcutsSection(
                   facilityId: clinicId,

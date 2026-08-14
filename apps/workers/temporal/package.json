@@ -13,16 +13,20 @@
     "start:emultec-order-import": "bun src/scripts/start-emultec-order-import.ts",
     "sync:emultec-products": "bun src/scripts/sync-emultec-products.ts",
     "import:emultec-orders": "bun src/scripts/import-emultec-orders.ts",
-    "schedule:metric-snapshot": "bun src/scripts/ensure-metric-snapshot-schedule.ts"
+    "schedule:metric-snapshot": "bun src/scripts/ensure-metric-snapshot-schedule.ts",
+    "schedule:cnes-ingestion": "bun src/scripts/ensure-cnes-ingestion-schedule.ts"
   },
   "dependencies": {
+    "@atlasmed/cnes-ingestion": "workspace:*",
     "@atlasmed/config": "workspace:*",
     "@atlasmed/database": "workspace:*",
     "@atlasmed/emultec-mysql": "workspace:*",
     "@atlasmed/facility-insights": "workspace:*",
     "@atlasmed/observability": "workspace:*",
     "@atlasmed/storage": "workspace:*",
+    "@atlasmed/test-support": "workspace:*",
     "@aws-sdk/client-s3": "^3.1093.0",
+    "@aws-sdk/lib-storage": "^3.1093.0",
     "@temporalio/activity": "^1.11.7",
     "@temporalio/client": "^1.11.7",
     "@temporalio/worker": "^1.11.7",

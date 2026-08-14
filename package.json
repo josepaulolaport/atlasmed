@@ -54,7 +54,8 @@
     "observability:verify": "bash deploy/scripts/verify-observability.sh",
     "hooks:install": "bun run prepare",
     "prepare": "husky",
-    "clean": "rm -rf .turbo"
+    "clean": "rm -rf .turbo",
+    "storage:check": "turbo storage:check --filter=@atlasmed/storage"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

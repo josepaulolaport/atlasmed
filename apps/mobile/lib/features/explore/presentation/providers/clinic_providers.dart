@@ -16,6 +16,9 @@ class ClinicsQuery {
     this.purchaseBucket,
     this.productIds,
     this.clinicalFocusIds,
+    this.unitTypeIds,
+    this.legalDocumentType,
+    this.cpfStatus,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -35,6 +38,17 @@ class ClinicsQuery {
   final String? purchaseBucket;
   final String? productIds;
   final String? clinicalFocusIds;
+
+  /// Comma-separated CNES unit type ids. OR-matched by the API: a facility has
+  /// exactly one unit type, so requiring all of them would return nothing.
+  final String? unitTypeIds;
+
+  /// `CNPJ` or `CPF`, single choice.
+  final String? legalDocumentType;
+
+  /// Desempenho CPF drill-down: `missing` or `invalid`. The CPF belongs to the
+  /// clinic, so this never interacts with the Linha filter beside it.
+  final String? cpfStatus;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -55,6 +69,9 @@ class ClinicsQuery {
       purchaseBucket: purchaseBucket,
       productIds: productIds,
       clinicalFocusIds: clinicalFocusIds,
+      unitTypeIds: unitTypeIds,
+      legalDocumentType: legalDocumentType,
+      cpfStatus: cpfStatus,
       purchaseFunnelStages: purchaseFunnelStages,
       purchaseProfile: purchaseProfile,
       purchaseIntervalMinDays: purchaseIntervalMinDays,
@@ -65,6 +82,9 @@ class ClinicsQuery {
     );
   }
 
+  // This type is a Riverpod family key. Every field must appear in both `==`
+  // and `hashCode`: omit one and two different filter selections compare equal,
+  // the cached provider is reused, and the filter silently does nothing.
   @override
   bool operator ==(Object other) {
     return other is ClinicsQuery &&
@@ -78,6 +98,9 @@ class ClinicsQuery {
         other.purchaseBucket == purchaseBucket &&
         other.productIds == productIds &&
         other.clinicalFocusIds == clinicalFocusIds &&
+        other.unitTypeIds == unitTypeIds &&
+        other.legalDocumentType == legalDocumentType &&
+        other.cpfStatus == cpfStatus &&
         _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
         other.purchaseProfile == purchaseProfile &&
         other.purchaseIntervalMinDays == purchaseIntervalMinDays &&
@@ -99,6 +122,9 @@ class ClinicsQuery {
     purchaseBucket,
     productIds,
     clinicalFocusIds,
+    unitTypeIds,
+    legalDocumentType,
+    cpfStatus,
     Object.hashAll(purchaseFunnelStages),
     purchaseProfile,
     purchaseIntervalMinDays,
@@ -150,6 +176,9 @@ final clinicsRepositoryProvider = Provider.autoDispose
         purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
         clinicalFocusIds: query.clinicalFocusIds,
+        unitTypeIds: query.unitTypeIds,
+        legalDocumentType: query.legalDocumentType,
+        cpfStatus: query.cpfStatus,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,
@@ -180,6 +209,9 @@ final _clinicsPageRepositoryProvider = Provider.autoDispose
         purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
         clinicalFocusIds: query.clinicalFocusIds,
+        unitTypeIds: query.unitTypeIds,
+        legalDocumentType: query.legalDocumentType,
+        cpfStatus: query.cpfStatus,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,

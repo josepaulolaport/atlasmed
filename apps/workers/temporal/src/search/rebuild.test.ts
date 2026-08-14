@@ -58,6 +58,9 @@ describe("search rebuild", () => {
         state: "SP",
         streetAddress: "Rua Augusta",
         neighborhood: "Consolação",
+        unitTypeId: 3,
+        legalDocumentType: "CNPJ",
+        clinicalFocusIds: [9, 4],
         verticalIds: [10],
         territoryIds: [20],
         repUserIds: [7, 3, 3],
@@ -84,6 +87,9 @@ describe("search rebuild", () => {
       state: "SP",
       streetAddress: "Rua Augusta",
       neighborhood: "Consolação",
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      clinicalFocusIds: [4, 9],
       verticalIds: [10],
       territoryIds: [20],
       repUserIds: [3, 7],
@@ -136,9 +142,11 @@ describe("search rebuild", () => {
         cpf: "12345678901",
         primarySpecialtyLabel: "Cardiologia",
         activeAssociations: [
+          // Clinic 2 is an administrative link only — she is attached to it but
+          // does not practise there.
           { facilityId: 2, territoryId: 22 },
-          { facilityId: 1, territoryId: 11 },
-          { facilityId: 1, territoryId: 11 },
+          { facilityId: 1, territoryId: 11, isClinical: true },
+          { facilityId: 1, territoryId: 11, isClinical: true },
         ],
         registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
         deletedAt: null,
@@ -151,9 +159,64 @@ describe("search rebuild", () => {
       specialty: "Cardiologia",
       specialtyNormalized: "cardiologia",
       activeFacilityIds: [1, 2],
+      // Narrower than activeFacilityIds on purpose: clinic 2 is absent, so the
+      // associate picker still offers her there.
+      clinicalFacilityIds: [1],
       activeTerritoryIds: [11, 22],
       registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
     });
+  });
+
+  test("carries the clinical flag from the row into the association", () => {
+    // Without this the field is empty on every document, the exclusion matches
+    // nobody, and the only symptom is that every search in the picker falls
+    // back to SQL.
+    const merged = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: null, isClinical: true },
+      { personId: 1, facilityId: 8, territoryId: null, isClinical: false },
+    ]);
+
+    expect(merged.get(1)).toEqual([
+      { facilityId: 9, territoryId: null, isClinical: true },
+      { facilityId: 8, territoryId: null, isClinical: false },
+    ]);
+  });
+
+  test("a clinical duplicate does not lose its flag to an administrative one", () => {
+    // Two links to the same clinic collapse into one association. Whichever row
+    // the database returned first, the person practises there.
+    const clinicalLast = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: false },
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: true },
+    ]);
+    const clinicalFirst = searchRebuild.mergePersonAssociations([
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: true },
+      { personId: 1, facilityId: 9, territoryId: 4, isClinical: false },
+    ]);
+
+    expect(clinicalLast.get(1)).toEqual([
+      { facilityId: 9, territoryId: 4, isClinical: true },
+    ]);
+    expect(clinicalLast.get(1)).toEqual(clinicalFirst.get(1)!);
+  });
+
+  test("a person with no clinical link anywhere gets an empty list, not a missing field", () => {
+    // Meili cannot filter an attribute some documents omit, and a person who is
+    // purely an administrative contact is exactly the case the exclusion has to
+    // reason about.
+    const document = mapPersonSearchDocument({
+      id: 5,
+      firstName: "Bruno",
+      lastName: "Costa",
+      socialName: null,
+      cpf: null,
+      primarySpecialtyLabel: null,
+      activeAssociations: [{ facilityId: 9, territoryId: null }],
+      deletedAt: null,
+    });
+
+    expect(document).toHaveProperty("clinicalFacilityIds", []);
+    expect(document?.activeFacilityIds).toEqual([9]);
   });
 
   test("defaults registrationDisplays to empty when omitted", () => {
@@ -171,6 +234,107 @@ describe("search rebuild", () => {
     ).toEqual([]);
   });
 
+  test("carries every per-facility association into the rebuilt document", () => {
+    // The rebuild is where a filterable attribute goes wrong most quietly: if
+    // the page builder does not populate it, the index is rebuilt with the
+    // field empty on every document, the filter then matches nothing, and
+    // facilities that do match disappear from search with no error anywhere.
+    const row = {
+      id: 1,
+      displayName: "Clínica Central",
+      legalName: null,
+      tradeName: null,
+      legalDocument: null,
+      cnesCode: null,
+      city: null,
+      state: null,
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      latitude: null,
+      longitude: null,
+      deactivatedAt: null,
+    };
+
+    const [document] = searchRebuild.buildFacilityPageDocuments(
+      [row],
+      {
+        verticalIds: new Map([[1, [10]]]),
+        territoryIds: new Map([[1, [20]]]),
+        repUserIds: new Map([[1, [7]]]),
+        funnelData: new Map(),
+      },
+      new Map([[1, [9, 4]]]),
+    );
+
+    expect(document).toMatchObject({
+      id: "1",
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      clinicalFocusIds: [4, 9],
+      verticalIds: [10],
+      territoryIds: [20],
+      repUserIds: [7],
+    });
+  });
+
+  test("leaves associations empty for a facility that has none", () => {
+    const [document] = searchRebuild.buildFacilityPageDocuments(
+      [{
+        id: 2,
+        displayName: "Sem vínculos",
+        legalName: null,
+        tradeName: null,
+        legalDocument: null,
+        cnesCode: null,
+        city: null,
+        state: null,
+        latitude: null,
+        longitude: null,
+        deactivatedAt: null,
+      }],
+      {
+        verticalIds: new Map(),
+        territoryIds: new Map(),
+        repUserIds: new Map(),
+        funnelData: new Map(),
+      },
+      new Map(),
+    );
+
+    expect(document).toMatchObject({
+      clinicalFocusIds: [],
+      unitTypeId: null,
+      legalDocumentType: null,
+    });
+  });
+
+  test("drops deactivated facilities from the page", () => {
+    expect(
+      searchRebuild.buildFacilityPageDocuments(
+        [{
+          id: 3,
+          displayName: "Fechada",
+          legalName: null,
+          tradeName: null,
+          legalDocument: null,
+          cnesCode: null,
+          city: null,
+          state: null,
+          latitude: null,
+          longitude: null,
+          deactivatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        }],
+        {
+          verticalIds: new Map(),
+          territoryIds: new Map(),
+          repUserIds: new Map(),
+          funnelData: new Map(),
+        },
+        new Map(),
+      ),
+    ).toEqual([]);
+  });
+
   test("exposes hybrid filter and distance-sort index settings", () => {
     const facilityFilterable = [...searchRebuild.FACILITY_SETTINGS.filterableAttributes];
     expect(facilityFilterable).toEqual(
@@ -184,6 +348,20 @@ describe("search rebuild", () => {
     );
     expect(facilityFilterable).not.toContain("commercialStatus");
     expect(facilityFilterable).not.toContain("territoryId");
+    // Explorar filters on these. A name missing here is not a build failure —
+    // Meili rejects the query at runtime and the API quietly falls back to
+    // SQL, so the feature keeps working and only the latency shows it.
+    expect(facilityFilterable).toEqual(
+      expect.arrayContaining([
+        "unitTypeId",
+        "legalDocumentType",
+        "clinicalFocusIds",
+      ])
+    );
+    // Order history is deliberately absent: nothing re-indexes a facility when
+    // an order is created, so an indexed copy would go stale and silently drop
+    // facilities that do match.
+    expect(facilityFilterable).not.toContain("productIds");
     expect(searchRebuild.FACILITY_SETTINGS.searchableAttributes).toEqual(
       expect.arrayContaining(["streetAddress", "neighborhood", "city", "state"])
     );
@@ -194,8 +372,23 @@ describe("search rebuild", () => {
       "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin",
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
     ]));
+    // Street types, both directions. The registry writes "Av." and a rep types
+    // "Avenida"; typo tolerance allows one edit at that length and this is
+    // five, so without the synonym the query matches nothing at all.
+    const synonyms = searchRebuild.FACILITY_SETTINGS.synonyms;
+    expect(synonyms.avenida).toContain("av");
+    expect(synonyms.av).toContain("avenida");
+    expect(synonyms.rua).toContain("r");
     expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
-      expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
+      // clinicalFacilityIds is what the associate-doctors exclusion filters on.
+      // Missing here, Meili rejects the filter at runtime and the request falls
+      // back to SQL — correct, but the whole point of indexing it is lost.
+      expect.arrayContaining([
+        "specialtyNormalized",
+        "activeFacilityIds",
+        "clinicalFacilityIds",
+        "activeTerritoryIds",
+      ])
     );
     expect(searchRebuild.PERSON_SETTINGS.searchableAttributes).toEqual(
       expect.arrayContaining([
@@ -338,14 +531,21 @@ describe("search rebuild", () => {
       pages: [[{ id: "1", name: "A" }], [{ id: "2", name: "B" }]],
     });
 
+    /*
+     * Pages are enqueued together and awaited together, rather than one at a
+     * time. Waiting per page defeats Meilisearch's own batching — it merges
+     * consecutive queued document tasks into one indexing pass only if several
+     * are queued — and that is what made a 373 435-document rebuild take
+     * nineteen minutes.
+     */
     expect(events).toEqual([
       "create:facilities__tmp",
       "wait:1",
       "settings:facilities__tmp",
       "wait:2",
       "documents:facilities__tmp:1",
-      "wait:3",
       "documents:facilities__tmp:1",
+      "wait:3",
       "wait:3",
       "get:facilities",
       "swap:facilities:facilities__tmp",
@@ -353,6 +553,16 @@ describe("search rebuild", () => {
       "delete:facilities__tmp",
       "wait:5",
     ]);
+
+    /*
+     * The invariant the interleaving above is only one expression of, asserted
+     * on its own so a future reordering cannot quietly swap a half-built index
+     * into place: every document task is awaited before the swap.
+     */
+    const swapAt = events.indexOf("swap:facilities:facilities__tmp");
+    const lastDocumentWaitAt = events.lastIndexOf("wait:3");
+    expect(lastDocumentWaitAt).toBeGreaterThan(-1);
+    expect(lastDocumentWaitAt).toBeLessThan(swapAt);
   });
 });
 

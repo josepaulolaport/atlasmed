@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 
 double? _readRatio(dynamic raw) {
   if (raw == null) return null;
@@ -23,25 +24,65 @@ class DashboardCountMetric {
 }
 
 /// Buckets of `purchase_funnel_stage` — the donut, and Cobertura's numerator.
+/// Counts per `purchase_funnel_stage`, and the three buckets the donut draws.
+///
+/// The API sends one count per stage and groups nothing — grouping is a
+/// presentation choice and lives here. It used to arrive pre-grouped, which
+/// cost two things: PURCHASE_WINDOW ("due to buy now") and OUTSIDE_WINDOW
+/// ("recently served") were summed server-side even though a rep acts on them
+/// differently, and no surface could draw the finer breakdown without an API
+/// change. [stages] is there for the surface that wants it.
 class DashboardBuckets {
-  const DashboardBuckets({
-    required this.active,
-    required this.inactive,
-    required this.neverBought,
-    required this.total,
-  });
+  const DashboardBuckets({required this.stages, required this.total});
 
-  final int active;
-  final int inactive;
-  final int neverBought;
+  /// Count per stage, keyed by API value, plus `UNKNOWN` for a profile the
+  /// funnel has not calculated yet.
+  final Map<String, int> stages;
   final int total;
 
+  Map<String, int> get _grouped =>
+      PurchaseBucketFilter.groupStageCounts(stages);
+
+  int get active => _grouped[PurchaseBucketFilter.active] ?? 0;
+  int get inactive => _grouped[PurchaseBucketFilter.inactive] ?? 0;
+  int get neverBought => _grouped[PurchaseBucketFilter.neverBought] ?? 0;
+
   factory DashboardBuckets.fromJson(Map<String, dynamic> json) {
-    return DashboardBuckets(
-      active: _readInt(json['active']),
-      inactive: _readInt(json['inactive']),
-      neverBought: _readInt(json['neverBought']),
-      total: _readInt(json['total']),
+    final raw = json['stages'];
+    final stages = <String, int>{};
+    if (raw is Map<String, dynamic>) {
+      for (final entry in raw.entries) {
+        final value = entry.value;
+        if (value is int) stages[entry.key] = value;
+      }
+    }
+    return DashboardBuckets(stages: stages, total: _readInt(json['total']));
+  }
+}
+
+/// CPF clinics needing attention (spec 0014 §4).
+class DashboardCpfIssues {
+  const DashboardCpfIssues({required this.missing, required this.invalid});
+
+  /// No CPF on file: null, or blank once trimmed.
+  final int missing;
+
+  /// A CPF is on file but fails the modulo-11 check.
+  final int invalid;
+
+  int get total => missing + invalid;
+
+  /// Nothing needs the rep's attention, so the card does not render.
+  bool get isClear => total == 0;
+
+  /// Zeros when the key is absent, so an older client against a newer API — or
+  /// the reverse — degrades to "no warning" instead of throwing on a screen
+  /// that has nothing to do with CPFs.
+  factory DashboardCpfIssues.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const DashboardCpfIssues(missing: 0, invalid: 0);
+    return DashboardCpfIssues(
+      missing: _readInt(json['missing']),
+      invalid: _readInt(json['invalid']),
     );
   }
 }

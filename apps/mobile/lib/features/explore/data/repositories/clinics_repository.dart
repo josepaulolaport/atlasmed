@@ -25,6 +25,9 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.purchaseBucket,
     this.productIds,
     this.clinicalFocusIds,
+    this.unitTypeIds,
+    this.legalDocumentType,
+    this.cpfStatus,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -33,40 +36,31 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.order,
     this.verticalId,
   }) : super(
-         endpoint: buildEndpoint(
+         // Built through [makeEndpoint] rather than inline: the two used to be
+         // parallel copies of the same query map, so a test asserting on
+         // makeEndpoint said nothing about the URL the app actually requests.
+         endpoint: makeEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
-           path: '/api/v1/facilities',
-           queryParameters: {
-             'page': page.toString(),
-             'limit': limit.toString(),
-             if (searchQuery != null && searchQuery.trim().isNotEmpty)
-               'search': searchQuery.trim(),
-             if (latitude != null) 'latitude': latitude.toString(),
-             if (longitude != null) 'longitude': longitude.toString(),
-             if (radiusKm != null) 'radiusKm': radiusKm.toString(),
-             if (commercialStatus != null && commercialStatus.trim().isNotEmpty)
-               'commercialStatus': commercialStatus.trim(),
-             if (purchaseBucket != null && purchaseBucket.trim().isNotEmpty)
-               'purchaseBucket': purchaseBucket.trim(),
-             if (productIds != null && productIds.trim().isNotEmpty)
-               'productIds': productIds.trim(),
-             if (clinicalFocusIds != null && clinicalFocusIds.trim().isNotEmpty)
-               'clinicalFocusIds': clinicalFocusIds.trim(),
-             if (purchaseFunnelStages.isNotEmpty)
-               'purchaseFunnelStage': purchaseFunnelStages
-                   .map((stage) => stage.apiValue)
-                   .join(','),
-             if (purchaseProfile != null)
-               'purchaseProfile': purchaseProfile.apiValue,
-             if (purchaseIntervalMinDays != null)
-               'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
-             if (purchaseIntervalMaxDays != null)
-               'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
-             if (verticalId != null && verticalId > 0)
-               'verticalId': verticalId.toString(),
-             if (sort != null) 'sort': sort.apiValue,
-             if (order != null) 'order': order.name,
-           },
+           page: page,
+           limit: limit,
+           searchQuery: searchQuery,
+           latitude: latitude,
+           longitude: longitude,
+           radiusKm: radiusKm,
+           commercialStatus: commercialStatus,
+           purchaseBucket: purchaseBucket,
+           productIds: productIds,
+           clinicalFocusIds: clinicalFocusIds,
+           unitTypeIds: unitTypeIds,
+           legalDocumentType: legalDocumentType,
+           cpfStatus: cpfStatus,
+           purchaseFunnelStages: purchaseFunnelStages,
+           purchaseProfile: purchaseProfile,
+           purchaseIntervalMinDays: purchaseIntervalMinDays,
+           purchaseIntervalMaxDays: purchaseIntervalMaxDays,
+           sort: sort,
+           order: order,
+           verticalId: verticalId,
          ),
          name: 'ClinicsRepository',
          tag: cacheTag,
@@ -82,6 +76,9 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
   final String? purchaseBucket;
   final String? productIds;
   final String? clinicalFocusIds;
+  final String? unitTypeIds;
+  final String? legalDocumentType;
+  final String? cpfStatus;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -104,6 +101,9 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     String? purchaseBucket,
     String? productIds,
     String? clinicalFocusIds,
+    String? unitTypeIds,
+    String? legalDocumentType,
+    String? cpfStatus,
     List<PurchaseFunnelStage> purchaseFunnelStages = const [],
     PurchaseProfile? purchaseProfile,
     int? purchaseIntervalMinDays,
@@ -131,6 +131,12 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
           'productIds': productIds.trim(),
         if (clinicalFocusIds != null && clinicalFocusIds.trim().isNotEmpty)
           'clinicalFocusIds': clinicalFocusIds.trim(),
+        if (unitTypeIds != null && unitTypeIds.trim().isNotEmpty)
+          'unitTypeIds': unitTypeIds.trim(),
+        if (legalDocumentType != null && legalDocumentType.trim().isNotEmpty)
+          'legalDocumentType': legalDocumentType.trim(),
+        if (cpfStatus != null && cpfStatus.trim().isNotEmpty)
+          'cpfStatus': cpfStatus.trim(),
         if (purchaseFunnelStages.isNotEmpty)
           'purchaseFunnelStage': purchaseFunnelStages
               .map((stage) => stage.apiValue)

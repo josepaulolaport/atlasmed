@@ -12,6 +12,16 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "REVOKED",
 ]);
 
+/**
+ * How a `facility_emultec_clients` row came to exist. `MANUAL` is an operator
+ * decision; the `AUTO_*` values record which document the importer matched on.
+ */
+export const emultecClientLinkSourceEnum = pgEnum("emultec_client_link_source", [
+  "MANUAL",
+  "AUTO_CNPJ",
+  "AUTO_CPF",
+]);
+
 export const userStatusEnum = pgEnum("user_status", [
   "ACTIVE",
   "INACTIVE",

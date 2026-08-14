@@ -9,12 +9,16 @@ const FILTER_FIELDS = [
   "verticalIds",
   "specialtyNormalized",
   "activeFacilityIds",
+  "clinicalFacilityIds",
   "activeTerritoryIds",
   "repUserIds",
   "verticalFunnelStages",
   "verticalPurchaseIntervalSources",
   "verticalManualPurchaseProfiles",
   "purchaseFunnelStagesAny",
+  "unitTypeId",
+  "legalDocumentType",
+  "clinicalFocusIds",
 ] as const;
 
 type FilterField = (typeof FILTER_FIELDS)[number];
@@ -53,6 +57,45 @@ export function inFilter(
   return {
     expression: `${field} IN [${uniqueValues.map(formatFilterValue).join(", ")}]`,
   };
+}
+
+/**
+ * Every value must be present on the document — AND, not OR.
+ *
+ * On an array field Meili reads `f = 1 AND f = 2` as "contains 1 and contains
+ * 2", which is what the SQL side means by requiring all selected clinical
+ * focuses. `IN [1, 2]` would be "contains either" and would widen the result
+ * set instead of narrowing it, matching the products/focuses asymmetry that
+ * this whole filter audit started from.
+ */
+export function allOfFilter(
+  field: FilterField,
+  values: Array<string | number>,
+): FilterClause | undefined {
+  const uniqueValues = [...new Set(values)].sort((a, b) =>
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b)),
+  );
+  if (uniqueValues.length === 0) return undefined;
+  const expression = uniqueValues
+    .map((value) => `${field} = ${formatFilterValue(value)}`)
+    .join(" AND ");
+  return {
+    expression: uniqueValues.length === 1 ? expression : `(${expression})`,
+  };
+}
+
+/**
+ * Negates a clause.
+ *
+ * Written as `NOT (…)` rather than `!=` because the fields worth negating here
+ * are arrays: on `activeFacilityIds`, `= 685` means "contains 685", so the
+ * negation has to wrap the containment rather than compare against it.
+ */
+export function notFilter(clause: FilterClause | undefined): FilterClause | undefined {
+  if (!clause) return undefined;
+  return { expression: `NOT (${clause.expression})` };
 }
 
 export function isNullFilter(field: FilterField): FilterClause {

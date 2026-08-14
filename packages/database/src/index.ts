@@ -1,8 +1,16 @@
 export { createDatabase, type Database, type AnyDatabase, type DatabaseTransaction } from "./client";
+export {
+  countQueries,
+  summarizeQueries,
+  withQueryCount,
+  type QueryRecord,
+} from "./query-counter";
 
 export * from "./schema/public/index";
 export * from "./schema/audit/index";
 export * from "./schema/ops/index";
+export * from "./schema/registry/index";
+export * from "./schema/ingestion/index";
 export * from "./types/geometry";
 export {
   createMetricSnapshotStore,

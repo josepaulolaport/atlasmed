@@ -7,6 +7,8 @@
  *   BACKFILL     — full id scan from --after-id (default 0)
  *   INCREMENTAL  — id > CRM watermark (or --after-id)
  *   RECONCILE    — date window on Data/Finalizado/Sem_Faturamento (--since or --reconcile-days)
+ *   SKIP_RECHECK — skipped orders whose blocker cleared in OUR database
+ *   DLQ_REPLAY   — open dead letters
  *   HYBRID       — DLQ replay → RECONCILE → INCREMENTAL (default)
  *
  * Usage:
@@ -54,6 +56,8 @@ async function runPhase(input: {
   let pages = 0;
   let fetched = 0;
   let upserted = 0;
+  let changed = 0;
+  let linkFailures = 0;
   let skipped = 0;
   const skipReasons: Record<string, number> = {};
   const facilityIds = new Set<number>();
@@ -68,6 +72,8 @@ async function runPhase(input: {
     pages += 1;
     fetched += page.fetched;
     upserted += page.upserted;
+    changed += page.changed;
+    linkFailures += page.linkFailures;
     skipped += page.skipped;
     for (const [key, count] of Object.entries(page.skipReasons)) {
       skipReasons[key] = (skipReasons[key] ?? 0) + count;
@@ -79,6 +85,8 @@ async function runPhase(input: {
         page: pages,
         fetched: page.fetched,
         upserted: page.upserted,
+        changed: page.changed,
+        linkFailures: page.linkFailures,
         skipped: page.skipped,
         lastId: page.lastId,
         skipReasons: page.skipReasons,
@@ -96,6 +104,8 @@ async function runPhase(input: {
     pages,
     fetched,
     upserted,
+    changed,
+    linkFailures,
     skipped,
     lastId: afterId,
     skipReasons,
@@ -132,6 +142,8 @@ async function main() {
   let pages = 0;
   let fetched = 0;
   let upserted = 0;
+  let changed = 0;
+  let linkFailures = 0;
   let skipped = 0;
   let lastId = afterId;
   const skipReasons: Record<string, number> = {};
@@ -141,6 +153,8 @@ async function main() {
     pages += phase.pages;
     fetched += phase.fetched;
     upserted += phase.upserted;
+    changed += phase.changed;
+    linkFailures += phase.linkFailures;
     skipped += phase.skipped;
     lastId = phase.lastId;
     for (const [k, v] of Object.entries(phase.skipReasons)) {
@@ -153,6 +167,16 @@ async function main() {
     absorb(
       await runPhase({
         mode: "DLQ_REPLAY",
+        afterId: 0,
+        limit,
+        maxPages,
+      })
+    );
+    // Mirrors the workflow's HYBRID order: locally-unblocked skips before the
+    // date window, because a skip waits on our data and RECONCILE cannot see it.
+    absorb(
+      await runPhase({
+        mode: "SKIP_RECHECK",
         afterId: 0,
         limit,
         maxPages,
@@ -185,7 +209,12 @@ async function main() {
         sinceDate,
       })
     );
-  } else if (mode === "INCREMENTAL" || mode === "BACKFILL") {
+  } else if (
+    mode === "INCREMENTAL" ||
+    mode === "BACKFILL" ||
+    mode === "SKIP_RECHECK" ||
+    mode === "DLQ_REPLAY"
+  ) {
     absorb(
       await runPhase({
         mode,
@@ -206,6 +235,8 @@ async function main() {
         pages,
         fetched,
         upserted,
+        changed,
+        linkFailures,
         skipped,
         lastId,
         watermarkBefore,

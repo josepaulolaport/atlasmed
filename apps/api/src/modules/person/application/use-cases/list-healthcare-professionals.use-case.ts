@@ -6,6 +6,7 @@ import {
   buildMeiliFilter,
   compactPersonMeiliScopeFilter,
   eqFilter,
+  notFilter,
   orGroup,
 } from "../../../../infrastructure/search/meili-filter";
 import { reportSearchMeiliFallback } from "../../../../infrastructure/search/search-resilience";
@@ -49,7 +50,12 @@ function orderSearchResultsById<T extends { id: number }>(
   });
 }
 
-function serializeSummary(
+/**
+ * Exported so the Favoritos list returns byte-identical doctor summaries.
+ * A second, hand-written serializer would drift the moment a field is added
+ * here — and the app would render saved doctors differently from searched ones.
+ */
+export function serializeSummary(
   professional: HealthcareProfessionalRecord,
   relationshipLevel?: number
 ) {
@@ -101,6 +107,8 @@ export class ListHealthcareProfessionalsUseCase {
     limit?: number;
     search?: string;
     facilityId?: number;
+    /** Hide people already working at this facility — the associate-doctor pool. */
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -119,6 +127,16 @@ export class ListHealthcareProfessionalsUseCase {
     if (input.facilityId) {
       assertResourceInScope(input.scope, "facility", input.facilityId);
     }
+
+    /**
+     * `excludeFacilityId` is deliberately not scope-checked, unlike `facilityId`.
+     *
+     * `facilityId` narrows the result *to* a facility, so an unchecked one would
+     * let a caller read a roster they cannot see. Excluding can only remove rows
+     * the caller was already entitled to, and the response says nothing about
+     * which rows were removed — so there is nothing to leak, and rejecting an
+     * out-of-scope id would only turn a harmless request into a 403.
+     */
 
     const scope: ListScope = input.scope.isGlobal
       ? { isGlobal: true }
@@ -147,6 +165,21 @@ export class ListHealthcareProfessionalsUseCase {
         specialtyMeiliFilter(input.specialty),
         input.facilityId
           ? eqFilter("activeFacilityIds", input.facilityId)
+          : undefined,
+        // Mirrors the SQL condition. Both paths must carry it: the SQL branch is
+        // not a slow twin of this one, it is what runs whenever Meili is absent,
+        // errors, or produces a filter over the length cap — so an exclusion
+        // applied here alone would work in testing and lapse under load.
+        //
+        // `clinicalFacilityIds`, not `activeFacilityIds`. The SQL condition is
+        // scoped to the HEALTHCARE_PROFESSIONAL classification, and this one was
+        // not, so the two paths disagreed about who was "already here": a doctor
+        // who is merely an administrative contact at the clinic was offered as a
+        // candidate while browsing and silently withheld the moment the rep
+        // typed a search. Meili exclusion drops the id before hydration, and the
+        // SQL hydrate only removes rows, so nothing downstream could restore it.
+        input.excludeFacilityId
+          ? notFilter(eqFilter("clinicalFacilityIds", input.excludeFacilityId))
           : undefined,
       ];
       const scopeFilter = compactPersonMeiliScopeFilter({
@@ -209,6 +242,7 @@ export class ListHealthcareProfessionalsUseCase {
         await this.deps.healthcareProfessionalRepository.findAllByIds({
           ids,
           facilityId: input.facilityId,
+          excludeFacilityId: input.excludeFacilityId,
           specialty: input.specialty,
           latitude: input.latitude,
           longitude: input.longitude,
@@ -279,6 +313,7 @@ export class ListHealthcareProfessionalsUseCase {
     limit: number;
     search?: string;
     facilityId?: number;
+    excludeFacilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -294,6 +329,7 @@ export class ListHealthcareProfessionalsUseCase {
         limit: input.limit,
         search: input.search,
         facilityId: input.facilityId,
+        excludeFacilityId: input.excludeFacilityId,
         specialty: input.specialty,
         latitude: input.latitude,
         longitude: input.longitude,

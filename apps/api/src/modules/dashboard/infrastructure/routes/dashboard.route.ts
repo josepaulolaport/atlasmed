@@ -123,6 +123,7 @@ export interface DashboardHttpUseCases {
   getAssignedClinics(): Executable;
   getCoverage(): Executable;
   getPurchaseBuckets(): Executable;
+  getCpfIssues(): Executable;
   getCadastroCompletion(): Executable;
   getOrders(): Executable;
   getPenetration(): Executable;
@@ -159,6 +160,11 @@ const METRIC_ENDPOINTS: Array<{
     path: "/metrics/purchase-buckets",
     useCase: "getPurchaseBuckets",
     summary: "Distribuição por bucket do funil de compra",
+  },
+  {
+    path: "/metrics/cpf-issues",
+    useCase: "getCpfIssues",
+    summary: "Clínicas CPF com documento ausente ou inválido",
   },
   {
     path: "/metrics/cadastro-completion",

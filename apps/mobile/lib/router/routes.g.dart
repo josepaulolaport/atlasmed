@@ -22,6 +22,8 @@ List<RouteBase> get $appRoutes => [
   $repsWithoutPatchRoute,
   $metricClinicsRoute,
   $purchaseBucketFacilitiesRoute,
+  $cpfIssueFacilitiesRoute,
+  $favoritosRoute,
   $clinicDetailRoute,
   $doctorDetailRoute,
   $interactionDetailRoute,
@@ -1126,6 +1128,76 @@ mixin $PurchaseBucketFacilitiesRoute on GoRouteData {
       if (_self.verticalId != null) 'verticalId': _self.verticalId!.toString(),
     },
   );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $cpfIssueFacilitiesRoute => GoRouteData.$route(
+  path: '/dashboard/cpf-issues/:cpfStatus',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: CpfIssueFacilitiesRoute.$parentNavigatorKey,
+  factory: $CpfIssueFacilitiesRoute._fromState,
+);
+
+mixin $CpfIssueFacilitiesRoute on GoRouteData {
+  static CpfIssueFacilitiesRoute _fromState(GoRouterState state) =>
+      CpfIssueFacilitiesRoute(
+        cpfStatus: state.pathParameters['cpfStatus']!,
+        verticalId: _$convertMapValue(
+          'verticalId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+      );
+
+  CpfIssueFacilitiesRoute get _self => this as CpfIssueFacilitiesRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/dashboard/cpf-issues/${Uri.encodeComponent(_self.cpfStatus)}',
+    queryParams: {
+      if (_self.verticalId != null) 'verticalId': _self.verticalId!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $favoritosRoute => GoRouteData.$route(
+  path: '/explore/favoritos',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: FavoritosRoute.$parentNavigatorKey,
+  factory: $FavoritosRoute._fromState,
+);
+
+mixin $FavoritosRoute on GoRouteData {
+  static FavoritosRoute _fromState(GoRouterState state) =>
+      const FavoritosRoute();
+
+  @override
+  String get location => GoRouteData.$location('/explore/favoritos');
 
   @override
   void go(BuildContext context) => context.go(location);

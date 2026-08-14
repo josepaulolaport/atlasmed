@@ -19,6 +19,8 @@ export type EmultecOrderBundle = {
   idCliente: number;
   idVendedor: number | null;
   status: string | null;
+  /** `avulsa.Natureza` — VENDA / DOACAO. Decides the CRM order type. */
+  nature: string | null;
   orderedAt: string | null;
   notes: string | null;
   freight: number;
@@ -31,12 +33,19 @@ export type EmultecOrderBundle = {
   lines: EmultecOrderLine[];
 };
 
-/** Page-level modes (HYBRID / DLQ replay orchestrated above this). */
+/**
+ * Page-level modes (HYBRID orchestrated above this).
+ *
+ * `DLQ_REPLAY` and `SKIP_RECHECK` do not page Emultec by id at all — they draw
+ * their ids from our own tables and then fetch those rows by id, so neither
+ * reaches `buildEmultecOrderIdPageSql`.
+ */
 export type EmultecOrderPageMode =
   | "BACKFILL"
   | "INCREMENTAL"
   | "RECONCILE"
-  | "DLQ_REPLAY";
+  | "DLQ_REPLAY"
+  | "SKIP_RECHECK";
 
 export type FetchEmultecOrdersPageInput = {
   mode: EmultecOrderPageMode;
@@ -63,7 +72,7 @@ function assertSinceDate(sinceDate: string | undefined): string {
 
 /** Build id-page SQL (exported for unit tests). */
 export function buildEmultecOrderIdPageSql(input: {
-  mode: Exclude<EmultecOrderPageMode, "DLQ_REPLAY">;
+  mode: Exclude<EmultecOrderPageMode, "DLQ_REPLAY" | "SKIP_RECHECK">;
   afterId: number;
   limit: number;
   sinceDate?: string;
@@ -124,7 +133,8 @@ async function loadBundlesForIds(
     "  c.Id_Cliente_PJ,",
     "  c.CNPJ,",
     "  c.CPF,",
-    "  pj.CNPJ AS PJ_CNPJ",
+    "  pj.CNPJ AS PJ_CNPJ,",
+    "  a.Natureza",
     "FROM avulsa a",
     "LEFT JOIN clientes c ON c.Id = a.Id_Cliente",
     "LEFT JOIN clientes pj ON pj.Id = c.Id_Cliente_PJ",
@@ -192,6 +202,7 @@ async function loadBundlesForIds(
       clientCnpjDigits: digitsOnly(nullIfNullToken(cols[10])),
       clientCpfDigits: digitsOnly(nullIfNullToken(cols[11])),
       pjCnpjDigits: digitsOnly(nullIfNullToken(cols[12])),
+      nature: nullIfNullToken(cols[13]),
       lines: linesByAvulsa.get(idAvulsa) ?? [],
     } satisfies EmultecOrderBundle;
   });
@@ -206,8 +217,8 @@ async function loadBundlesForIds(
 export async function fetchEmultecOrdersPage(
   input: FetchEmultecOrdersPageInput
 ): Promise<EmultecOrderBundle[]> {
-  if (input.mode === "DLQ_REPLAY") {
-    throw new Error("DLQ_REPLAY uses listOpenEmultecDeadLetterIds + fetchEmultecOrdersByIds");
+  if (input.mode === "DLQ_REPLAY" || input.mode === "SKIP_RECHECK") {
+    throw new Error(`${input.mode} draws ids locally, then fetchEmultecOrdersByIds`);
   }
 
   const cfg = requireEmultecMysqlConfig();

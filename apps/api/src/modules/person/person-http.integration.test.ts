@@ -1,5 +1,9 @@
 import { describe, expect, it, mock } from "bun:test";
-import { createGlobalScopeContext, type Role } from "@atlasmed/access";
+import {
+  createGlobalScopeContext,
+  ForbiddenError,
+  type Role,
+} from "@atlasmed/access";
 import { Elysia } from "elysia";
 import {
   ResourceNotFoundError,
@@ -100,6 +104,16 @@ function healthcareUseCases(
     }),
     listHealthcareSpecialties: () => ({
       execute: mock(async () => ({ data: ["Cardiologia"] })),
+    }),
+    addPersonBookmark: () => ({ execute: mock(async () => ({ bookmarked: true })) }),
+    removePersonBookmark: () => ({
+      execute: mock(async () => ({ bookmarked: false })),
+    }),
+    listPersonBookmarks: () => ({
+      execute: mock(async () => ({
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
+      })),
     }),
     ...overrides,
   };
@@ -271,7 +285,7 @@ describe("Person HTTP routes", () => {
     expect(await personResponse.json()).toEqual(
       expect.objectContaining({ id: 10, firstName: "Ana", lastName: "Silva" })
     );
-    expect(getPerson).toHaveBeenCalledWith({ personId: 10 });
+    expect(getPerson).toHaveBeenCalledWith({ personId: 10, userId: 1 });
 
     const notesResponse = await authRequest(
       application,
@@ -400,5 +414,115 @@ describe("Person HTTP routes", () => {
       noteId: 3,
       userId: 1,
     });
+  });
+
+  it("bookmark routes are reachable, caller-scoped, and reject anonymous callers", async () => {
+    const add = mock(async () => ({ bookmarked: true }));
+    const remove = mock(async () => ({ bookmarked: false }));
+    const list = mock(async () => ({
+      data: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
+    }));
+    const application = app(
+      undefined,
+      healthcareUseCases({
+        addPersonBookmark: () => ({ execute: add }),
+        removePersonBookmark: () => ({ execute: remove }),
+        listPersonBookmarks: () => ({ execute: list }),
+      })
+    );
+
+    const added = await authRequest(
+      application,
+      "http://localhost/api/v1/healthcare-professionals/10/bookmark",
+      "token",
+      { method: "PUT" }
+    );
+    expect(added.status).toBe(200);
+    expect(await added.json()).toEqual({ bookmarked: true });
+    // userId and scope come from the session, never from the request body —
+    // otherwise one rep could write into another's list.
+    expect(add).toHaveBeenCalledWith(
+      expect.objectContaining({ personId: 10, userId: 1 })
+    );
+
+    const removed = await authRequest(
+      application,
+      "http://localhost/api/v1/healthcare-professionals/10/bookmark",
+      "token",
+      { method: "DELETE" }
+    );
+    expect(removed.status).toBe(200);
+    expect(await removed.json()).toEqual({ bookmarked: false });
+
+    const listed = await authRequest(
+      application,
+      "http://localhost/api/v1/me/bookmarks/healthcare-professionals",
+      "token"
+    );
+    expect(listed.status).toBe(200);
+    expect(list).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 1, page: 1, limit: 20 })
+    );
+  });
+
+  it("returns 401 on bookmark routes without auth", async () => {
+    const anon = app(undefined, undefined, "unauthenticated");
+    for (const [path, method] of [
+      ["/api/v1/healthcare-professionals/10/bookmark", "PUT"],
+      ["/api/v1/healthcare-professionals/10/bookmark", "DELETE"],
+      ["/api/v1/me/bookmarks/healthcare-professionals", "GET"],
+    ] as const) {
+      const response = await authRequest(
+        anon,
+        `http://localhost${path}`,
+        "token",
+        { method }
+      );
+      expect(response.status).toBe(401);
+    }
+  });
+
+  it("propagates 403 when the doctor is real but none of their clinics are visible", async () => {
+    const denied = {
+      execute: mock(async () => {
+        throw new ForbiddenError("Resource outside scope: person");
+      }),
+    };
+    const response = await authRequest(
+      app(undefined, healthcareUseCases({ addPersonBookmark: () => denied })),
+      "http://localhost/api/v1/healthcare-professionals/999/bookmark",
+      "token",
+      { method: "PUT" }
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("propagates 404 when the doctor does not exist", async () => {
+    const missing = {
+      execute: mock(async () => {
+        throw new ResourceNotFoundError("Person", 999);
+      }),
+    };
+    const response = await authRequest(
+      app(undefined, healthcareUseCases({ addPersonBookmark: () => missing })),
+      "http://localhost/api/v1/healthcare-professionals/999/bookmark",
+      "token",
+      { method: "PUT" }
+    );
+    // Distinct from 403 on purpose — see person-bookmark.use-cases.ts.
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects a non-positive doctor id before reaching the use case", async () => {
+    const add = mock(async () => ({ bookmarked: true }));
+    const response = await authRequest(
+      app(undefined, healthcareUseCases({ addPersonBookmark: () => ({ execute: add }) })),
+      "http://localhost/api/v1/healthcare-professionals/0/bookmark",
+      "token",
+      { method: "PUT" }
+    );
+    expect(response.status).toBe(400);
+    expect(add).not.toHaveBeenCalled();
   });
 });

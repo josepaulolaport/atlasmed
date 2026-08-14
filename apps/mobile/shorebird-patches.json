@@ -1,0 +1,6 @@
+{
+  "patches": [
+    { "platform": "android", "releaseVersion": "1.2.0+8" },
+    { "platform": "ios", "releaseVersion": "1.2.0+8" }
+  ]
+}

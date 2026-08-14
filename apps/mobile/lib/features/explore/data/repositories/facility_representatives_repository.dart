@@ -63,10 +63,12 @@ class FacilityRepresentativesRepository
     if (result == null) {
       throw const FacilityRepresentativesException();
     }
-    // Warm id→name catalog cache so roleChipLabels resolve.
+    // Warm id→name catalog cache so roleChipLabels resolve. Shared across
+    // instances: the professionals roster warms the same catalog on the same
+    // screen, and both used to fetch it.
     final catalogRepo = PersonFacilityRolesCatalogRepository(client: _client);
     try {
-      await catalogRepo.listActive();
+      await catalogRepo.ensureCatalogWarm();
     } catch (_) {
       // Labels stay empty until a roles sheet loads catalog.
     } finally {

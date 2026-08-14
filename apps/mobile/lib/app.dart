@@ -48,12 +48,19 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
 
   void _syncLocationWatching() {
     final notifier = ref.read(locationSessionProvider.notifier);
-    if (_sessionListenable.isAuthenticated) {
-      notifier.startWatching();
-      unawaited(notifier.ensureLocation());
-    } else {
+    if (!_sessionListenable.isAuthenticated) {
       notifier.stopWatching();
+      return;
     }
+    notifier.startWatching();
+    if (kIsWeb &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      // Avoid issuing the geolocation prompt while the tab is not focused —
+      // Chrome suppresses/queues it silently. The resumed lifecycle handler
+      // or the location gate prompts once the tab regains focus.
+      return;
+    }
+    unawaited(notifier.ensureLocation());
   }
 
   @override

@@ -20,6 +20,12 @@ class FacilityEntry {
   final List<ClinicalFocus> clinicalFocuses;
   final List<FacilityVerticalProfileDTO> verticalProfiles;
 
+  /// Already in the list response — `serializeFacility` emits both. Carrying
+  /// them means the shell seeded at tap time has coordinates, so the nearby
+  /// preview does not have to wait for the detail and fetch a second time.
+  final double? lat;
+  final double? lng;
+
   const FacilityEntry({
     required this.id,
     required this.name,
@@ -32,6 +38,8 @@ class FacilityEntry {
     this.purchaseRecurrence,
     this.clinicalFocuses = const [],
     this.verticalProfiles = const [],
+    this.lat,
+    this.lng,
   });
 
   List<ClinicalFocus> get displayServices => clinicalFocuses;
@@ -76,6 +84,8 @@ class FacilityEntry {
           .where((focus) => focus.name.trim().isNotEmpty)
           .toList(growable: false),
       verticalProfiles: dto.verticalProfiles,
+      lat: dto.lat,
+      lng: dto.lng,
     );
   }
 }

@@ -48,3 +48,23 @@ export type {
   FacilityProfileFunnelData,
   FacilitySearchDocument,
 } from "./facility-search-document";
+
+export {
+  FACILITY_CANDIDATE_SETTINGS,
+  FACILITY_CANDIDATE_COLUMNS,
+  FACILITY_CANDIDATE_JOINS,
+  FACILITY_CANDIDATE_MEMBERSHIP,
+  buildFacilityCandidateDocument,
+} from "./facility-candidate-document";
+export type {
+  FacilityCandidateDocument,
+  CandidateRow as FacilityCandidateRow,
+} from "./facility-candidate-document";
+
+export {
+  ADDRESS_ABBREVIATION_GROUPS,
+  MAX_ADDRESS_QUERY_VARIANTS,
+  buildAddressSearchSynonyms,
+  expandAddressAbbreviations,
+  normalizeAddressToken,
+} from "./address-abbreviations";

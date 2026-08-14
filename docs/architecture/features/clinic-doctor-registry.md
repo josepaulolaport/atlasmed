@@ -2,7 +2,7 @@
 
 ## Current State
 
-AtlasMed has clinic and person CRM support: facilities, unified `persons` with facility affiliations, healthcare vs administrative classifications, role assignments, private notes, relationship scores, Meilisearch indexes (`facilities` + `persons`), and purchase-recurrence snapshots. CNES registry warehouse ingest and `/registry/*` READ/confirm are **removed**.
+AtlasMed has clinic and person CRM support: facilities, unified `persons` with facility affiliations, healthcare vs administrative classifications, role assignments, private notes, relationship scores, Meilisearch indexes (`facilities` + `persons`), and purchase-recurrence snapshots. The CNES registry warehouse's diff/suggestion surface and `/registry/*` READ/confirm are **removed**; a narrow read-only `registry` schema, loaded monthly by a Temporal worker, backs the CNES suggestions on the associate-doctor sheet (ADR 0006, ADR 0009, spec 0012).
 
 User-submitted field corrections and deactivation requests use `public.field_suggestions` (Não Conformidades) — see Spec 0007. That path is not a CNES registry suggestion queue.
 
@@ -58,7 +58,9 @@ Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/profe
 ## Frontend surfaces (current)
 
 - **Web:** out of scope for person/professional CRM surfaces on this line of work (no rewire planned).
-- **Mobile:** Explore + establishment detail — Médicos via healthcare projection (associate existing only; no in-app create-doctor); administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles/registrations on person paths. See Spec 0005.
+- **Mobile:** Explore + establishment detail — Médicos via healthcare projection; administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles/registrations on person paths. See Spec 0005.
+  - The associate-doctor sheet has a **"Vinculados a esta clínica no CNES"** section between "Já associados" and "Disponíveis", carrying the snapshot's competence ("segundo o CNES em maio de 2026"). Rows use the same select-then-save flow, so CNES suggests and a human confirms (ADR 0004 Q21) and the result is an ordinary `person_facilities` row.
+  - Still **associate-existing only** today. Importing a doctor CNES lists that we do not hold is specified (spec 0012 §5) and not yet built.
 
 ## Recurring Purchase Profile and Funnel
 
@@ -133,7 +135,7 @@ POST /sync
 { "entity": "emultec-orders" }
 ```
 
-Schedule runs every 10 minutes as paged **BACKFILL** (`BUFFER_ONE` catch-up; `pageSize` 200). Hard upsert failures go to `ops.emultec_order_import_dead_letters`; replay via API/CLI `HYBRID` / `DLQ_REPLAY` (schedule BACKFILL does not auto-replay DLQ).
+Schedule runs every 10 minutes as **HYBRID** (`SKIP` overlap; `pageSize` 200, `maxPages` 50), so it replays dead letters and re-checks cleared skips on its own. Hard upsert failures go to `ops.emultec_order_import_dead_letters`; orders blocked on our own reference data go to `ops.emultec_order_import_pending` and re-import automatically once the blocker clears.
 
 Start the initial purchase-recurrence backfill through the authorized endpoint:
 

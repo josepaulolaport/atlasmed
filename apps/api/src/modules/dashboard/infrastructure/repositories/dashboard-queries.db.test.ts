@@ -102,9 +102,11 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
 
   test("buckets partition the denominator", async () => {
     const buckets = await repository.countPurchaseBuckets(filter());
-    expect(buckets.active + buckets.inactive + buckets.neverBought).toBe(
-      buckets.total,
-    );
+    // Every profile lands in exactly one stage, `UNKNOWN` included — which is
+    // what makes it safe for a client to regroup them. A stage missing from the
+    // select would show up here as a sum short of the total.
+    const summed = Object.values(buckets.stages).reduce((a, b) => a + b, 0);
+    expect(summed).toBe(buckets.total);
 
     const registered = await repository.countRegisteredProfiles(filter());
     expect(registered.total).toBe(buckets.total);

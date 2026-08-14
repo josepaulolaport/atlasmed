@@ -88,8 +88,10 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
   return {
     findAll: async () => ({ facilities: [], total: 0 }),
     findAllByIds: async () => [],
+    registryHasEstablishment: async () => true,
     findById: async () => facility,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypesInUse: async () => [],
     listUnitTypeCatalog: async () => [],
     create: async () => facility ?? ortoOnlyFacility(),
     update: async () => facility ?? ortoOnlyFacility(),

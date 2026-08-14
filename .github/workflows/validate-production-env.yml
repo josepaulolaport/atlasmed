@@ -41,10 +41,6 @@ on:
         required: true
       MEILISEARCH_API_KEY:
         required: true
-      MINIO_ROOT_USER:
-        required: true
-      MINIO_ROOT_PASSWORD:
-        required: true
       STORAGE_ACCESS_KEY_ID:
         required: true
       STORAGE_SECRET_ACCESS_KEY:
@@ -70,8 +66,6 @@ jobs:
       RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
       TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
       MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
-      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
-      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
       NODE_ENV: production
       PORT: "3000"
       REDIS_URL: redis://atlasmed-redis:6379
@@ -94,8 +88,7 @@ jobs:
       # which is why both still exist.
       STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
       STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
-      # What requests are signed with — the R2 API token. MINIO_ROOT_* above provision
-      # the MinIO server itself and are a different thing.
+      # What requests are signed with — the R2 API token id and secret.
       STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
       STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
 
@@ -116,3 +109,20 @@ jobs:
 
       - name: Validate compose file
         run: docker compose -f deploy/uncloud.compose.yml config --quiet
+
+      # Writes a probe object to the production bucket and deletes it. The API's
+      # boot probe proves the credential can *read* — on 2026-08-12 production
+      # ran with an R2 token that could list and not put, booted clean, and
+      # failed every upload. A deploy that fails here leaves the working
+      # container serving.
+      #
+      # Runs on pull requests too, despite writing to the production bucket.
+      # It was deploy-only first, on the reasoning that a PR-triggered write to
+      # production is a wider blast radius than the problem needs. That was the
+      # wrong trade: the step was then never exercised until it ran on main,
+      # where it failed immediately because turbo had not been told to pass
+      # STORAGE_*. An unexercised guard is not a guard.
+      #
+      # The write is nine bytes under `_preflight/`, deleted immediately.
+      - name: Verify object storage is writable
+        run: bun run storage:check

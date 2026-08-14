@@ -131,9 +131,10 @@ const getPersonRoute = (useCases: PersonsHttpUseCases, authPlugin: any = auth) =
     .use(requirePermission("read", "PERSON"))
     .get(
       "/persons/:personId",
-      async ({ params }) => {
+      async ({ params, getUserId }: any) => {
         return useCases.getPerson().execute({
           personId: params.personId,
+          userId: await getUserId(),
         });
       },
       {
