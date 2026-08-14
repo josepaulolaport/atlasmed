@@ -422,12 +422,12 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.inventory_outlined,
     visibleFor: canReadCatalog,
   ),
-  AppNavigationItem(
-    branchIndex: 10,
-    label: 'Perfil',
-    route: '/profile',
-    icon: Icons.person_outline_rounded,
-  ),
+
+  // Perfil is hidden alongside Usuários. Branch 10 and `/profile` still exist —
+  // only the drawer entry is gone. Note what goes with it: the avatar picker,
+  // the push-notification preference and the personal Território card have no
+  // other entry point in the app. Signing out does not: "Sair" is in the
+  // drawer's own footer, not on Perfil.
 ];
 
 class AtlasDrawer extends ConsumerWidget {

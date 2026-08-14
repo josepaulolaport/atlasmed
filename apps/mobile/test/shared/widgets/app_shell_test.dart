@@ -35,12 +35,9 @@ void main() {
             .branchIndex,
         4,
       );
-      expect(
-        appNavigationItems
-            .singleWhere((item) => item.route == '/profile')
-            .branchIndex,
-        10,
-      );
+      // `/profile` was pinned here too. It is no longer in this list — the
+      // drawer entry is hidden — and branch 10 is now guarded by the router,
+      // not by the navigation items.
     });
   });
 
@@ -50,6 +47,20 @@ void main() {
         appNavigationItems,
         contains(
           predicate<AppNavigationItem>((item) => item.route == '/orders'),
+        ),
+      );
+    });
+
+    test('offers no way into Perfil', () {
+      // The branch and the route survive; only the drawer entry is gone. The
+      // avatar picker and the push preference live there and nowhere else, so
+      // this is the assertion that records the trade deliberately.
+      expect(
+        appNavigationItems,
+        isNot(
+          contains(
+            predicate<AppNavigationItem>((item) => item.route == '/profile'),
+          ),
         ),
       );
     });
