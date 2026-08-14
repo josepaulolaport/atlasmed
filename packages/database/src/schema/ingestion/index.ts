@@ -128,6 +128,18 @@ export const cnesRuns = ingestionSchema.table(
  * without one describes a person we could never act on. Applying it here rather
  * than at read drops 2 500 334 of 6 734 280 rows — 37 % — that nothing would ever
  * have selected.
+ *
+ * **No primary key, and that is deliberate.** The obvious natural key —
+ * competência, unit, professional, council, UF, registration, CBO — is not
+ * unique in the source: measured on 202607, 13 605 groups repeat it for 13 667
+ * excess rows, because `tbCargaHorariaSus` carries one row per workload entry and
+ * this table projects away the hours and contract type that distinguish them. A
+ * unique constraint here would abort every monthly load on real data.
+ *
+ * The duplicates are harmless because every reader aggregates with `DISTINCT`,
+ * and retry safety comes from the loader deleting the competência before
+ * restaging it rather than from a constraint. This is a projection of an external
+ * file, not a table with an identity of its own.
  */
 export const cnesCargaStaging = ingestionSchema.table(
   "carga_staging",
