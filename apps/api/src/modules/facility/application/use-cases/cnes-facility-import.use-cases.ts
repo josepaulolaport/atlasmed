@@ -325,6 +325,29 @@ export class ImportCnesFacilityUseCase {
     const geography = await this.resolveGeography(establishment, input.municipalityId ?? null);
 
     /*
+     * A subtype belongs to exactly one type, and `facilities` carries the two as
+     * independent foreign keys — so nothing in the database refuses a mismatched
+     * pair. Migration 0109 exists to repair exactly that, and an unchecked import
+     * would recreate it one clinic at a time.
+     */
+    const unitTypeId = input.unitTypeId ?? establishment.unitTypeId;
+    const unitSubtypeId = input.unitSubtypeId ?? establishment.unitSubtypeId;
+    const unitType = await this.deps.repository.checkUnitType({ unitTypeId, unitSubtypeId });
+    if (!unitType.typeExists) {
+      throw new ValidationError([
+        { field: "unitTypeId", message: `Unknown unit type: ${unitTypeId}` },
+      ]);
+    }
+    if (!unitType.subtypeBelongs) {
+      throw new ValidationError([
+        {
+          field: "unitSubtypeId",
+          message: "That subtype belongs to a different kind of establishment",
+        },
+      ]);
+    }
+
+    /*
      * A CNPJ we already hold under a different CNES code is two establishments
      * claiming one legal entity. Report the facility that holds it rather than
      * failing on a constraint the user cannot read.
@@ -350,9 +373,12 @@ export class ImportCnesFacilityUseCase {
       }
     }
 
-    const { facilityId } = await this.deps.repository.createFromRegistry({
+    const { facilityId, raced } = await this.deps.repository.createFromRegistry({
       cnesCode,
       name,
+      // The registry's own, never a copy of `name` — see `createFromRegistry`.
+      legalName: establishment.legalName,
+      tradeName: establishment.tradeName,
       legalDocumentType,
       legalDocument: legalDocument ?? null,
       streetAddress: input.streetAddress ?? establishment.streetAddress,
@@ -366,10 +392,31 @@ export class ImportCnesFacilityUseCase {
       municipalityId: geography.municipalityId,
       lat,
       lng,
-      unitTypeId: input.unitTypeId ?? establishment.unitTypeId,
-      unitSubtypeId: input.unitSubtypeId ?? establishment.unitSubtypeId,
+      unitTypeId,
+      unitSubtypeId,
       verticalIds,
     });
+
+    /*
+     * Somebody imported this establishment while we were deciding. The facility
+     * exists and is not ours to have created, so the honest answer is the one
+     * case 2 gives: make it visible to this user's verticals and say so. Writing
+     * the fields we prepared would overwrite the winner's record.
+     */
+    if (raced) {
+      const { added } = await this.deps.repository.addVerticalProfiles({
+        facilityId,
+        verticalIds,
+      });
+      await this.deps.onFacilityCreated?.(facilityId);
+      await this.deps.onCandidateChanged?.(cnesCode);
+      return {
+        outcome: added.length > 0 ? "PROFILE_ADDED" : "ALREADY_VISIBLE",
+        facilityId,
+        cnesCode,
+        verticalIds: added,
+      };
+    }
 
     // Ownership is geometric (spec 0009): the pin decides the manager zone.
     await this.deps.onFacilityLocationChanged?.(facilityId);
@@ -396,14 +443,21 @@ export class ImportCnesFacilityUseCase {
     establishment: RegistryEstablishment,
     chosenMunicipalityId: number | null
   ): Promise<{ municipalityId: number; stateId: number }> {
+    /*
+     * The chosen município brings its **own** state. Taking the state from the
+     * registry instead would let a user pick a município in another UF and leave
+     * the facility's `state_id` contradicting its `municipality_id` — and an id
+     * that does not exist at all would surface as a raw foreign-key error rather
+     * than something the user can act on.
+     */
     if (chosenMunicipalityId !== null) {
-      const stateId = establishment.stateId;
-      if (stateId === null) {
+      const chosen = await this.deps.repository.findMunicipality(chosenMunicipalityId);
+      if (!chosen) {
         throw new ValidationError([
-          { field: "municipalityId", message: "Could not resolve the state for this clinic" },
+          { field: "municipalityId", message: `Município ${chosenMunicipalityId} does not exist` },
         ]);
       }
-      return { municipalityId: chosenMunicipalityId, stateId };
+      return chosen;
     }
 
     if (establishment.municipalityId !== null && establishment.stateId !== null) {
@@ -413,13 +467,20 @@ export class ImportCnesFacilityUseCase {
       };
     }
 
-    if (establishment.municipalityCnesId !== null) {
-      const created = await this.deps.repository.ensureMunicipality(
-        establishment.municipalityCnesId
-      );
-      if (created) return created;
-    }
-
+    /*
+     * Nothing is created here any more, and that is the correction.
+     *
+     * This used to mint a município from the registry whenever `public` did not
+     * hold one, on the belief that CNES knew 33 municípios we did not. It does
+     * not. All 33 were Brasília's regiões administrativas (31) plus two Ministry
+     * internal codes — the DF is a single município in IBGE. Migration 0112
+     * bridges the localities to Brasília, so a real establishment now resolves
+     * here, and creating anything would have meant inventing an `ibge_id` from a
+     * check digit that is not derivable.
+     *
+     * What is left is genuinely unplaceable: `999999 SAS`, `222222 DRAC/CGSOS`,
+     * neither carrying an establishment. Failing is right.
+     */
     throw new ValidationError([
       {
         field: "municipalityId",

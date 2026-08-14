@@ -2,13 +2,15 @@ import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { ForbiddenError } from "../../../../shared/errors";
-import { searchFacilityCandidates } from "../../../../infrastructure/search/facility-candidate-index.service";
+import {
+  searchFacilityCandidates,
+  upsertFacilityCandidateDocument,
+} from "../../../../infrastructure/search/facility-candidate-index.service";
 import {
   ImportCnesFacilityUseCase,
   PreviewCnesFacilityImportUseCase,
 } from "../../application/use-cases/cnes-facility-import.use-cases";
 import { DrizzleCnesFacilityImportRepository } from "../repositories/drizzle/drizzle-cnes-facility-import.repository";
-import { upsertFacilityCandidateDocument } from "../../../../infrastructure/search/facility-candidate-index.service";
 import { upsertFacilitySearchDocument } from "../../../../infrastructure/search/facility-search-index.service";
 
 /**
@@ -164,9 +166,18 @@ const importCandidateRoute = new Elysia()
         phoneNumber: t.Optional(t.Union([t.String(), t.Null()])),
         email: t.Optional(t.Union([t.String(), t.Null()])),
         municipalityId: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
-        /* Required only when CNES has no point — 272 of 494 273 active units. */
-        lat: t.Optional(t.Union([t.Number(), t.Null()])),
-        lng: t.Optional(t.Union([t.Number(), t.Null()])),
+        /*
+         * Required only when CNES has no point — 272 of 494 273 active units.
+         *
+         * Bounded, because an unbounded number is accepted by `ST_MakePoint` and
+         * by Postgres without complaint. Ownership is geometric (spec 0009 R5):
+         * a clinic at lat 500 lands in no manager zone and reads afterwards as a
+         * territory-assignment bug rather than as the bad input it was. The box
+         * is Brazil with room to spare — the registry is national and cannot
+         * contain a clinic outside it.
+         */
+        lat: t.Optional(t.Union([t.Number({ minimum: -34, maximum: 6 }), t.Null()])),
+        lng: t.Optional(t.Union([t.Number({ minimum: -74, maximum: -34 }), t.Null()])),
         unitTypeId: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
         unitSubtypeId: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
         /*

@@ -113,11 +113,18 @@ export const registryStates = registrySchema.table(
 export const registryMunicipalities = registrySchema.table(
   "municipalities",
   {
-    /** IBGE code. */
+    /** IBGE code without its check digit — six digits, matching `cnes_code`. */
     cnesId: text("cnes_id").primaryKey(),
     name: text("name").notNull(),
     stateCnesId: text("state_cnes_id").notNull(),
-    /** → public.municipalities.id */
+    /**
+     * → public.municipalities.id — **many-to-one, not a bijection.**
+     *
+     * CNES subdivides the Distrito Federal into 31 regiões administrativas and
+     * gives each its own code; IBGE has one município there, Brasília. So 31
+     * registry rows point at one público município, and this is the whole of the
+     * 5 604 / 5 571 gap (plus two Ministry codes carrying no establishment).
+     */
     atlasmedId: integer("atlasmed_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -130,7 +137,12 @@ export const registryMunicipalities = registrySchema.table(
     })
       .onUpdate("cascade")
       .onDelete("restrict"),
-    uniqueIndex("registry_municipalities_atlasmed_id_uidx")
+    /*
+     * Not unique — see `atlasmedId`. It was, and the DF's 31 localities cannot
+     * all bridge to Brasília under a unique index. Nothing reads this column as
+     * a reverse lookup, so the uniqueness bought nothing and forbade the truth.
+     */
+    index("registry_municipalities_atlasmed_id_idx")
       .on(t.atlasmedId)
       .where(sql`${t.atlasmedId} IS NOT NULL`),
     index("registry_municipalities_state_cnes_id_idx").on(t.stateCnesId),

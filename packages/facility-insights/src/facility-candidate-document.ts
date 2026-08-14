@@ -101,7 +101,7 @@ export const FACILITY_CANDIDATE_SETTINGS = {
 
 export interface CandidateRow {
   cnes_id: string;
-  atlasmed_id: number | null;
+  atlasmed_id: number | string | null;
   legal_name: string | null;
   trade_name: string | null;
   tax_id_cnpj: string | null;
@@ -116,14 +116,39 @@ export interface CandidateRow {
   longitude: string | null;
   unit_type_code: string | null;
   unit_subtype_code: string | null;
-  unit_type_atlasmed_id: number | null;
+  /*
+   * Typed as it actually arrives, not as it ought to. `registry.unit_types.
+   * atlasmed_id` is `bigint`, and the driver hands those back as **strings** —
+   * measured, not assumed. Declaring it `number` here is what let a string reach
+   * the index; see `toId` below.
+   */
+  unit_type_atlasmed_id: number | string | null;
   unit_type_name: string | null;
   municipality_name: string | null;
-  municipality_atlasmed_id: number | null;
+  municipality_atlasmed_id: number | string | null;
   municipality_cnes_id: string | null;
   state_abbrev: string | null;
-  state_atlasmed_id: number | null;
+  state_atlasmed_id: number | string | null;
   vertical_ids: (number | string)[] | null;
+}
+
+/**
+ * Every `atlasmed_id` that reaches a document goes through here.
+ *
+ * Postgres `bigint` arrives as a string, `integer` as a number, and which of the
+ * two a given bridge column is has already changed once. Coercing at this one
+ * boundary is the only version of this that stays fixed: three separate defects
+ * in this feature were a bigint reaching JavaScript as `"9"` and comparing
+ * unequal to `9`.
+ *
+ * It matters most for the **filterable** ids. Meili does not coerce — a document
+ * holding `unitTypeId: "9"` simply never matches `unitTypeId = 9`, so the filter
+ * returns nothing and looks like "no clinics of that kind exist".
+ */
+function toId(value: number | string | null): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -168,20 +193,20 @@ export function buildFacilityCandidateDocument(
     legalDocumentType,
     maintainerTaxId: row.maintainer_tax_id,
     municipality: row.municipality_name,
-    municipalityId: row.municipality_atlasmed_id,
+    municipalityId: toId(row.municipality_atlasmed_id),
     municipalityCnesId: row.municipality_cnes_id,
     state: row.state_abbrev,
-    stateId: row.state_atlasmed_id,
+    stateId: toId(row.state_atlasmed_id),
     neighborhood: row.neighborhood,
     streetAddress: row.street_address,
     streetNumber: row.street_number,
     postalCode: row.postal_code,
     unitTypeCode: row.unit_type_code,
-    unitTypeId: row.unit_type_atlasmed_id,
+    unitTypeId: toId(row.unit_type_atlasmed_id),
     unitTypeName: row.unit_type_name,
     unitSubtypeCode: row.unit_subtype_code,
     imported: row.atlasmed_id !== null,
-    atlasmedId: row.atlasmed_id === null ? null : Number(row.atlasmed_id),
+    atlasmedId: toId(row.atlasmed_id),
     /*
      * Coerced, and this one is load-bearing. `facility_vertical_profiles.
      * vertical_id` is bigint, which the driver can hand back as a string — and a

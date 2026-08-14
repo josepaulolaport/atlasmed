@@ -364,6 +364,8 @@ export async function loadRegistryFromCsv(
   result.auxMunicipalities = municipalityRows.length;
   const knownMunicipalities = new Set(municipalityRows.map((m) => m.cnesId));
 
+  await bridgeGeography(db, log);
+
   const occupationRows: {
     cnesId: string;
     name: string;
@@ -1213,6 +1215,59 @@ interface BridgeResult {
  * Runs after everything else: the registrations it matches on are written by
  * step 5, and a bridge is worth nothing if the load it describes was refused.
  */
+/**
+ * Point the registry's geography at ours.
+ *
+ * **This has to live in the loader, not only in a migration.** Migration 0110
+ * carries the same backfill, and on this lane it worked — because the registry
+ * was already loaded when the migration ran. That ordering is an accident. On a
+ * fresh environment the migration runs first, finds `registry.states` and
+ * `registry.municipalities` empty, bridges nothing, and the load then inserts
+ * every row with a null `atlasmed_id` that nothing ever fills. Measured on a
+ * clean clone: `Geography bridge: 0 state(s), 0 município(s)`.
+ *
+ * The consequence is not subtle. Every establishment then resolves with no
+ * município and no state, so every import falls through to the "CNES knows a
+ * município we don't" path — which is meant for a handful of rows and would run
+ * for all 631 973.
+ *
+ * So: idempotent, every run, guarded on `atlasmed_id is null` so a bridge a
+ * human set by hand is never overwritten (invariant 4).
+ *
+ * **The two levels join on different keys.** Municípios match on `cnes_code`,
+ * which is the IBGE code without its check digit and is populated on all 5 571.
+ * States do not: `registry.states.cnes_id` holds the sigla from
+ * `tbEstado.CO_SIGLA` (`AC`, `SP`) while `public.states.cnes_code` holds the
+ * numeric code (`12`, `35`). Joining states on `cnes_code` matches zero rows —
+ * measured, after migration 0110 first did exactly that.
+ */
+async function bridgeGeography(
+  db: AnyDatabase,
+  log: (message: string, detail?: Record<string, unknown>) => void
+): Promise<void> {
+  const states = await db.execute(sql`
+    update registry.states r
+       set atlasmed_id = s.id, updated_at = now()
+      from public.states s
+     where s.abbreviation = r.cnes_id
+       and r.atlasmed_id is null
+  `);
+
+  const municipalities = await db.execute(sql`
+    update registry.municipalities r
+       set atlasmed_id = m.id, updated_at = now()
+      from public.municipalities m
+     where m.cnes_code is not null
+       and m.cnes_code = r.cnes_id
+       and r.atlasmed_id is null
+  `);
+
+  log("geography bridged", {
+    states: (states as unknown as { count?: number }).count ?? null,
+    municipalities: (municipalities as unknown as { count?: number }).count ?? null,
+  });
+}
+
 async function bridgeByRegistration(db: AnyDatabase): Promise<BridgeResult> {
   /**
    * Three conditions, each guarding a different way this could attach a clinic's

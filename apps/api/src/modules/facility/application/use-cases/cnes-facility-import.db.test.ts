@@ -414,10 +414,58 @@ describe.if(dbUp)("importing a CNES establishment (database)", () => {
   });
 
   /**
-   * §4.5: the registry holds 5 604 municípios against public's 5 571. A real
-   * clinic in a real município is not a data error to reject.
+   * §4.5, corrected. This used to create the município from the registry, on the
+   * belief that CNES knew 33 municípios we did not. It knew none: 31 were
+   * Brasília's regiões administrativas and 2 were Ministry internal codes
+   * (`999999 SAS`, `222222 DRAC/CGSOS`) carrying no establishment.
+   *
+   * Creating one meant inventing an `ibge_id` from the 6-digit CNES code, which
+   * is the IBGE code without its check digit — and that digit is a modulo-11
+   * checksum with nine real exceptions, so it is not derivable. An unplaceable
+   * establishment must fail where the user can see it.
+   *
+   * Runs before the sibling below, which bridges this município.
    */
-  it("creates a município only the registry knows, and bridges it", async () => {
+  it("refuses an establishment CNES cannot place, rather than inventing geography", async () => {
+    const before = (await db.execute(sql`
+      select count(*)::int as n from municipalities where cnes_code = ${MUN_ONLY_IN_REGISTRY}
+    `)) as unknown as { n: number }[];
+    expect(before[0]!.n).toBe(0);
+
+    await expect(
+      useCase().execute({
+        cnesCode: NO_POINT_CNES,
+        lat: -23.4,
+        lng: -46.5,
+        role: "MANAGER",
+        assignedVerticalIds: [verticalId],
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    // Nothing was minted on the way out.
+    const after = (await db.execute(sql`
+      select count(*)::int as n from municipalities where cnes_code = ${MUN_ONLY_IN_REGISTRY}
+    `)) as unknown as { n: number }[];
+    expect(after[0]!.n).toBe(0);
+  });
+
+  /**
+   * The Distrito Federal, in miniature.
+   *
+   * CNES gives each of Brasília's 31 regiões administrativas its own
+   * `CO_MUNICIPIO`; IBGE has one município there. So `registry.municipalities.
+   * atlasmed_id` is legitimately **many-to-one**, and the unique index it used to
+   * carry made the real world unrepresentable — the second locality to bridge
+   * would have collided. Proven here against the database, because an index is
+   * exactly the kind of claim a fake cannot test.
+   */
+  it("lets two CNES localities resolve to one município", async () => {
+    await db.execute(sql`
+      update registry.municipalities
+         set atlasmed_id = ${municipalityId}
+       where cnes_id = ${MUN_ONLY_IN_REGISTRY}
+    `);
+
     const result = await useCase().execute({
       cnesCode: NO_POINT_CNES,
       lat: -23.4,
@@ -428,15 +476,12 @@ describe.if(dbUp)("importing a CNES establishment (database)", () => {
     expect(result.outcome).toBe("CREATED");
 
     const [row] = (await db.execute(sql`
-      select m.ibge_id, m.cnes_code, rm.atlasmed_id
-        from facilities f
-        join municipalities m on m.id = f.municipality_id
-        join registry.municipalities rm on rm.cnes_id = m.cnes_code
-       where f.id = ${result.facilityId}
+      select f.municipality_id, f.state_id
+        from facilities f where f.id = ${result.facilityId}
     `)) as unknown as Record<string, unknown>[];
 
-    expect(row!.cnes_code).toBe(MUN_ONLY_IN_REGISTRY);
-    // Bridged back, so the next import resolves it directly.
-    expect(row!.atlasmed_id).not.toBeNull();
+    // Both localities land on the one município we actually hold.
+    expect(Number(row!.municipality_id)).toBe(municipalityId);
+    expect(Number(row!.state_id)).toBe(stateId);
   });
 });

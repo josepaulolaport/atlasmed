@@ -72,17 +72,37 @@ interface EstablishmentRow {
   longitude: string | null;
   unit_type_code: string | null;
   unit_subtype_code: string | null;
-  unit_type_id: number | null;
-  unit_subtype_id: number | null;
+  /*
+   * Typed as they actually arrive. The `atlasmed_id` bridges are a mix of
+   * `bigint` (unit types, subtypes, facilities) and `integer` (municípios,
+   * states), and the driver returns the former as strings. Declaring them all
+   * `number` is how a string reached the wire as a value typed `number`.
+   */
+  unit_type_id: number | string | null;
+  unit_subtype_id: number | string | null;
   unit_type_importable: boolean;
   deactivation_reason_code: string | null;
   municipality_cnes_id: string | null;
   municipality_name: string | null;
-  municipality_id: number | null;
+  municipality_id: number | string | null;
   state_abbreviation: string | null;
-  state_id: number | null;
-  atlasmed_id: number | null;
-  vertical_ids: number[] | null;
+  state_id: number | string | null;
+  atlasmed_id: number | string | null;
+  vertical_ids: (number | string)[] | null;
+}
+
+/**
+ * Every bridge id crosses this boundary exactly once.
+ *
+ * Postgres `bigint` arrives as a string and `integer` as a number, and which a
+ * given column is has already changed once in this schema. Coercing per-field at
+ * the call site is what produced three separate defects here; coercing at the
+ * mapping is what stops the fourth.
+ */
+function toId(value: number | string | null): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 export class DrizzleCnesFacilityImportRepository {
@@ -140,17 +160,17 @@ export class DrizzleCnesFacilityImportRepository {
       longitude: row.longitude === null ? null : Number(row.longitude),
       unitTypeCode: row.unit_type_code,
       unitSubtypeCode: row.unit_subtype_code,
-      unitTypeId: row.unit_type_id,
-      unitSubtypeId: row.unit_subtype_id,
+      unitTypeId: toId(row.unit_type_id),
+      unitSubtypeId: toId(row.unit_subtype_id),
       unitTypeImportable: row.unit_type_importable === true,
       deactivationReasonCode: row.deactivation_reason_code,
       municipalityCnesId: row.municipality_cnes_id,
       municipalityName: row.municipality_name,
-      municipalityId: row.municipality_id,
+      municipalityId: toId(row.municipality_id),
       stateAbbreviation: row.state_abbreviation,
-      stateId: row.state_id,
-      atlasmedId: row.atlasmed_id === null ? null : Number(row.atlasmed_id),
-      verticalIds: (row.vertical_ids ?? []).map(Number),
+      stateId: toId(row.state_id),
+      atlasmedId: toId(row.atlasmed_id),
+      verticalIds: (row.vertical_ids ?? []).map(Number).filter(Number.isFinite),
     };
   }
 
@@ -179,6 +199,59 @@ export class DrizzleCnesFacilityImportRepository {
       : null;
   }
 
+  /**
+   * The município the user chose, with **its own** state.
+   *
+   * Both halves matter. Returning null for an id that does not exist turns a raw
+   * foreign-key 500 into a validation error the user can act on; and taking the
+   * state from this row rather than from the registry is what stops a facility
+   * whose `state_id` contradicts its `municipality_id` — the pairing
+   * `municipalities_id_state_id_uidx` exists to make checkable, and which
+   * `facilities` does not carry a composite key against.
+   */
+  async findMunicipality(
+    municipalityId: number
+  ): Promise<{ municipalityId: number; stateId: number } | null> {
+    const rows = (await db.execute(sql`
+      select id, state_id from municipalities where id = ${municipalityId} limit 1
+    `)) as unknown as { id: number | string; state_id: number | string }[];
+    const row = rows[0];
+    return row
+      ? { municipalityId: Number(row.id), stateId: Number(row.state_id) }
+      : null;
+  }
+
+  /**
+   * Whether a client-supplied unit type and subtype are real, and belong together.
+   *
+   * A subtype belongs to exactly one type. Accepting the pair unchecked lets an
+   * import recreate precisely the inconsistency migration 0109 was written to
+   * repair — 7 facilities carrying a subtype from a different type — and there is
+   * no constraint on `facilities` that would catch it, because the two columns
+   * carry independent foreign keys.
+   */
+  async checkUnitType(input: {
+    unitTypeId: number | null;
+    unitSubtypeId: number | null;
+  }): Promise<{ typeExists: boolean; subtypeBelongs: boolean }> {
+    const rows = (await db.execute(sql`
+      select
+        ${input.unitTypeId === null} or exists (
+          select 1 from unit_types t where t.id = ${input.unitTypeId}
+        ) as type_exists,
+        ${input.unitSubtypeId === null} or exists (
+          select 1 from unit_subtypes s
+           where s.id = ${input.unitSubtypeId}
+             and s.unit_type_id is not distinct from ${input.unitTypeId}
+        ) as subtype_belongs
+    `)) as unknown as { type_exists: boolean; subtype_belongs: boolean }[];
+    const row = rows[0];
+    return {
+      typeExists: row?.type_exists === true,
+      subtypeBelongs: row?.subtype_belongs === true,
+    };
+  }
+
   /** Verticals that exist and are usable — the set an admin may choose from. */
   async listActiveVerticalIds(): Promise<number[]> {
     const rows = (await db.execute(sql`
@@ -190,59 +263,6 @@ export class DrizzleCnesFacilityImportRepository {
     return rows.map((r) => Number(r.id));
   }
 
-  /**
-   * Create the município from the registry when `public` does not hold it.
-   *
-   * The registry carries 5 604 municípios against public's 5 571, so 33 exist in
-   * CNES and not here. A real clinic in a real município is not a data error to
-   * reject (§4.5), and the alternative — refusing the import — would strand
-   * whole municipalities with no path in.
-   *
-   * Returns null when even the registry cannot place it, which leaves the
-   * decision to the caller rather than inventing geography.
-   */
-  async ensureMunicipality(
-    municipalityCnesId: string
-  ): Promise<{ municipalityId: number; stateId: number } | null> {
-    const rows = (await db.execute(sql`
-      with registry_row as (
-        select rm.cnes_id, rm.name, rs.atlasmed_id as state_id
-          from registry.municipalities rm
-          join registry.states rs on rs.cnes_id = rm.state_cnes_id
-         where rm.cnes_id = ${municipalityCnesId}
-      ),
-      inserted as (
-        insert into municipalities (name, ibge_id, cnes_code, state_id)
-        select r.name, r.cnes_id, r.cnes_id, r.state_id
-          from registry_row r
-         where r.state_id is not null
-           and not exists (
-             select 1 from municipalities m where m.cnes_code = r.cnes_id
-           )
-        returning id, state_id
-      )
-      select id, state_id from inserted
-      union all
-      select m.id, m.state_id from municipalities m
-        join registry_row r on r.cnes_id = m.cnes_code
-       limit 1
-    `)) as unknown as { id: number; state_id: number }[];
-
-    const row = rows[0];
-    if (!row) return null;
-
-    /*
-     * Bridge the registry row back, so the next import resolves it directly
-     * rather than running this again.
-     */
-    await db.execute(sql`
-      update registry.municipalities
-         set atlasmed_id = ${row.id}, updated_at = now()
-       where cnes_id = ${municipalityCnesId} and atlasmed_id is null
-    `);
-
-    return { municipalityId: Number(row.id), stateId: Number(row.state_id) };
-  }
 
   /**
    * Promote one establishment: facility, its vertical profiles, and the bridge,
@@ -251,10 +271,29 @@ export class DrizzleCnesFacilityImportRepository {
    * All three or none. A facility with no profile is invisible to everybody
    * (invariant 2), and a facility with no bridge is one the next import would
    * offer again — so a partial write here is worse than a failed one.
+   *
+   * Returns `{ raced: true }` when another transaction created this
+   * establishment first. The use case checks `atlasmed_id` before calling, but
+   * that check and this insert are two statements: two people importing the same
+   * clinic at once — or one person double-tapping — both pass it. Without the
+   * `ON CONFLICT`, the loser gets a bare `facilities_cnes_code_uidx` violation as
+   * a 500. `cnes_code` is uniquely indexed with no predicate, so the conflict is
+   * the reliable serialisation point; the caller resolves the race by treating it
+   * as the "already ours" case, which is what it now is.
    */
   async createFromRegistry(input: {
     cnesCode: string;
+    /** What the user confirmed. The clinic's display name, and only that. */
     name: string;
+    /**
+     * Razão social and nome fantasia **as CNES holds them**, not a copy of
+     * `name`. They are different facts: `name` is what a rep calls the clinic and
+     * may be edited, while these two are the establishment's registered
+     * identities and are what a CNPJ lookup or an invoice will match on.
+     * Collapsing all three into the typed name loses both, silently.
+     */
+    legalName: string | null;
+    tradeName: string | null;
     legalDocumentType: "CNPJ" | "CPF";
     legalDocument: string | null;
     streetAddress: string | null;
@@ -271,7 +310,7 @@ export class DrizzleCnesFacilityImportRepository {
     unitTypeId: number | null;
     unitSubtypeId: number | null;
     verticalIds: number[];
-  }): Promise<{ facilityId: number }> {
+  }): Promise<{ facilityId: number; raced: boolean }> {
     return db.transaction(async (tx: Tx) => {
       const inserted = (await tx.execute(sql`
         insert into facilities (
@@ -281,7 +320,7 @@ export class DrizzleCnesFacilityImportRepository {
           postal_code, phone_number, email,
           state_id, municipality_id, location, unit_type_id, unit_subtype_id
         ) values (
-          ${input.name}, ${input.name}, ${input.name}, ${input.cnesCode},
+          ${input.name}, ${input.legalName}, ${input.tradeName}, ${input.cnesCode},
           ${input.legalDocumentType}, ${input.legalDocument},
           ${input.streetAddress}, ${input.streetNumber}, ${input.addressComplement},
           ${input.neighborhood}, ${input.postalCode}, ${input.phoneNumber}, ${input.email},
@@ -289,18 +328,34 @@ export class DrizzleCnesFacilityImportRepository {
           ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326),
           ${input.unitTypeId}, ${input.unitSubtypeId}
         )
+        on conflict (cnes_code) do nothing
         returning id
-      `)) as unknown as { id: number }[];
+      `)) as unknown as { id: number | string }[];
 
+      /*
+       * No row back means the `ON CONFLICT` fired: somebody else imported this
+       * establishment between the caller's check and this insert. Report it
+       * rather than inventing a facility id — the caller turns it into the
+       * "already ours" outcome, which is now the truth.
+       */
+      const rawId = inserted[0]?.id;
+      if (rawId === undefined || rawId === null) {
+        const existing = (await tx.execute(sql`
+          select id from facilities where cnes_code = ${input.cnesCode} limit 1
+        `)) as unknown as { id: number | string }[];
+        const raced = existing[0]?.id;
+        if (raced === undefined || raced === null) {
+          throw new Error(
+            `facility insert for CNES ${input.cnesCode} returned no id and no row holds the code`
+          );
+        }
+        return { facilityId: Number(raced), raced: true };
+      }
       /*
        * Coerced, not cast. `facilities.id` is `bigint`, and the driver hands
        * those back as strings — so an uncoerced value is typed `number`, is not
        * one, and every `===` downstream quietly fails.
        */
-      const rawId = inserted[0]?.id;
-      if (rawId === undefined || rawId === null) {
-        throw new Error("facility insert returned no id");
-      }
       const facilityId = Number(rawId);
 
       for (const verticalId of input.verticalIds) {
@@ -319,7 +374,7 @@ export class DrizzleCnesFacilityImportRepository {
 
       await deriveRosterFromStaging(tx, input.cnesCode);
 
-      return { facilityId };
+      return { facilityId, raced: false };
     });
   }
 
