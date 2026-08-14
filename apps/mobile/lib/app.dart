@@ -7,7 +7,7 @@ import 'package:atlasmed_mobile_app/features/location/presentation/providers/loc
 import 'package:atlasmed_mobile_app/router/app_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:device_preview/device_preview.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,12 +47,19 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
 
   void _syncLocationWatching() {
     final notifier = ref.read(locationSessionProvider.notifier);
-    if (_sessionListenable.isAuthenticated) {
-      notifier.startWatching();
-      unawaited(notifier.ensureLocation());
-    } else {
+    if (!_sessionListenable.isAuthenticated) {
       notifier.stopWatching();
+      return;
     }
+    notifier.startWatching();
+    if (kIsWeb &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      // Avoid issuing the geolocation prompt while the tab is not focused —
+      // Chrome suppresses/queues it silently. The resumed lifecycle handler
+      // or the location gate prompts once the tab regains focus.
+      return;
+    }
+    unawaited(notifier.ensureLocation());
   }
 
   @override
