@@ -37,13 +37,21 @@ path that ends in a correct record.
 ## 2. Scope
 
 **In:** mirroring every CNES establishment into `registry`, the catalogues a facility record needs
-(unit type, unit subtype, deactivation reason), and a user-driven flow that promotes one registry
-facility into `public.facilities` with a vertical profile.
+(unit type, unit subtype, deactivation reason), a user-driven flow that promotes one registry
+facility into `public.facilities` with a vertical profile, and **national staging tables for the
+workload and professional files** (§6.7).
 
-**Out:** the professional pipeline's scope. Vínculos, professionals and their occupations stay
-gated on `atlasmed_id IS NOT NULL` exactly as today — mirroring 380 000 establishments must not
-drag 7.7 M workload rows in behind them. A facility acquires its doctors only after it is
-imported, through the flow spec 0012 already built.
+**Out:** the *semantic* professional tables' scope. `registry.facility_professionals`,
+`registry.professionals` and their occupations stay derived and scoped to
+`atlasmed_id IS NOT NULL` — they carry the bridge to `public.people` and the roster semantics, and
+mirroring those nationally would mean maintaining 4.2 M bridged rows for clinics nobody has
+imported.
+
+**This revises the earlier framing** that the professional data must stay out entirely "because
+mirroring 380 000 establishments must not drag 7.7 M workload rows in behind them". The number was
+right and the conclusion was too broad: it conflated *storing the rows* with *bridging them*.
+Storing the raw rows in staging costs ~700 MB and no semantics; bridging them is what would have
+been expensive. Staging is national and dumb, `registry.*` stays scoped and meaningful.
 
 **Data scope changes** from spec 0012 §2 ("only facilities we already operate. Not the national
 CNES set") — this spec supersedes that sentence for `registry.facilities` and its catalogues only.
@@ -344,7 +352,8 @@ columns happened to be filled.
 
 ## 5. The ingestion workflow, as changed
 
-Current order is preserved; the gate at step 4 is what moves.
+Current order is preserved. Two things change: the establishment gate is removed, and the workload
+files gain a national staging step ahead of the scoped derivation.
 
 1. **Catalogues** — `tbEstado`, `tbMunicipio`, `tbAtividadeProfissional`, and now `tbTipoUnidade`,
    `tbSubTipo`, `tbMotivoDesativacao`. Councils remain hand-seeded and never ingested (ADR 0009).
@@ -354,9 +363,15 @@ Current order is preserved; the gate at step 4 is what moves.
    upserts against today's 1 423. Existing `atlasmed_id` values are preserved on conflict; the
    loader never clears a bridge a user established.
 4. **Subtypes** — `rlEstabSubTipo`, joined on `CO_UNIDADE`, one row per establishment.
-5. **Vínculos, professionals, occupations** — unchanged, and still scoped to establishments with
-   `atlasmed_id IS NOT NULL`. This is what keeps the load bounded.
-6. **Bridge, prune, promote** — unchanged.
+5. **Staging, national** (new) — `tbCargaHorariaSus` and `tbDadosProfissionalSus` into
+   `ingestion.carga_raw` and `ingestion.professionals_raw`, **every establishment**, registration
+   gate applied at load. 4.2 M and 2.5 M rows, ≈ 700 MB, written to a new competência and swapped
+   (§6.7).
+6. **Vínculos, professionals, occupations** — still scoped to establishments with
+   `atlasmed_id IS NOT NULL`, but now **derived from staging in SQL** rather than accumulated in
+   worker memory. Same output, same scope; the difference is where the work happens, and it is what
+   stops the load's memory growing with our base (§6.7).
+7. **Bridge, prune, promote** — unchanged.
 
 **`municipality_cnes_id` stops meaning "the gestor".** It holds the `CO_UNIDADE` prefix — the
 establishment's own município, which is what the column's name always implied and what every
@@ -605,9 +620,9 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
 ## 6.7 Professional suggestions for a newly imported clinic
 
 **The problem.** Spec 0012's whole point is that a clinic's CNES doctors can be suggested to the
-rep. A clinic imported the day after an ingestion has **none of them**, and will have none until
-the next monthly run — up to a month of an empty feature on exactly the clinics someone just went
-to the trouble of adding.
+rep. A clinic imported the day after an ingestion would have **none of them**, and none until the
+next monthly run — up to a month of an empty feature on exactly the clinics someone just went to
+the trouble of adding.
 
 The cause is that the professional pipeline is scoped at *ingestion* time. Step 0 builds
 `atlasIdByCnes` from the facilities that exist then; step 2 turns it into `cnesIdByUnitCode`; and
@@ -622,66 +637,86 @@ if (facilityCnesId === undefined) continue;
 A facility imported afterwards is bridged, mirrored and complete in every other respect, and has no
 vínculo rows at all.
 
-### The silent part, which is worse
+### The answer: stage the national rows, derive on import
 
-`CnesSuggestionContext` deliberately separates three meanings of an empty list — no CNES code, the
-registry was never loaded, or CNES genuinely knows nobody here — because "collapsing them into *no
-results* is what makes a working feature look broken". **This spec introduces a fourth state that
-the existing three cannot express, and it degrades to the most misleading one.**
+The workload and professional files are loaded **nationally into staging tables**, and an import
+derives that clinic's roster from them with a query. No archive re-read, no background job.
 
-For a freshly imported clinic: `facilityHasCnesCode` is true, `facilityInRegistry` is true
-(`rf.atlasmed_id = f.id` now matches), `registryHasData` is true. Every signal says the data is
-loaded, so an empty list reads as *CNES knows nobody at this clinic* — when the truth is *we have
-not looked yet*.
+```
+ingestion.carga_raw          ← tbCargaHorariaSus,     registration gate applied at load
+ingestion.professionals_raw  ← tbDadosProfissionalSus, restricted to SUS ids in carga_raw
+```
 
-**So a fourth signal is required, not optional:** whether this facility's staff have been loaded
-since it was bridged. Until they have, the surface says pending, never "nobody here".
+Measured against the 202607 archive:
 
-### The mechanism: a debounced batch backfill, never per-import
-
-Measured against the 202607 archive, the two files a backfill must stream:
-
-| file | compressed | raw |
+| | rows | payload |
 |---|---|---|
-| `tbCargaHorariaSus` | 148.9 MB | 874.7 MB |
-| `tbDadosProfissionalSus` | 342.3 MB | 962.0 MB |
+| `tbCargaHorariaSus`, total | 6 734 280 | |
+| **surviving the registration gate** | **4 233 946** (62.9 %) | 189 MB |
+| professionals behind those | 2 502 725 | 105 MB |
+| distinct `CO_UNIDADE` | 421 050 | ≈ 10 vínculos per unit |
 
-`tbEstabelecimento` (90.2 MB / 298.7 MB) takes well under a minute, so a pass over these two is
-minutes, not seconds. **Per-import scanning is therefore out**: twenty imports in a session would
-mean twenty passes over 1.8 GB to collect twenty clinics' rows. One pass serves any number of
-pending facilities, so the backfill is a batch keyed on *"bridged since the last load"*, not on a
-single import.
+With row overhead and one index each, **≈ 700 MB steady state** — replaced per competência, not
+cumulative. For 4.2 M narrow rows that is an unremarkable table.
 
-The establishment file does **not** need re-reading. `registry.facilities.cnes_unit_code` is
-populated on 1 423 of 1 423 rows, so `cnesIdByUnitCode` is built from the registry directly.
+`carga_raw` keeps only the six columns step 3 reads — `CO_UNIDADE`, `CO_PROFISSIONAL_SUS`,
+`CO_CONSELHO_CLASSE`, `SG_UF_CRM`, `NU_REGISTRO`, `CO_CBO` — and **applies the registration gate at
+load time** (ADR 0009 §5: the registration is the gate, not the CBO). That drops 37 % of rows for
+free; what it discards describes people we could never act on, so storing them buys nothing.
 
-**It reuses the loader rather than reimplementing it.** Steps 3–7 are already parameterised by the
-scope map; the only change is where that scope comes from — all active facilities for the monthly
-run, the pending set for a backfill. Step 6 replaces the staff snapshot *per scoped facility*, so a
-narrow scope touches only those clinics, and steps 4, 5 and 7 are insert-new-only or keep-first and
-are safe to re-run.
+**Import then becomes a query**, scoped to one `CO_UNIDADE`, inside the same transaction that
+creates the facility and its bridge. The clinic has its doctors the moment it is bridged.
 
-Rules it must hold to:
+### Why this is not what §2 rejected
 
-1. **The import never fails because the backfill did.** The facility, its profile and its bridge
-   are the deliverable; staff arrive after. But a failure is recorded and visible — a clinic stuck
-   pending is a bug someone must see, not a permanently empty list.
-2. **Which archive, recorded.** The last `COMPLETED` run's archive, and the competência is stored
-   so the surface can say *staff as of 2026-07*. If no archive is retained, the backfill is
-   skipped, the facility stays pending, and the next monthly run resolves it — degraded, stated,
-   not silent.
-3. **Serialised against the monthly run.** Both write `registry.facility_professionals`, and step 6
-   deletes before it inserts. A backfill overlapping an ingestion could delete a roster the
-   ingestion is mid-way through writing. They must not run concurrently.
-4. **Idempotent.** Re-running for the same facility replaces its snapshot with the same rows.
+§2 objected to dragging 7.7 M workload rows in behind the establishments. That number was right and
+the conclusion was too broad — it conflated **storing** the rows with **bridging** them.
 
-### The alternative, and when to take it
+`ingestion.*` is staging: no foreign keys, no `atlasmed_id`, no roster semantics, no bridge to
+`public.people`. It is a queryable cache of the archive, replaced wholesale each month.
+`registry.*` remains exactly what it is today — derived, scoped to bridged facilities, carrying the
+identity resolution of steps 4–7. The expensive half was always the bridging, and that stays
+scoped.
 
-Mirroring **every** vínculo would delete this entire mechanism: an import would have its doctors the
-moment it is bridged, with no backfill, no pending state and no serialisation. §2 rejected that to
-keep the monthly load bounded, and that reason still holds — but it is a trade, not a law. If
-imports become routine rather than occasional, the machinery here costs more than the 7.7 M rows it
-avoids, and this decision is worth reopening rather than defending.
+### What this deletes
+
+The alternative was a debounced batch backfill re-reading the archive per pass. Its cost was the
+reason it needed so much machinery: `tbCargaHorariaSus` is 148.9 MB compressed / 874.7 MB raw and
+`tbDadosProfissionalSus` is 342.3 MB / 962.0 MB, so a pass is minutes, not seconds, on a worker
+that also runs the Emultec import every ten minutes. Staging removes all of it — the debounce, the
+pending set, the batch sizing, the serialisation against the monthly run, and the multi-minute pass.
+
+**It also removes a ceiling that had nothing to do with imports.** Steps 3–6 accumulate
+`staffByFacility`, `cbosByPair`, `registrationsBySus`, `vinculoRows` and `occupationRowsToInsert`
+fully in memory before writing — the writes chunk at 1 000, the accumulation does not, because step
+6 replaces each facility's roster wholesale and must know the complete new roster before deleting
+anything. So worker memory scales with the size of our base, at a measured **17.9 vínculos per
+facility**:
+
+| facilities in scope | vínculos | rough heap |
+|---|---|---|
+| 1 423 (today) | 25 440 | ~15 MB |
+| 10 000 | 179 000 | ~100 MB |
+| 50 000 | 895 000 | ~500 MB |
+
+(Heap figures are estimates from structure shapes, not measurements.) This spec is what makes the
+base grow, so it is this spec that would have hit the ceiling. Deriving steps 3–6 from staging in
+SQL removes it: the accumulation moves into Postgres, which is built for it.
+
+### Rules
+
+1. **Load into a new competência and swap, never truncate in place.** An import landing mid-reload
+   would otherwise derive from a half-loaded table and get a partial roster, silently. Staging
+   carries its competência, and the import reads the last *complete* one.
+2. **The registration gate is applied at load, not at read.** One definition, at the boundary.
+3. **Derivation is deterministic and re-runnable.** Re-deriving a facility's roster from the same
+   competência produces the same rows, so a failed import leaves nothing half-built.
+4. **Staging is a cache, not a source of truth.** The archive remains authoritative; staging can be
+   rebuilt from it at any time.
+5. **An empty staging table is still a state that must be named.** Before any ingestion has run,
+   an imported clinic legitimately has no doctors, and the surface must say *no CNES data loaded*
+   rather than *nobody here* (invariant 8). This is the one part of the original four-state problem
+   that survives.
 
 ## 7. Invariants
 
@@ -697,9 +732,13 @@ avoids, and this decision is worth reopening rather than defending.
    lacks — a point, a resolvable unit type, a município we do not hold — the flow collects it from
    the rep or creates it. What the model requires is that the value *exists*, not that CNES
    provided it.
-8. **An empty suggestion list always says which emptiness it is.** A clinic bridged but not yet
-   staff-loaded reports *pending*, never *nobody here* (§6.7). Every state added to the import flow
-   that can produce an empty list must extend `CnesSuggestionContext` rather than fall through it.
+8. **An empty suggestion list always says which emptiness it is.** With staging (§6.7) an imported
+   clinic gets its roster in the import transaction, so the only new emptiness is *no competência
+   loaded yet* — which must read as that, never as *nobody here*. Any future state that can produce
+   an empty list extends `CnesSuggestionContext` rather than falling through it.
+9. **Staging is derived, never authoritative.** `ingestion.*` can be dropped and rebuilt from the
+   archive without losing a fact. Nothing may write to it except the loader, and nothing may read
+   it as if it carried our decisions — the bridge and the roster live in `registry.*`.
 
 ## 8. Consequences worth stating
 
@@ -709,7 +748,12 @@ avoids, and this decision is worth reopening rather than defending.
   All three need re-reading against the new size, not just re-running.
 - The establishment file is already read in full every run (298 MB uncompressed); dropping the
   gate changes what is *written*, not what is *read*, so the load's runtime cost is upserts rather
-  than I/O.
+  than I/O. The same is true of the workload files: they are already streamed in full, and staging
+  changes what survives the pass rather than what the pass costs.
+- **The database grows by ≈ 700 MB** for staging, replaced per competência rather than accumulated.
+  That is the price of deleting the backfill workflow and the load's memory ceiling, and it is
+  worth paying — but it is a real operational change, not a rounding error, and monthly churn wants
+  a partition drop rather than a delete.
 - Every clinic in Brazil becomes an import candidate. Scope isolation applies to what a user may
   *read of our data*, not to what CNES publishes — but the list is still a facility-creation
   surface, which is why it is searched rather than browsed (§6.1.1) and, for now, restricted to
