@@ -83,80 +83,41 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('every row shows all three figures, whatever the sort', (
+  testWidgets('reads its kind from its own rows, not from the viewer', (
     tester,
   ) async {
-    await _pump(tester, [
-      _member(userId: 5, name: 'Ana', clinics: 242, coverage: 0.05, orders: 5),
-      _member(
-        userId: 6,
-        name: 'Bruno',
-        clinics: 447,
-        coverage: 0.01,
-        orders: 1,
-      ),
-    ]);
-
-    // The redesign's whole claim: a row is readable on its own terms, not only
-    // through the column it happens to be ordered by. Sorting by name used to
-    // mean no figures at all.
-    expect(find.text('242'), findsOneWidget);
-    expect(find.text('447'), findsOneWidget);
-    expect(find.text('5%'), findsOneWidget);
-    expect(find.text('1%'), findsOneWidget);
-    expect(find.text('Clínicas'), findsWidgets);
-    expect(find.text('Pedidos'), findsNWidgets(2));
-  });
-
-  testWidgets('the header totals the roster, weighting coverage by clinics', (
-    tester,
-  ) async {
-    await _pump(tester, [
-      _member(userId: 5, name: 'Ana', clinics: 100, coverage: 1, orders: 4),
-      _member(userId: 6, name: 'Bruno', clinics: 300, coverage: 0, orders: 2),
-    ]);
-
-    expect(find.text('2 representantes'), findsOneWidget);
-    expect(find.text('400'), findsOneWidget);
-    // A mean of the two percentages would say 50%; weighting says 25%, which
-    // is the share of the team's clinics actually covered.
-    expect(find.text('25%'), findsOneWidget);
-    expect(find.text('6'), findsOneWidget);
-  });
-
-  testWidgets('a percentage with no clinics reads as absent, not as zero', (
-    tester,
-  ) async {
-    await _pump(tester, [
-      _member(userId: 5, name: 'Ana', clinics: 0, coverage: null, orders: 0),
-    ]);
-
-    expect(find.text('—'), findsWidgets);
-    expect(find.text('0%'), findsNothing);
-  });
-
-  testWidgets('names the roster from its own rows, not from the viewer', (
-    tester,
-  ) async {
-    // `currentUserRoleProvider` resolves a beat after sign-in, and the header
-    // used to read `role != manager` — so an unresolved role counted as admin
-    // and a manager who had just logged in saw their reps headed "3 gestores".
-    // The response already says who these people are.
+    // `currentUserRoleProvider` resolves a beat after sign-in, and this used to
+    // ask `role != manager` — so an unresolved role counted as admin. The
+    // visible cost was a sort ("Sem representante") that counts clinics inside
+    // a manager's zones and can only be null for every rep on the list.
     await _pump(tester, [
       _member(userId: 5, name: 'Ana'),
       _member(userId: 6, name: 'Bruno'),
     ], role: null);
 
-    expect(find.text('2 representantes'), findsOneWidget);
-    expect(find.text('2 gestores'), findsNothing);
+    await tester.tap(find.text('Nome'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sem representante'), findsNothing);
   });
 
-  testWidgets('a roster of managers is named as one', (tester) async {
+  testWidgets('a roster of managers is offered the sorts only it has', (
+    tester,
+  ) async {
+    // A phone-sized surface: the manager sheet carries seven options and the
+    // 800x600 default is shorter than any device this ships to.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
     await _pump(tester, [
       _member(userId: 2, name: 'Silvio', role: 'MANAGER'),
     ], role: null);
 
-    expect(find.text('1 gestor'), findsOneWidget);
+    await tester.tap(find.text('Nome'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sem representante'), findsOneWidget);
   });
 
   testWidgets('a card never mentions territory, however much someone holds', (

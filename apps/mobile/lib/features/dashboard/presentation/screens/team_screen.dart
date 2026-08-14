@@ -19,16 +19,6 @@ const _sortLabels = <String, String>{
   'unassigned-clinics': 'Sem representante',
 };
 
-const _percentSorts = {'coverage', 'cadastro-completion', 'penetration'};
-
-/// Sorts the row itself already answers, so no trailing column is needed.
-const _rowMetricSorts = {
-  'assigned-clinics',
-  'coverage',
-  'cadastro-completion',
-  'orders-month',
-};
-
 /// Above this many people, scanning stops working and you need to search.
 const _searchThreshold = 8;
 
@@ -135,13 +125,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             }
 
             final visible = _filter(members);
-            // Scaled across the whole roster, never the search result: a bar
-            // that regrew as you typed would make the same person look
-            // stronger for having been filtered to.
-            final peak = members.fold<double>(0, (max, m) {
-              final value = (m.metrics?.assignedClinics ?? 0).toDouble();
-              return value > max ? value : max;
-            });
 
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -153,7 +136,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return _RosterHeader(
-                    members: members,
                     isManagerRoster: isManagerRoster,
                     showSearch: members.length >= _searchThreshold,
                     search: _search,
@@ -164,12 +146,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                       _sortBy = sortBy;
                       _order = order;
                     }),
-                    manager: widget.managerId == null
-                        ? null
-                        : (
-                            id: widget.managerId!,
-                            name: widget.managerName ?? 'Gestor',
-                          ),
                   );
                 }
                 if (visible.isEmpty && invites.isEmpty) {
@@ -185,9 +161,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                 }
                 return _MemberTile(
                   member: visible[position],
-                  sortBy: _sortBy,
-                  peakClinics: peak,
-                  isManagerRoster: isManagerRoster,
                   viaManagerId: widget.managerId,
                 );
               },
@@ -214,15 +187,13 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
   }
 }
 
-/// What sits above the roster: the team as one line, then the controls.
+/// What sits above the roster: search, and the order.
 ///
-/// The totals come from the rows themselves rather than from a second request.
-/// That is deliberate — a header computed from a different query could disagree
-/// with the list underneath it, and a screen that contradicts itself is worse
-/// than one that shows less.
+/// It used to open with the team totalled in one line. That line answered a
+/// Desempenho question on an Equipe screen, and it is the same question the
+/// viewer's own Desempenho already answers for the same population.
 class _RosterHeader extends StatelessWidget {
   const _RosterHeader({
-    required this.members,
     required this.isManagerRoster,
     required this.showSearch,
     required this.search,
@@ -230,10 +201,8 @@ class _RosterHeader extends StatelessWidget {
     required this.sortBy,
     required this.order,
     required this.onSort,
-    required this.manager,
   });
 
-  final List<TeamMember> members;
   final bool isManagerRoster;
   final bool showSearch;
   final String search;
@@ -242,187 +211,24 @@ class _RosterHeader extends StatelessWidget {
   final String order;
   final void Function(String sortBy, String order) onSort;
 
-  /// Set only on a drill-down, where the roster belongs to one named person.
-  final ({int id, String name})? manager;
-
   @override
   Widget build(BuildContext context) {
-    var clinics = 0;
-    var orders = 0;
-    var covered = 0.0;
-    for (final member in members) {
-      final metrics = member.metrics;
-      if (metrics == null) continue;
-      clinics += metrics.assignedClinics;
-      orders += metrics.ordersMonth;
-      // Weighted by clinics, not a mean of percentages: averaging 100% of two
-      // clinics with 2% of five hundred would report the team as doing well.
-      covered += (metrics.coveragePercent ?? 0) * metrics.assignedClinics;
-    }
-    final coverage = clinics == 0 ? null : covered / clinics;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: _SummaryStrip(
-            people: members.length,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Row(
+        children: [
+          if (showSearch)
+            Expanded(
+              child: _SearchField(value: search, onChanged: onSearch),
+            )
+          else
+            const Spacer(),
+          const SizedBox(width: 8),
+          _SortButton(
+            sortBy: sortBy,
+            order: order,
+            onSort: onSort,
             isManagerRoster: isManagerRoster,
-            clinics: clinics,
-            coverage: coverage,
-            orders: orders,
-            manager: manager,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          child: Row(
-            children: [
-              if (showSearch)
-                Expanded(
-                  child: _SearchField(value: search, onChanged: onSearch),
-                )
-              else
-                const Spacer(),
-              const SizedBox(width: 8),
-              _SortButton(
-                sortBy: sortBy,
-                order: order,
-                onSort: onSort,
-                isManagerRoster: isManagerRoster,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The team in one line, and the way into its Desempenho.
-class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({
-    required this.people,
-    required this.isManagerRoster,
-    required this.clinics,
-    required this.coverage,
-    required this.orders,
-    required this.manager,
-  });
-
-  final int people;
-  final bool isManagerRoster;
-  final int clinics;
-  final double? coverage;
-  final int orders;
-  final ({int id, String name})? manager;
-
-  @override
-  Widget build(BuildContext context) {
-    final noun = isManagerRoster
-        ? (people == 1 ? 'gestor' : 'gestores')
-        : (people == 1 ? 'representante' : 'representantes');
-
-    final card = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '$people $noun',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray900,
-                    letterSpacing: -0.1,
-                  ),
-                ),
-              ),
-              if (manager != null)
-                const Row(
-                  children: [
-                    Text(
-                      'Ver desempenho',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyBright,
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: AppColors.navyBright,
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _SummaryFigure(label: 'Clínicas', value: '$clinics'),
-              _SummaryFigure(
-                label: 'Cobertura',
-                value: coverage == null ? '—' : '${(coverage! * 100).round()}%',
-              ),
-              _SummaryFigure(label: 'Pedidos no mês', value: '$orders'),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    if (manager == null) return card;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      // On a drill-down the roster already belongs to one person, so the header
-      // is the natural place to reach *their* numbers — the rows below are
-      // their reps, and none of them leads here.
-      onTap: () => SubjectDashboardRoute(
-        subjectUserId: manager!.id,
-        subjectName: manager!.name,
-        subjectRole: 'MANAGER',
-      ).push(context),
-      child: card,
-    );
-  }
-}
-
-class _SummaryFigure extends StatelessWidget {
-  const _SummaryFigure({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
-              letterSpacing: -0.4,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: AppColors.gray500),
           ),
         ],
       ),
@@ -610,42 +416,22 @@ class _NoSearchMatch extends StatelessWidget {
 }
 
 class _MemberTile extends StatelessWidget {
-  const _MemberTile({
-    required this.member,
-    required this.sortBy,
-    required this.peakClinics,
-    required this.isManagerRoster,
-    required this.viaManagerId,
-  });
+  const _MemberTile({required this.member, required this.viaManagerId});
 
   final TeamMember member;
-  final String sortBy;
 
-  /// The largest clinic count in the roster, so a row can draw its share of it.
-  ///
-  /// A bare "447" says nothing about whether that is a lot. Scaling to the
-  /// leader turns the number into a comparison, which is the question anyone
-  /// looking at a team list is actually asking. It tracks clínicas rather than
-  /// the sort so the bar means one fixed thing.
-  final double peakClinics;
-
-  final bool isManagerRoster;
-
-  /// Spec 0015 R2: on a drill-down the rows belong to that manager, and the
+  /// Spec 0015 R2: on a drill-down the cards belong to that manager, and the
   /// profile carries the context so its Desempenho reads the same population.
   final int? viaManagerId;
 
-  /// A card per person rather than a row in a list.
+  /// A card per person: who they are, and the way to them.
   ///
-  /// The roster is short — three to nine people — and each entry carries four
-  /// separate facts. As rows divided by hairlines those facts ran together
-  /// vertically and the eye had to work out where one person ended and the next
-  /// began. A card gives each person an edge, which is what makes a set of
-  /// figures readable as *someone's* figures.
+  /// It carried three figures and a bar scaled to the roster leader. Those are
+  /// comparisons, and comparing people is what Desempenho is for — here they
+  /// turned a list of colleagues into a scoreboard you had to read rather than
+  /// scan. The sort still orders by them; the card no longer argues about them.
   @override
   Widget build(BuildContext context) {
-    final metrics = member.metrics;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Material(
@@ -654,10 +440,7 @@ class _MemberTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           // One destination per card, always the same one: this person's
-          // profile. The manager row used to open a *different* roster, which
-          // made "tap a person" mean two things depending on who you were. The
-          // team is now a card inside the profile, so the second control is
-          // gone too.
+          // profile.
           onTap: () => TeamMemberProfileRoute(
             userId: member.userId,
             memberName: member.displayName,
@@ -670,7 +453,6 @@ class _MemberTile extends StatelessWidget {
               border: Border.all(color: AppColors.surfaceSecondary),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 44,
@@ -703,155 +485,29 @@ class _MemberTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        member.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.gray900,
-                          letterSpacing: -0.15,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (metrics == null)
-                        const Text(
-                          'sem números nesta linha',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.gray500,
-                          ),
-                        )
-                      else ...[
-                        Row(
-                          children: [
-                            _RowFigure(
-                              label: 'Clínicas',
-                              value: '${metrics.assignedClinics}',
-                              emphasised: sortBy == 'assigned-clinics',
-                            ),
-                            _RowFigure(
-                              label: 'Cobertura',
-                              value: _percent(metrics.coveragePercent),
-                              emphasised: sortBy == 'coverage',
-                            ),
-                            _RowFigure(
-                              label: 'Pedidos',
-                              value: '${metrics.ordersMonth}',
-                              emphasised: sortBy == 'orders-month',
-                            ),
-                            // Cadastro only when it is what you sorted by: three
-                            // figures fit a phone row, four crowd it, and this one
-                            // is the least asked for.
-                            if (sortBy == 'cadastro-completion')
-                              _RowFigure(
-                                label: 'Cadastro',
-                                value: _percent(metrics.cadastroPercent),
-                                emphasised: true,
-                              ),
-                            // The two sorts the roster cannot compute per row. They
-                            // appear only while they are the sort, because that is
-                            // the only time they were calculated at all.
-                            if (!_rowMetricSorts.contains(sortBy) &&
-                                sortBy != 'name')
-                              _RowFigure(
-                                label: _sortLabels[sortBy] ?? '',
-                                value: _formatMetric(
-                                  sortBy,
-                                  member.metricValue,
-                                ),
-                                emphasised: true,
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 7),
-                        _ShareBar(
-                          value: metrics.assignedClinics.toDouble(),
-                          peak: peakClinics,
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    member.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: AppColors.gray500,
-                  ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// `—` for a percentage that has no denominator. Rendering 0% would report a
-  /// person with no clinics as covering none of them.
-  static String _percent(double? value) =>
-      value == null ? '—' : '${(value * 100).round()}%';
-
-  /// `—` for a value the API could not calculate. Rendering 0 would put a
-  /// person at the bottom of a leaderboard for having no data.
-  static String _formatMetric(String sortBy, double? value) {
-    if (value == null) return '—';
-    if (_percentSorts.contains(sortBy)) return '${(value * 100).round()}%';
-    return '${value.round()}';
-  }
-}
-
-/// One figure in a roster row.
-///
-/// The sorted one is emphasised rather than being the only one shown: you keep
-/// the column you asked for without losing the two you did not.
-class _RowFigure extends StatelessWidget {
-  const _RowFigure({
-    required this.label,
-    required this.value,
-    required this.emphasised,
-  });
-
-  final String label;
-  final String value;
-  final bool emphasised;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
-              color: emphasised ? AppColors.navyBright : AppColors.gray900,
-            ),
-          ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: emphasised ? FontWeight.w600 : FontWeight.w400,
-              color: emphasised ? AppColors.navyBright : AppColors.gray500,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1017,33 +673,6 @@ class _PersonRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// One person's clinics as a share of the roster's largest.
-///
-/// Scaled to the leader rather than to a fixed ceiling: a clinic count has no
-/// natural maximum, so the only honest reading is relative — and relative is
-/// also the question people bring to a team list.
-class _ShareBar extends StatelessWidget {
-  const _ShareBar({required this.value, required this.peak});
-
-  final double value;
-  final double peak;
-
-  @override
-  Widget build(BuildContext context) {
-    final fraction = peak <= 0 ? 0.0 : (value / peak).clamp(0.0, 1.0);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: LinearProgressIndicator(
-        value: fraction,
-        minHeight: 4,
-        backgroundColor: AppColors.surfaceSecondary,
-        valueColor: const AlwaysStoppedAnimation(AppColors.navyBright),
       ),
     );
   }
