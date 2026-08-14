@@ -57,7 +57,10 @@ void main() {
         CpfIssue.missing,
       );
       // A CNPJ clinic with no CNPJ is a real problem, but not this warning's.
-      expect(cpfIssueFor(legalDocumentType: 'CNPJ', legalDocument: null), isNull);
+      expect(
+        cpfIssueFor(legalDocumentType: 'CNPJ', legalDocument: null),
+        isNull,
+      );
     });
 
     test('separates an invalid CPF from a missing one', () {

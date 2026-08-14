@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> pump(WidgetTester tester, Widget child) => tester.pumpWidget(
-  MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child))),
+  MaterialApp(
+    home: Scaffold(body: SingleChildScrollView(child: child)),
+  ),
 );
 
 void main() {

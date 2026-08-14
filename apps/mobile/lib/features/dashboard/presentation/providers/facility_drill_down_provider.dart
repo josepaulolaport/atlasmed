@@ -125,8 +125,7 @@ final facilityDrillDownProvider = StateNotifierProvider.autoDispose
       return notifier;
     });
 
-class FacilityDrillDownNotifier
-    extends StateNotifier<FacilityDrillDownState>
+class FacilityDrillDownNotifier extends StateNotifier<FacilityDrillDownState>
     with DisposeSafeStateWrites<FacilityDrillDownState> {
   FacilityDrillDownNotifier(this._ref, this.args)
     : super(const FacilityDrillDownState());

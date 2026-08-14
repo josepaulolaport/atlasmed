@@ -492,10 +492,7 @@ class PurchaseBucketFacilitiesRoute extends GoRouteData
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return FacilityDrillDownScreen(
-      bucket: bucket,
-      verticalId: verticalId,
-    );
+    return FacilityDrillDownScreen(bucket: bucket, verticalId: verticalId);
   }
 }
 
@@ -504,9 +501,7 @@ class PurchaseBucketFacilitiesRoute extends GoRouteData
 /// Its own route rather than a query parameter on the bucket one: the two are
 /// different slices, and a bucket path segment carrying a CPF status would be
 /// a lie in every deep link and analytics event.
-@TypedGoRoute<CpfIssueFacilitiesRoute>(
-  path: '/dashboard/cpf-issues/:cpfStatus',
-)
+@TypedGoRoute<CpfIssueFacilitiesRoute>(path: '/dashboard/cpf-issues/:cpfStatus')
 class CpfIssueFacilitiesRoute extends GoRouteData
     with $CpfIssueFacilitiesRoute {
   const CpfIssueFacilitiesRoute({
