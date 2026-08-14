@@ -97,7 +97,7 @@ describe("dashboard HTTP routes", () => {
     const response = await app.handle(
       new Request(
         "http://localhost/dashboard/metrics/assigned-clinics" +
-          "?verticalId=1&subjectUserId=5&stateId=33&municipalityId=3304557&unitTypeId=4&managerId=2&repId=5",
+          "?verticalId=1&subjectUserId=5&stateId=33&municipalityId=3304557&unitTypeId=4&managerId=2&repId=5&withinManagerId=7",
       ),
     );
 
@@ -111,6 +111,9 @@ describe("dashboard HTTP routes", () => {
       scope: expect.objectContaining({ assignedVerticalIds: [1] }),
       verticalId: 1,
       subjectUserId: 5,
+      // Spec 0015 R2: structural, not a filter — it says which share of the
+      // subject the reader is looking at, and must not be lost in transit.
+      withinManagerId: 7,
       filters: {
         unitTypeId: 4,
         managerId: 2,

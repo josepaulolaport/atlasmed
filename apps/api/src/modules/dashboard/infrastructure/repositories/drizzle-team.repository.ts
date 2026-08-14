@@ -73,14 +73,21 @@ export class DrizzleTeamRepository {
    * REPs holding an active patch under these manager zones.
    *
    * `assigned_clinic_count` counts open rep assignments on live, active
-   * profiles — the same denominator the rep's own Desempenho uses, so the
-   * roster and the drill-down agree.
+   * profiles **inside these zones**. The zone predicate is the point: a rep may
+   * hold patches under two managers, and an unscoped count would show each of
+   * them clinics the other is accountable for — numbers they cannot act on, and
+   * which would not add up to their own roster header.
    */
   async listRepsUnderZones(input: {
     verticalId: number;
     zoneIds: number[];
   }): Promise<TeamMemberRow[]> {
     if (input.zoneIds.length === 0) return [];
+
+    const zones = sql.join(
+      input.zoneIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
 
     return this.query(sql`
       SELECT u.id,
@@ -102,7 +109,11 @@ export class DrizzleTeamRepository {
                  AND a.ended_at IS NULL
                  AND p.vertical_id = ${input.verticalId}
                  AND p.is_active = true
-                 AND f.deactivated_at IS NULL)::int AS assigned_clinic_count
+                 AND f.deactivated_at IS NULL
+                 -- Spec 0015 R1: this manager's share of the rep, not the whole
+                 -- person. Without it a rep working under two managers shows
+                 -- each of them the other's clinics.
+                 AND p.manager_zone_id IN (${zones}))::int AS assigned_clinic_count
       FROM users u
       INNER JOIN roles r ON r.id = u.role_id
       INNER JOIN user_territory_assignments uta ON uta.user_id = u.id
@@ -112,10 +123,7 @@ export class DrizzleTeamRepository {
         AND t.vertical_id = ${input.verticalId}
         AND t.is_active = true
         AND tt.slug = ${REP_PATCH_TYPE_SLUG}
-        AND t.manager_territory_id IN (${sql.join(
-          input.zoneIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})
+        AND t.manager_territory_id IN (${zones})
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.avatar_url, r.name
       ORDER BY name NULLS LAST, u.id
     `);
@@ -143,11 +151,25 @@ export class DrizzleTeamRepository {
     verticalId: number;
     userIds: number[];
     scope: "rep" | "manager";
+    /**
+     * Spec 0015 R1 — the zones the reader is accountable for, narrowing a rep's
+     * figures to their share of that person. Null only for a viewer with
+     * authority everywhere, which is the one case where the whole rep is the
+     * honest answer.
+     *
+     * Unused by the manager scope, whose zones are the members' own.
+     */
+    withinZoneIds?: number[] | null;
     /** Half-open, for the orders count. */
     ordersFrom: Date;
     ordersTo: Date;
   }): Promise<Map<number, TeamMemberMetrics>> {
     if (input.userIds.length === 0) return new Map();
+    // An empty list is "no zones", not "every zone" — the `IN ()` widening trap
+    // that would hand a manager with no ground the whole country.
+    if (input.scope === "rep" && input.withinZoneIds?.length === 0) {
+      return new Map();
+    }
 
     const ids = sql.join(
       input.userIds.map((id) => sql`${id}`),
@@ -157,6 +179,14 @@ export class DrizzleTeamRepository {
     // postgres-js rejects it at Bind time. Same trap as `countOrders`.
     const from = orders.orderedAt.mapToDriverValue(input.ordersFrom) as string;
     const to = orders.orderedAt.mapToDriverValue(input.ordersTo) as string;
+
+    const withinZones =
+      input.scope === "rep" && input.withinZoneIds?.length
+        ? sql` AND p.manager_zone_id IN (${sql.join(
+            input.withinZoneIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql``;
 
     const scoped =
       input.scope === "rep"
@@ -170,7 +200,7 @@ export class DrizzleTeamRepository {
                AND a.user_id IN (${ids})
                AND p.vertical_id = ${input.verticalId}
                AND p.is_active = true
-               AND f.deactivated_at IS NULL`
+               AND f.deactivated_at IS NULL${withinZones}`
         : sql`
             SELECT uta.user_id, p.id AS profile_id
               FROM user_territory_assignments uta

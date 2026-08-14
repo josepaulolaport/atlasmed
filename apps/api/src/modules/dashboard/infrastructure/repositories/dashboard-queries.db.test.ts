@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import { db } from "../../../../infrastructure/database/db";
 import { isDatabaseReachable } from "../../../../test-utils/db-harness";
 import { DrizzleDashboardDirectoryRepository } from "./drizzle-dashboard-directory.repository";
 import { DrizzleDashboardRepository } from "./drizzle-dashboard.repository";
@@ -223,6 +225,78 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
         }
       }
     }
+  });
+
+  test("a rep's figures narrow to the zones the reader owns (0015 R1)", async () => {
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    if (zones.length === 0) return;
+
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+    const userIds = reps.map((r) => r.userId);
+    const window = { ordersFrom: monthAgo, ordersTo: now };
+
+    const inTheirOwnZones = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds,
+      scope: "rep",
+      withinZoneIds: zones,
+      ...window,
+    });
+    const everywhere = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds,
+      scope: "rep",
+      withinZoneIds: null,
+      ...window,
+    });
+
+    // Narrowing can only remove clinics, never add them.
+    for (const rep of reps) {
+      expect(inTheirOwnZones.get(rep.userId)!.assignedClinics).toBeLessThanOrEqual(
+        everywhere.get(rep.userId)?.assignedClinics ?? 0,
+      );
+    }
+
+    // The predicate has to actually bite, and today's data cannot show that on
+    // its own: every rep holds one patch under one manager, so scoped and
+    // unscoped agree. Pointing it at ground they do not work proves the join is
+    // applied rather than merely present.
+    const elsewhere = await db.execute(sql`
+      SELECT id FROM territories
+       WHERE is_active = true AND vertical_id = 1
+         AND id NOT IN (${sql.join(zones.map((id) => sql`${id}`), sql`, `)})
+         AND territory_type_id = (SELECT id FROM territory_types WHERE slug = 'manager_zone')
+       LIMIT 1
+    `) as unknown as Array<{ id: number | string }>;
+
+    if (elsewhere.length > 0) {
+      const foreign = await team.findMemberMetrics({
+        verticalId: 1,
+        userIds,
+        scope: "rep",
+        withinZoneIds: [Number(elsewhere[0]!.id)],
+        ...window,
+      });
+      for (const rep of reps) {
+        expect(foreign.get(rep.userId)?.assignedClinics ?? 0).toBe(0);
+      }
+    }
+  });
+
+  test("no zones means no clinics, never every clinic", async () => {
+    // The `IN ()` widening trap: an empty list must match nothing. Read as
+    // "unrestricted" it would hand a manager with no ground the whole country.
+    const metrics = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds: [4, 5, 6],
+      scope: "rep",
+      withinZoneIds: [],
+      ordersFrom: monthAgo,
+      ordersTo: now,
+    });
+
+    expect(metrics.size).toBe(0);
   });
 
   test("a manager is measured on their zones, not on assignments", async () => {

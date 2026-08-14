@@ -35,12 +35,18 @@ function deps(overrides: {
   /** Feeds the batched query's coverage figure, and the per-member fakes. */
   metricByUser?: Record<number, number | null>;
 }): Deps & {
-  calls: { metricSubjects: number[]; batchScopes: string[]; batchIds: number[][] };
+  calls: {
+    metricSubjects: number[];
+    batchScopes: string[];
+    batchIds: number[][];
+    batchZones: Array<number[] | null>;
+  };
 } {
   const calls = {
     metricSubjects: [] as number[],
     batchScopes: [] as string[],
     batchIds: [] as number[][],
+    batchZones: [] as Array<number[] | null>,
   };
   const metric = {
     execute: async (request: { subjectUserId?: number | null }) => {
@@ -56,9 +62,14 @@ function deps(overrides: {
       listManagers: async () => overrides.managers ?? [],
       listRepsUnderZones: async () => overrides.reps ?? [],
       listRepsWithoutPatch: async () => [],
-      findMemberMetrics: async (input: { userIds: number[]; scope: string }) => {
+      findMemberMetrics: async (input: {
+        userIds: number[];
+        scope: string;
+        withinZoneIds?: number[] | null;
+      }) => {
         calls.batchScopes.push(input.scope);
         calls.batchIds.push(input.userIds);
+        calls.batchZones.push(input.withinZoneIds ?? null);
         // Only people with something in scope produce a row, exactly as the
         // real query's GROUP BY does — so anyone absent from `metricByUser`
         // exercises the holds-nothing path rather than a zeroed row.
@@ -200,6 +211,27 @@ describe("Equipe roster (spec 0014 §6)", () => {
     );
 
     expect(d.calls.metricSubjects.sort()).toEqual([5, 6]);
+  });
+
+  it("measures a rep roster against the zones it was built from (0015 R1)", async () => {
+    // The same zones that selected the members narrow their figures. That is
+    // what makes a manager's header equal the sum of the rows beneath it, and
+    // what stops a rep shared with another manager contributing clinics this
+    // manager cannot act on.
+    const own = deps({ reps: [member({ userId: 5 })], zoneIds: [11, 12] });
+    await new ListTeamUseCase(own).execute(request(Role.MANAGER));
+    expect(own.calls.batchZones).toEqual([[11, 12]]);
+
+    const drilled = deps({ reps: [member({ userId: 5 })], zoneIds: [21] });
+    await new ListTeamUseCase(drilled).execute(
+      request(Role.ADMIN, { managerId: 2 }),
+    );
+    expect(drilled.calls.batchZones).toEqual([[21]]);
+
+    // A manager roster is the ground itself — there is nothing to narrow to.
+    const managers = deps({ managers: [member({ userId: 2, roleName: Role.MANAGER })] });
+    await new ListTeamUseCase(managers).execute(request(Role.ADMIN));
+    expect(managers.calls.batchZones).toEqual([null]);
   });
 
   it("measures each roster against its own denominator", async () => {

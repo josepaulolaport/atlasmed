@@ -93,6 +93,7 @@ function request(
 
 const rep: DashboardSubject = { userId: 5, roleName: Role.REP };
 const manager: DashboardSubject = { userId: 2, roleName: Role.MANAGER };
+const admin: DashboardSubject = { userId: 1, roleName: Role.ADMIN };
 
 describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
   it("measures a rep on the clinics assigned to them", async () => {
@@ -119,7 +120,10 @@ describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
     const { repository, seen } = fakeRepository();
     await new GetAssignedClinicsMetricUseCase({
       repository,
-      directory: fakeDirectory({ findUser: async () => rep }),
+      directory: fakeDirectory({
+        findUser: async () => rep,
+        findManagerZoneIds: async () => [11, 12],
+      }),
     }).execute(
       request(manager, {
         subjectUserId: 5,
@@ -132,7 +136,37 @@ describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
       }),
     );
 
+    // Spec 0015 R2: the manager's own zones ride alongside the rep. This
+    // asserted `zoneIds: null` until 0015 — the whole rep, including patches
+    // held under another manager. The roster is scoped, so an unscoped
+    // dashboard meant tapping a row silently changed the population.
+    expect(seen[0]).toMatchObject({ repUserIds: [5], zoneIds: [11, 12] });
+  });
+
+  it("leaves an admin the whole rep unless they drilled through a team", async () => {
+    const { repository, seen } = fakeRepository();
+    await new GetAssignedClinicsMetricUseCase({
+      repository,
+      directory: fakeDirectory({
+        findUser: async () => rep,
+        findManagerZoneIds: async () => [11, 12],
+      }),
+    }).execute(request(admin, { subjectUserId: 5 }));
+
     expect(seen[0]).toMatchObject({ repUserIds: [5], zoneIds: null });
+  });
+
+  it("narrows an admin to the team they drilled through (0015 R2)", async () => {
+    const { repository, seen } = fakeRepository();
+    await new GetAssignedClinicsMetricUseCase({
+      repository,
+      directory: fakeDirectory({
+        findUser: async () => rep,
+        findManagerZoneIds: async () => [21],
+      }),
+    }).execute(request(admin, { subjectUserId: 5, withinManagerId: 2 }));
+
+    expect(seen[0]).toMatchObject({ repUserIds: [5], zoneIds: [21] });
   });
 
   it("answers zero — without querying — when the scope resolves to nothing", async () => {

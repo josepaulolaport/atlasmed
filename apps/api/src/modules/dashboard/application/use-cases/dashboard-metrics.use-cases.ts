@@ -36,6 +36,13 @@ export interface DashboardMetricRequest {
   verticalId?: number | null;
   /** Spec 0014 §2: whose desempenho — omitted means the viewer's own. */
   subjectUserId?: number | null;
+  /**
+   * ADMIN only: the manager whose team the subject was reached through, so a
+   * drill-down keeps the population the roster row showed. Ignored for a
+   * MANAGER viewer, whose constraint is themselves and is derived rather than
+   * accepted — see `resolveDenominator`.
+   */
+  withinManagerId?: number | null;
   filters: DashboardFilters;
 }
 
@@ -102,6 +109,8 @@ abstract class DashboardMetricUseCase {
       subject,
       verticalId,
       directory: this.deps.directory,
+      viewer,
+      withinManagerId: request.withinManagerId ?? null,
     });
 
     return { verticalId, subject, denominator };

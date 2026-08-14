@@ -14,8 +14,17 @@ import { ForbiddenError, ValidationError } from "../../../shared/errors";
 export type DashboardDenominator =
   /** Every profile in the vertical. ADMIN with no subject, and OPS. */
   | { kind: "global" }
-  /** Profiles with an open rep assignment to this user. */
-  | { kind: "rep"; userId: number }
+  /**
+   * Profiles with an open rep assignment to this user.
+   *
+   * `withinZoneIds` narrows that to the part of the rep a particular manager is
+   * accountable for. A rep may hold patches under two managers (I4 puts each
+   * patch in exactly one zone, but says nothing about how many zones a person
+   * may appear in), and without this the answer would be "every clinic this
+   * person holds anywhere" — which for a manager means clinics they cannot act
+   * on, and numbers that do not reconcile with their own.
+   */
+  | { kind: "rep"; userId: number; withinZoneIds?: number[] | null }
   /** Profiles whose derived manager zone is one of these. */
   | { kind: "zones"; zoneIds: number[] };
 
@@ -196,10 +205,38 @@ export async function resolveDenominator(input: {
   subject: DashboardSubject;
   verticalId: number;
   directory: DashboardDirectoryPort;
+  /** Who is asking. A MANAGER only ever sees their own share of a rep. */
+  viewer?: DashboardSubject;
+  /**
+   * ADMIN only: the manager whose team this rep was reached through, so an
+   * admin drilling Equipe → gestor → representante keeps reading the same
+   * population the roster row showed. A MANAGER cannot pass this — their
+   * constraint is themselves, derived below rather than accepted from input.
+   */
+  withinManagerId?: number | null;
 }): Promise<DashboardDenominator> {
   switch (input.subject.roleName) {
-    case Role.REP:
-      return { kind: "rep", userId: input.subject.userId };
+    case Role.REP: {
+      // Derived from the viewer, never from the request, so a manager cannot
+      // widen their own scope by asking. ADMIN and OPS hold authority across
+      // every zone, so for them the constraint is only the explicit one.
+      const constrainToManagerId =
+        input.viewer?.roleName === Role.MANAGER
+          ? input.viewer.userId
+          : (input.withinManagerId ?? null);
+
+      if (constrainToManagerId === null) {
+        return { kind: "rep", userId: input.subject.userId };
+      }
+      return {
+        kind: "rep",
+        userId: input.subject.userId,
+        withinZoneIds: await input.directory.findManagerZoneIds({
+          userId: constrainToManagerId,
+          verticalId: input.verticalId,
+        }),
+      };
+    }
     case Role.MANAGER: {
       const zoneIds = await input.directory.findManagerZoneIds({
         userId: input.subject.userId,
@@ -258,7 +295,15 @@ export async function buildProfileFilter(input: {
     : selected(input.filters.unitTypeId, input.filters.unitTypeIds);
 
   let zoneIds: number[] | null =
-    input.denominator.kind === "zones" ? input.denominator.zoneIds : null;
+    input.denominator.kind === "zones"
+      ? input.denominator.zoneIds
+      : // A rep subject constrained to one manager's zones carries both
+        // predicates: the assignment is theirs *and* the clinic sits in that
+        // manager's ground. They are ANDed, which is what makes a shared rep
+        // read differently to each of their managers.
+        (input.denominator.kind === "rep"
+          ? (input.denominator.withinZoneIds ?? null)
+          : null);
   let repUserIds: number[] | null =
     input.denominator.kind === "rep" ? [input.denominator.userId] : null;
 

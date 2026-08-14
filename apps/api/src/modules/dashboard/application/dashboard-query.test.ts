@@ -151,6 +151,97 @@ describe("resolveDenominator (spec 0014 §3)", () => {
       }),
     ).toEqual({ kind: "global" });
   });
+
+  describe("a manager's share of a rep (spec 0015 R2)", () => {
+    it("narrows a rep to the viewing manager's own zones", async () => {
+      expect(
+        await resolveDenominator({
+          subject: rep,
+          verticalId: 1,
+          viewer: manager,
+          directory: directory({ findManagerZoneIds: async () => [11, 12] }),
+        }),
+      ).toEqual({ kind: "rep", userId: 5, withinZoneIds: [11, 12] });
+    });
+
+    it("derives the constraint from the viewer, never from the request", async () => {
+      // A manager passing someone else's id must not widen their own reach.
+      // The zones asked for are the viewer's, so the parameter cannot matter.
+      const asked: number[] = [];
+      const result = await resolveDenominator({
+        subject: rep,
+        verticalId: 1,
+        viewer: manager,
+        withinManagerId: 999,
+        directory: directory({
+          findManagerZoneIds: async ({ userId }) => {
+            asked.push(userId);
+            return [11];
+          },
+        }),
+      });
+
+      expect(asked).toEqual([manager.userId]);
+      expect(result).toEqual({ kind: "rep", userId: 5, withinZoneIds: [11] });
+    });
+
+    it("leaves an admin the whole rep when no team context is given", async () => {
+      expect(
+        await resolveDenominator({
+          subject: rep,
+          verticalId: 1,
+          viewer: admin,
+          directory: directory({ findManagerZoneIds: async () => [11] }),
+        }),
+      ).toEqual({ kind: "rep", userId: 5 });
+    });
+
+    it("narrows an admin to the team they drilled through", async () => {
+      // Equipe → gestor → representante: the dashboard must answer for the same
+      // population the roster row showed, or tapping a number changes it.
+      expect(
+        await resolveDenominator({
+          subject: rep,
+          verticalId: 1,
+          viewer: admin,
+          withinManagerId: 2,
+          directory: directory({ findManagerZoneIds: async () => [11, 12] }),
+        }),
+      ).toEqual({ kind: "rep", userId: 5, withinZoneIds: [11, 12] });
+    });
+
+    it("carries the constraint into the filter, alongside the rep", async () => {
+      const resolved = await buildProfileFilter({
+        verticalId: 1,
+        denominator: { kind: "rep", userId: 5, withinZoneIds: [11] },
+        filters: {},
+        directory: directory(),
+      });
+
+      expect(resolved).toEqual({
+        empty: false,
+        filter: {
+          verticalId: 1,
+          zoneIds: [11],
+          repUserIds: [5],
+          stateIds: null,
+          municipalityIds: null,
+          unitTypeIds: null,
+        },
+      });
+    });
+
+    it("a manager with no zones sees nothing of a rep, not everything", async () => {
+      const resolved = await buildProfileFilter({
+        verticalId: 1,
+        denominator: { kind: "rep", userId: 5, withinZoneIds: [] },
+        filters: {},
+        directory: directory(),
+      });
+
+      expect(resolved).toEqual({ empty: true });
+    });
+  });
 });
 
 describe("buildProfileFilter", () => {

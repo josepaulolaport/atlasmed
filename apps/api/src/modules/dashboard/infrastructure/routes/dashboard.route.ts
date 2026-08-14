@@ -27,6 +27,16 @@ const metricQuery = t.Object({
   verticalId: t.Optional(t.Number({ minimum: 1 })),
   /** Spec 0014 §2: whose desempenho. Omitted means the caller's own. */
   subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+  /**
+   * Spec 0015 R2: the manager whose team this subject was reached through.
+   *
+   * Deliberately not the `managerId` **filter** below, which expresses the same
+   * predicate but is user-visible and clearable — dropping a filter chip would
+   * silently change who the numbers are about. This is structural: it says
+   * which share of a person the reader is looking at, and only an admin can
+   * send it. A manager's own constraint is derived from their identity.
+   */
+  withinManagerId: t.Optional(t.Number({ minimum: 1 })),
   unitTypeId: t.Optional(t.Number({ minimum: 1 })),
   managerId: t.Optional(t.Number({ minimum: 1 })),
   repId: t.Optional(t.Number({ minimum: 1 })),
@@ -42,6 +52,7 @@ const metricQuery = t.Object({
 type MetricQuery = {
   verticalId?: number;
   subjectUserId?: number;
+  withinManagerId?: number;
   unitTypeId?: number;
   managerId?: number;
   repId?: number;
@@ -71,6 +82,7 @@ function toRequest(
     scope,
     verticalId: query.verticalId ?? null,
     subjectUserId: query.subjectUserId ?? null,
+    withinManagerId: query.withinManagerId ?? null,
     filters: {
       unitTypeId: query.unitTypeId ?? null,
       managerId: query.managerId ?? null,

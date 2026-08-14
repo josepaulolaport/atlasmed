@@ -140,6 +140,7 @@ export class ListTeamUseCase {
       verticalId,
       userIds: roster.members.map((member) => member.userId),
       scope: roster.scope,
+      withinZoneIds: roster.withinZoneIds,
       ordersFrom: month.start,
       ordersTo: month.end,
     });
@@ -167,16 +168,26 @@ export class ListTeamUseCase {
   }
 
   /**
-   * The roster, and which denominator its metrics are measured against.
+   * The roster, which denominator its metrics are measured against, and the
+   * ground the reader is accountable for.
    *
    * The scope is a property of who is *listed*, not of who is looking: an admin
    * viewing managers gets zone-scoped figures, and the same admin drilled into
    * one manager's team gets assignment-scoped ones.
+   *
+   * `withinZoneIds` is the second half of that (spec 0015 R1) — a rep roster is
+   * always somebody's roster, so it narrows to the zones the list was built
+   * from. It is the same set that selected the members, which is what makes the
+   * header equal the sum of its rows.
    */
   private async loadMembers(
     request: ListTeamRequest,
     verticalId: number,
-  ): Promise<{ members: TeamMemberRow[]; scope: "rep" | "manager" }> {
+  ): Promise<{
+    members: TeamMemberRow[];
+    scope: "rep" | "manager";
+    withinZoneIds: number[] | null;
+  }> {
     if (request.viewerRole === Role.MANAGER) {
       // A manager's roster is their own reps. `managerId` cannot widen it:
       // pointing it at a peer would be a lateral read of someone else's team.
@@ -196,6 +207,7 @@ export class ListTeamUseCase {
           zoneIds,
         }),
         scope: "rep",
+        withinZoneIds: zoneIds,
       };
     }
 
@@ -204,6 +216,8 @@ export class ListTeamUseCase {
         return {
           members: await this.deps.teamRepository.listManagers(verticalId),
           scope: "manager",
+          // A manager IS the ground; there is nothing further to narrow to.
+          withinZoneIds: null,
         };
       }
       const zoneIds = await this.deps.directory.findManagerZoneIds({
@@ -216,6 +230,7 @@ export class ListTeamUseCase {
           zoneIds,
         }),
         scope: "rep",
+        withinZoneIds: zoneIds,
       };
     }
 
