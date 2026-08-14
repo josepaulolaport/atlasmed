@@ -368,6 +368,55 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
    * behaviour that replaced it — every one of them fails against the scoped
    * loader, because it wrote no row at all for a clinic we do not operate.
    */
+  /**
+   * Temporal reads `onProgress` as the activity's heartbeat, and it used to fire
+   * only between steps. The establishment upsert writes 631 973 rows and the
+   * workload staging millions more without reading another byte of the archive,
+   * so a production run went silent for over five minutes while working hardest
+   * and was killed as a dead worker — twice, because the retry restarts the load
+   * and reaches the same silence.
+   *
+   * `progressEveryRows` is lowered here so the reports are observable without a
+   * fixture the size of a real competence.
+   */
+  describe("reporting progress from inside the write loops", () => {
+    it("reports while upserting establishments, not only when the step ends", async () => {
+      await rolledBack(async (tx) => {
+        const steps: string[] = [];
+        await loadRegistryFromCsv({
+          db: tx,
+          csvDir: join(dir, "national"),
+          reference: REFERENCE,
+          progressEveryRows: 1,
+          onProgress: (message) => steps.push(message),
+        });
+
+        expect(steps).toContain("facilities upserting");
+        // The end-of-step report still fires; the new one is additional.
+        expect(steps).toContain("facilities upserted");
+        expect(steps.indexOf("facilities upserting")).toBeLessThan(
+          steps.indexOf("facilities upserted")
+        );
+      });
+    });
+
+    it("stays quiet between reports once the threshold is high", async () => {
+      await rolledBack(async (tx) => {
+        const steps: string[] = [];
+        await loadRegistryFromCsv({
+          db: tx,
+          csvDir: join(dir, "national"),
+          reference: REFERENCE,
+          progressEveryRows: 1_000_000,
+          onProgress: (message) => steps.push(message),
+        });
+
+        expect(steps).not.toContain("facilities upserting");
+        expect(steps).toContain("facilities upserted");
+      });
+    });
+  });
+
   describe("mirroring establishments we do not operate", () => {
     async function registryRow(tx: AnyDatabase, cnesId: string) {
       const rows = (await tx.execute(sql`
