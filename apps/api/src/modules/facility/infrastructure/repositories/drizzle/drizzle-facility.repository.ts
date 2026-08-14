@@ -699,6 +699,50 @@ const profileFunnelStageRankSql = sql<number>`case p.purchase_funnel_stage
   when 'NEVER_PURCHASED' then 0 when 'OUTSIDE_WINDOW' then 1
   when 'PURCHASE_WINDOW' then 2 when 'CHURN' then 3 when 'INACTIVE' then 4 end`;
 
+/**
+ * Pin colour on the live map — the facility's worst-case bucket across the
+ * verticals in scope.
+ *
+ * This was the one place the bucket grouping was written out by hand, as
+ * `active = PURCHASE_WINDOW` and `inactive = OUTSIDE_WINDOW, CHURN`. When the
+ * grouping was corrected to follow the purchase timeline the copy was not, so a
+ * clinic that bought last week read Ativa in the list and Inativa on the map.
+ * Deriving the stage lists from `purchaseBucketToFunnelFilter` is what stops the
+ * two drifting again.
+ *
+ * Exported so a test can execute the real expression rather than a transcription
+ * of it — a duplicate in the test would keep passing while this drifted.
+ */
+export function buildMapPurchaseBucketSql(verticalFilterSql: SQL) {
+  const stagesIn = (bucket: FacilityPurchaseBucket) =>
+    sql.join(
+      purchaseBucketToFunnelFilter(bucket).stages.map((stage) => sql`${stage}`),
+      sql`, `,
+    );
+
+  return sql<"active" | "inactive" | "neverBought">`(
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM ${facilityVerticalProfiles} p
+        WHERE p.facility_id = facilities.id
+          AND p.is_active = true
+          ${verticalFilterSql}
+          AND p.purchase_funnel_stage IN (${stagesIn("active")})
+      ) THEN 'active'
+      WHEN EXISTS (
+        SELECT 1
+        FROM ${facilityVerticalProfiles} p
+        WHERE p.facility_id = facilities.id
+          AND p.is_active = true
+          ${verticalFilterSql}
+          AND p.purchase_funnel_stage IN (${stagesIn("inactive")})
+      ) THEN 'inactive'
+      ELSE 'neverBought'
+    END
+  )`;
+}
+
 function profileVerticalFilterSql(verticalIds?: number[]) {
   return verticalIds && verticalIds.length > 0
     ? sql`and p.vertical_id in (${sql.join(
@@ -1263,27 +1307,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
             sql`, `,
           )})`
         : sql``;
-    const purchaseBucketSql = sql<"active" | "inactive" | "neverBought">`(
-      CASE
-        WHEN EXISTS (
-          SELECT 1
-          FROM ${facilityVerticalProfiles} p
-          WHERE p.facility_id = facilities.id
-            AND p.is_active = true
-            ${verticalFilterSql}
-            AND p.purchase_funnel_stage = 'PURCHASE_WINDOW'
-        ) THEN 'active'
-        WHEN EXISTS (
-          SELECT 1
-          FROM ${facilityVerticalProfiles} p
-          WHERE p.facility_id = facilities.id
-            AND p.is_active = true
-            ${verticalFilterSql}
-            AND p.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')
-        ) THEN 'inactive'
-        ELSE 'neverBought'
-      END
-    )`;
+    const purchaseBucketSql = buildMapPurchaseBucketSql(verticalFilterSql);
 
     const rows = await db
       .select({

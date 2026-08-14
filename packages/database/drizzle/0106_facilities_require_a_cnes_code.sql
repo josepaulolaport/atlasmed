@@ -16,7 +16,7 @@
 -- can only point at one of them. Made total, re-importing a deactivated
 -- clinic's code can only reactivate the row that already exists.
 --
--- Migration 0104 removed the single facility that had no code. This one refuses
+-- Migration 0105 removed the single facility that had no code. This one refuses
 -- to run rather than assume that worked, because a NULL here would otherwise
 -- surface as a bare NOT NULL violation naming no row.
 

@@ -6,8 +6,8 @@ profiles), spec 0009 (territory & clinic ownership — R5, the geometric model)
 
 **Already built** on `chore/remove-facility-without-cnes-20260813`:
 
-- `0104` removed the one facility with no CNES code (recorded in the migration header).
-- `0105` made `facilities.cnes_code` **NOT NULL** and `facilities_cnes_code_uidx` **total**, so
+- `0105` removed the one facility with no CNES code (recorded in the migration header).
+- `0106` made `facilities.cnes_code` **NOT NULL** and `facilities_cnes_code_uidx` **total**, so
   "every facility came from CNES" and "one CNES code, one facility" are database invariants rather
   than conventions.
 - `CreateFacilityUseCase` requires a `cnesCode` and checks it resolves in `registry.facilities`.
@@ -452,7 +452,7 @@ insert into `facilities` in the entire repository, behind `CreateFacilityUseCase
 
 Two properties of that resolver matter to this spec:
 
-- **It already filters candidates on `cnesCode IS NOT NULL` and non-blank.** Migration 0105 made
+- **It already filters candidates on `cnesCode IS NOT NULL` and non-blank.** Migration 0106 made
   explicit what this code was quietly assuming.
 - **It refuses ambiguity rather than picking.** Correct for the 101 CNPJs nationwide that name more
   than one establishment, and for CPF, which is deliberately not unique among facilities.
@@ -463,7 +463,7 @@ carries 51 `UNIDADE MOVEL TIPO B` rows — and only **3** are all-clinical.
 
 So an invoice carrying a payer's CNPJ (a cooperativa, a plan) simply fails to match and is skipped
 with a reason. **Nothing must ever create a facility from a billing CNPJ**: that row would be a
-facility that is not a place, with no CNES code, which migration 0105 now rejects outright. If
+facility that is not a place, with no CNES code, which migration 0106 now rejects outright. If
 payer-level billing turns out to be common, the answer is a separate payer concept, not a facility
 wearing the wrong hat — today's evidence says it is not common.
 

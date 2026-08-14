@@ -1,7 +1,8 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   businessVerticals,
   facilities,
+  facilityEmultecClients,
   facilityVerticalProfiles,
   orderItems,
   orders,
@@ -23,6 +24,7 @@ import {
   resolveEmultecDeadLetter,
 } from "./emultec-order-import-ops";
 import { mapEmultecOrderStatus } from "./map-emultec-order-status";
+import { mapEmultecOrderType } from "./map-emultec-order-type";
 import { resolveEmultecFacility } from "./resolve-emultec-facility";
 
 const ORTOPEDIA_CODE = "ORTOPEDIA";
@@ -78,82 +80,110 @@ function bump(reasons: Record<string, number>, key: string) {
   reasons[key] = (reasons[key] ?? 0) + 1;
 }
 
+/**
+ * Records which clinic an Emultec client buys for, so later imports resolve on
+ * the cheap primary-key branch instead of re-deriving the document match.
+ *
+ * Writes to `facility_emultec_clients`, which is keyed on the *client*. That is
+ * the direction the constraint belongs in: one client resolves to one clinic,
+ * while a clinic may legitimately have several clients — a clinic's surgeons
+ * each bill as their own pessoa-física row under its CNPJ. The old column on
+ * `facilities` could hold only one of them and quietly kept whichever was
+ * written first.
+ *
+ * Never repoints an existing link: if the client already names a clinic, that
+ * came from an operator or an earlier resolve, and disagreeing with it is a
+ * conflict to look at rather than to overwrite. Best-effort — an order that
+ * resolved correctly must not be dead-lettered over a bookkeeping row.
+ */
+async function linkEmultecClient(
+  facilityId: number,
+  idCliente: number,
+  via: "cnpj" | "cpf"
+): Promise<void> {
+  try {
+    await db
+      .insert(facilityEmultecClients)
+      .values({
+        idClienteEmultec: idCliente,
+        facilityId,
+        source: via === "cnpj" ? "AUTO_CNPJ" : "AUTO_CPF",
+      })
+      .onConflictDoNothing({ target: facilityEmultecClients.idClienteEmultec });
+  } catch (error) {
+    logger.warn("emultec.order_import.client_link_failed", {
+      facilityId,
+      idCliente,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function findFacilityId(
   bundle: EmultecOrderBundle
 ): Promise<{ facilityId: number } | { skip: string }> {
-  const [stamped] = await db
+  const [linked] = await db
     .select({
       id: facilities.id,
-      idClienteEmultec: facilities.idClienteEmultec,
       legalDocument: facilities.legalDocument,
       legalDocumentType: facilities.legalDocumentType,
     })
-    .from(facilities)
+    .from(facilityEmultecClients)
+    .innerJoin(
+      facilities,
+      eq(facilities.id, facilityEmultecClients.facilityId)
+    )
     .where(
       and(
-        eq(facilities.idClienteEmultec, bundle.idCliente),
-        isNull(facilities.deactivatedAt),
-        isNotNull(facilities.cnesCode),
-        sql`trim(${facilities.cnesCode}) <> ''`
+        eq(facilityEmultecClients.idClienteEmultec, bundle.idCliente),
+        isNull(facilities.deactivatedAt)
       )
     )
     .limit(1);
 
   const byIdCliente = new Map(
-    stamped
+    linked
       ? [
           [
             bundle.idCliente,
             {
-              id: stamped.id,
-              idClienteEmultec: stamped.idClienteEmultec,
-              legalDocument: stamped.legalDocument,
-              legalDocumentType: stamped.legalDocumentType,
+              id: linked.id,
+              legalDocument: linked.legalDocument,
+              legalDocumentType: linked.legalDocumentType,
             },
           ] as const,
         ]
       : []
   );
 
-  let docDigits: string | null = null;
-  let docType: "CNPJ" | "CPF" | null = null;
-  if (bundle.idClientePj != null) {
-    docDigits = bundle.pjCnpjDigits;
-    docType = "CNPJ";
-  } else if (bundle.clientCnpjDigits?.length === 14) {
-    docDigits = bundle.clientCnpjDigits;
-    docType = "CNPJ";
-  } else if (bundle.clientCpfDigits?.length === 11) {
-    docDigits = bundle.clientCpfDigits;
-    docType = "CPF";
-  }
+  // Every document the client carries, not just the first one resolve would try
+  // — `resolveEmultecFacility` falls back from CNPJ to CPF, and it can only do
+  // that if both were loaded. Filtering by document alone (not by type) keeps a
+  // facility whose `legal_document_type` disagrees with ours in the candidate
+  // set, so resolve decides rather than the query.
+  const docDigits = [
+    bundle.idClientePj != null ? bundle.pjCnpjDigits : bundle.clientCnpjDigits,
+    bundle.clientCpfDigits,
+  ].filter(
+    (digits): digits is string =>
+      digits != null && (digits.length === 14 || digits.length === 11)
+  );
 
-  let candidates: Array<{
-    id: number;
-    idClienteEmultec: number | null;
-    legalDocument: string | null;
-    legalDocumentType: "CNPJ" | "CPF" | null;
-  }> = [];
-
-  if (docDigits && docType) {
-    candidates = await db
+  const candidates = docDigits.length === 0
+    ? []
+    : await db
       .select({
         id: facilities.id,
-        idClienteEmultec: facilities.idClienteEmultec,
         legalDocument: facilities.legalDocument,
         legalDocumentType: facilities.legalDocumentType,
       })
       .from(facilities)
       .where(
         and(
-          eq(facilities.legalDocument, docDigits),
-          eq(facilities.legalDocumentType, docType),
-          isNull(facilities.deactivatedAt),
-          isNotNull(facilities.cnesCode),
-          sql`trim(${facilities.cnesCode}) <> ''`
+          inArray(facilities.legalDocument, [...new Set(docDigits)]),
+          isNull(facilities.deactivatedAt)
         )
       );
-  }
 
   const resolved = resolveEmultecFacility(
     {
@@ -168,6 +198,26 @@ async function findFacilityId(
   );
 
   if (!resolved.ok) return { skip: `facility_${resolved.reason}` };
+
+  /**
+   * Record the link when the client's *own* document found the clinic.
+   *
+   * The new table could hold the PF→PJ case too — one row per surgeon pointing
+   * at the clinic is exactly what it is for, and the old column could not
+   * express it. It is still left out, for a different reason than before: a
+   * cached link wins over document matching, and a surgeon who moves to another
+   * clinic would keep resolving to the old one until someone noticed. Their
+   * parent pointer is re-read from Emultec on every import, so leaving that path
+   * dynamic costs one extra lookup and cannot go stale. A clinic's own CNPJ does
+   * not move, so caching that is safe.
+   */
+  if (
+    (resolved.via === "cnpj" || resolved.via === "cpf") &&
+    bundle.idClientePj == null
+  ) {
+    await linkEmultecClient(resolved.facilityId, bundle.idCliente, resolved.via);
+  }
+
   return { facilityId: resolved.facilityId };
 }
 
@@ -279,6 +329,7 @@ async function upsertOneOrder(
 
   const personId = await resolvePersonId(bundle);
   const status = mapEmultecOrderStatus(bundle.status);
+  const type = mapEmultecOrderType(bundle.nature);
   const orderedAt = parseOrderedAt(bundle.orderedAt);
 
   const [existing] = await db
@@ -297,7 +348,7 @@ async function upsertOneOrder(
         sellerId: seller,
         personId,
         status,
-        type: "SALE",
+        type,
         orderedAt,
         notes: bundle.notes,
         freight: String(bundle.freight),
@@ -314,7 +365,7 @@ async function upsertOneOrder(
         sellerId: seller,
         personId,
         status,
-        type: "SALE",
+        type,
         orderedAt,
         notes: bundle.notes,
         freight: String(bundle.freight),

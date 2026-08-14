@@ -19,6 +19,8 @@ export type EmultecOrderBundle = {
   idCliente: number;
   idVendedor: number | null;
   status: string | null;
+  /** `avulsa.Natureza` — VENDA / DOACAO. Decides the CRM order type. */
+  nature: string | null;
   orderedAt: string | null;
   notes: string | null;
   freight: number;
@@ -124,7 +126,8 @@ async function loadBundlesForIds(
     "  c.Id_Cliente_PJ,",
     "  c.CNPJ,",
     "  c.CPF,",
-    "  pj.CNPJ AS PJ_CNPJ",
+    "  pj.CNPJ AS PJ_CNPJ,",
+    "  a.Natureza",
     "FROM avulsa a",
     "LEFT JOIN clientes c ON c.Id = a.Id_Cliente",
     "LEFT JOIN clientes pj ON pj.Id = c.Id_Cliente_PJ",
@@ -192,6 +195,7 @@ async function loadBundlesForIds(
       clientCnpjDigits: digitsOnly(nullIfNullToken(cols[10])),
       clientCpfDigits: digitsOnly(nullIfNullToken(cols[11])),
       pjCnpjDigits: digitsOnly(nullIfNullToken(cols[12])),
+      nature: nullIfNullToken(cols[13]),
       lines: linesByAvulsa.get(idAvulsa) ?? [],
     } satisfies EmultecOrderBundle;
   });

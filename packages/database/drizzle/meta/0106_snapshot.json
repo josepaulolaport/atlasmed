@@ -1,6 +1,6 @@
 {
-  "id": "c517874a-f264-4791-b59b-7b0c664536a1",
-  "prevId": "ee58d562-05f1-4c2d-b3fd-e78c0c232df8",
+  "id": "c80be8c2-ebac-4022-a6b4-4f5d6b59559c",
+  "prevId": "fb555b6e-2799-444c-bc48-53f36b951c4e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4004,7 +4004,7 @@
           "name": "cnes_code",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "id_cliente_emultec": {
           "name": "id_cliente_emultec",
@@ -4178,7 +4178,6 @@
             }
           ],
           "isUnique": true,
-          "where": "\"facilities\".\"cnes_code\" IS NOT NULL AND \"facilities\".\"deactivated_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}

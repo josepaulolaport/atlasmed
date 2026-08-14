@@ -48,6 +48,42 @@ export function isDatabaseReachable(): Promise<boolean> {
   return reachable;
 }
 
+/**
+ * A two-character `states.abbreviation` no other fixture is using.
+ *
+ * The column is UNIQUE, and other suites commit their fixtures into the same
+ * database instead of rolling back — the CNES loader's test leaves a permanent
+ * `ZZ` behind. A literal makes a test's outcome depend on what else has ever
+ * run against the database.
+ *
+ * Two independent hazards, and both have bitten:
+ *
+ *   1. Other fixtures. The counter guarantees uniqueness within a file; the
+ *      random first character spreads separate runs and parallel files apart.
+ *      It throws rather than wrapping, because a modulo would hand out a repeat
+ *      on the 37th call and surface as a unique violation somewhere unrelated.
+ *   2. The 27 real UFs, which exist on a production clone and not on an empty
+ *      database — so a fixture that collides with one passes locally on
+ *      `atlasmed_test_empty` and fails on the clone. The leading character is
+ *      therefore a **digit**: every real UF is two letters, so this cannot
+ *      collide with one at all, rather than merely being unlikely to.
+ */
+const DIGITS = "0123456789";
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+let abbreviationCounter = 0;
+
+export function uniqueAbbreviation(): string {
+  if (abbreviationCounter >= ALPHABET.length) {
+    throw new Error(
+      "uniqueAbbreviation exhausted — seed fewer states per test file",
+    );
+  }
+  const head = DIGITS[Math.floor(Math.random() * DIGITS.length)]!;
+  const tail = ALPHABET[abbreviationCounter]!;
+  abbreviationCounter += 1;
+  return `${head}${tail}`;
+}
+
 /** Thrown to unwind the transaction. Never escapes `withRollback`. */
 const ROLLBACK = Symbol("rollback");
 

@@ -227,10 +227,14 @@ void main() {
     final query = buildClinicsQuery(state, verticalId: null);
 
     expect(query.purchaseBucket, isNull);
+    // Ativas = bought recently + due to buy now; Inativas = overdue + lapsed.
+    // OUTSIDE_WINDOW used to sit under Inativas and INACTIVE under "nunca
+    // compraram", which read a clinic that bought last week as inactive.
     expect(query.purchaseFunnelStages, [
-      PurchaseFunnelStage.purchaseWindow,
       PurchaseFunnelStage.outsideWindow,
+      PurchaseFunnelStage.purchaseWindow,
       PurchaseFunnelStage.churn,
+      PurchaseFunnelStage.inactive,
     ]);
   });
 

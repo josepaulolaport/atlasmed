@@ -1,6 +1,6 @@
 {
-  "id": "c80be8c2-ebac-4022-a6b4-4f5d6b59559c",
-  "prevId": "fb555b6e-2799-444c-bc48-53f36b951c4e",
+  "id": "fb555b6e-2799-444c-bc48-53f36b951c4e",
+  "prevId": "c517874a-f264-4791-b59b-7b0c664536a1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4004,7 +4004,7 @@
           "name": "cnes_code",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "id_cliente_emultec": {
           "name": "id_cliente_emultec",
@@ -4178,6 +4178,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"facilities\".\"cnes_code\" IS NOT NULL AND \"facilities\".\"deactivated_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -4546,6 +4547,82 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.facility_emultec_clients": {
+      "name": "facility_emultec_clients",
+      "schema": "",
+      "columns": {
+        "id_cliente_emultec": {
+          "name": "id_cliente_emultec",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "emultec_client_link_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "facility_emultec_clients_facility_id_idx": {
+          "name": "facility_emultec_clients_facility_id_idx",
+          "columns": [
+            {
+              "expression": "facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "facility_emultec_clients_facility_id_facilities_id_fk": {
+          "name": "facility_emultec_clients_facility_id_facilities_id_fk",
+          "tableFrom": "facility_emultec_clients",
+          "tableTo": "facilities",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -13604,6 +13681,15 @@
         "REGISTERED",
         "SUSPENDED",
         "CLOSED"
+      ]
+    },
+    "public.emultec_client_link_source": {
+      "name": "emultec_client_link_source",
+      "schema": "public",
+      "values": [
+        "MANUAL",
+        "AUTO_CNPJ",
+        "AUTO_CPF"
       ]
     },
     "public.facility_legal_document_type": {

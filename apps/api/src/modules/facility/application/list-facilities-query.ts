@@ -20,8 +20,20 @@ export type FacilitySearchOrder = (typeof ORDERS)[number];
 export type FacilityLegalDocumentType = (typeof LEGAL_DOCUMENT_TYPES)[number];
 
 /**
- * Desempenho donut buckets → `facilities.purchase_funnel_stage`.
- * Keep in sync with `DrizzleDashboardRepository.countPurchaseBuckets`.
+ * Desempenho drill-down buckets → `facility_vertical_profiles.purchase_funnel_stage`.
+ *
+ * Stages ordered by time since the clinic last bought (`I` = purchase interval):
+ * OUTSIDE_WINDOW (<0.5×I, bought recently) · PURCHASE_WINDOW (<2×I, due now) ·
+ * CHURN (<3×I, overdue) · INACTIVE (≥3×I, lapsed) · NEVER_PURCHASED.
+ *
+ * So Ativas is the first two and Inativas the next two. The previous split put
+ * OUTSIDE_WINDOW under Inativas and INACTIVE under "nunca compraram", which made
+ * a clinic that bought last week read as inactive, and made a lapsed customer
+ * indistinguishable from one that never bought at all.
+ *
+ * Must agree with `PurchaseBucketFilter` on mobile, which groups the per-stage
+ * counts the dashboard now returns; tapping a donut slice drills in through
+ * here, so a mismatch shows one number and lists a different set.
  */
 export function purchaseBucketToFunnelFilter(bucket: FacilityPurchaseBucket): {
   stages: FacilityPurchaseFunnelStage[];
@@ -29,17 +41,16 @@ export function purchaseBucketToFunnelFilter(bucket: FacilityPurchaseBucket): {
 } {
   switch (bucket) {
     case "active":
-      return { stages: ["PURCHASE_WINDOW"], includeNull: false };
-    case "inactive":
       return {
-        stages: ["OUTSIDE_WINDOW", "CHURN"],
+        stages: ["OUTSIDE_WINDOW", "PURCHASE_WINDOW"],
         includeNull: false,
       };
+    case "inactive":
+      return { stages: ["CHURN", "INACTIVE"], includeNull: false };
     case "neverBought":
-      return {
-        stages: ["NEVER_PURCHASED", "INACTIVE"],
-        includeNull: true,
-      };
+      // Null = the funnel has not run for this profile yet, which reads as "no
+      // purchase on record" rather than as a lapsed customer.
+      return { stages: ["NEVER_PURCHASED"], includeNull: true };
   }
 }
 
@@ -48,13 +59,13 @@ export function funnelStageToPurchaseBucket(
   stage: FacilityPurchaseFunnelStage | null | undefined,
 ): FacilityPurchaseBucket {
   switch (stage) {
+    case "OUTSIDE_WINDOW":
     case "PURCHASE_WINDOW":
       return "active";
-    case "OUTSIDE_WINDOW":
     case "CHURN":
+    case "INACTIVE":
       return "inactive";
     case "NEVER_PURCHASED":
-    case "INACTIVE":
     case null:
     case undefined:
       return "neverBought";
