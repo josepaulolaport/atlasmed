@@ -15,7 +15,18 @@ export const PURCHASE_RECURRENCE_SCHEDULES = [
     scheduleId: "facility-purchase-recurrence-hourly",
     workflowId: "facility-purchase-recurrence-hourly",
     overlap: "SKIP" as const,
-    calendar: { minute: 0 },
+    /**
+     * `hour: "*"` is load-bearing. Temporal defaults an omitted calendar field
+     * to 0, not to every value, so `{ minute: 0 }` resolves to `hour: "0"` —
+     * midnight daily, which is what ran in production until 2026-08-14.
+     *
+     * That also silently disabled the incremental path: the workflow takes its
+     * `fullSweep` branch when `scheduledAt.getUTCHours() === 0`, so the single
+     * daily run was always a full sweep and the two-hour `since`/`until` window
+     * never executed. Nothing was lost, but a purchase waited until the next
+     * midnight to be reflected instead of the next hour.
+     */
+    calendar: { minute: 0, hour: "*" },
   },
 ] as const;
 
