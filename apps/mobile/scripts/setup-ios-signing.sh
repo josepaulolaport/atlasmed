@@ -17,6 +17,8 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 project_dir="$(cd "$script_dir/.." && pwd)"
 signing_xcconfig="$project_dir/ios/Flutter/CodeSigning.xcconfig"
 
+export_options_path="$RUNNER_TEMP/atlasmed-export-options.plist"
+
 certificate_path="$RUNNER_TEMP/atlasmed-distribution.p12"
 profile_path="$RUNNER_TEMP/atlasmed-app-store.mobileprovision"
 profile_plist="$RUNNER_TEMP/atlasmed-app-store.plist"
@@ -93,5 +95,46 @@ PROVISIONING_PROFILE_SPECIFIER = $profile_name
 EOF
 
 echo "Assinatura manual configurada em ios/Flutter/CodeSigning.xcconfig"
+
+# O xcconfig acima cobre apenas o archive. O export do IPA é uma invocação
+# separada do xcodebuild, guiada por um ExportOptions.plist — e o que o Flutter
+# gera sozinho traz só a chave "method", o que faz o exportArchive falhar com
+# "Runner.app requires a provisioning profile". Geramos o plist explicitamente
+# e o passamos ao Shorebird via --export-options-plist.
+#
+# manageAppVersionAndBuildNumber precisa ser false: o Xcode reescreveria o build
+# number do IPA e ele deixaria de bater com a release registrada no Shorebird,
+# quebrando os patches. O próprio CLI rejeita o plist se essa chave for true.
+cat > "$export_options_path" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>$APPLE_TEAM_ID</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>br.com.atlasmed.app</key>
+		<string>$profile_uuid</string>
+	</dict>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>uploadBitcode</key>
+	<false/>
+</dict>
+</plist>
+EOF
+
+plutil -lint "$export_options_path"
+
 echo "signing_xcconfig_path=$signing_xcconfig" >> "$GITHUB_OUTPUT"
+echo "export_options_plist_path=$export_options_path" >> "$GITHUB_OUTPUT"
 echo "api_key_path=$api_key_path" >> "$GITHUB_OUTPUT"

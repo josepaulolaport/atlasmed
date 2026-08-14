@@ -8,6 +8,10 @@
 #
 # Flags passadas ao shorebird patch:
 #   --allow-asset-diffs --allow-native-diffs
+#
+# Variáveis de ambiente:
+#   SHOREBIRD_DRY_RUN     Acrescenta --dry-run
+#   EXPORT_OPTIONS_PLIST  ExportOptions.plist usado no export do IPA (só iOS)
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -102,10 +106,17 @@ run_patches() {
 
     echo "▶️  Patching $platform @ $releaseVersion ..."
 
+    # Só o iOS assina e exporta um IPA; a flag não existe para o Android.
+    platform_flags=()
+    if [ "$platform" = "ios" ] && [ -n "${EXPORT_OPTIONS_PLIST:-}" ]; then
+      platform_flags+=(--export-options-plist="$EXPORT_OPTIONS_PLIST")
+    fi
+
     if shorebird patch \
       --platforms="$platform" \
       --release-version="$releaseVersion" \
       "${FLAGS[@]}" \
+      ${platform_flags[@]+"${platform_flags[@]}"} \
       -- --dart-define-from-file=config.production.json --no-tree-shake-icons; then
       echo "  ✅ $platform @ $releaseVersion patched successfully"
       echo "| $platform | $releaseVersion | ✅ |" >> "$STEP_SUMMARY"

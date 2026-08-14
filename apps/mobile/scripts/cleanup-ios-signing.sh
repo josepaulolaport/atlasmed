@@ -23,4 +23,5 @@ rm -f \
   "$RUNNER_TEMP/atlasmed-distribution.p12" \
   "$RUNNER_TEMP/atlasmed-app-store.mobileprovision" \
   "$RUNNER_TEMP/atlasmed-app-store.plist" \
+  "$RUNNER_TEMP/atlasmed-export-options.plist" \
   "$RUNNER_TEMP"/AuthKey_*.p8
