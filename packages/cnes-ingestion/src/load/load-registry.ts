@@ -1262,9 +1262,40 @@ async function bridgeGeography(
        and r.atlasmed_id is null
   `);
 
+  /*
+   * The Distrito Federal, which the join above cannot reach.
+   *
+   * CNES subdivides the DF into 31 regiões administrativas — Taguatinga,
+   * Ceilândia, Gama, Asa Sul — and gives each its own `CO_MUNICIPIO`. IBGE does
+   * not: the DF is one município, Brasília (IBGE 5300108 / CNES 530010). So
+   * those 31 codes match no `public.municipalities.cnes_code` and would stay
+   * unbridged, leaving every Brasília establishment unplaceable.
+   *
+   * This mirrors migration 0112 for the same reason the block above mirrors
+   * 0110's backfill: a migration runs once, against whatever the registry held
+   * at that moment, and on a fresh environment that is nothing.
+   *
+   * **By code, never by name.** Taguatinga, Planaltina, Sobradinho, Cruzeiro and
+   * Guará all name real municípios in other states; matching on name would file
+   * Brasília clinics ~700 km away, in the wrong UF and the wrong territory. The
+   * `53` prefix also excludes the two Ministry codes (`999999`, `222222`), which
+   * carry no establishment and should stay unbridged so naming one fails loudly.
+   */
+  const districtFederal = await db.execute(sql`
+    update registry.municipalities r
+       set atlasmed_id = b.id, updated_at = now()
+      from public.municipalities b
+     where b.cnes_code = '530010'
+       and r.state_cnes_id = 'DF'
+       and r.cnes_id like '53%'
+       and r.atlasmed_id is null
+  `);
+
   log("geography bridged", {
     states: (states as unknown as { count?: number }).count ?? null,
     municipalities: (municipalities as unknown as { count?: number }).count ?? null,
+    districtFederalLocalities:
+      (districtFederal as unknown as { count?: number }).count ?? null,
   });
 }
 

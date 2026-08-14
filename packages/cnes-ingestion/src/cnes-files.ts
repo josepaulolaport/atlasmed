@@ -129,4 +129,15 @@ export const REQUIRED_COLUMNS: Record<CnesSourceName, readonly string[]> = {
  * ```
  *
  * On the 202605 dump `71` accounts for 99.56 % of rows carrying a CBO `225*`.
+ *
+ * **Do not turn this into a seed migration.** It has been proposed and declined:
+ * CNES enters the wrong codes, so which codes are trustworthy is a standing
+ * judgement that gets revisited as the dumps change, not a fact to freeze into
+ * the schema. A migration would make the current answer look settled and would
+ * have to be superseded by another migration every time it moved.
+ *
+ * The cost is real and accepted: a fresh environment cannot load CNES until
+ * somebody runs the statement above. The loader refuses loudly rather than
+ * importing nobody while reporting success, which is the behaviour that makes
+ * the manual step safe.
  */
