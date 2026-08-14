@@ -10,8 +10,7 @@
 #   --allow-asset-diffs --allow-native-diffs
 #
 # Variáveis de ambiente:
-#   SHOREBIRD_DRY_RUN     Acrescenta --dry-run
-#   EXPORT_OPTIONS_PLIST  ExportOptions.plist usado no export do IPA (só iOS)
+#   SHOREBIRD_DRY_RUN  Acrescenta --dry-run
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -106,10 +105,10 @@ run_patches() {
 
     echo "▶️  Patching $platform @ $releaseVersion ..."
 
-    # Só o iOS assina e exporta um IPA; a flag não existe para o Android.
+    # Patches iOS não precisam de IPA assinada; Android não aceita essa flag.
     platform_flags=()
-    if [ "$platform" = "ios" ] && [ -n "${EXPORT_OPTIONS_PLIST:-}" ]; then
-      platform_flags+=(--export-options-plist="$EXPORT_OPTIONS_PLIST")
+    if [ "$platform" = "ios" ]; then
+      platform_flags+=(--no-codesign)
     fi
 
     if shorebird patch \
