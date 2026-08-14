@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_candidate_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Importing a clinic from CNES (spec 0015 §6).
@@ -41,9 +45,12 @@ class CnesFacilityImportScreen extends StatefulWidget {
 class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
   late final CnesFacilityCandidatesRepository _repository =
       widget.repository ?? CnesFacilityCandidatesRepository();
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initialQuery,
-  );
+  /*
+   * The query is state, not a controller: `SearchBarWidget` is value-driven —
+   * it rebuilds its own controller from `value` — which is what lets the clear
+   * button and the debounce agree on one source of truth.
+   */
+  late String _query = widget.initialQuery;
 
   Timer? _debounce;
   bool _loading = false;
@@ -60,11 +67,11 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
-    _controller.dispose();
     super.dispose();
   }
 
   void _onChanged(String value) {
+    setState(() => _query = value);
     _debounce?.cancel();
     // The index holds ~373 000 documents; a request per keystroke is a request
     // per keystroke against all of them.
@@ -126,7 +133,7 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
             .where((c) => c.cnesCode != candidate.cnesCode)
             .toList(growable: false);
       });
-      await _search(_controller.text);
+      await _search(_query);
     }
   }
 
@@ -146,53 +153,13 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
-            child: TextField(
-              controller: _controller,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: SearchBarWidget(
+              key: const ValueKey('cnes-search-field'),
+              value: _query,
               onChanged: _onChanged,
-              autofocus: widget.initialQuery.trim().isEmpty,
-              textInputAction: TextInputAction.search,
-              onSubmitted: _search,
-              style: const TextStyle(fontSize: 14, color: AppColors.gray900),
-              decoration: InputDecoration(
-                hintText: 'Nome, CNPJ ou código CNES',
-                hintStyle: const TextStyle(color: AppColors.gray400),
-                helperText: 'Clínicas registradas no CNES em todo o Brasil',
-                helperStyle: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.gray500,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  size: 20,
-                  color: AppColors.gray400,
-                ),
-                filled: true,
-                fillColor: AppColors.cardBg,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(
-                    color: AppColors.surfaceSecondary,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(
-                    color: AppColors.surfaceSecondary,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.navyBright),
-                ),
-              ),
+              hintText: 'Buscar clínica, CNPJ ou CNES…',
             ),
           ),
           const Divider(height: 1, color: AppColors.surfaceSecondary),
@@ -211,95 +178,34 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
     if (_error != null) {
       return _Message(icon: Icons.error_outline, text: _error!);
     }
-    if (!_searched) {
+    if (!_searched && !_loading) {
       return const _Message(
         icon: Icons.travel_explore,
         text: 'Busque uma clínica pelo nome, CNPJ ou código CNES.',
       );
     }
-    if (_results.isEmpty && !_loading) {
-      return const _Message(
-        icon: Icons.search_off,
-        text:
-            'Nenhuma clínica encontrada no CNES.\n'
-            'Clínicas muito novas podem levar até um mês para aparecer.',
+    /*
+     * Explorar's skeleton, not a progress bar. A list that is about to hold rows
+     * should be shaped like rows while it loads — the same reason Explorar does
+     * it, and the same widget so the two cannot drift.
+     */
+    if (_loading && _results.isEmpty) {
+      return ListView.builder(
+        itemCount: 6,
+        itemBuilder: (_, _) => const SkeletonRow(),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+    if (_results.isEmpty) {
+      return EmptyState(query: _query, kind: 'clinic');
+    }
+    return ListView.builder(
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final candidate = _results[index];
-        return Material(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            key: ValueKey('cnes-candidate-${candidate.cnesCode}'),
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _open(candidate),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          candidate.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.gray900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          [
-                            if (candidate.whereLabel.isNotEmpty)
-                              candidate.whereLabel,
-                            'CNES ${candidate.cnesCode}',
-                          ].join(' · '),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.gray500,
-                          ),
-                        ),
-                        /*
-                         * The one thing the row must say: importing this adds a
-                         * vertical profile to a clinic we already hold, rather
-                         * than creating one. The outcome differs, so the row does.
-                         */
-                        if (candidate.imported) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.gray100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Já cadastrada · adiciona à sua vertical',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.gray700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: AppColors.gray400),
-                ],
-              ),
-            ),
-          ),
+        return CnesCandidateRow(
+          key: ValueKey('cnes-candidate-${candidate.cnesCode}'),
+          candidate: candidate,
+          onTap: () => _open(candidate),
         );
       },
     );
