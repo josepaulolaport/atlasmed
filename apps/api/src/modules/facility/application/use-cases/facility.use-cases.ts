@@ -84,6 +84,7 @@ export class ListFacilitiesUseCase {
     clinicalFocusIds?: number[];
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -121,6 +122,7 @@ export class ListFacilitiesUseCase {
         clinicalFocusIds: input.clinicalFocusIds,
         unitTypeIds: input.unitTypeIds,
         legalDocumentType: input.legalDocumentType,
+        cpfStatus: input.cpfStatus,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -249,6 +251,7 @@ export class ListFacilitiesUseCase {
           clinicalFocusIds: input.clinicalFocusIds,
           unitTypeIds: input.unitTypeIds,
           legalDocumentType: input.legalDocumentType,
+          cpfStatus: input.cpfStatus,
           purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile,
           purchaseIntervalMinDays: input.purchaseIntervalMinDays,

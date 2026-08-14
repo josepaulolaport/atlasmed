@@ -29,6 +29,7 @@ type _ListAcceptsEveryFilter = Accepts<
   | "clinicalFocusIds"
   | "unitTypeIds"
   | "legalDocumentType"
+  | "cpfStatus"
   | "purchaseFunnelStages"
   | "purchaseProfile"
 >;
@@ -38,6 +39,7 @@ type _HydrateAcceptsEveryFilter = Accepts<
   | "clinicalFocusIds"
   | "unitTypeIds"
   | "legalDocumentType"
+  | "cpfStatus"
   | "purchaseFunnelStages"
   | "purchaseProfile"
 >;
@@ -153,6 +155,35 @@ describe("buildFacilityListConditions", () => {
     expect(renderConditions({ legalDocumentType: "CNPJ" })).toContain(
       '"facilities"."legal_document_type" = ',
     );
+  });
+
+  it("scopes both cpfStatus branches to CPF clinics", () => {
+    // A CNPJ clinic with no CNPJ is a real problem, but not the one this
+    // warning counts. Folding it in would make the Desempenho number disagree
+    // with the list it opens.
+    for (const cpfStatus of ["missing", "invalid"] as const) {
+      expect(renderConditions({ cpfStatus })).toContain(
+        '"facilities"."legal_document_type" = ',
+      );
+    }
+  });
+
+  it("treats a blank document as missing, not as present", () => {
+    // The app renders a blank as "—", so a rep seeing a dash would not
+    // understand its absence from a list of clinics without a CPF.
+    const sql = renderConditions({ cpfStatus: "missing" });
+    expect(sql).toContain("is null");
+    expect(sql).toContain("btrim");
+    expect(sql).not.toContain("is_valid_cpf");
+  });
+
+  it("asks the database for validity only on a non-blank document", () => {
+    const sql = renderConditions({ cpfStatus: "invalid" });
+    expect(sql).toContain("is_valid_cpf");
+    // Without the blank guard, `not is_valid_cpf(null)` is NULL and matches
+    // nothing — but a blank string is not NULL, so it would be reported as
+    // invalid as well as missing, and one clinic would appear in both counts.
+    expect(sql).toContain("btrim");
   });
 
   it("adds nothing for either new filter when they are absent", () => {
