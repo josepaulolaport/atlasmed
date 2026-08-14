@@ -342,6 +342,98 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     expect(foreign!.assignedClinicCount).toBe(0);
   });
 
+  test("the patch door offers only free clinics the rep covers (0015 R6)", async () => {
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+
+    const page = await team.listAssignableClinics({
+      userId: reps[0]!.userId,
+      verticalId: 1,
+      mode: "patch",
+      withinZoneIds: zones,
+      offset: 0,
+      limit: 25,
+    });
+
+    for (const row of page.rows) {
+      // Inside their patch, so I2 is satisfied by geometry and no reason is
+      // needed. If this were ever true here the screen would demand a sentence
+      // for a clinic the rep already covers.
+      expect(row.requiresReason).toBe(false);
+      // Free: the patch door exists to fill gaps, not to take from colleagues.
+      expect(row.currentRepId).toBeNull();
+      expect(row.name.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("the search door reaches beyond the patch, and says a reason is due", async () => {
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+
+    const inPatch = await team.listAssignableClinics({
+      userId: reps[0]!.userId,
+      verticalId: 1,
+      mode: "patch",
+      withinZoneIds: zones,
+      offset: 0,
+      limit: 25,
+    });
+    const anywhere = await team.listAssignableClinics({
+      userId: reps[0]!.userId,
+      verticalId: 1,
+      mode: "search",
+      withinZoneIds: zones,
+      offset: 0,
+      limit: 25,
+    });
+
+    // Searching cannot offer less than the patch does, or the second door
+    // would be a narrower version of the first rather than a wider one.
+    expect(anywhere.total).toBeGreaterThanOrEqual(inPatch.total);
+
+    // Spec 0009 R2: outside the patch, I2 needs an override instead of
+    // geometry — and the client cannot work that out, so the server says so.
+    const outside = anywhere.rows.filter((row) => row.requiresReason);
+    if (inPatch.total < anywhere.total) {
+      expect(outside.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("a rep with no patch is offered nothing to take without a reason", async () => {
+    // ST_Union over no rows is NULL, and `ST_Covers(NULL, point)` is NULL —
+    // which a WHERE clause drops. Worth pinning: the alternative reading of an
+    // empty patch set is "covers everything".
+    const orphans = await team.listRepsWithoutPatch();
+    if (orphans.length === 0) return;
+
+    const page = await team.listAssignableClinics({
+      userId: orphans[0]!.userId,
+      verticalId: 1,
+      mode: "patch",
+      withinZoneIds: null,
+      offset: 0,
+      limit: 25,
+    });
+
+    expect(page.rows).toEqual([]);
+    expect(page.total).toBe(0);
+  });
+
+  test("no zones means nothing to assign from", async () => {
+    const page = await team.listAssignableClinics({
+      userId: 5,
+      verticalId: 1,
+      mode: "patch",
+      withinZoneIds: [],
+      offset: 0,
+      limit: 25,
+    });
+
+    expect(page.total).toBe(0);
+  });
+
   test("a manager is measured on their zones, not on assignments", async () => {
     const managers = await team.listManagers(1);
     if (managers.length === 0) return;

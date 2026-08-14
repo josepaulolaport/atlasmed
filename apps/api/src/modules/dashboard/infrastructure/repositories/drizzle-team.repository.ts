@@ -42,6 +42,22 @@ export type TeamMemberProfile = TeamMemberRow & {
   outOfTerritoryCount: number;
 };
 
+/** A clinic that could be given to someone (spec 0015 R6). */
+export type AssignableClinicRow = {
+  facilityId: number;
+  name: string;
+  city: string;
+  state: string;
+  /** Who holds it now, if anyone — the confirmation has to name them. */
+  currentRepName: string | null;
+  currentRepId: number | null;
+  /**
+   * True when no patch of theirs covers it, so I2 needs an override instead of
+   * geometry. Decided server-side: the client cannot see the polygons.
+   */
+  requiresReason: boolean;
+};
+
 export type TeamMemberRow = {
   userId: number;
   name: string | null;
@@ -409,6 +425,134 @@ export class DrizzleTeamRepository {
           : row.territories,
       assignedClinicCount: Number(row.assigned_clinic_count),
       outOfTerritoryCount: Number(row.out_of_territory_count),
+    };
+  }
+
+  /**
+   * Clinics this rep could be given (spec 0015 R6).
+   *
+   * Two doors, one query. `mode: "patch"` offers the unassigned clinics their
+   * own patches cover — the common case, and the one that needs no
+   * justification. `mode: "search"` offers anything in the vertical, including
+   * clinics someone else holds, because taking one over is a real operation and
+   * hiding it produces the workaround spec 0009 R2 warns about: a throwaway
+   * patch drawn around the clinic.
+   *
+   * `requiresReason` is computed here rather than inferred by the client. It is
+   * exactly I2's second limb — no patch of theirs covers this point — so the
+   * screen can ask for a sentence at the right moment without re-deriving
+   * geometry it cannot see.
+   *
+   * Patch membership is resolved by `ST_Covers` at request time. Nothing
+   * materialises it (only `manager_zone_id` is stored), and this is a cold path
+   * — reached when someone opens the screen, not on every dashboard card — so a
+   * derived column would be one more thing to keep true through every edit.
+   */
+  async listAssignableClinics(input: {
+    userId: number;
+    verticalId: number;
+    mode: "patch" | "search";
+    search?: string | null;
+    /** The reader's ground; patches outside it are not theirs to staff. */
+    withinZoneIds: number[] | null;
+    offset: number;
+    limit: number;
+  }): Promise<{ rows: AssignableClinicRow[]; total: number }> {
+    if (input.withinZoneIds?.length === 0) return { rows: [], total: 0 };
+
+    const zoneFilter = input.withinZoneIds?.length
+      ? sql` AND t.manager_territory_id IN (${sql.join(
+          input.withinZoneIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : sql``;
+
+    // The union of their patches, once, so the covers test runs against one
+    // geometry rather than once per polygon.
+    const patches = sql`
+      SELECT ST_Union(t.boundary::geometry) AS area
+        FROM user_territory_assignments uta
+        JOIN territories t ON t.id = uta.territory_id AND t.is_active = true
+        JOIN territory_types tt
+          ON tt.id = t.territory_type_id AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+       WHERE uta.user_id = ${input.userId}
+         AND t.vertical_id = ${input.verticalId}${zoneFilter}
+    `;
+
+    const term = input.search?.trim();
+    const searchFilter = term
+      ? sql` AND f.name ILIKE ${`%${term}%`}`
+      : sql``;
+
+    // "Unassigned" only matters for the patch door. The search door must offer
+    // held clinics too, or takeover is unreachable.
+    const heldFilter =
+      input.mode === "patch"
+        ? sql` AND NOT EXISTS (
+              SELECT 1 FROM facility_vertical_rep_assignments a
+               WHERE a.facility_vertical_profile_id = p.id
+                 AND a.ended_at IS NULL)`
+        : sql``;
+
+    const coverageFilter =
+      input.mode === "patch"
+        ? sql` AND patch.area IS NOT NULL AND ST_Covers(patch.area, f.location::geometry)`
+        : sql``;
+
+    const rows = (await db.execute(sql`
+      WITH patch AS (${patches})
+      SELECT f.id AS facility_id,
+             f.name AS name,
+             m.name AS city,
+             s.abbreviation AS state,
+             (SELECT NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), '')
+                FROM facility_vertical_rep_assignments a
+                JOIN users u ON u.id = a.user_id
+               WHERE a.facility_vertical_profile_id = p.id
+                 AND a.ended_at IS NULL
+               LIMIT 1) AS current_rep_name,
+             (SELECT a.user_id
+                FROM facility_vertical_rep_assignments a
+               WHERE a.facility_vertical_profile_id = p.id
+                 AND a.ended_at IS NULL
+               LIMIT 1) AS current_rep_id,
+             NOT (patch.area IS NOT NULL
+                  AND ST_Covers(patch.area, f.location::geometry))
+               AS requires_reason,
+             COUNT(*) OVER ()::int AS total
+        FROM facility_vertical_profiles p
+        JOIN facilities f ON f.id = p.facility_id
+        JOIN municipalities m ON m.id = f.municipality_id
+        JOIN states s ON s.id = f.state_id
+        CROSS JOIN patch
+       WHERE p.vertical_id = ${input.verticalId}
+         AND p.is_active = true
+         AND f.deactivated_at IS NULL${heldFilter}${coverageFilter}${searchFilter}
+       ORDER BY f.name, f.id
+       OFFSET ${input.offset} LIMIT ${input.limit}
+    `)) as unknown as Array<{
+      facility_id: number | string;
+      name: string;
+      city: string;
+      state: string;
+      current_rep_name: string | null;
+      current_rep_id: number | string | null;
+      requires_reason: boolean;
+      total: number | string;
+    }>;
+
+    return {
+      total: Number(rows[0]?.total ?? 0),
+      rows: rows.map((row) => ({
+        facilityId: Number(row.facility_id),
+        name: row.name,
+        city: row.city,
+        state: row.state,
+        currentRepName: row.current_rep_name,
+        currentRepId:
+          row.current_rep_id == null ? null : Number(row.current_rep_id),
+        requiresReason: row.requires_reason,
+      })),
     };
   }
 

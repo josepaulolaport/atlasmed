@@ -8,6 +8,7 @@ import {
 import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import type {
+  AssignableClinicRow,
   DrizzleTeamRepository,
   TeamMemberMetrics,
   TeamMemberProfile,
@@ -398,6 +399,99 @@ export class GetTeamMemberUseCase {
     if (!member) throw new ForbiddenError();
 
     return member;
+  }
+}
+
+/**
+ * Clinics a member could be given (spec 0015 R6).
+ *
+ * Only a REP can hold clinics, so this refuses a manager subject rather than
+ * returning an empty list — an empty list reads as "none available", which is a
+ * different and wrong answer.
+ */
+export class ListAssignableClinicsUseCase {
+  constructor(
+    private readonly deps: Pick<Dependencies, "teamRepository" | "directory">,
+  ) {}
+
+  async execute(request: {
+    viewerId: number;
+    viewerRole: string;
+    scope: ScopeContext;
+    subjectUserId: number;
+    verticalId?: number | null;
+    mode?: "patch" | "search";
+    search?: string | null;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: AssignableClinicRow[];
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const accessibleVerticalIds = resolveVerticalIds({
+      role: request.viewerRole,
+      assignedVerticalIds: request.scope.assignedVerticalIds ?? [],
+      queryVerticalId: request.verticalId ?? null,
+    });
+    const verticalId = resolveSingleVerticalId({
+      requestedVerticalId: request.verticalId ?? null,
+      accessibleVerticalIds,
+    });
+
+    // OPS reads everything and changes nothing (spec 0015 R3), so it has no
+    // business being offered a list whose only purpose is to assign from.
+    if (
+      request.viewerRole !== Role.ADMIN &&
+      request.viewerRole !== Role.MANAGER
+    ) {
+      throw new ForbiddenError();
+    }
+    if (
+      request.viewerRole === Role.MANAGER &&
+      !(request.scope.managedUserIds ?? []).includes(request.subjectUserId)
+    ) {
+      throw new ForbiddenError();
+    }
+
+    const subject = await this.deps.directory.findUser(request.subjectUserId);
+    if (!subject || subject.roleName !== Role.REP) {
+      throw new ForbiddenError();
+    }
+
+    const withinZoneIds =
+      request.viewerRole === Role.MANAGER
+        ? await this.deps.directory.findManagerZoneIds({
+            userId: request.viewerId,
+            verticalId,
+          })
+        : null;
+
+    const page = request.page ?? 1;
+    const limit = request.limit ?? 25;
+    const mode = request.mode ?? "patch";
+    const search = request.search?.trim() || null;
+
+    // The search door needs a term. Without one it scans the whole vertical and
+    // runs the coverage test on every row — measured at ~770ms against 1.4k
+    // clinics, versus ~30ms with a term. It is also the wrong answer: "every
+    // clinic in the linha" is not a list anyone was asking for. The screen
+    // prompts instead.
+    if (mode === "search" && search === null) {
+      return { data: [], pagination: { page, limit, total: 0 } };
+    }
+
+    const { rows, total } =
+      await this.deps.teamRepository.listAssignableClinics({
+        userId: request.subjectUserId,
+        verticalId,
+        mode,
+        search,
+        withinZoneIds,
+        offset: (page - 1) * limit,
+        limit,
+      });
+
+    return { data: rows, pagination: { page, limit, total } };
   }
 }
 

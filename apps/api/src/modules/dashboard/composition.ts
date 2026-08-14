@@ -16,6 +16,7 @@ import {
 import { DrizzleTeamRepository } from "./infrastructure/repositories/drizzle-team.repository";
 import {
   GetTeamMemberUseCase,
+  ListAssignableClinicsUseCase,
   ListRepsWithoutPatchUseCase,
   ListTeamUseCase,
 } from "./application/use-cases/team.use-cases";
@@ -58,5 +59,7 @@ export const dashboardUseCases = {
       },
     }),
   getTeamMember: () => new GetTeamMemberUseCase({ teamRepository, directory }),
+  listAssignableClinics: () =>
+    new ListAssignableClinicsUseCase({ teamRepository, directory }),
   listRepsWithoutPatch: () => new ListRepsWithoutPatchUseCase({ teamRepository }),
 };

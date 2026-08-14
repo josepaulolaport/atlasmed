@@ -30,6 +30,7 @@ type Executable = { execute(input: never): Promise<unknown> };
 export interface TeamHttpUseCases {
   listTeam(): Executable;
   getTeamMember(): Executable;
+  listAssignableClinics(): Executable;
   listRepsWithoutPatch(): Executable;
 }
 
@@ -80,6 +81,42 @@ const teamRoutes = (useCases: TeamHttpUseCases, authPlugin: typeof auth) =>
         params: t.Object({ userId: t.Number({ minimum: 1 }) }),
         query: t.Object({
           verticalId: t.Optional(t.Number({ minimum: 1 })),
+        }),
+      },
+    )
+    .get(
+      "/members/:userId/assignable-clinics",
+      async ({ params, query, getScope, getUser }) => {
+        const actor = await getUser();
+        const scope = await getScope();
+        return useCases.listAssignableClinics().execute({
+          viewerId: actor.id,
+          viewerRole: actor.role.name,
+          scope,
+          subjectUserId: params.userId,
+          verticalId: query.verticalId ?? null,
+          mode: query.mode ?? "patch",
+          search: query.search ?? null,
+          page: query.page,
+          limit: query.limit,
+        } as never);
+      },
+      {
+        detail: {
+          summary:
+            "Clinics this rep could take — inside their patches, or anywhere with a reason (spec 0015 R6)",
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: t.Object({ userId: t.Number({ minimum: 1 }) }),
+        query: t.Object({
+          verticalId: t.Optional(t.Number({ minimum: 1 })),
+          mode: t.Optional(
+            t.Union([t.Literal("patch"), t.Literal("search")]),
+          ),
+          search: t.Optional(t.String()),
+          page: t.Optional(t.Number({ minimum: 1 })),
+          limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         }),
       },
     )

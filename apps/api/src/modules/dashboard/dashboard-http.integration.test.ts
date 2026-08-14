@@ -275,13 +275,48 @@ describe("team HTTP routes", () => {
     listTeamExecute = mock(async () => ({ data: [] })),
     repsExecute = mock(async () => ({ data: [] })),
     memberExecute = mock(async () => ({ userId: 5 })),
+    assignableExecute = mock(async () => ({ data: [] })),
   ): TeamHttpUseCases {
     return {
       listTeam: () => ({ execute: listTeamExecute }),
       getTeamMember: () => ({ execute: memberExecute }),
+      listAssignableClinics: () => ({ execute: assignableExecute }),
       listRepsWithoutPatch: () => ({ execute: repsExecute }),
     } as TeamHttpUseCases;
   }
+
+  it("defaults the assignable list to the rep's own patches", async () => {
+    // The door that needs no justification is the default; searching the whole
+    // vertical is the deliberate second step (spec 0015 R6).
+    const assignable = mock(async () => ({ data: [] }));
+    const response = await teamApp(
+      teamUseCases(undefined, undefined, undefined, assignable),
+    ).handle(
+      new Request(
+        "http://localhost/team/members/5/assignable-clinics?verticalId=1",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(assignable).toHaveBeenCalledWith(
+      expect.objectContaining({ subjectUserId: 5, mode: "patch" }),
+    );
+  });
+
+  it("carries the search term through the second door", async () => {
+    const assignable = mock(async () => ({ data: [] }));
+    await teamApp(
+      teamUseCases(undefined, undefined, undefined, assignable),
+    ).handle(
+      new Request(
+        "http://localhost/team/members/5/assignable-clinics?verticalId=1&mode=search&search=clinica",
+      ),
+    );
+
+    expect(assignable).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "search", search: "clinica" }),
+    );
+  });
 
   it("reads one member by id, in a linha", async () => {
     const member = mock(async () => ({ userId: 5 }));

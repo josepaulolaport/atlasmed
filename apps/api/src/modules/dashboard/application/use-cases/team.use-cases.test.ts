@@ -9,6 +9,7 @@ import type { DashboardDirectoryPort } from "../dashboard-query";
 import type { TeamMemberRow } from "../../infrastructure/repositories/drizzle-team.repository";
 import {
   GetTeamMemberUseCase,
+  ListAssignableClinicsUseCase,
   ListRepsWithoutPatchUseCase,
   ListTeamUseCase,
   type ListTeamRequest,
@@ -212,6 +213,127 @@ describe("member profile (spec 0015 §4)", () => {
     await expect(
       new GetTeamMemberUseCase(deps).execute(profileRequest(Role.MANAGER, 5)),
     ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+describe("assignable clinics (spec 0015 R6)", () => {
+  function assignableDeps(overrides: {
+    subjectRole?: string;
+    zoneIds?: number[];
+  }) {
+    const seen: Array<Record<string, unknown>> = [];
+    return {
+      seen,
+      deps: {
+        teamRepository: {
+          listAssignableClinics: async (input: Record<string, unknown>) => {
+            seen.push(input);
+            return { rows: [], total: 0 };
+          },
+        },
+        directory: {
+          findUser: async (id: number) => ({
+            userId: id,
+            roleName: overrides.subjectRole ?? Role.REP,
+          }),
+          findManagerZoneIds: async () => overrides.zoneIds ?? [11],
+          findManagedUserIds: async () => [],
+        },
+      } as unknown as ConstructorParameters<
+        typeof ListAssignableClinicsUseCase
+      >[0],
+    };
+  }
+
+  function assignableRequest(
+    role: string,
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      viewerId: 2,
+      viewerRole: role,
+      scope: withTerritoryScopeAliases({
+        ...createEmptyScopeContext(),
+        assignedVerticalIds: [1],
+        managedUserIds: [5],
+        isOperationallyActive: true,
+      }),
+      subjectUserId: 5,
+      verticalId: 1,
+      ...overrides,
+    } as Parameters<ListAssignableClinicsUseCase["execute"]>[0];
+  }
+
+  it("refuses a manager subject — only a rep holds clinics", async () => {
+    // An empty list would read as "none available", which is a different and
+    // wrong answer to "can this person take a clinic".
+    const { deps } = assignableDeps({ subjectRole: Role.MANAGER });
+    await expect(
+      new ListAssignableClinicsUseCase(deps).execute(
+        assignableRequest(Role.MANAGER),
+      ),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("refuses OPS — it reads everything and changes nothing", async () => {
+    const { deps } = assignableDeps({});
+    await expect(
+      new ListAssignableClinicsUseCase(deps).execute(
+        assignableRequest(Role.OPS),
+      ),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("refuses a manager a rep outside their zones", async () => {
+    const { deps } = assignableDeps({});
+    await expect(
+      new ListAssignableClinicsUseCase(deps).execute(
+        assignableRequest(Role.MANAGER, { subjectUserId: 99 }),
+      ),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("defaults to the patch door, scoped to the reader's ground", async () => {
+    const { deps, seen } = assignableDeps({ zoneIds: [11, 12] });
+    await new ListAssignableClinicsUseCase(deps).execute(
+      assignableRequest(Role.MANAGER),
+    );
+
+    expect(seen[0]).toMatchObject({
+      mode: "patch",
+      withinZoneIds: [11, 12],
+      userId: 5,
+    });
+  });
+
+  it("does not scan the linha for an empty search", async () => {
+    // Measured at ~770ms against 1.4k clinics with no term, ~30ms with one —
+    // and "every clinic in the linha" is not a list anyone asked for.
+    const { deps, seen } = assignableDeps({});
+    const result = await new ListAssignableClinicsUseCase(deps).execute(
+      assignableRequest(Role.MANAGER, { mode: "search", search: "   " }),
+    );
+
+    expect(result.data).toEqual([]);
+    expect(seen).toHaveLength(0);
+  });
+
+  it("searches once a term is given", async () => {
+    const { deps, seen } = assignableDeps({});
+    await new ListAssignableClinicsUseCase(deps).execute(
+      assignableRequest(Role.MANAGER, { mode: "search", search: "  clinica " }),
+    );
+
+    expect(seen[0]).toMatchObject({ mode: "search", search: "clinica" });
+  });
+
+  it("gives an admin the whole ground to assign from", async () => {
+    const { deps, seen } = assignableDeps({});
+    await new ListAssignableClinicsUseCase(deps).execute(
+      assignableRequest(Role.ADMIN, { viewerId: 1 }),
+    );
+
+    expect(seen[0]).toMatchObject({ withinZoneIds: null });
   });
 });
 
