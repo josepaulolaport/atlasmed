@@ -8,8 +8,20 @@ import {
 
 describe("purchase recurrence schedule provisioning", () => {
   test("defines one stable hourly UTC schedule without a fixed fullSweep input", () => {
-    expect(PURCHASE_RECURRENCE_SCHEDULES).toEqual([expect.objectContaining({ scheduleId: "facility-purchase-recurrence-hourly", workflowId: "facility-purchase-recurrence-hourly", overlap: "SKIP", calendar: { minute: 0 } })]);
+    expect(PURCHASE_RECURRENCE_SCHEDULES).toEqual([expect.objectContaining({ scheduleId: "facility-purchase-recurrence-hourly", workflowId: "facility-purchase-recurrence-hourly", overlap: "SKIP", calendar: { minute: 0, hour: "*" } })]);
     expect(PURCHASE_RECURRENCE_SCHEDULES[0]).not.toHaveProperty("fullSweep");
+  });
+
+  /**
+   * Asserting the calendar literal is what let this ship: `{ minute: 0 }` reads
+   * as "every hour on the hour" and matched the assertion happily, while
+   * Temporal resolved the omitted `hour` to 0 and ran it once a day at
+   * midnight. The bug lives in the field that *isn't* written, so the guard has
+   * to name it.
+   */
+  test("pins the hour explicitly, since an omitted field resolves to 0 rather than every hour", () => {
+    const [hourly] = PURCHASE_RECURRENCE_SCHEDULES;
+    expect(hourly?.calendar.hour).toBe("*");
   });
 
   test("deletes the legacy schedule and updates the canonical schedule", async () => {
