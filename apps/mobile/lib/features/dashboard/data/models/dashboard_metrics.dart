@@ -308,6 +308,72 @@ class TeamMemberMetrics {
   }
 }
 
+/// One person, as their profile reads them (spec 0015 §4).
+///
+/// Everything here is scoped to the reader: a manager sees the territories,
+/// clinics and overrides that fall inside their own zones, so this agrees with
+/// the roster row that opened it by construction.
+class TeamMemberProfile {
+  const TeamMemberProfile({
+    required this.userId,
+    required this.email,
+    required this.roleName,
+    required this.status,
+    required this.memberSince,
+    required this.territories,
+    required this.assignedClinicCount,
+    required this.outOfTerritoryCount,
+    this.name,
+    this.phoneNumber,
+    this.avatarUrl,
+  });
+
+  final int userId;
+  final String? name;
+  final String email;
+  final String? phoneNumber;
+  final String? avatarUrl;
+  final String roleName;
+  final String status;
+  final DateTime memberSince;
+  final List<({int id, String name})> territories;
+  final int assignedClinicCount;
+
+  /// Clinics they hold that no patch of theirs covers — spec 0009 R2's
+  /// override, reported for the first time.
+  final int outOfTerritoryCount;
+
+  String get displayName => (name?.trim().isNotEmpty ?? false) ? name! : email;
+
+  bool get isRep => roleName == 'REP';
+
+  factory TeamMemberProfile.fromJson(Map<String, dynamic> json) {
+    return TeamMemberProfile(
+      userId: readCrmId(json['userId'], 'userId'),
+      name: json['name'] as String?,
+      email: json['email'] as String? ?? '',
+      phoneNumber: json['phoneNumber'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+      roleName: json['roleName'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      memberSince:
+          DateTime.tryParse(json['memberSince'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      territories: (json['territories'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (t) => (
+              id: readCrmId(t['id'], 'id'),
+              name: t['name'] as String? ?? '',
+            ),
+          )
+          .toList(growable: false),
+      assignedClinicCount: _readInt(json['assignedClinicCount']),
+      outOfTerritoryCount: _readInt(json['outOfTerritoryCount']),
+    );
+  }
+}
+
 /// A row of the Equipe roster (spec 0014 §6).
 class TeamMember {
   const TeamMember({

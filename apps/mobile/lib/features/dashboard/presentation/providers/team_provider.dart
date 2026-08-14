@@ -54,6 +54,33 @@ final teamProvider = Provider.autoDispose
       return repository;
     });
 
+/// One member's profile, keyed by (linha, pessoa).
+class TeamMemberArgs {
+  const TeamMemberArgs({required this.verticalId, required this.userId});
+
+  final int verticalId;
+  final int userId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TeamMemberArgs &&
+      other.verticalId == verticalId &&
+      other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(verticalId, userId);
+}
+
+final teamMemberProvider = Provider.autoDispose
+    .family<Repository<TeamMemberProfile>, TeamMemberArgs>((ref, args) {
+      final repository = teamMemberRepository(
+        verticalId: args.verticalId,
+        userId: args.userId,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
 final repsWithoutPatchProvider =
     Provider.autoDispose<Repository<List<TeamMember>>>((ref) {
       final repository = RepsWithoutPatchRepository();

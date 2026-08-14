@@ -117,6 +117,17 @@ DashboardMetricRepository<DashboardClinicPage> metricClinicsRepository({
   extraQuery: {'page': '$page', 'limit': '$limit'},
 );
 
+/// One member's profile (spec 0015 §4). Scoped server-side to the reader's
+/// zones, so it agrees with the roster row that opened it.
+DashboardMetricRepository<TeamMemberProfile> teamMemberRepository({
+  required int verticalId,
+  required int userId,
+}) => DashboardMetricRepository(
+  path: '/team/members/$userId',
+  args: DashboardScopeArgs(verticalId: verticalId),
+  parse: TeamMemberProfile.fromJson,
+);
+
 /// The Equipe roster. `sortBy` is what turns it into a leaderboard — the API
 /// computes only that metric per member (spec 0014 §6).
 DashboardMetricRepository<List<TeamMember>> teamRepository({

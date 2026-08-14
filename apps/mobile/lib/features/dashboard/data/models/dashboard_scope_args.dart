@@ -13,6 +13,7 @@ class DashboardScopeArgs {
   const DashboardScopeArgs({
     required this.verticalId,
     this.subjectUserId,
+    this.withinManagerId,
     this.unitTypeIds = const [],
     this.managerIds = const [],
     this.repIds = const [],
@@ -24,6 +25,13 @@ class DashboardScopeArgs {
 
   /// Whose desempenho — null means the signed-in user's own (spec 0014 §2).
   final int? subjectUserId;
+
+  /// Spec 0015 R2: the manager's team this subject was reached through, so an
+  /// admin's drill-down reads the same population the roster row showed.
+  ///
+  /// Structural rather than a filter — [cleared] keeps it, because "limpar
+  /// filtros" must not silently widen whose numbers are on screen.
+  final int? withinManagerId;
 
   final List<int> unitTypeIds;
   final List<int> managerIds;
@@ -60,6 +68,7 @@ class DashboardScopeArgs {
       subjectUserId: clearSubject
           ? null
           : (subjectUserId ?? this.subjectUserId),
+      withinManagerId: clearSubject ? null : withinManagerId,
       unitTypeIds: unitTypeIds ?? this.unitTypeIds,
       managerIds: managerIds ?? this.managerIds,
       repIds: repIds ?? this.repIds,
@@ -70,14 +79,18 @@ class DashboardScopeArgs {
 
   /// Clears every filter but keeps the linha and the subject — "limpar filtros"
   /// must not silently change whose numbers are on screen.
-  DashboardScopeArgs cleared() =>
-      DashboardScopeArgs(verticalId: verticalId, subjectUserId: subjectUserId);
+  DashboardScopeArgs cleared() => DashboardScopeArgs(
+    verticalId: verticalId,
+    subjectUserId: subjectUserId,
+    withinManagerId: withinManagerId,
+  );
 
   static String _csv(List<int> ids) => ids.join(',');
 
   Map<String, String> toQuery() => {
     'verticalId': '$verticalId',
     if (subjectUserId != null) 'subjectUserId': '$subjectUserId',
+    if (withinManagerId != null) 'withinManagerId': '$withinManagerId',
     if (unitTypeIds.isNotEmpty) 'unitTypeIds': _csv(unitTypeIds),
     if (managerIds.isNotEmpty) 'managerIds': _csv(managerIds),
     if (repIds.isNotEmpty) 'repIds': _csv(repIds),
@@ -98,6 +111,7 @@ class DashboardScopeArgs {
       other is DashboardScopeArgs &&
       other.verticalId == verticalId &&
       other.subjectUserId == subjectUserId &&
+      other.withinManagerId == withinManagerId &&
       _sameIds(other.unitTypeIds, unitTypeIds) &&
       _sameIds(other.managerIds, managerIds) &&
       _sameIds(other.repIds, repIds) &&
@@ -111,6 +125,7 @@ class DashboardScopeArgs {
   int get hashCode => Object.hash(
     verticalId,
     subjectUserId,
+    withinManagerId,
     Object.hashAll(unitTypeIds),
     Object.hashAll(managerIds),
     Object.hashAll(repIds),

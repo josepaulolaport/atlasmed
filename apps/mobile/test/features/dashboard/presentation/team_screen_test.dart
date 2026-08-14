@@ -160,17 +160,19 @@ void main() {
     expect(find.textContaining('corresponde a "zzz"'), findsOneWidget);
   });
 
-  testWidgets('a manager row offers the person and the team separately', (
-    tester,
-  ) async {
+  testWidgets('every row leads to one place — that person', (tester) async {
     await _pump(tester, [
       _member(userId: 2, name: 'Silvio', role: 'MANAGER', clinics: 1134),
     ], role: UserRoleName.admin);
 
-    // Tapping the row used to open the manager's *team*, which left their own
-    // Desempenho behind a second icon and made a row mean two things by role.
-    // Now the row is the person and the team has the control.
-    expect(find.byIcon(Icons.groups_rounded), findsOneWidget);
+    // A manager row used to open the manager's *team*, so "tap a person" meant
+    // two different things depending on the viewer's role, and the manager's
+    // own numbers needed a second icon. Spec 0015 §4 makes the row the person's
+    // profile, with their team as a card inside it — so neither extra control
+    // belongs on the row any more.
+    expect(find.byIcon(Icons.groups_rounded), findsNothing);
     expect(find.byIcon(Icons.insights_rounded), findsNothing);
+    // The exception band has its own chevron, so the row's is the second.
+    expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(2));
   });
 }

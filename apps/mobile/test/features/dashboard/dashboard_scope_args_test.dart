@@ -237,21 +237,78 @@ void main() {
       container.read(dashboardSelectedVerticalIdProvider.notifier).state = 1;
 
       expect(
-        container.read(dashboardScopeArgsProvider(null))!.subjectUserId,
+        container
+            .read(dashboardScopeArgsProvider(const DashboardSubjectKey()))!
+            .subjectUserId,
         isNull,
       );
-      expect(container.read(dashboardScopeArgsProvider(7))!.subjectUserId, 7);
+      expect(
+        container
+            .read(
+              dashboardScopeArgsProvider(
+                const DashboardSubjectKey(subjectUserId: 7),
+              ),
+            )!
+            .subjectUserId,
+        7,
+      );
       // Reading the subject's scope must not have changed the viewer's own.
       expect(
-        container.read(dashboardScopeArgsProvider(null))!.subjectUserId,
+        container
+            .read(dashboardScopeArgsProvider(const DashboardSubjectKey()))!
+            .subjectUserId,
         isNull,
       );
+    });
+
+    test('the same rep through two managers is two populations', () {
+      // Spec 0015 R2: an admin can reach one rep from either manager's team,
+      // and each shows only that manager's share. Sharing a cache entry would
+      // make the second read answer with the first manager's numbers.
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(dashboardSelectedVerticalIdProvider.notifier).state = 1;
+
+      final viaOne = container.read(
+        dashboardScopeArgsProvider(
+          const DashboardSubjectKey(subjectUserId: 5, withinManagerId: 2),
+        ),
+      )!;
+      final viaTwo = container.read(
+        dashboardScopeArgsProvider(
+          const DashboardSubjectKey(subjectUserId: 5, withinManagerId: 3),
+        ),
+      )!;
+
+      expect(viaOne.withinManagerId, 2);
+      expect(viaTwo.withinManagerId, 3);
+      expect(viaOne == viaTwo, isFalse);
+      expect(viaOne.toQuery()['withinManagerId'], '2');
+    });
+
+    test('clearing filters keeps which share of a person is on screen', () {
+      // "Limpar filtros" must not widen the population. The manager context is
+      // structural, not a filter chip.
+      const args = DashboardScopeArgs(
+        verticalId: 1,
+        subjectUserId: 5,
+        withinManagerId: 2,
+        stateIds: [35],
+      );
+
+      final cleared = args.cleared();
+      expect(cleared.withinManagerId, 2);
+      expect(cleared.subjectUserId, 5);
+      expect(cleared.stateIds, isEmpty);
     });
 
     test('no linha, no scope — a metric has no correct answer yet', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      expect(container.read(dashboardScopeArgsProvider(null)), isNull);
+      expect(
+        container.read(dashboardScopeArgsProvider(const DashboardSubjectKey())),
+        isNull,
+      );
     });
   });
 }

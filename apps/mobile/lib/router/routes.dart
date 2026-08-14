@@ -21,6 +21,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_sco
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_member_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -506,10 +507,17 @@ class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
     required this.subjectUserId,
     @TypedQueryParameter(name: 'subjectName') this.subjectName,
     @TypedQueryParameter(name: 'subjectRole') this.subjectRole,
+    @TypedQueryParameter(name: 'withinManagerId') this.withinManagerId,
   });
 
   final int subjectUserId;
   final String? subjectName;
+
+  /// Spec 0015 R2: the manager's team this subject was reached through, so an
+  /// admin's drill-down reads the population the roster row showed. A manager's
+  /// own constraint is derived server-side from their identity, so this is
+  /// never how a manager's scope is decided.
+  final int? withinManagerId;
 
   /// Carried so the screen knows which cards the *subject* may be asked about —
   /// "Clínicas não atribuídas" is a zone question and a rep holds no zones.
@@ -523,11 +531,41 @@ class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
       subjectUserId: subjectUserId,
       subjectName: subjectName,
       subjectRole: subjectRole,
+      withinManagerId: withinManagerId,
     );
   }
 }
 
-/// One manager's team, from the ADMIN roster (spec 0014 §6).
+/// One person, in full (spec 0015 §4) — what a roster row opens onto.
+@TypedGoRoute<TeamMemberProfileRoute>(path: '/team/profile/:userId')
+class TeamMemberProfileRoute extends GoRouteData with $TeamMemberProfileRoute {
+  const TeamMemberProfileRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+    @TypedQueryParameter(name: 'viaManagerId') this.viaManagerId,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  /// The manager whose team this person was reached through (spec 0015 R2).
+  /// Only meaningful for an admin — a manager's own scope is derived from their
+  /// identity server-side and cannot be widened from here.
+  final int? viaManagerId;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return TeamMemberScreen(
+      userId: userId,
+      memberName: memberName,
+      viaManagerId: viaManagerId,
+    );
+  }
+}
+
+/// One manager.s team, from the ADMIN roster (spec 0014 §6).
 @TypedGoRoute<TeamMemberRoute>(path: '/team/manager/:managerId')
 class TeamMemberRoute extends GoRouteData with $TeamMemberRoute {
   const TeamMemberRoute({

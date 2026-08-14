@@ -22,6 +22,23 @@ final dashboardVerticalOptionsProvider = FutureProvider<List<BusinessVertical>>(
   (ref) => ref.watch(currentUserFacilityVerticalOptionsProvider.future),
 );
 
+/// Who a dashboard is about, and through whose team they were reached.
+class DashboardSubjectKey {
+  const DashboardSubjectKey({this.subjectUserId, this.withinManagerId});
+
+  final int? subjectUserId;
+  final int? withinManagerId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DashboardSubjectKey &&
+      other.subjectUserId == subjectUserId &&
+      other.withinManagerId == withinManagerId;
+
+  @override
+  int get hashCode => Object.hash(subjectUserId, withinManagerId);
+}
+
 /// The scope every metric request shares. Null until a linha is known — no
 /// metric may be fetched before then, because there is no correct answer.
 ///
@@ -31,24 +48,27 @@ final dashboardVerticalOptionsProvider = FutureProvider<List<BusinessVertical>>(
 /// screen is *pushed over* the dashboard tab: a global would still hold the
 /// other person's id after the push was popped, and the viewer's own tab would
 /// go on showing that person's numbers under the heading "Desempenho".
-final dashboardScopeArgsProvider = Provider.family<DashboardScopeArgs?, int?>((
-  ref,
-  subjectUserId,
-) {
-  final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
-  if (verticalId == null) return null;
+///
+/// The key carries `withinManagerId` alongside the subject (spec 0015 R2): an
+/// admin can open the same rep through two different managers, and those are
+/// two different populations, so they must not share a cache entry.
+final dashboardScopeArgsProvider =
+    Provider.family<DashboardScopeArgs?, DashboardSubjectKey>((ref, key) {
+      final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
+      if (verticalId == null) return null;
 
-  final filters = ref.watch(dashboardFiltersProvider);
-  return DashboardScopeArgs(
-    verticalId: verticalId,
-    subjectUserId: subjectUserId,
-    unitTypeIds: filters?.unitTypeIds ?? const [],
-    managerIds: filters?.managerIds ?? const [],
-    repIds: filters?.repIds ?? const [],
-    stateIds: filters?.stateIds ?? const [],
-    municipalityIds: filters?.municipalityIds ?? const [],
-  );
-});
+      final filters = ref.watch(dashboardFiltersProvider);
+      return DashboardScopeArgs(
+        verticalId: verticalId,
+        subjectUserId: key.subjectUserId,
+        withinManagerId: key.withinManagerId,
+        unitTypeIds: filters?.unitTypeIds ?? const [],
+        managerIds: filters?.managerIds ?? const [],
+        repIds: filters?.repIds ?? const [],
+        stateIds: filters?.stateIds ?? const [],
+        municipalityIds: filters?.municipalityIds ?? const [],
+      );
+    });
 
 /// One autodisposing repository per (metric, scope) so a filter change starts a
 /// fresh request and the old one is torn down rather than raced.

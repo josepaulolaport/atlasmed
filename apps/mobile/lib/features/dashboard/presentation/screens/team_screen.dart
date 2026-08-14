@@ -166,6 +166,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                   sortBy: _sortBy,
                   peakClinics: peak,
                   isManagerRoster: isManagerRoster,
+                  viaManagerId: widget.managerId,
                 );
               },
             );
@@ -651,6 +652,7 @@ class _MemberTile extends StatelessWidget {
     required this.sortBy,
     required this.peakClinics,
     required this.isManagerRoster,
+    required this.viaManagerId,
   });
 
   final TeamMember member;
@@ -666,6 +668,10 @@ class _MemberTile extends StatelessWidget {
 
   final bool isManagerRoster;
 
+  /// Spec 0015 R2: on a drill-down the rows belong to that manager, and the
+  /// profile carries the context so its Desempenho reads the same population.
+  final int? viaManagerId;
+
   /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
   /// the same bordered row, 44px rounded avatar, 15/w600 title and icon-led
   /// 11px meta. Two lists of people in one app should not look like they came
@@ -676,14 +682,14 @@ class _MemberTile extends StatelessWidget {
     final metrics = member.metrics;
 
     return InkWell(
-      // One destination per row, always the same one: this person. The manager
-      // row used to open a *different* roster, which made "tap a person" mean
-      // two things depending on who you were — the team is now reached by its
-      // own control on the right.
-      onTap: () => SubjectDashboardRoute(
-        subjectUserId: member.userId,
-        subjectName: member.displayName,
-        subjectRole: member.roleName,
+      // One destination per row, always the same one: this person's profile.
+      // The manager row used to open a *different* roster, which made "tap a
+      // person" mean two things depending on who you were. The team is now a
+      // card inside the profile, so the second control is gone too.
+      onTap: () => TeamMemberProfileRoute(
+        userId: member.userId,
+        memberName: member.displayName,
+        viaManagerId: viaManagerId,
       ).push(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -798,40 +804,14 @@ class _MemberTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // A manager's roster is a second destination, and one row cannot
-            // mean two things — so the team gets its own control and the row
-            // keeps meaning "this person".
-            if (isManagerRoster && member.roleName == 'MANAGER')
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  tooltip: 'Ver equipe de ${member.displayName}',
-                  icon: const Icon(
-                    Icons.groups_rounded,
-                    size: 19,
-                    color: AppColors.navyBright,
-                  ),
-                  onPressed: () => TeamMemberRoute(
-                    managerId: member.userId,
-                    managerName: member.displayName,
-                  ).push(context),
-                ),
-              )
-            else
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.gray500,
-                ),
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.gray500,
               ),
+            ),
           ],
         ),
       ),

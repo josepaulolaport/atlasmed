@@ -25,11 +25,16 @@ class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({
     super.key,
     this.subjectUserId,
+    this.withinManagerId,
     this.subjectName,
     this.subjectRole,
   });
 
   final int? subjectUserId;
+
+  /// Spec 0015 R2 — the team this subject was reached through, so the numbers
+  /// match the roster row that opened this screen.
+  final int? withinManagerId;
   final String? subjectName;
 
   /// The subject's role, when the screen was opened from a roster that knew it.
@@ -79,7 +84,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final optionsAsync = ref.watch(dashboardVerticalOptionsProvider);
     final selectedVerticalId = ref.watch(dashboardSelectedVerticalIdProvider);
-    final scope = ref.watch(dashboardScopeArgsProvider(widget.subjectUserId));
+    final scope = ref.watch(
+      dashboardScopeArgsProvider(
+        DashboardSubjectKey(
+          subjectUserId: widget.subjectUserId,
+          withinManagerId: widget.withinManagerId,
+        ),
+      ),
+    );
     // Clínicas não atribuídas is a manager question: a rep holds no zones, so
     // the API refuses it rather than answering a reassuring 0.
     //

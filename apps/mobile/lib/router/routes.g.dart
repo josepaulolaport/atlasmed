@@ -14,6 +14,7 @@ List<RouteBase> get $appRoutes => [
   $agendaEditRoute,
   $agendaOccurrenceEditRoute,
   $subjectDashboardRoute,
+  $teamMemberProfileRoute,
   $teamMemberRoute,
   $repsWithoutPatchRoute,
   $metricClinicsRoute,
@@ -736,6 +737,11 @@ mixin $SubjectDashboardRoute on GoRouteData {
         subjectUserId: int.parse(state.pathParameters['subjectUserId']!),
         subjectName: state.uri.queryParameters['subjectName'],
         subjectRole: state.uri.queryParameters['subjectRole'],
+        withinManagerId: _$convertMapValue(
+          'withinManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
       );
 
   SubjectDashboardRoute get _self => this as SubjectDashboardRoute;
@@ -746,6 +752,62 @@ mixin $SubjectDashboardRoute on GoRouteData {
     queryParams: {
       if (_self.subjectName != null) 'subjectName': _self.subjectName,
       if (_self.subjectRole != null) 'subjectRole': _self.subjectRole,
+      if (_self.withinManagerId != null)
+        'withinManagerId': _self.withinManagerId!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+RouteBase get $teamMemberProfileRoute => GoRouteData.$route(
+  path: '/team/profile/:userId',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: TeamMemberProfileRoute.$parentNavigatorKey,
+  factory: $TeamMemberProfileRoute._fromState,
+);
+
+mixin $TeamMemberProfileRoute on GoRouteData {
+  static TeamMemberProfileRoute _fromState(GoRouterState state) =>
+      TeamMemberProfileRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+        viaManagerId: _$convertMapValue(
+          'viaManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+      );
+
+  TeamMemberProfileRoute get _self => this as TeamMemberProfileRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}',
+    queryParams: {
+      if (_self.memberName != null) 'memberName': _self.memberName,
+      if (_self.viaManagerId != null)
+        'viaManagerId': _self.viaManagerId!.toString(),
     },
   );
 
@@ -882,15 +944,6 @@ mixin $MetricClinicsRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 RouteBase get $purchaseBucketFacilitiesRoute => GoRouteData.$route(
