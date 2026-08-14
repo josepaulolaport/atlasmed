@@ -149,8 +149,13 @@ class _Profile extends ConsumerWidget {
                   verticalId: verticalId,
                   subjectUserId: member.userId,
                   withinManagerId: viaManagerId,
-                  manageForUserId: member.userId,
-                  manageForName: member.displayName,
+                  // Only a rep's list is actionable. A manager's clinics are
+                  // derived from geometry — nothing is assigned *to* them — so
+                  // "desassociar" there would end some rep's assignment under
+                  // the manager's name. A manager loses clinics by their zone
+                  // changing, which is the map's job, not a menu's.
+                  manageForUserId: member.isRep ? member.userId : null,
+                  manageForName: member.isRep ? member.displayName : null,
                 ).push(context),
         ),
         // Only a rep can hold a clinic, so a manager's profile has nothing to

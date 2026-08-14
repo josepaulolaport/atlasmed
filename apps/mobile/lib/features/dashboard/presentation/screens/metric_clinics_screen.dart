@@ -51,7 +51,11 @@ class MetricClinicsScreen extends ConsumerStatefulWidget {
 
 class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
   int _page = 1;
-  final _assignments = ClinicAssignmentRepository();
+
+  /// Built on first use. A read-only breakdown never mutates anything, and
+  /// constructing the client eagerly starts an HTTP stack the screen may have
+  /// no use for.
+  late final _assignments = ClinicAssignmentRepository();
 
   Future<void> _dissociate(
     DashboardClinicRow row,
@@ -173,44 +177,154 @@ class _ClinicTile extends StatelessWidget {
   final String? manageForName;
   final VoidCallback? onDissociate;
 
+  /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
+  /// the same bordered row, 44px rounded icon tile, 15/w600 title and icon-led
+  /// meta. Two lists of clinics in one app should not look like they came from
+  /// different products.
   @override
   Widget build(BuildContext context) {
-    final subtitle = [
-      row.locationLabel,
-      if (row.repName != null) row.repName!,
-    ].where((s) => s.isNotEmpty).join(' · ');
-
     void open() => ClinicDetailRoute(
       id: row.facilityId,
       verticalId: verticalId,
     ).push(context);
 
-    return ListTile(
-      title: Text(row.name),
-      subtitle: subtitle.isEmpty ? null : Text(subtitle),
-      // An overflow menu rather than a swipe: discoverable, and it does not
-      // fight the list's own scrolling.
-      trailing: onDissociate == null
-          ? const Icon(Icons.chevron_right_rounded)
-          : PopupMenuButton<String>(
-              icon: const Icon(Icons.more_horiz_rounded),
-              onSelected: (value) {
-                if (value == 'open') open();
-                if (value == 'dissociate') onDissociate!();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'open', child: Text('Ver clínica')),
-                PopupMenuItem(
-                  value: 'dissociate',
-                  child: Text(
-                    manageForName == null
-                        ? 'Desassociar'
-                        : 'Desassociar de $manageForName',
-                  ),
-                ),
-              ],
-            ),
+    return InkWell(
       onTap: open,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.blue100, AppColors.blueLight],
+                ),
+              ),
+              child: const Icon(
+                Icons.local_hospital_rounded,
+                size: 22,
+                color: AppColors.navyBright,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (row.locationLabel.isNotEmpty)
+                        _RowMeta(
+                          icon: Icons.place_outlined,
+                          text: row.locationLabel,
+                        ),
+                      if (row.repName != null)
+                        _RowMeta(
+                          icon: Icons.person_outline_rounded,
+                          text: row.repName!,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // An overflow menu rather than a swipe: discoverable, and it does
+            // not fight the list's own scrolling.
+            if (onDissociate == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
+                ),
+              )
+            else
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_horiz_rounded,
+                  size: 20,
+                  color: AppColors.gray500,
+                ),
+                onSelected: (value) {
+                  if (value == 'open') open();
+                  if (value == 'dissociate') onDissociate!();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'open',
+                    child: Text('Ver clínica'),
+                  ),
+                  PopupMenuItem(
+                    value: 'dissociate',
+                    child: Text(
+                      manageForName == null
+                          ? 'Desassociar'
+                          : 'Desassociar de $manageForName',
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One icon-led fact under a clinic's name — the shape Explorar's rows use.
+class _RowMeta extends StatelessWidget {
+  const _RowMeta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: AppColors.gray500),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.gray500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
