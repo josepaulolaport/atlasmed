@@ -27,8 +27,12 @@ import {
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
+import {
+  FACILITY_CANDIDATE_SETTINGS,
+  facilityCandidatePages,
+} from "./facility-candidates";
 
-export type SearchSyncTarget = "facilities" | "persons";
+export type SearchSyncTarget = "facilities" | "persons" | "facility_candidates";
 
 /** Re-export shared Meili facility document helpers (SoT: @atlasmed/facility-insights). */
 export {
@@ -704,6 +708,18 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
   }
 }
 
+function settingsFor(target: SearchSyncTarget): Record<string, unknown> {
+  if (target === "facilities") return FACILITY_SETTINGS;
+  if (target === "persons") return PERSON_SETTINGS;
+  return FACILITY_CANDIDATE_SETTINGS;
+}
+
+function pagesFor(target: SearchSyncTarget) {
+  if (target === "facilities") return facilityPages();
+  if (target === "persons") return personPages();
+  return facilityCandidatePages();
+}
+
 export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<void> {
   const temporaryIndex = `${target}__rebuild_${crypto.randomUUID().replaceAll("-", "")}`;
 
@@ -711,7 +727,7 @@ export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<
     target,
     temporaryIndex,
     search: createSearchClient(),
-    settings: target === "facilities" ? FACILITY_SETTINGS : PERSON_SETTINGS,
-    pages: target === "facilities" ? facilityPages() : personPages(),
+    settings: settingsFor(target),
+    pages: pagesFor(target),
   });
 }

@@ -6,6 +6,7 @@ import { ordersUseCases } from "../../../orders/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroDocumentsRoute } from "./cadastro-documents.route";
+import { createCnesFacilityImportRoutes } from "./cnes-facility-import.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 
@@ -950,6 +951,8 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  // Same reason: `cnes-candidates` must not be captured as a facility id.
+  .use(createCnesFacilityImportRoutes())
   .use(listFacilityUnitTypesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
