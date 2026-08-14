@@ -20,7 +20,9 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/out_of_territory_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/assign_clinic_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_member_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
@@ -536,6 +538,47 @@ class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
   }
 }
 
+/// Giving a rep a clinic (spec 0015 R6) — inside their patch, or anywhere with
+/// a reason.
+@TypedGoRoute<AssignClinicRoute>(path: '/team/profile/:userId/assign-clinic')
+class AssignClinicRoute extends GoRouteData with $AssignClinicRoute {
+  const AssignClinicRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return AssignClinicScreen(userId: userId, memberName: memberName);
+  }
+}
+
+/// Clinics a rep holds outside their patches (spec 0009 R2 / 0015 §4.2).
+@TypedGoRoute<OutOfTerritoryRoute>(
+  path: '/team/profile/:userId/out-of-territory',
+)
+class OutOfTerritoryRoute extends GoRouteData with $OutOfTerritoryRoute {
+  const OutOfTerritoryRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return OutOfTerritoryScreen(userId: userId, memberName: memberName);
+  }
+}
+
 /// One person, in full (spec 0015 §4) — what a roster row opens onto.
 @TypedGoRoute<TeamMemberProfileRoute>(path: '/team/profile/:userId')
 class TeamMemberProfileRoute extends GoRouteData with $TeamMemberProfileRoute {
@@ -611,11 +654,22 @@ class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
     @TypedQueryParameter(name: 'repIds') this.repIds,
     @TypedQueryParameter(name: 'stateIds') this.stateIds,
     @TypedQueryParameter(name: 'municipalityIds') this.municipalityIds,
+    @TypedQueryParameter(name: 'withinManagerId') this.withinManagerId,
+    @TypedQueryParameter(name: 'manageForUserId') this.manageForUserId,
+    @TypedQueryParameter(name: 'manageForName') this.manageForName,
   });
 
   final String metric;
   final int verticalId;
   final int? subjectUserId;
+
+  /// Spec 0015 R2 — carried so a drilled-in list reads the same population.
+  final int? withinManagerId;
+
+  /// Spec 0015 §4.2: set when the list is one person's caseload, which is what
+  /// makes the rows actionable.
+  final int? manageForUserId;
+  final String? manageForName;
 
   /// Comma-separated ids. Strings rather than `List<int>` because go_router's
   /// generator would encode a list as repeated `?stateIds=33&stateIds=35`,
@@ -641,9 +695,12 @@ class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
   Widget build(BuildContext context, GoRouterState state) {
     return MetricClinicsScreen(
       metric: metric,
+      manageForUserId: manageForUserId,
+      manageForName: manageForName,
       scope: DashboardScopeArgs(
         verticalId: verticalId,
         subjectUserId: subjectUserId,
+        withinManagerId: withinManagerId,
         unitTypeIds: _ids(unitTypeIds),
         managerIds: _ids(managerIds),
         repIds: _ids(repIds),

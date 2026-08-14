@@ -14,6 +14,8 @@ List<RouteBase> get $appRoutes => [
   $agendaEditRoute,
   $agendaOccurrenceEditRoute,
   $subjectDashboardRoute,
+  $assignClinicRoute,
+  $outOfTerritoryRoute,
   $teamMemberProfileRoute,
   $teamMemberRoute,
   $repsWithoutPatchRoute,
@@ -780,6 +782,77 @@ T? _$convertMapValue<T>(
   return value == null ? null : converter(value);
 }
 
+RouteBase get $assignClinicRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/assign-clinic',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AssignClinicRoute.$parentNavigatorKey,
+  factory: $AssignClinicRoute._fromState,
+);
+
+mixin $AssignClinicRoute on GoRouteData {
+  static AssignClinicRoute _fromState(GoRouterState state) => AssignClinicRoute(
+    userId: int.parse(state.pathParameters['userId']!),
+    memberName: state.uri.queryParameters['memberName'],
+  );
+
+  AssignClinicRoute get _self => this as AssignClinicRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/assign-clinic',
+    queryParams: {if (_self.memberName != null) 'memberName': _self.memberName},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $outOfTerritoryRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/out-of-territory',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: OutOfTerritoryRoute.$parentNavigatorKey,
+  factory: $OutOfTerritoryRoute._fromState,
+);
+
+mixin $OutOfTerritoryRoute on GoRouteData {
+  static OutOfTerritoryRoute _fromState(GoRouterState state) =>
+      OutOfTerritoryRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+      );
+
+  OutOfTerritoryRoute get _self => this as OutOfTerritoryRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/out-of-territory',
+    queryParams: {if (_self.memberName != null) 'memberName': _self.memberName},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 RouteBase get $teamMemberProfileRoute => GoRouteData.$route(
   path: '/team/profile/:userId',
   hasOverriddenOnExit: false,
@@ -912,6 +985,17 @@ mixin $MetricClinicsRoute on GoRouteData {
         repIds: state.uri.queryParameters['repIds'],
         stateIds: state.uri.queryParameters['stateIds'],
         municipalityIds: state.uri.queryParameters['municipalityIds'],
+        withinManagerId: _$convertMapValue(
+          'withinManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        manageForUserId: _$convertMapValue(
+          'manageForUserId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        manageForName: state.uri.queryParameters['manageForName'],
       );
 
   MetricClinicsRoute get _self => this as MetricClinicsRoute;
@@ -929,6 +1013,11 @@ mixin $MetricClinicsRoute on GoRouteData {
       if (_self.stateIds != null) 'stateIds': _self.stateIds,
       if (_self.municipalityIds != null)
         'municipalityIds': _self.municipalityIds,
+      if (_self.withinManagerId != null)
+        'withinManagerId': _self.withinManagerId!.toString(),
+      if (_self.manageForUserId != null)
+        'manageForUserId': _self.manageForUserId!.toString(),
+      if (_self.manageForName != null) 'manageForName': _self.manageForName,
     },
   );
 

@@ -56,7 +56,11 @@ class TeamMemberScreen extends ConsumerWidget {
             if (member == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            return _Profile(member: member, viaManagerId: viaManagerId);
+            return _Profile(
+              member: member,
+              viaManagerId: viaManagerId,
+              verticalId: verticalId,
+            );
           },
         ),
       ),
@@ -65,10 +69,15 @@ class TeamMemberScreen extends ConsumerWidget {
 }
 
 class _Profile extends ConsumerWidget {
-  const _Profile({required this.member, required this.viaManagerId});
+  const _Profile({
+    required this.member,
+    required this.viaManagerId,
+    required this.verticalId,
+  });
 
   final TeamMemberProfile member;
   final int? viaManagerId;
+  final int verticalId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,6 +88,9 @@ class _Profile extends ConsumerWidget {
     final showsTeam =
         !member.isRep &&
         (role == UserRoleName.admin || role == UserRoleName.ops);
+    // Spec 0015 R3: OPS reads everything and changes nothing.
+    final canAssign =
+        role == UserRoleName.admin || role == UserRoleName.manager;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -120,8 +132,31 @@ class _Profile extends ConsumerWidget {
           subtitle: member.assignedClinicCount == 0
               ? 'Nenhuma clínica nesta área'
               : 'Ver e gerenciar as clínicas desta pessoa',
-          onTap: member.assignedClinicCount == 0 ? null : () {},
+          onTap: member.assignedClinicCount == 0
+              ? null
+              : () => MetricClinicsRoute(
+                  metric: 'assigned-clinics',
+                  verticalId: verticalId,
+                  subjectUserId: member.userId,
+                  withinManagerId: viaManagerId,
+                  manageForUserId: member.userId,
+                  manageForName: member.displayName,
+                ).push(context),
         ),
+        // Only a rep can hold a clinic, so a manager's profile has nothing to
+        // assign — their reps do, one level down.
+        if (member.isRep && canAssign) ...[
+          const SizedBox(height: 10),
+          _LinkCard(
+            icon: Icons.add_location_alt_outlined,
+            title: 'Associar nova clínica',
+            subtitle: 'Livres no território, ou fora dele com justificativa',
+            onTap: () => AssignClinicRoute(
+              userId: member.userId,
+              memberName: member.displayName,
+            ).push(context),
+          ),
+        ],
         // Spec 0009 R2 promised this report and nothing ever showed it. Absent
         // when there are none, because "0 fora do território" is a sentence
         // about a problem that does not exist.
@@ -133,7 +168,10 @@ class _Profile extends ConsumerWidget {
             title: 'Clínicas fora do território',
             trailing: '${member.outOfTerritoryCount}',
             subtitle: 'Atribuídas com justificativa, fora dos patches',
-            onTap: () {},
+            onTap: () => OutOfTerritoryRoute(
+              userId: member.userId,
+              memberName: member.displayName,
+            ).push(context),
           ),
         ],
         if (showsTeam) ...[
