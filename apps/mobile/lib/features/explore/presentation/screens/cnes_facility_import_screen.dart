@@ -133,23 +133,23 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        foregroundColor: AppColors.gray900,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
         title: const Text(
           'Buscar no CNES',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppColors.gray900,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
             child: TextField(
               controller: _controller,
               onChanged: _onChanged,
@@ -178,11 +178,15 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.gray200),
+                  borderSide: const BorderSide(
+                    color: AppColors.surfaceSecondary,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.gray200),
+                  borderSide: const BorderSide(
+                    color: AppColors.surfaceSecondary,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -191,7 +195,12 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
               ),
             ),
           ),
-          if (_loading) const LinearProgressIndicator(),
+          const Divider(height: 1, color: AppColors.surfaceSecondary),
+          if (_loading)
+            const LinearProgressIndicator(
+              minHeight: 2,
+              backgroundColor: AppColors.surfaceSecondary,
+            ),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -217,9 +226,9 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final candidate = _results[index];
         return Material(
@@ -482,21 +491,19 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     final preview = _preview;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        foregroundColor: AppColors.gray900,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.candidate.name,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.gray900,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             Text(
               preview == null
@@ -582,7 +589,7 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.gray200),
+          border: Border.all(color: AppColors.surfaceSecondary),
         ),
         child: const Text(
           'Esta clínica já está cadastrada na AtlasMed, mas não aparece para a '
@@ -628,11 +635,11 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.gray200),
+            borderSide: const BorderSide(color: AppColors.surfaceSecondary),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.gray200),
+            borderSide: const BorderSide(color: AppColors.surfaceSecondary),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -656,7 +663,7 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.gray200),
+          border: Border.all(color: AppColors.surfaceSecondary),
         ),
         child: Column(
           children: [
@@ -771,9 +778,9 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.red.withValues(alpha: 0.08),
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.red.withValues(alpha: 0.35)),
+        border: Border.all(color: AppColors.red100),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
