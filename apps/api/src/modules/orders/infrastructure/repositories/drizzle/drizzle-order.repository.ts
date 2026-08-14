@@ -17,6 +17,7 @@ import type {
   OrderRepository,
   OrderScopeFilter,
   OrderStatus,
+  OrderStatusCounts,
 } from "../../../application/interfaces/order.repository.interface";
 
 /**
@@ -36,6 +37,15 @@ function personName(firstName: string | null, lastName: string | null, fallback:
   return [firstName, lastName].filter(Boolean).join(" ") || fallback || null;
 }
 
+const EMPTY_STATUS_COUNTS: OrderStatusCounts = {
+  DRAFT: 0,
+  PENDING: 0,
+  APPROVED: 0,
+  INVOICED: 0,
+  REJECTED: 0,
+  NO_BILLING: 0,
+};
+
 export class DrizzleOrderRepository implements OrderRepository {
   async findAll(input: {
     page: number;
@@ -48,22 +58,34 @@ export class DrizzleOrderRepository implements OrderRepository {
     scope: OrderScopeFilter;
   }) {
     if (input.verticalIds.length === 0) {
-      return { orders: [], total: 0 };
+      return { orders: [], total: 0, statusCounts: { ...EMPTY_STATUS_COUNTS } };
     }
 
-    const conditions = [
+    /**
+     * Everything except the status filter.
+     *
+     * Split out so the status breakdown can reuse the scope, vertical, facility
+     * and seller predicates while ignoring the status the caller asked for.
+     * Filtering to INVOICED and then counting by status would answer "how many
+     * INVOICED orders are INVOICED", which is the tab count the strip already
+     * had wrong.
+     */
+    const baseConditions = [
       scopeCondition(input.scope),
       inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
     ];
-    if (input.statuses?.length) conditions.push(inArray(orders.status, input.statuses));
     if (input.facilityId) {
-      conditions.push(eq(facilityVerticalProfiles.facilityId, input.facilityId));
+      baseConditions.push(eq(facilityVerticalProfiles.facilityId, input.facilityId));
     }
-    if (input.sellerId) conditions.push(eq(orders.sellerId, input.sellerId));
+    if (input.sellerId) baseConditions.push(eq(orders.sellerId, input.sellerId));
+
+    const conditions = [...baseConditions];
+    if (input.statuses?.length) conditions.push(inArray(orders.status, input.statuses));
     const where = and(...conditions);
+    const unfilteredWhere = and(...baseConditions);
     const skip = (input.page - 1) * input.limit;
 
-    const [rows, counts] = await Promise.all([
+    const [rows, counts, statusRows] = await Promise.all([
       db
         .select({
           id: orders.id,
@@ -110,7 +132,27 @@ export class DrizzleOrderRepository implements OrderRepository {
           eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
         )
         .where(where),
+      // One grouped pass for the whole breakdown rather than six counting
+      // queries, and on `unfilteredWhere` so the totals hold still while the
+      // rep switches tabs.
+      db
+        .select({
+          status: orders.status,
+          count: sql<number>`cast(count(*) as int)`,
+        })
+        .from(orders)
+        .innerJoin(
+          facilityVerticalProfiles,
+          eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+        )
+        .where(unfilteredWhere)
+        .groupBy(orders.status),
     ]);
+
+    const statusCounts = { ...EMPTY_STATUS_COUNTS };
+    for (const row of statusRows) {
+      statusCounts[row.status] = row.count;
+    }
 
     const previewsByOrderId = input.includeItemPreviews && rows.length > 0
       ? await this.loadItemPreviews(rows.map((row) => row.id))
@@ -146,6 +188,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         itemPreviews: previewsByOrderId.get(row.id) ?? [],
       })),
       total: counts[0]?.count ?? 0,
+      statusCounts,
     };
   }
 
@@ -215,6 +258,37 @@ export class DrizzleOrderRepository implements OrderRepository {
       .where(eq(orderItems.orderId, id))
       .orderBy(orderItems.createdAt, orderItems.id);
 
+    /**
+     * The four audit actors in one query.
+     *
+     * Four more LEFT JOINs on `users` in the statement above would each need
+     * their own alias and would multiply nothing useful; the ids are usually
+     * null and often the same person twice. Resolved here so the detail screen
+     * can say who rejected an order instead of printing a user id.
+     */
+    const actorIds = [
+      order.order.finalizedById,
+      order.order.rejectedById,
+      order.order.noBillingById,
+      order.order.expenseAuthorizedById,
+    ].filter((actorId): actorId is number => actorId !== null);
+    const actorsById = new Map<number, { id: number; name: string }>();
+    if (actorIds.length > 0) {
+      const actorRows = await db
+        .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+        .from(users)
+        .where(inArray(users.id, [...new Set(actorIds)]));
+      for (const actor of actorRows) {
+        actorsById.set(actor.id, {
+          id: actor.id,
+          name: personName(actor.firstName, actor.lastName, null) ?? String(actor.id),
+        });
+      }
+    }
+    /** Null for a null id and for an id whose user row no longer exists. */
+    const actor = (actorId: number | null) =>
+      actorId === null ? null : actorsById.get(actorId) ?? null;
+
     return {
       id: order.order.id,
       idAvulsaEmultec: order.order.idAvulsaEmultec,
@@ -225,15 +299,20 @@ export class DrizzleOrderRepository implements OrderRepository {
       orderedAt: order.order.orderedAt,
       createdAt: order.order.createdAt,
       updatedAt: order.order.updatedAt,
+      interactionId: order.order.interactionId,
       notes: order.order.notes,
       currency: order.order.currency,
+      finalizedBy: actor(order.order.finalizedById),
       finalizedById: order.order.finalizedById,
       finalizedAt: order.order.finalizedAt,
+      rejectedBy: actor(order.order.rejectedById),
       rejectedById: order.order.rejectedById,
       rejectionReason: order.order.rejectionReason,
+      noBillingBy: actor(order.order.noBillingById),
       noBillingById: order.order.noBillingById,
       noBillingAt: order.order.noBillingAt,
       noBillingNotes: order.order.noBillingNotes,
+      expenseAuthorizedBy: actor(order.order.expenseAuthorizedById),
       expenseAuthorizedById: order.order.expenseAuthorizedById,
       expenseAuthorizedAt: order.order.expenseAuthorizedAt,
       facility: { id: order.facilityId, name: order.facilityName },

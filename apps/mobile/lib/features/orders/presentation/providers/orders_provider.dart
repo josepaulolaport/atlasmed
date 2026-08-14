@@ -1,19 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/payment_method.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
   return OrdersRepository(baseUrl: AppConfig.apiBaseUrl);
-});
-
-final ordersPageProvider = FutureProvider.family<OrdersPage, List<String>?>((
-  ref,
-  statuses,
-) {
-  return ref.watch(ordersRepositoryProvider).listOrders(statuses: statuses);
 });
 
 final orderDetailProvider = FutureProvider.family<ApiOrderDetail, int>((
@@ -27,61 +19,170 @@ OrderStatus _orderStatusFromApi(String status) => orderStatusFromJson(status);
 
 String _formatDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-String _formatCurrency(double value) =>
+String formatOrderCurrency(double value) =>
     'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
 
-final meusOrdersProvider =
-    FutureProvider.family<List<OrderListItem>, List<String>?>((
-      ref,
-      statuses,
-    ) async {
-      final page = await ref.watch(ordersPageProvider(statuses).future);
-      return page.data
-          .map(
-            (order) => OrderListItem(
-              id: order.id,
-              clinic: order.facility.name,
-              doctor: order.professional?.name ?? 'Profissional não informado',
-              date: _formatDate(order.orderedAt ?? order.createdAt),
-              value: _formatCurrency(order.total),
-              status: _orderStatusFromApi(order.status),
-              items: order.itemCount,
-            ),
-          )
-          .toList(growable: false);
-    });
+/// How many orders one request asks for. The route ceilings this at 100.
+const int ordersPageSize = 20;
+
+/// The list, its paging state and the status tallies behind the summary strip.
+///
+/// The screen fetched exactly one page of 20 before and dropped `pagination`
+/// on the floor, so on 1131 orders it showed 20 with nothing to say more
+/// existed — no next page, no total, no way to reach order 21.
+class OrdersListState {
+  const OrdersListState({
+    this.orders = const [],
+    this.statusCounts = const {},
+    this.total = 0,
+    this.page = 0,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+  });
+
+  final List<OrderListItem> orders;
+
+  /// Across the whole scoped set, unaffected by the status filter, so the
+  /// tallies hold still as the rep switches tabs.
+  final Map<String, int> statusCounts;
+  final int total;
+  final int page;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  OrdersListState copyWith({
+    List<OrderListItem>? orders,
+    Map<String, int>? statusCounts,
+    int? total,
+    int? page,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) => OrdersListState(
+    orders: orders ?? this.orders,
+    statusCounts: statusCounts ?? this.statusCounts,
+    total: total ?? this.total,
+    page: page ?? this.page,
+    hasMore: hasMore ?? this.hasMore,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+  );
+}
+
+OrderListItem _listItemForApi(ApiOrderListItem order) => OrderListItem(
+  id: order.id,
+  displayId: order.displayId,
+  clinic: order.facility.name,
+  seller: order.seller?.name,
+  date: _formatDate(order.orderedAt ?? order.createdAt),
+  value: formatOrderCurrency(order.total),
+  status: _orderStatusFromApi(order.status),
+  items: order.itemCount,
+);
+
+class OrdersListNotifier extends AsyncNotifier<OrdersListState> {
+  List<String>? _statuses;
+
+  @override
+  Future<OrdersListState> build() => _loadFirstPage();
+
+  Future<OrdersListState> _loadFirstPage() async {
+    final page = await ref
+        .read(ordersRepositoryProvider)
+        .listOrders(page: 1, limit: ordersPageSize, statuses: _statuses);
+    return OrdersListState(
+      orders: page.data.map(_listItemForApi).toList(growable: false),
+      statusCounts: page.statusCounts,
+      total: page.total,
+      page: page.page,
+      hasMore: page.hasNextPage,
+    );
+  }
+
+  /// Re-queries from page 1. The accumulated pages belong to the old filter,
+  /// so they go rather than being appended to.
+  Future<void> setStatuses(List<String>? statuses) async {
+    _statuses = statuses;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_loadFirstPage);
+  }
+
+  Future<void> refresh() async {
+    state = await AsyncValue.guard(_loadFirstPage);
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    // Guarded against the scroll notifier firing repeatedly at the threshold:
+    // without `isLoadingMore` the same page is requested several times and
+    // appended several times.
+    if (current == null || !current.hasMore || current.isLoadingMore) return;
+
+    state = AsyncData(current.copyWith(isLoadingMore: true));
+    try {
+      final next = await ref
+          .read(ordersRepositoryProvider)
+          .listOrders(
+            page: current.page + 1,
+            limit: ordersPageSize,
+            statuses: _statuses,
+          );
+      state = AsyncData(
+        current.copyWith(
+          orders: [...current.orders, ...next.data.map(_listItemForApi)],
+          statusCounts: next.statusCounts,
+          total: next.total,
+          page: next.page,
+          hasMore: next.hasNextPage,
+          isLoadingMore: false,
+        ),
+      );
+    } catch (_) {
+      // Keep what is already on screen; the next scroll retries.
+      state = AsyncData(current.copyWith(isLoadingMore: false));
+    }
+  }
+}
+
+final ordersListProvider =
+    AsyncNotifierProvider<OrdersListNotifier, OrdersListState>(
+      OrdersListNotifier.new,
+    );
 
 OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
   id: order.id,
+  displayId: order.displayId,
   placedAt: _formatDate(order.orderedAt ?? order.createdAt),
+  updatedAt: _formatDate(order.updatedAt),
   clinic: order.facility.name,
-  clinicAddress: '',
-  doctor: order.professional?.name ?? 'Profissional não informado',
-  doctorCrm: '',
+  seller: order.seller?.name,
   status: _orderStatusFromApi(order.status),
+  type: order.type,
+  notes: (order.notes?.trim().isEmpty ?? true) ? null : order.notes!.trim(),
+  currency: order.currency,
   items: order.items
       .map(
         (item) => OrderDetailItem(
-          productId: item.product?.id ?? item.id,
-          qty: item.quantity.round(),
+          productId: item.product?.id,
+          // Not rounded. Quantity is numeric(12,3) and a consignment line can
+          // legitimately be fractional; `.round()` silently reported 1 for 1.5.
+          qty: item.quantity,
           name: item.product?.name,
+          code: item.product?.code.trim().isEmpty ?? true
+              ? null
+              : item.product!.code.trim(),
           unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+          writtenOff: item.writtenOff,
+          batchNumber: item.batchNumber?.isEmpty ?? true
+              ? null
+              : item.batchNumber,
         ),
       )
       .toList(growable: false),
-  shipping: order.freight,
-  paymentMethod: paymentMethodFromJson(order.notes ?? 'credit'),
-  invoice: '',
-  tracking: '',
-  estimate: '',
-  timeline: [
-    TimelineStep(
-      step: _orderStatusFromApi(order.status).label,
-      date: _formatDate(order.updatedAt),
-      done: true,
-      current: true,
-    ),
-  ],
+  itemsTotal: order.itemsTotal,
+  // Freight is deliberately not surfaced: it is 1.00 on every imported order,
+  // a placeholder rather than a shipping cost. It stays inside `total`, which
+  // is what the API computes and what reconciles against Emultec.
+  total: order.total,
 );
 
 // ── Cart state ───────────────────────────────────────────────

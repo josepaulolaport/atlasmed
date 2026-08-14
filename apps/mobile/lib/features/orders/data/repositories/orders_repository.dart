@@ -28,7 +28,6 @@ class ApiOrderListItem {
     required this.orderedAt,
     required this.createdAt,
     required this.facility,
-    required this.professional,
     required this.seller,
     required this.itemCount,
     required this.itemsTotal,
@@ -44,7 +43,6 @@ class ApiOrderListItem {
   final DateTime? orderedAt;
   final DateTime createdAt;
   final ApiOrderIdentity facility;
-  final ApiOrderIdentity? professional;
   final ApiOrderIdentity? seller;
   final int itemCount;
   final double itemsTotal;
@@ -66,7 +64,6 @@ class ApiOrderListItem {
         facility: ApiOrderIdentity.fromJson(
           json['facility'] as Map<String, dynamic>,
         ),
-        professional: _identityOrNull(json['professional']),
         seller: _identityOrNull(json['seller']),
         itemCount: json['itemCount'] as int,
         itemsTotal: _number(json['itemsTotal']),
@@ -100,6 +97,7 @@ class ApiOrderItem {
     required this.unitPrice,
     required this.lineTotal,
     required this.writtenOff,
+    required this.batchNumber,
     required this.product,
   });
 
@@ -108,6 +106,9 @@ class ApiOrderItem {
   final double unitPrice;
   final double lineTotal;
   final bool writtenOff;
+
+  /// Lot number, when the line carries one. The API has always sent it.
+  final String? batchNumber;
   final ApiOrderProduct? product;
 
   factory ApiOrderItem.fromJson(Map<String, dynamic> json) => ApiOrderItem(
@@ -116,6 +117,7 @@ class ApiOrderItem {
     unitPrice: _number(json['unitPrice']),
     lineTotal: _number(json['lineTotal']),
     writtenOff: json['writtenOff'] as bool? ?? false,
+    batchNumber: (json['batchNumber'] as String?)?.trim(),
     product: json['product'] == null
         ? null
         : ApiOrderProduct.fromJson(json['product'] as Map<String, dynamic>),
@@ -149,7 +151,6 @@ class ApiOrderDetail extends ApiOrderListItem {
     required super.orderedAt,
     required super.createdAt,
     required super.facility,
-    required super.professional,
     required super.seller,
     required super.itemCount,
     required super.itemsTotal,
@@ -178,7 +179,6 @@ class ApiOrderDetail extends ApiOrderListItem {
     facility: ApiOrderIdentity.fromJson(
       json['facility'] as Map<String, dynamic>,
     ),
-    professional: _identityOrNull(json['professional']),
     seller: _identityOrNull(json['seller']),
     itemCount: json['itemCount'] as int? ?? (json['items'] as List).length,
     itemsTotal: _number(json['itemsTotal']),
@@ -199,6 +199,7 @@ class OrdersPage {
     required this.limit,
     required this.total,
     required this.totalPages,
+    required this.statusCounts,
   });
   final List<ApiOrderListItem> data;
   final int page;
@@ -206,8 +207,16 @@ class OrdersPage {
   final int total;
   final int totalPages;
 
+  /// How many orders sit in each status across the whole scoped set — not this
+  /// page, and not narrowed by the status filter in effect. The summary strip
+  /// counted the loaded page before, so its numbers moved as the rep scrolled.
+  final Map<String, int> statusCounts;
+
+  bool get hasNextPage => page < totalPages;
+
   factory OrdersPage.fromJson(Map<String, dynamic> json) {
     final pagination = json['pagination'] as Map<String, dynamic>;
+    final counts = json['statusCounts'] as Map<String, dynamic>? ?? const {};
     return OrdersPage(
       data: (json['data'] as List<dynamic>)
           .map(
@@ -218,6 +227,9 @@ class OrdersPage {
       limit: pagination['limit'] as int,
       total: pagination['total'] as int,
       totalPages: pagination['totalPages'] as int,
+      statusCounts: {
+        for (final entry in counts.entries) entry.key: entry.value as int,
+      },
     );
   }
 }
@@ -243,6 +255,7 @@ class OrdersRepository extends Repository<OrdersPage>
   OrdersPage fromJson(String json) =>
       OrdersPage.fromJson(jsonDecode(json) as Map<String, dynamic>);
 
+  /// [limit] is ceilinged at 100 by the route; asking for more is a 422.
   Future<OrdersPage> listOrders({
     int page = 1,
     int limit = 20,
