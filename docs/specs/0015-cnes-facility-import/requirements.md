@@ -1,8 +1,19 @@
 # Spec 0015 — Importing clinics from the CNES registry
 
-**Status:** Draft (2026-08-13) · **Depends on:** spec 0012 (registry schema, professional
-associations), ADR 0009 (ingestion worker, run ledger), spec 0010 (verticals and profiles),
-spec 0009 (territory & clinic ownership — R5, the geometric model)
+**Status:** Draft (2026-08-13, revised 2026-08-14) · **Depends on:** spec 0012 (registry schema,
+professional associations), ADR 0009 (ingestion worker, run ledger), spec 0010 (verticals and
+profiles), spec 0009 (territory & clinic ownership — R5, the geometric model)
+
+**Already built** on `chore/remove-facility-without-cnes-20260813`:
+
+- `0104` removed the one facility with no CNES code (recorded in the migration header).
+- `0105` made `facilities.cnes_code` **NOT NULL** and `facilities_cnes_code_uidx` **total**, so
+  "every facility came from CNES" and "one CNES code, one facility" are database invariants rather
+  than conventions.
+- `CreateFacilityUseCase` requires a `cnesCode` and checks it resolves in `registry.facilities`.
+  `POST /facilities` is no longer a general create endpoint.
+
+Everything below §4 is still to build.
 
 ---
 
@@ -84,6 +95,71 @@ No catalogue needs rebuilding — they are already exact:
 And `facilities.unit_type_id` already agrees with CNES on **1 414 of 1 423** bridged facilities.
 The nine that diverge are somebody's deliberate correction and **must not be overwritten** by any
 backfill this spec introduces.
+
+## 3.2 Which establishments we import at all
+
+**The catalogue bridge is the allowlist.** `registry.unit_types` mirrors all 39 CNES types
+faithfully; `atlasmed_id` being set is the decision to import that kind. Unmapped means
+mirrored-but-never-offered, extending the set is one `UPDATE` with no deploy, and it fails closed —
+a type CNES invents next year is invisible until somebody looks at it.
+
+It cannot be "the type exists in `public.unit_types`": that table already holds all 39, so every
+type would pass. The decision has to live on the bridge.
+
+Junk falls out for free. The export contains `16` (293 active), `00` (80) and two rows where a
+**date** landed in `TP_UNIDADE` (`30-set-2025`, `12-fev-2029`) — column misalignment at source.
+None can ever be mapped, so none is ever offered, with no special case.
+
+### The set — places a rep physically visits to sell
+
+| type | active | ours |
+|---|---|---|
+| 22 Consultório Isolado | 225 950 | 505 |
+| 36 Clínica/Centro de Especialidade | 92 302 | 571 |
+| 39 SADT Isolado | 31 830 | 8 |
+| 04 Policlínica | 12 670 | 180 |
+| 05 Hospital Geral | 5 550 | 143 |
+| 73 Pronto Atendimento | 1 760 | 2 |
+| 62 Hospital/Dia Isolado | 1 090 | 10 |
+| 07 Hospital Especializado | 1 058 | 11 |
+| 15 Unidade Mista | 495 | 1 |
+| 20 Pronto Socorro Geral | 254 | — |
+| 21 Pronto Socorro Especializado | 64 | — |
+
+97 % of our own base is four types: 36, 22, 04, 05.
+
+**Excluded as not a sales site:** 43 Farmácia (29 894), 84 Central de Abastecimento (2 329 — the
+warehouse case), 68 Central de Gestão (6 538), 64/76/81/82 centrais de regulação e notificação,
+40/42/32 unidades móveis (no fixed address), 75 Telessaúde, 50 Vigilância, 67/80 laboratórios
+públicos, 74 Polo Academia, 83 Polo Prevenção, 85 Centro de Imunização, 78 Regime Residencial.
+**Excluded as public primary care:** 01 Posto, 02 UBS, 69/70/71/72.
+
+**Open:** 79 Oficina Ortopédica (57 active, none ours — makes orthoses, may be a gap rather than an
+exclusion) and 77 Home Care (2 083 active, 1 ours).
+
+### Why 60 (cooperativa) and 68 (central de gestão) are excluded
+
+Not by intuition — they were tested as possible duplicate registrations of a clinical site:
+
+| | type 60 | type 68 |
+|---|---|---|
+| active | 1 394 | 6 538 |
+| **shares a CNPJ with a clinical row** | **0** | **0** |
+| shares an address with a clinical row | 309 (22 %) | 922 (14 %) |
+
+Zero CNPJ overlap means a cooperativa is a **distinct legal entity**, not a second registration of a
+hospital. The address matches are unrelated businesses in one building — `UNIMED NOROESTE RS` at the
+same address as `VIONE DEBONI S S LTDA`. Where the operator really is the same, the clinical row
+exists *separately* and is already offered on its own.
+
+Corroborated by our own data: **all 1 131 orders come from clinical types** (759 clínica, 161
+consultório, 117 policlínica, 62 hospital geral, 20 hospital especializado, 12 UBS) and **none from
+60 or 68**. The nine type-60 facilities we hold have **zero orders between them**.
+
+**UNIMED is an owner, not a place.** 1 610 active establishments across 21 unit types — hospitals,
+clinics, labs, pharmacies and admin offices. Type is the right axis precisely because the brand is
+orthogonal to it: their clinics come in under 36/05/04, their central de gestão and farmácias do
+not.
 
 ## 4. Model
 
@@ -363,6 +439,36 @@ code held by a deactivated facility then **reactivates that facility** rather th
 second, because the database makes the alternative impossible rather than merely discouraged.
 
 Safe to apply: of 1 443 facilities, 19 are deactivated and **no `cnes_code` is duplicated today**.
+
+## 6.6 What this means for the Emultec order import
+
+The order import already behaves correctly and needs no change — verified in
+`apps/workers/temporal/src/emultec/`, which is where it lives (not in `apps/api`).
+
+`resolveEmultecFacility` matches on `id_cliente_emultec`, then CNPJ, then CPF, and returns one of
+four refusals — `no_match`, `ambiguous`, `no_document`, `id_cliente_not_cnes_eligible`. The importer
+answers a refusal with `skip`, counts it, and **creates nothing**. There is exactly one production
+insert into `facilities` in the entire repository, behind `CreateFacilityUseCase`.
+
+Two properties of that resolver matter to this spec:
+
+- **It already filters candidates on `cnesCode IS NOT NULL` and non-blank.** Migration 0105 made
+  explicit what this code was quietly assuming.
+- **It refuses ambiguity rather than picking.** Correct for the 101 CNPJs nationwide that name more
+  than one establishment, and for CPF, which is deliberately not unique among facilities.
+
+**CNPJ is a sound key for a place.** Of 276 148 distinct CNPJs on active establishments, **276 047
+(100.0 %) identify exactly one site**. The 101 exceptions are fleets and branch networks — one
+carries 51 `UNIDADE MOVEL TIPO B` rows — and only **3** are all-clinical.
+
+So an invoice carrying a payer's CNPJ (a cooperativa, a plan) simply fails to match and is skipped
+with a reason. **Nothing must ever create a facility from a billing CNPJ**: that row would be a
+facility that is not a place, with no CNES code, which migration 0105 now rejects outright. If
+payer-level billing turns out to be common, the answer is a separate payer concept, not a facility
+wearing the wrong hat — today's evidence says it is not common.
+
+Excluding cooperativas is safe because a skip is not permanent: skipped orders recover through the
+re-check queue, so a genuinely missing clinic can be imported later and its orders linked then.
 
 ## 7. Invariants
 
