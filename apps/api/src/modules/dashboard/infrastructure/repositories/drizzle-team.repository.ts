@@ -42,6 +42,16 @@ export type TeamMemberProfile = TeamMemberRow & {
   outOfTerritoryCount: number;
 };
 
+/** A territory with its geometry, for the map (spec 0015 §6). */
+export type TerritoryFeature = {
+  id: number;
+  name: string;
+  /** Parsed GeoJSON. Null only if the row somehow has no boundary. */
+  boundary: unknown;
+  /** Who holds it, when that is worth drawing — a zone's manager. */
+  holderName: string | null;
+};
+
 /** A clinic that could be given to someone (spec 0015 R6). */
 export type AssignableClinicRow = {
   facilityId: number;
@@ -426,6 +436,115 @@ export class DrizzleTeamRepository {
       assignedClinicCount: Number(row.assigned_clinic_count),
       outOfTerritoryCount: Number(row.out_of_territory_count),
     };
+  }
+
+  /**
+   * The territories a person holds, with geometry (spec 0015 §6).
+   *
+   * `typeSlug` decides which: a rep's patches, or a manager's zones. Scoping to
+   * `withinZoneIds` keeps the map honest with the rest of the profile — a
+   * manager should not be shown, and certainly not be able to edit, a patch
+   * their colleague owns.
+   */
+  async listTerritoryFeatures(input: {
+    userId: number;
+    verticalId: number;
+    typeSlug: "patch" | "manager_zone";
+    withinZoneIds: number[] | null;
+  }): Promise<TerritoryFeature[]> {
+    if (input.withinZoneIds?.length === 0) return [];
+
+    const zoneFilter =
+      input.typeSlug === "patch" && input.withinZoneIds?.length
+        ? sql` AND t.manager_territory_id IN (${sql.join(
+            input.withinZoneIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql``;
+
+    return this.features(sql`
+      SELECT t.id, t.name, ST_AsGeoJSON(t.boundary)::json AS boundary, NULL AS holder_name
+        FROM user_territory_assignments uta
+        JOIN territories t ON t.id = uta.territory_id AND t.is_active = true
+        JOIN territory_types tt
+          ON tt.id = t.territory_type_id AND tt.slug = ${input.typeSlug}
+       WHERE uta.user_id = ${input.userId}
+         AND t.vertical_id = ${input.verticalId}
+         AND t.boundary IS NOT NULL${zoneFilter}
+       ORDER BY t.name
+    `);
+  }
+
+  /** Manager zones by id — the ground a patch sits inside. */
+  async listZoneFeatures(zoneIds: number[]): Promise<TerritoryFeature[]> {
+    if (zoneIds.length === 0) return [];
+
+    return this.features(sql`
+      SELECT t.id, t.name, ST_AsGeoJSON(t.boundary)::json AS boundary,
+             NULL AS holder_name
+        FROM territories t
+       WHERE t.id IN (${sql.join(
+         zoneIds.map((id) => sql`${id}`),
+         sql`, `,
+       )})
+         AND t.boundary IS NOT NULL
+       ORDER BY t.name
+    `);
+  }
+
+  /**
+   * Every other manager's zone in the vertical — the ground already taken.
+   *
+   * I3 forbids overlap, so an admin drawing a zone can only grow into
+   * unclaimed space. Shading the rest is what makes that visible before the
+   * save refuses it.
+   */
+  async listOtherZoneFeatures(input: {
+    verticalId: number;
+    exceptZoneIds: number[];
+  }): Promise<TerritoryFeature[]> {
+    const except = input.exceptZoneIds.length
+      ? sql` AND t.id NOT IN (${sql.join(
+          input.exceptZoneIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : sql``;
+
+    return this.features(sql`
+      SELECT t.id, t.name, ST_AsGeoJSON(t.boundary)::json AS boundary,
+             NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), '')
+               AS holder_name
+        FROM territories t
+        JOIN territory_types tt
+          ON tt.id = t.territory_type_id AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
+        LEFT JOIN user_territory_assignments uta ON uta.territory_id = t.id
+        LEFT JOIN users u ON u.id = uta.user_id AND u.deleted_at IS NULL
+       WHERE t.vertical_id = ${input.verticalId}
+         AND t.is_active = true
+         AND t.boundary IS NOT NULL${except}
+       ORDER BY t.name
+    `);
+  }
+
+  private async features(
+    statement: ReturnType<typeof sql>,
+  ): Promise<TerritoryFeature[]> {
+    const rows = (await db.execute(statement)) as unknown as Array<{
+      id: number | string;
+      name: string;
+      boundary: unknown;
+      holder_name: string | null;
+    }>;
+
+    return rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      boundary:
+        typeof row.boundary === "string"
+          ? JSON.parse(row.boundary)
+          : row.boundary,
+      holderName: row.holder_name,
+    }));
   }
 
   /**

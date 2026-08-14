@@ -13,6 +13,7 @@ import type {
   TeamMemberMetrics,
   TeamMemberProfile,
   TeamMemberRow,
+  TerritoryFeature,
 } from "../../infrastructure/repositories/drizzle-team.repository";
 import type { DashboardDirectoryPort } from "../dashboard-query";
 import { resolveSingleVerticalId } from "../dashboard-query";
@@ -399,6 +400,142 @@ export class GetTeamMemberUseCase {
     if (!member) throw new ForbiddenError();
 
     return member;
+  }
+}
+
+/**
+ * What the member's territory map draws (spec 0015 §6).
+ *
+ * Three sets, because the map answers three questions at once: what this person
+ * holds, what encloses it, and what is already taken. Which sets are populated
+ * depends on who is looking at whom — R9's table, expressed once here rather
+ * than re-derived by the screen.
+ */
+export interface MemberTerritoryMap {
+  /** This person's own territories: a rep's patches, a manager's zones. */
+  subject: TerritoryFeature[];
+  /**
+   * The zone that encloses them, outlined with everything outside greyed.
+   * Empty for an admin looking at a manager — a zone encloses nothing.
+   */
+  context: TerritoryFeature[];
+  /**
+   * Other managers' zones, shaded as unavailable. Only for an admin looking at
+   * a manager, where the question is where a zone may grow (I3 forbids
+   * overlap, so it grows only into unclaimed ground).
+   */
+  taken: TerritoryFeature[];
+  /**
+   * Whether this viewer may redraw what they are looking at.
+   *
+   * A manager may redraw a patch and never a zone — zone geometry is ADMIN-only
+   * (spec 0009 §3.3) — and OPS may redraw nothing (R3).
+   *
+   * Where a new patch would go is not a separate field: `context` already lists
+   * the zones it could belong to, and I4 says it must sit in exactly one, so
+   * the screen asks when there is more than one rather than the server guessing
+   * or, worse, declining to offer creation at all.
+   */
+  canEdit: boolean;
+}
+
+export class GetMemberTerritoryMapUseCase {
+  constructor(
+    private readonly deps: Pick<Dependencies, "teamRepository" | "directory">,
+  ) {}
+
+  async execute(request: {
+    viewerId: number;
+    viewerRole: string;
+    scope: ScopeContext;
+    subjectUserId: number;
+    verticalId?: number | null;
+    /** ADMIN drill-down: the manager whose team this person was reached by. */
+    viaManagerId?: number | null;
+  }): Promise<MemberTerritoryMap> {
+    const accessibleVerticalIds = resolveVerticalIds({
+      role: request.viewerRole,
+      assignedVerticalIds: request.scope.assignedVerticalIds ?? [],
+      queryVerticalId: request.verticalId ?? null,
+    });
+    const verticalId = resolveSingleVerticalId({
+      requestedVerticalId: request.verticalId ?? null,
+      accessibleVerticalIds,
+    });
+
+    if (request.viewerRole === Role.REP) throw new ForbiddenError();
+    if (
+      request.viewerRole === Role.MANAGER &&
+      request.subjectUserId !== request.viewerId &&
+      !(request.scope.managedUserIds ?? []).includes(request.subjectUserId)
+    ) {
+      throw new ForbiddenError();
+    }
+
+    const subject = await this.deps.directory.findUser(request.subjectUserId);
+    if (!subject) throw new ForbiddenError();
+
+    // OPS reads and never draws (R3); a manager may redraw a patch but never a
+    // zone, which stays admin-only (spec 0009 §3.3).
+    const isRepSubject = subject.roleName === Role.REP;
+    const canEdit =
+      request.viewerRole === Role.ADMIN ||
+      (request.viewerRole === Role.MANAGER && isRepSubject);
+
+    if (!isRepSubject) {
+      // An admin looking at a manager: their zones, and everyone else's shaded.
+      const zoneIds = await this.deps.directory.findManagerZoneIds({
+        userId: request.subjectUserId,
+        verticalId,
+      });
+      const [ownZones, taken] = await Promise.all([
+        this.deps.teamRepository.listZoneFeatures(zoneIds),
+        this.deps.teamRepository.listOtherZoneFeatures({
+          verticalId,
+          exceptZoneIds: zoneIds,
+        }),
+      ]);
+      return {
+        subject: ownZones,
+        context: [],
+        taken,
+        canEdit,
+      };
+    }
+
+    // A rep, seen from inside somebody's ground. The enclosing zone is the
+    // viewer's own when a manager is looking, and the team they drilled through
+    // when an admin is — so an admin sees the rep as that manager does (R9).
+    const contextManagerId =
+      request.viewerRole === Role.MANAGER
+        ? request.viewerId
+        : (request.viaManagerId ?? null);
+
+    const contextZoneIds = contextManagerId
+      ? await this.deps.directory.findManagerZoneIds({
+          userId: contextManagerId,
+          verticalId,
+        })
+      : null;
+
+    const [patches, context] = await Promise.all([
+      this.deps.teamRepository.listTerritoryFeatures({
+        userId: request.subjectUserId,
+        verticalId,
+        typeSlug: "patch",
+        withinZoneIds: contextZoneIds,
+      }),
+      contextZoneIds
+        ? this.deps.teamRepository.listZoneFeatures(contextZoneIds)
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      subject: patches,
+      context,
+      taken: [],
+      canEdit,
+    };
   }
 }
 

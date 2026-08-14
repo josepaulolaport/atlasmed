@@ -31,6 +31,7 @@ export interface TeamHttpUseCases {
   listTeam(): Executable;
   getTeamMember(): Executable;
   listAssignableClinics(): Executable;
+  getMemberTerritoryMap(): Executable;
   listRepsWithoutPatch(): Executable;
 }
 
@@ -117,6 +118,34 @@ const teamRoutes = (useCases: TeamHttpUseCases, authPlugin: typeof auth) =>
           search: t.Optional(t.String()),
           page: t.Optional(t.Number({ minimum: 1 })),
           limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        }),
+      },
+    )
+    .get(
+      "/members/:userId/territory-map",
+      async ({ params, query, getScope, getUser }) => {
+        const actor = await getUser();
+        const scope = await getScope();
+        return useCases.getMemberTerritoryMap().execute({
+          viewerId: actor.id,
+          viewerRole: actor.role.name,
+          scope,
+          subjectUserId: params.userId,
+          verticalId: query.verticalId ?? null,
+          viaManagerId: query.viaManagerId ?? null,
+        } as never);
+      },
+      {
+        detail: {
+          summary:
+            "What a member's territory map draws — their own ground, what encloses it, what is taken (spec 0015 §6)",
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: t.Object({ userId: t.Number({ minimum: 1 }) }),
+        query: t.Object({
+          verticalId: t.Optional(t.Number({ minimum: 1 })),
+          viaManagerId: t.Optional(t.Number({ minimum: 1 })),
         }),
       },
     )

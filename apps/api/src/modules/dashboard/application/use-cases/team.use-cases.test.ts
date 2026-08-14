@@ -8,6 +8,7 @@ import { ForbiddenError } from "../../../../shared/errors";
 import type { DashboardDirectoryPort } from "../dashboard-query";
 import type { TeamMemberRow } from "../../infrastructure/repositories/drizzle-team.repository";
 import {
+  GetMemberTerritoryMapUseCase,
   GetTeamMemberUseCase,
   ListAssignableClinicsUseCase,
   ListRepsWithoutPatchUseCase,
@@ -212,6 +213,131 @@ describe("member profile (spec 0015 §4)", () => {
     const { deps } = profileDeps({ member: null });
     await expect(
       new GetTeamMemberUseCase(deps).execute(profileRequest(Role.MANAGER, 5)),
+    ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+describe("member territory map (spec 0015 §6)", () => {
+  function mapDeps(overrides: { subjectRole?: string; zoneIds?: number[] }) {
+    const seen: Array<Record<string, unknown>> = [];
+    const feature = (name: string) => ({ id: 1, name, boundary: {}, holderName: null });
+    return {
+      seen,
+      deps: {
+        teamRepository: {
+          listTerritoryFeatures: async (input: Record<string, unknown>) => {
+            seen.push({ call: "patches", ...input });
+            return [feature("Patch")];
+          },
+          listZoneFeatures: async (ids: number[]) => {
+            seen.push({ call: "zones", ids });
+            return ids.map((id) => feature(`Zona $${id}`));
+          },
+          listOtherZoneFeatures: async (input: Record<string, unknown>) => {
+            seen.push({ call: "others", ...input });
+            return [feature("Outra zona")];
+          },
+        },
+        directory: {
+          findUser: async (id: number) => ({
+            userId: id,
+            roleName: overrides.subjectRole ?? Role.REP,
+          }),
+          findManagerZoneIds: async () => overrides.zoneIds ?? [11],
+          findManagedUserIds: async () => [],
+        },
+      } as unknown as ConstructorParameters<
+        typeof GetMemberTerritoryMapUseCase
+      >[0],
+    };
+  }
+
+  function mapRequest(role: string, overrides: Record<string, unknown> = {}) {
+    return {
+      viewerId: 2,
+      viewerRole: role,
+      scope: withTerritoryScopeAliases({
+        ...createEmptyScopeContext(),
+        assignedVerticalIds: [1],
+        managedUserIds: [5],
+        isOperationallyActive: true,
+      }),
+      subjectUserId: 5,
+      verticalId: 1,
+      ...overrides,
+    } as Parameters<GetMemberTerritoryMapUseCase["execute"]>[0];
+  }
+
+  it("draws a rep inside the viewing manager's own ground", async () => {
+    const { deps, seen } = mapDeps({ zoneIds: [11, 12] });
+    const map = await new GetMemberTerritoryMapUseCase(deps).execute(
+      mapRequest(Role.MANAGER),
+    );
+
+    expect(map.subject).toHaveLength(1);
+    expect(map.context).toHaveLength(2);
+    expect(map.taken).toEqual([]);
+    // The patches are filtered to the same zones the outline draws, so the map
+    // never shows a polygon this manager has no authority over.
+    expect(seen[0]).toMatchObject({ call: "patches", withinZoneIds: [11, 12] });
+  });
+
+  it("shows an admin a manager's zones against everyone else's", async () => {
+    // I3 forbids overlap, so a zone grows only into unclaimed ground. Shading
+    // the rest is what makes that visible before the save refuses it.
+    const { deps } = mapDeps({ subjectRole: Role.MANAGER, zoneIds: [21] });
+    const map = await new GetMemberTerritoryMapUseCase(deps).execute(
+      mapRequest(Role.ADMIN, { viewerId: 1, subjectUserId: 541 }),
+    );
+
+    expect(map.subject).toHaveLength(1);
+    expect(map.taken).toHaveLength(1);
+    // A zone encloses nothing, so there is no outline to draw.
+    expect(map.context).toEqual([]);
+  });
+
+  it("gives an admin the manager-context view of a rep (R9)", async () => {
+    // Reached through a team, so the rep is drawn as that manager sees them
+    // rather than against the whole country.
+    const { deps, seen } = mapDeps({ zoneIds: [31] });
+    const map = await new GetMemberTerritoryMapUseCase(deps).execute(
+      mapRequest(Role.ADMIN, { viewerId: 1, viaManagerId: 541 }),
+    );
+
+    expect(map.context).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ withinZoneIds: [31] });
+  });
+
+  it("lets a manager redraw a patch but never a zone", async () => {
+    // Zone geometry is ADMIN-only (spec 0009 §3.3).
+    const patch = mapDeps({});
+    const onPatch = await new GetMemberTerritoryMapUseCase(patch.deps).execute(
+      mapRequest(Role.MANAGER),
+    );
+    expect(onPatch.canEdit).toBe(true);
+
+    const zone = mapDeps({ subjectRole: Role.MANAGER });
+    const onZone = await new GetMemberTerritoryMapUseCase(zone.deps).execute(
+      mapRequest(Role.MANAGER, { subjectUserId: 5 }),
+    );
+    expect(onZone.canEdit).toBe(false);
+  });
+
+  it("lets OPS look and never draw (R3)", async () => {
+    const { deps } = mapDeps({});
+    const map = await new GetMemberTerritoryMapUseCase(deps).execute(
+      mapRequest(Role.OPS, { viewerId: 9 }),
+    );
+
+    expect(map.canEdit).toBe(false);
+  });
+
+  it("refuses a manager a rep outside their zones", async () => {
+    const { deps } = mapDeps({});
+    await expect(
+      new GetMemberTerritoryMapUseCase(deps).execute(
+        mapRequest(Role.MANAGER, { subjectUserId: 99 }),
+      ),
     ).rejects.toThrow(ForbiddenError);
   });
 });

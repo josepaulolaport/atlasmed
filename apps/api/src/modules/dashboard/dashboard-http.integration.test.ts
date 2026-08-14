@@ -281,6 +281,9 @@ describe("team HTTP routes", () => {
       listTeam: () => ({ execute: listTeamExecute }),
       getTeamMember: () => ({ execute: memberExecute }),
       listAssignableClinics: () => ({ execute: assignableExecute }),
+      getMemberTerritoryMap: () => ({
+        execute: mock(async () => ({ subject: [], context: [], taken: [] })),
+      }),
       listRepsWithoutPatch: () => ({ execute: repsExecute }),
     } as TeamHttpUseCases;
   }
