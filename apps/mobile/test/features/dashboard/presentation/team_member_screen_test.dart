@@ -173,37 +173,27 @@ void main() {
     expect(find.text('Penetração média'), findsNothing);
   });
 
-  testWidgets('says nothing about out-of-territory when there is none', (
+  // Territory was removed from this screen: the map card, the "sem território"
+  // call to action and the out-of-territory report all lived here and now live
+  // on Territórios. This asserts the profile says nothing about it at all,
+  // rather than saying it in a smaller way — a half-removed concept is how a
+  // screen ends up with a heading and no content behind it.
+  testWidgets('says nothing about territory, whatever the person holds', (
     tester,
   ) async {
-    await _pump(tester, _profile());
-    expect(find.text('Clínicas fora do território'), findsNothing);
-  });
-
-  testWidgets('surfaces overrides when they exist (0009 R2)', (tester) async {
     await _pump(tester, _profile(outOfTerritory: 3));
 
-    expect(find.text('Clínicas fora do território'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Clínicas fora do território'), findsNothing);
+    expect(find.text('Sem território'), findsNothing);
+    expect(find.text('Desenhar área'), findsNothing);
+    expect(find.text('Território'), findsNothing);
   });
 
-  testWidgets('a rep with no patch is told what that costs them', (
-    tester,
-  ) async {
-    // The single most useful thing this screen can say. A rep with no patch has
-    // no manager, appears on no team, and can hold no clinics — an empty grey
-    // map would state none of that.
-    await _pump(tester, _profile());
-
-    expect(find.text('Sem território'), findsOneWidget);
-    expect(find.text('Desenhar área'), findsOneWidget);
-  });
-
-  testWidgets('a manager with no zone gets the manager wording', (
-    tester,
-  ) async {
+  testWidgets('a manager sees no territory card either', (tester) async {
     await _pump(tester, _profile(role: 'MANAGER'), role: UserRoleName.admin);
-    expect(find.text('Sem zona nesta linha'), findsOneWidget);
+
+    expect(find.text('Sem zona nesta linha'), findsNothing);
+    expect(find.text('Território'), findsNothing);
   });
 
   testWidgets('a rep has no team to open', (tester) async {

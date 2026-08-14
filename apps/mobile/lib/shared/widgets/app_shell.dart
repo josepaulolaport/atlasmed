@@ -390,13 +390,11 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.groups_outlined,
     visibleFor: canReadTeam,
   ),
-  AppNavigationItem(
-    branchIndex: 5,
-    label: 'Usuários',
-    route: '/users',
-    icon: Icons.people_outline_rounded,
-    visibleFor: canManageUsers,
-  ),
+  // Usuários is deliberately absent from the drawer: Equipe is now the one
+  // place people are listed. Branch 5 and `/users` still exist and still work —
+  // only the way in is gone — so restoring the entry is one item, not a
+  // rebuild. Note that this also removes the only entry point to "Convidar":
+  // nothing else in the app starts an invitation.
   AppNavigationItem(
     branchIndex: 6,
     label: 'Pedidos',

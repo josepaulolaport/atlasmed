@@ -3,7 +3,6 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
-import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/member_territory_view.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -121,14 +120,6 @@ class _Profile extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 16),
-        _TerritoryCard(
-          userId: member.userId,
-          memberName: member.displayName,
-          viaManagerId: viaManagerId,
-          isRep: member.isRep,
-          verticalId: verticalId,
-        ),
-        const SizedBox(height: 16),
         _LinkCard(
           icon: Icons.insights_rounded,
           title: 'Desempenho',
@@ -173,7 +164,7 @@ class _Profile extends ConsumerWidget {
           _LinkCard(
             icon: Icons.add_location_alt_outlined,
             title: 'Associar nova clínica',
-            subtitle: 'Livres no território, ou fora dele com justificativa',
+            subtitle: 'Sem representante, ou já com outro — com justificativa',
             onTap: () => AssignClinicRoute(
               userId: member.userId,
               memberName: member.displayName,
@@ -203,23 +194,6 @@ class _Profile extends ConsumerWidget {
                     verticalId: verticalId,
                     subjectUserId: member.userId,
                   ).push(context),
-          ),
-        ],
-        // Spec 0009 R2 promised this report and nothing ever showed it. Absent
-        // when there are none, because "0 fora do território" is a sentence
-        // about a problem that does not exist.
-        if (member.outOfTerritoryCount > 0) ...[
-          const SizedBox(height: 10),
-          _LinkCard(
-            icon: Icons.warning_amber_rounded,
-            accent: AppColors.amber,
-            title: 'Clínicas fora do território',
-            trailing: '${member.outOfTerritoryCount}',
-            subtitle: 'Atribuídas com justificativa, fora dos patches',
-            onTap: () => OutOfTerritoryRoute(
-              userId: member.userId,
-              memberName: member.displayName,
-            ).push(context),
           ),
         ],
         if (showsTeam) ...[
@@ -275,184 +249,6 @@ class _Profile extends ConsumerWidget {
   }
 }
 
-/// The territory, previewed (spec 0015 R8).
-///
-/// The same widget the fullscreen view uses, so tapping enlarges what you were
-/// already looking at. A rep with no patch gets the call to action instead of an
-/// empty grey box — that state is the whole reason the card is on the profile.
-class _TerritoryCard extends ConsumerWidget {
-  const _TerritoryCard({
-    required this.userId,
-    required this.memberName,
-    required this.viaManagerId,
-    required this.isRep,
-    required this.verticalId,
-  });
-
-  final int userId;
-  final String memberName;
-  final int? viaManagerId;
-  final bool isRep;
-  final int verticalId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final args = MemberTerritoryArgs(
-      verticalId: verticalId,
-      userId: userId,
-      viaManagerId: viaManagerId,
-    );
-
-    void open() => MemberTerritoryRoute(
-      userId: userId,
-      memberName: memberName,
-      viaManagerId: viaManagerId,
-      isRep: isRep,
-    ).push(context);
-
-    return RepositoryBuilder(
-      repository: ref.watch(memberTerritoryProvider(args)),
-      builder: (context, map, repo) {
-        if (map == null) {
-          return Container(
-            height: 170,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceSecondary,
-              borderRadius: BorderRadius.circular(14),
-            ),
-          );
-        }
-
-        if (map.subject.isEmpty) {
-          return _EmptyTerritory(isRep: isRep, onDraw: open);
-        }
-
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Stack(
-            children: [
-              MemberTerritoryView(map: map),
-              Positioned.fill(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(onTap: open),
-                ),
-              ),
-              Positioned(
-                left: 10,
-                bottom: 10,
-                child: _MapChip(
-                  label: map.subject.length == 1
-                      ? map.subject.first.name
-                      : '${map.subject.length} áreas',
-                ),
-              ),
-              const Positioned(
-                right: 10,
-                bottom: 10,
-                child: _MapChip(label: 'Abrir'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MapChip extends StatelessWidget {
-  const _MapChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.gray900,
-        ),
-      ),
-    );
-  }
-}
-
-/// Someone holding no ground. The single most useful thing this screen can say.
-class _EmptyTerritory extends StatelessWidget {
-  const _EmptyTerritory({required this.isRep, required this.onDraw});
-
-  final bool isRep;
-  final VoidCallback onDraw;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.amber.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.layers_clear_outlined,
-            size: 26,
-            color: AppColors.amber,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            isRep ? 'Sem território' : 'Sem zona nesta linha',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            isRep
-                ? 'Sem um patch, esta pessoa não aparece em nenhuma equipe e não pode receber clínicas.'
-                : 'Sem uma zona, este gestor não tem representantes nem clínicas nesta linha.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: AppColors.gray500,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: onDraw,
-            icon: const Icon(Icons.draw_outlined, size: 18),
-            label: const Text('Desenhar área'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Avatar, name, role, and the account's own state.
-///
-/// Status earns its place because it is operational: a suspended rep still
-/// holds a patch and still appears on the roster, and nothing else on the
-/// screen would say why their numbers stopped moving.
 class _Identity extends StatelessWidget {
   const _Identity({required this.member});
 

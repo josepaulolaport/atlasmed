@@ -1,5 +1,3 @@
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
@@ -51,12 +49,16 @@ List<MapEntry<String, String>> _sortOptions({required bool isManagerRoster}) {
 /// manager's team.
 ///
 /// Equipe answers *who*, Desempenho answers *how much* — so this screen keeps
-/// what is true of a person (their clinics, their territory, their standing
-/// against the team) and sends every deeper question to Desempenho rather than
-/// reproducing a smaller version of it here.
+/// what is true of a person (their clinics, their standing against the team)
+/// and sends every deeper question to Desempenho rather than reproducing a
+/// smaller version of it here.
 ///
-/// Every row therefore carries the same three figures at all times, and sorting
-/// reorders the roster instead of changing what a row will tell you. It used to
+/// Territory is deliberately absent. It is a property of the map, not of a
+/// person you are comparing against their colleagues, and carrying it here made
+/// the roster answer two questions at once. It lives on Territórios.
+///
+/// Every card therefore carries the same three figures at all times, and sorting
+/// reorders the roster instead of changing what a card will tell you. It used to
 /// do both: only the sorted metric had a value, so comparing two people on two
 /// things meant sorting twice and remembering the first answer.
 class TeamScreen extends ConsumerStatefulWidget {
@@ -77,7 +79,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
   @override
   Widget build(BuildContext context) {
     final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
-    final role = ref.watch(currentUserRoleProvider);
 
     if (verticalId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -113,8 +114,16 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             }
             final members = roster.members;
             final invites = roster.pendingInvites;
-            final isManagerRoster =
-                widget.managerId == null && role != UserRoleName.manager;
+            // Read off the roster itself rather than inferred from the viewer's
+            // role. `role != manager` treats *not yet loaded* as admin, and the
+            // role arrives a beat after a fresh sign-in — so a manager who had
+            // just logged in saw their three reps headed "3 gestores", and was
+            // offered a sort ("Sem representante") that only exists for zones.
+            // Who is in the list is a fact about the response; who is looking is
+            // a fact still in flight.
+            final isManagerRoster = widget.managerId == null
+                ? members.any((member) => member.roleName != 'REP')
+                : false;
             if (members.isEmpty && invites.isEmpty) {
               // A ListView rather than a Center: an empty roster is exactly
               // when someone reaches for pull-to-refresh, and a non-scrollable
@@ -146,8 +155,6 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                   return _RosterHeader(
                     members: members,
                     isManagerRoster: isManagerRoster,
-                    showExceptions:
-                        role == UserRoleName.admin && widget.managerId == null,
                     showSearch: members.length >= _searchThreshold,
                     search: _search,
                     onSearch: (value) => setState(() => _search = value),
@@ -198,12 +205,11 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
     final term = _search.trim().toLowerCase();
     if (term.isEmpty) return members;
     return members
-        .where((member) {
-          final territories = member.territories.map((t) => t.name).join(' ');
-          return '${member.displayName} ${member.email} $territories'
+        .where(
+          (member) => '${member.displayName} ${member.email}'
               .toLowerCase()
-              .contains(term);
-        })
+              .contains(term),
+        )
         .toList(growable: false);
   }
 }
@@ -218,7 +224,6 @@ class _RosterHeader extends StatelessWidget {
   const _RosterHeader({
     required this.members,
     required this.isManagerRoster,
-    required this.showExceptions,
     required this.showSearch,
     required this.search,
     required this.onSearch,
@@ -230,7 +235,6 @@ class _RosterHeader extends StatelessWidget {
 
   final List<TeamMember> members;
   final bool isManagerRoster;
-  final bool showExceptions;
   final bool showSearch;
   final String search;
   final ValueChanged<String> onSearch;
@@ -271,13 +275,6 @@ class _RosterHeader extends StatelessWidget {
             manager: manager,
           ),
         ),
-        if (showExceptions)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _ExceptionBand(
-              onTap: () => const RepsWithoutPatchRoute().push(context),
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
           child: Row(
@@ -433,55 +430,6 @@ class _SummaryFigure extends StatelessWidget {
   }
 }
 
-/// An exception report, not a roster entry — so it reads as a notice rather
-/// than as the first person on the team.
-class _ExceptionBand extends StatelessWidget {
-  const _ExceptionBand({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.amber.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.amber.withValues(alpha: 0.25)),
-        ),
-        child: const Row(
-          children: [
-            Icon(
-              Icons.report_problem_outlined,
-              size: 16,
-              color: AppColors.amber,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Representantes sem território',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.gray900,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 16,
-              color: AppColors.gray500,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SearchField extends StatelessWidget {
   const _SearchField({required this.value, required this.onChanged});
 
@@ -497,7 +445,7 @@ class _SearchField extends StatelessWidget {
         style: const TextStyle(fontSize: 13.5),
         decoration: InputDecoration(
           isDense: true,
-          hintText: 'Buscar pessoa ou território',
+          hintText: 'Buscar pessoa',
           hintStyle: const TextStyle(fontSize: 13, color: AppColors.gray500),
           prefixIcon: const Icon(
             Icons.search_rounded,
@@ -687,147 +635,161 @@ class _MemberTile extends StatelessWidget {
   /// profile carries the context so its Desempenho reads the same population.
   final int? viaManagerId;
 
-  /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
-  /// the same bordered row, 44px rounded avatar, 15/w600 title and icon-led
-  /// 11px meta. Two lists of people in one app should not look like they came
-  /// from different products.
+  /// A card per person rather than a row in a list.
+  ///
+  /// The roster is short — three to nine people — and each entry carries four
+  /// separate facts. As rows divided by hairlines those facts ran together
+  /// vertically and the eye had to work out where one person ended and the next
+  /// began. A card gives each person an edge, which is what makes a set of
+  /// figures readable as *someone's* figures.
   @override
   Widget build(BuildContext context) {
-    final territories = member.territories.map((t) => t.name).join(' · ');
     final metrics = member.metrics;
 
-    return InkWell(
-      // One destination per row, always the same one: this person's profile.
-      // The manager row used to open a *different* roster, which made "tap a
-      // person" mean two things depending on who you were. The team is now a
-      // card inside the profile, so the second control is gone too.
-      onTap: () => TeamMemberProfileRoute(
-        userId: member.userId,
-        memberName: member.displayName,
-        viaManagerId: viaManagerId,
-      ).push(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.blue100, AppColors.blueLight],
-                ),
-                image: member.avatarUrl == null
-                    ? null
-                    : DecorationImage(
-                        image: NetworkImage(member.avatarUrl!),
-                        fit: BoxFit.cover,
-                      ),
-              ),
-              alignment: Alignment.center,
-              child: member.avatarUrl != null
-                  ? null
-                  : Text(
-                      member.displayName.characters.first.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.navyBright,
-                      ),
-                    ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          // One destination per card, always the same one: this person's
+          // profile. The manager row used to open a *different* roster, which
+          // made "tap a person" mean two things depending on who you were. The
+          // team is now a card inside the profile, so the second control is
+          // gone too.
+          onTap: () => TeamMemberProfileRoute(
+            userId: member.userId,
+            memberName: member.displayName,
+            viaManagerId: viaManagerId,
+          ).push(context),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.surfaceSecondary),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    member.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.blue100, AppColors.blueLight],
                     ),
+                    image: member.avatarUrl == null
+                        ? null
+                        : DecorationImage(
+                            image: NetworkImage(member.avatarUrl!),
+                            fit: BoxFit.cover,
+                          ),
                   ),
-                  if (territories.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    _MemberMeta(icon: Icons.layers_rounded, text: territories),
-                  ],
-                  const SizedBox(height: 8),
-                  if (metrics == null)
-                    const Text(
-                      'sem números nesta linha',
-                      style: TextStyle(fontSize: 11, color: AppColors.gray500),
-                    )
-                  else ...[
-                    Row(
-                      children: [
-                        _RowFigure(
-                          label: 'Clínicas',
-                          value: '${metrics.assignedClinics}',
-                          emphasised: sortBy == 'assigned-clinics',
-                        ),
-                        _RowFigure(
-                          label: 'Cobertura',
-                          value: _percent(metrics.coveragePercent),
-                          emphasised: sortBy == 'coverage',
-                        ),
-                        _RowFigure(
-                          label: 'Pedidos',
-                          value: '${metrics.ordersMonth}',
-                          emphasised: sortBy == 'orders-month',
-                        ),
-                        // Cadastro only when it is what you sorted by: three
-                        // figures fit a phone row, four crowd it, and this one
-                        // is the least asked for.
-                        if (sortBy == 'cadastro-completion')
-                          _RowFigure(
-                            label: 'Cadastro',
-                            value: _percent(metrics.cadastroPercent),
-                            emphasised: true,
+                  alignment: Alignment.center,
+                  child: member.avatarUrl != null
+                      ? null
+                      : Text(
+                          member.displayName.characters.first.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.navyBright,
                           ),
-                        // The two sorts the roster cannot compute per row. They
-                        // appear only while they are the sort, because that is
-                        // the only time they were calculated at all.
-                        if (!_rowMetricSorts.contains(sortBy) &&
-                            sortBy != 'name')
-                          _RowFigure(
-                            label: _sortLabels[sortBy] ?? '',
-                            value: _formatMetric(sortBy, member.metricValue),
-                            emphasised: true,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        member.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray900,
+                          letterSpacing: -0.15,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (metrics == null)
+                        const Text(
+                          'sem números nesta linha',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.gray500,
                           ),
+                        )
+                      else ...[
+                        Row(
+                          children: [
+                            _RowFigure(
+                              label: 'Clínicas',
+                              value: '${metrics.assignedClinics}',
+                              emphasised: sortBy == 'assigned-clinics',
+                            ),
+                            _RowFigure(
+                              label: 'Cobertura',
+                              value: _percent(metrics.coveragePercent),
+                              emphasised: sortBy == 'coverage',
+                            ),
+                            _RowFigure(
+                              label: 'Pedidos',
+                              value: '${metrics.ordersMonth}',
+                              emphasised: sortBy == 'orders-month',
+                            ),
+                            // Cadastro only when it is what you sorted by: three
+                            // figures fit a phone row, four crowd it, and this one
+                            // is the least asked for.
+                            if (sortBy == 'cadastro-completion')
+                              _RowFigure(
+                                label: 'Cadastro',
+                                value: _percent(metrics.cadastroPercent),
+                                emphasised: true,
+                              ),
+                            // The two sorts the roster cannot compute per row. They
+                            // appear only while they are the sort, because that is
+                            // the only time they were calculated at all.
+                            if (!_rowMetricSorts.contains(sortBy) &&
+                                sortBy != 'name')
+                              _RowFigure(
+                                label: _sortLabels[sortBy] ?? '',
+                                value: _formatMetric(
+                                  sortBy,
+                                  member.metricValue,
+                                ),
+                                emphasised: true,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 7),
+                        _ShareBar(
+                          value: metrics.assignedClinics.toDouble(),
+                          peak: peakClinics,
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 7),
-                    _ShareBar(
-                      value: metrics.assignedClinics.toDouble(),
-                      peak: peakClinics,
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.gray500,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1138,12 +1100,12 @@ class _TeamEmptyState extends StatelessWidget {
   }
 }
 
-/// Someone who already occupies territory but has not arrived (spec 0015 R11).
+/// Someone invited who has not arrived yet (spec 0015 R11).
 ///
 /// Greyed and inert: there is no profile to open, no metrics to show and
-/// nothing to sort them by. The row exists so that a manager who invited
-/// somebody and drew them a patch can see that the patch is spoken for — which
-/// the roster, built on `users`, could not tell them until they accepted.
+/// nothing to sort them by. The card exists so that a manager who invited
+/// somebody can see them on the roster — which it, built on `users`, could not
+/// do until they accepted.
 class _PendingInviteTile extends StatelessWidget {
   const _PendingInviteTile({required this.invite});
 
@@ -1151,8 +1113,6 @@ class _PendingInviteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final territories = invite.territories.map((t) => t.name).join(' · ');
-
     return Opacity(
       opacity: 0.72,
       child: Container(
@@ -1194,21 +1154,9 @@ class _PendingInviteTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const _MemberMeta(
-                        icon: Icons.mail_outline_rounded,
-                        text: 'Convite pendente',
-                      ),
-                      if (territories.isNotEmpty)
-                        _MemberMeta(
-                          icon: Icons.layers_rounded,
-                          text: territories,
-                        ),
-                    ],
+                  const _MemberMeta(
+                    icon: Icons.mail_outline_rounded,
+                    text: 'Convite pendente',
                   ),
                 ],
               ),

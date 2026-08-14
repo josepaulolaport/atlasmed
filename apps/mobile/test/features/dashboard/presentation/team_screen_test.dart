@@ -60,7 +60,7 @@ TeamMember _member({
 Future<void> _pump(
   WidgetTester tester,
   List<TeamMember> members, {
-  UserRoleName role = UserRoleName.manager,
+  UserRoleName? role = UserRoleName.manager,
   int? managerId,
   List<PendingInvite> invites = const [],
 }) async {
@@ -135,6 +135,48 @@ void main() {
     expect(find.text('0%'), findsNothing);
   });
 
+  testWidgets('names the roster from its own rows, not from the viewer', (
+    tester,
+  ) async {
+    // `currentUserRoleProvider` resolves a beat after sign-in, and the header
+    // used to read `role != manager` — so an unresolved role counted as admin
+    // and a manager who had just logged in saw their reps headed "3 gestores".
+    // The response already says who these people are.
+    await _pump(tester, [
+      _member(userId: 5, name: 'Ana'),
+      _member(userId: 6, name: 'Bruno'),
+    ], role: null);
+
+    expect(find.text('2 representantes'), findsOneWidget);
+    expect(find.text('2 gestores'), findsNothing);
+  });
+
+  testWidgets('a roster of managers is named as one', (tester) async {
+    await _pump(tester, [
+      _member(userId: 2, name: 'Silvio', role: 'MANAGER'),
+    ], role: null);
+
+    expect(find.text('1 gestor'), findsOneWidget);
+  });
+
+  testWidgets('a card never mentions territory, however much someone holds', (
+    tester,
+  ) async {
+    // Equipe answers *who*, not *where*. Territory came off these cards with
+    // the redesign, and the roster's search went with it — a term that matched
+    // something no longer on screen reads as a broken search, not a clever one.
+    await _pump(tester, [
+      _member(
+        userId: 5,
+        name: 'Ana',
+        territories: const [(id: 9, name: 'Patch Ana')],
+      ),
+    ]);
+
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Patch Ana'), findsNothing);
+  });
+
   testWidgets('a small roster needs no search — you can see all of it', (
     tester,
   ) async {
@@ -190,9 +232,10 @@ void main() {
 
     expect(find.text('Novo Rep'), findsOneWidget);
     expect(find.text('Convite pendente'), findsOneWidget);
-    expect(find.text('Patch Novo'), findsOneWidget);
+    // Territory is no longer shown anywhere on Equipe, invitations included.
+    expect(find.text('Patch Novo'), findsNothing);
     // Inert: there is no profile to open and no metrics to show, so it must not
-    // look like a row you can tap through.
+    // look like a card you can tap through.
     expect(find.byIcon(Icons.hourglass_empty_rounded), findsOneWidget);
   });
 
@@ -222,14 +265,16 @@ void main() {
       _member(userId: 2, name: 'Silvio', role: 'MANAGER', clinics: 1134),
     ], role: UserRoleName.admin);
 
-    // A manager row used to open the manager's *team*, so "tap a person" meant
+    // A manager card used to open the manager's *team*, so "tap a person" meant
     // two different things depending on the viewer's role, and the manager's
-    // own numbers needed a second icon. Spec 0015 §4 makes the row the person's
-    // profile, with their team as a card inside it — so neither extra control
-    // belongs on the row any more.
+    // own numbers needed a second icon. Spec 0015 §4 makes the card the
+    // person's profile, with their team as a card inside it — so neither extra
+    // control belongs on the card any more.
     expect(find.byIcon(Icons.groups_rounded), findsNothing);
     expect(find.byIcon(Icons.insights_rounded), findsNothing);
-    // The exception band has its own chevron, so the row's is the second.
-    expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(2));
+    // One card, one chevron. The "representantes sem território" band carried
+    // the only other one and has gone with the rest of territory.
+    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+    expect(find.text('Representantes sem território'), findsNothing);
   });
 }

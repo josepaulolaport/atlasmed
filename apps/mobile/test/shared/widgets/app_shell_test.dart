@@ -53,6 +53,20 @@ void main() {
         ),
       );
     });
+
+    test('offers no way into Usuários — Equipe is the one roster', () {
+      // The branch and the route still exist, so this is about the drawer only.
+      // Asserted rather than left to a screenshot because the entry is one line
+      // and would come back unnoticed in any merge that touches this list.
+      expect(
+        appNavigationItems,
+        isNot(
+          contains(
+            predicate<AppNavigationItem>((item) => item.route == '/users'),
+          ),
+        ),
+      );
+    });
   });
 
   testWidgets('drawer remains scrollable on compact height and large text', (
