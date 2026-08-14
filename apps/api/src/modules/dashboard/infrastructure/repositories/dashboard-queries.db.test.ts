@@ -299,7 +299,7 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     expect(metrics.size).toBe(0);
   });
 
-  test("the profile agrees with the row that opens it (0015 §4)", async () => {
+  test("the profile carries who someone is, not what they measure", async () => {
     const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
     const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
     if (reps.length === 0) return;
@@ -309,20 +309,17 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
         userId: rep.userId,
         verticalId: 1,
         withinZoneIds: zones,
-        subjectRole: "rep",
       });
 
-      // Same predicate on both sides, so this cannot drift — which is the
-      // point of computing it the same way rather than similarly.
-      expect(profile!.assignedClinicCount).toBe(rep.assignedClinicCount);
       expect(profile!.email).toBe(rep.email);
       expect(profile!.outOfTerritoryCount).toBeGreaterThanOrEqual(0);
-      expect(profile!.outOfTerritoryCount).toBeLessThanOrEqual(
-        profile!.assignedClinicCount,
-      );
       // Excluded on purpose (0015 §4.1) — a profile is not a personnel file.
       expect(profile).not.toHaveProperty("birthDate");
       expect(Number.isNaN(Date.parse(profile!.memberSince))).toBe(false);
+      // The counts come from the metric use cases, which own their definition.
+      // Recomputing them here is what produced two spellings of one number.
+      expect(profile).not.toHaveProperty("assignedClinicCount");
+      expect(profile).not.toHaveProperty("unassignedClinicCount");
     }
   });
 
@@ -334,14 +331,37 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     const foreign = await team.findMember({
       userId: reps[0]!.userId,
       verticalId: 1,
-      // Ground this rep does not work. Their patches must not be listed, and
-      // their clinics must not be counted.
+      // Ground this rep does not work: their patches must not be listed.
       withinZoneIds: [-1],
-      subjectRole: "rep",
     });
 
     expect(foreign!.territories).toEqual([]);
-    expect(foreign!.assignedClinicCount).toBe(0);
+  });
+
+  test("the roster's batch agrees with the card's own definition", async () => {
+    // The roster batches four metrics into one statement because computing them
+    // per member was an N+1. That is a second implementation of a number the
+    // Desempenho cards already define, so the two have to be pinned together —
+    // this test is the pin, and it is the reason the duplication is acceptable.
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+
+    const batched = await team.findMemberMetrics({
+      verticalId: 1,
+      userIds: reps.map((r) => r.userId),
+      scope: "rep",
+      withinZoneIds: zones,
+      ordersFrom: monthAgo,
+      ordersTo: now,
+    });
+
+    for (const rep of reps) {
+      const canonical = await repository.countProfiles(
+        filter({ repUserIds: [rep.userId], zoneIds: zones }),
+      );
+      expect(batched.get(rep.userId)!.assignedClinics).toBe(canonical);
+    }
   });
 
   test("the patch door offers only free clinics the rep covers (0015 R6)", async () => {

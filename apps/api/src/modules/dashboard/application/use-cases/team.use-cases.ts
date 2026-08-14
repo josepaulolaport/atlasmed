@@ -18,6 +18,7 @@ import type {
 import type { DashboardDirectoryPort } from "../dashboard-query";
 import { resolveSingleVerticalId } from "../dashboard-query";
 import type {
+  GetAssignedClinicsMetricUseCase,
   GetPenetrationMetricUseCase,
   GetUnassignedClinicsMetricUseCase,
 } from "./dashboard-metrics.use-cases";
@@ -340,7 +341,26 @@ function sortMembers(
  */
 export class GetTeamMemberUseCase {
   constructor(
-    private readonly deps: Pick<Dependencies, "teamRepository" | "directory">,
+    private readonly deps: Pick<Dependencies, "teamRepository" | "directory"> & {
+      /**
+       * The counts come from the metric use cases rather than from SQL of their
+       * own.
+       *
+       * `clínicas` and `sem representante` already have one definition each —
+       * `countProfiles` and `countProfilesWithoutRep`, reached through the same
+       * denominator resolution every card uses. Writing them again here gave two
+       * spellings of one business number, which is the drift this codebase keeps
+       * warning about: the copy that is wrong is the one nobody is comparing.
+       *
+       * A profile is one person, so two extra queries buy correctness cheaply.
+       * The roster keeps its batch (N+1 otherwise) and a database test pins the
+       * two readings together.
+       */
+      metrics: {
+        assignedClinics: GetAssignedClinicsMetricUseCase;
+        unassignedClinics: GetUnassignedClinicsMetricUseCase;
+      };
+    },
   ) {}
 
   async execute(request: {
@@ -349,6 +369,8 @@ export class GetTeamMemberUseCase {
     scope: ScopeContext;
     subjectUserId: number;
     verticalId?: number | null;
+    /** ADMIN drill-down: whose team this person was reached through. */
+    viaManagerId?: number | null;
   }): Promise<TeamMemberProfile> {
     const accessibleVerticalIds = resolveVerticalIds({
       role: request.viewerRole,
@@ -393,11 +415,11 @@ export class GetTeamMemberUseCase {
     const subject = await this.deps.directory.findUser(request.subjectUserId);
     if (!subject) throw new ForbiddenError();
 
+    const isRep = subject.roleName === Role.REP;
     const member = await this.deps.teamRepository.findMember({
       userId: request.subjectUserId,
       verticalId,
       withinZoneIds,
-      subjectRole: subject.roleName === Role.REP ? "rep" : "manager",
     });
 
     // A member the reader may reach but who has nothing in their ground is not
@@ -405,7 +427,33 @@ export class GetTeamMemberUseCase {
     // saying so beats rendering an empty one.
     if (!member) throw new ForbiddenError();
 
-    return member;
+    const metricRequest = {
+      viewerId: request.viewerId,
+      viewerRole: request.viewerRole,
+      scope: request.scope,
+      verticalId,
+      subjectUserId: request.subjectUserId,
+      // Spec 0015 R2: the same share of the person the rest of the screen
+      // shows. Derived from the viewer for a manager, so passing it is only
+      // meaningful for an admin who drilled through a team.
+      withinManagerId: request.viaManagerId ?? null,
+      filters: {},
+    };
+
+    const [assigned, unassigned] = await Promise.all([
+      this.deps.metrics.assignedClinics.execute(metricRequest),
+      // A clinic nobody holds is a zone question. A rep's denominator cannot
+      // contain one, so there is nothing to ask them about.
+      isRep
+        ? Promise.resolve(null)
+        : this.deps.metrics.unassignedClinics.execute(metricRequest),
+    ]);
+
+    return {
+      ...member,
+      assignedClinicCount: assigned.value,
+      unassignedClinicCount: unassigned?.value ?? null,
+    };
   }
 }
 

@@ -136,7 +136,6 @@ describe("member profile (spec 0015 §4)", () => {
             userId: number;
             verticalId: number;
             withinZoneIds: number[] | null;
-            subjectRole: string;
           }) => {
             seen.push(input);
             return overrides.member === undefined
@@ -151,6 +150,10 @@ describe("member profile (spec 0015 §4)", () => {
           }),
           findManagerZoneIds: async () => overrides.zoneIds ?? [11],
           findManagedUserIds: async () => [],
+        },
+        metrics: {
+          assignedClinics: { execute: async () => ({ value: 242 }) },
+          unassignedClinics: { execute: async () => ({ value: 7 }) },
         },
       } as unknown as ConstructorParameters<typeof GetTeamMemberUseCase>[0],
     };
@@ -197,7 +200,6 @@ describe("member profile (spec 0015 §4)", () => {
       userId: 5,
       verticalId: 1,
       withinZoneIds: [11, 12],
-      subjectRole: "rep",
     });
   });
 

@@ -59,7 +59,15 @@ export const dashboardUseCases = {
         unassignedClinics: new GetUnassignedClinicsMetricUseCase(deps),
       },
     }),
-  getTeamMember: () => new GetTeamMemberUseCase({ teamRepository, directory }),
+  getTeamMember: () =>
+    new GetTeamMemberUseCase({
+      teamRepository,
+      directory,
+      metrics: {
+        assignedClinics: new GetAssignedClinicsMetricUseCase(deps),
+        unassignedClinics: new GetUnassignedClinicsMetricUseCase(deps),
+      },
+    }),
   listAssignableClinics: () =>
     new ListAssignableClinicsUseCase({ teamRepository, directory }),
   getMemberTerritoryMap: () =>
