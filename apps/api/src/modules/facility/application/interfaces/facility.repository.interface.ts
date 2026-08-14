@@ -171,6 +171,8 @@ export interface FacilityRepository {
     /** CNES unit type IDs — facility matches any selected (OR). */
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    /** CPF clinics whose document is absent, or present but not a valid CPF. */
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -195,6 +197,8 @@ export interface FacilityRepository {
     clinicalFocusIds?: number[];
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    /** CPF clinics whose document is absent, or present but not a valid CPF. */
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;

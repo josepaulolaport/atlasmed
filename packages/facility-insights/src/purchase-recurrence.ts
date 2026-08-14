@@ -281,6 +281,30 @@ function resolveEffectiveInterval(input: {
   };
 }
 
+/**
+ * Stage boundaries as multiples of the clinic's own purchase interval.
+ *
+ * **The interval is the clinic's, not a buyer's.** Where several people buy for
+ * one clinic — Emultec bills each surgeon as their own client under the clinic's
+ * CNPJ — every one of their orders feeds this single stream, and independent
+ * buyers superimposed produce a shorter apparent interval than any of them
+ * actually runs. COT Centro Ortopédico reads 73 days across five surgeons whose
+ * own cycles are 130, 33, 20 and 392 days; across the six affected clinics the
+ * merged figure averages 1.9x shorter than the individual one, and the factor
+ * tracks how many buyers there are.
+ *
+ * That is the intended reading — the funnel answers "when does this clinic next
+ * order", which is what a rep acts on — but it means a short interval says the
+ * clinic is busy, not that one customer is eager. Do not present
+ * `purchaseIntervalDays` as a buyer's habit, and expect clinics with many
+ * surgeons to sit at the shorter end for structural reasons.
+ *
+ * The thresholds below were calibrated against a single buyer's renewal cycle. A
+ * superimposed stream has more variance relative to its mean, so the largest
+ * accounts are also the ones most likely to move between stages on ordinary
+ * fluctuation. Revisit these if per-buyer attribution ever lands
+ * (`orders.person_id` is the hook and is currently unpopulated).
+ */
 function resolveFunnel(input: {
   lastValidPurchaseDate: string | null;
   purchaseIntervalDays: number;

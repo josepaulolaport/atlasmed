@@ -27,6 +27,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.clinicalFocusIds,
     this.unitTypeIds,
     this.legalDocumentType,
+    this.cpfStatus,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -52,6 +53,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
            clinicalFocusIds: clinicalFocusIds,
            unitTypeIds: unitTypeIds,
            legalDocumentType: legalDocumentType,
+           cpfStatus: cpfStatus,
            purchaseFunnelStages: purchaseFunnelStages,
            purchaseProfile: purchaseProfile,
            purchaseIntervalMinDays: purchaseIntervalMinDays,
@@ -76,6 +78,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
   final String? clinicalFocusIds;
   final String? unitTypeIds;
   final String? legalDocumentType;
+  final String? cpfStatus;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -100,6 +103,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     String? clinicalFocusIds,
     String? unitTypeIds,
     String? legalDocumentType,
+    String? cpfStatus,
     List<PurchaseFunnelStage> purchaseFunnelStages = const [],
     PurchaseProfile? purchaseProfile,
     int? purchaseIntervalMinDays,
@@ -131,6 +135,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
           'unitTypeIds': unitTypeIds.trim(),
         if (legalDocumentType != null && legalDocumentType.trim().isNotEmpty)
           'legalDocumentType': legalDocumentType.trim(),
+        if (cpfStatus != null && cpfStatus.trim().isNotEmpty)
+          'cpfStatus': cpfStatus.trim(),
         if (purchaseFunnelStages.isNotEmpty)
           'purchaseFunnelStage': purchaseFunnelStages
               .map((stage) => stage.apiValue)

@@ -56,17 +56,19 @@ describe("parseListFacilitiesQuery", () => {
     expect(() => parseListFacilitiesQuery({ purchaseBucket: "OTHER" })).toThrow();
   });
 
-  it("maps purchaseBucket to the same funnel stages as the Desempenho donut", () => {
+  it("groups the funnel stages by how recently the clinic bought", () => {
+    // Ativas = bought recently (OUTSIDE_WINDOW) + due to buy now
+    // (PURCHASE_WINDOW). Inativas = overdue (CHURN) + lapsed (INACTIVE).
     expect(purchaseBucketToFunnelFilter("active")).toEqual({
-      stages: ["PURCHASE_WINDOW"],
+      stages: ["OUTSIDE_WINDOW", "PURCHASE_WINDOW"],
       includeNull: false,
     });
     expect(purchaseBucketToFunnelFilter("inactive")).toEqual({
-      stages: ["OUTSIDE_WINDOW", "CHURN"],
+      stages: ["CHURN", "INACTIVE"],
       includeNull: false,
     });
     expect(purchaseBucketToFunnelFilter("neverBought")).toEqual({
-      stages: ["NEVER_PURCHASED", "INACTIVE"],
+      stages: ["NEVER_PURCHASED"],
       includeNull: true,
     });
   });
@@ -98,6 +100,25 @@ describe("parseListFacilitiesQuery", () => {
     ).toThrow();
   });
 
+  it("accepts only the two cpfStatus values", () => {
+    expect(parseListFacilitiesQuery({ cpfStatus: "missing" })).toMatchObject({
+      cpfStatus: "missing",
+    });
+    expect(parseListFacilitiesQuery({ cpfStatus: "invalid" })).toMatchObject({
+      cpfStatus: "invalid",
+    });
+    // Rejected, not ignored: an unrecognised value would otherwise return an
+    // unfiltered list, and the rep would read every clinic they have as one
+    // missing its CPF.
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "both" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "MISSING" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "" })).toThrow();
+  });
+
+  it("leaves cpfStatus undefined when absent", () => {
+    expect(parseListFacilitiesQuery({}).cpfStatus).toBeUndefined();
+  });
+
   it("leaves both new filters undefined when absent", () => {
     // Absent must stay absent: defaulting either would filter a list the rep
     // did not ask to filter.
@@ -107,11 +128,28 @@ describe("parseListFacilitiesQuery", () => {
   });
 
   it("maps funnel stages back to Desempenho buckets", () => {
+    expect(funnelStageToPurchaseBucket("OUTSIDE_WINDOW")).toBe("active");
     expect(funnelStageToPurchaseBucket("PURCHASE_WINDOW")).toBe("active");
-    expect(funnelStageToPurchaseBucket("OUTSIDE_WINDOW")).toBe("inactive");
     expect(funnelStageToPurchaseBucket("CHURN")).toBe("inactive");
+    // A clinic that bought for two years and stopped is not one that never
+    // bought — that distinction is the whole point of the INACTIVE stage.
+    expect(funnelStageToPurchaseBucket("INACTIVE")).toBe("inactive");
     expect(funnelStageToPurchaseBucket("NEVER_PURCHASED")).toBe("neverBought");
-    expect(funnelStageToPurchaseBucket("INACTIVE")).toBe("neverBought");
     expect(funnelStageToPurchaseBucket(null)).toBe("neverBought");
+  });
+
+  it("round-trips every stage through its bucket", () => {
+    const stages = [
+      "NEVER_PURCHASED",
+      "OUTSIDE_WINDOW",
+      "PURCHASE_WINDOW",
+      "CHURN",
+      "INACTIVE",
+    ] as const;
+
+    for (const stage of stages) {
+      const bucket = funnelStageToPurchaseBucket(stage);
+      expect(purchaseBucketToFunnelFilter(bucket).stages).toContain(stage);
+    }
   });
 });

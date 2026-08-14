@@ -3,6 +3,7 @@ import { Role } from "@atlasmed/access";
 import { ForbiddenError } from "../../../shared/errors";
 import { resolveVerticalIds } from "../../access/application/services/vertical-access.service";
 import type {
+  CpfIssueCounts,
   DashboardTerritoryFeature,
   DrizzleDashboardRepository,
   PurchaseStatusBuckets,
@@ -13,6 +14,11 @@ export type DashboardSummary = {
   purchaseStatus: PurchaseStatusBuckets & {
     coveragePercent: number;
   };
+  /**
+   * CPF clinics whose document is unusable, in the same scope and Linha as
+   * every other number here. Both zero means the warning does not render.
+   */
+  cpfIssues: CpfIssueCounts;
   territory: {
     mode: "overview" | "assigned" | "empty";
     label: string | null;
@@ -48,9 +54,13 @@ export class GetDashboardSummaryUseCase {
       ? null
       : (input.scope.facilityIds ?? []);
 
-    const [purchaseStatus, doctorCount, features] = await Promise.all([
+    // Joins the existing fan-out rather than arriving as its own request: the
+    // warning renders in the same card stack as the donut, so making the client
+    // ask twice would show one number before the other on every load.
+    const [purchaseStatus, doctorCount, cpfIssues, features] = await Promise.all([
       this.repo.countPurchaseBuckets({ verticalIds: resolved, facilityIds }),
       this.repo.countDoctors({ verticalIds: resolved, facilityIds }),
+      this.repo.countCpfIssues({ verticalIds: resolved, facilityIds }),
       isAdmin
         ? Promise.resolve([] as DashboardTerritoryFeature[])
         : this.repo.listAssignedTerritoryFeatures({
@@ -59,13 +69,22 @@ export class GetDashboardSummaryUseCase {
           }),
     ]);
 
+    /**
+     * Share of profiled clinics that have ever bought.
+     *
+     * This was `(active + inactive) / total` over the old three buckets, which
+     * silently excluded the INACTIVE stage — a clinic that bought for two years
+     * and then lapsed counted as never having bought, and coverage read lower
+     * than reality. Stated over stages, the intent is plain: everything that is
+     * not NEVER_PURCHASED, and not a profile the funnel has yet to calculate.
+     */
+    const everPurchased =
+      purchaseStatus.total -
+      purchaseStatus.stages.NEVER_PURCHASED -
+      purchaseStatus.stages.UNKNOWN;
     const coveragePercent =
       purchaseStatus.total > 0
-        ? Math.round(
-            ((purchaseStatus.active + purchaseStatus.inactive) /
-              purchaseStatus.total) *
-              100,
-          )
+        ? Math.round((everPurchased / purchaseStatus.total) * 100)
         : 0;
 
     let mode: "overview" | "assigned" | "empty";
@@ -90,6 +109,7 @@ export class GetDashboardSummaryUseCase {
         ...purchaseStatus,
         coveragePercent,
       },
+      cpfIssues,
       territory: {
         mode,
         label,

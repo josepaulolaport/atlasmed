@@ -545,6 +545,8 @@ export function buildFacilityListConditions(params: {
   unitTypeIds?: number[];
   /** CNPJ or CPF. Single value — the enum has only these two. */
   legalDocumentType?: "CNPJ" | "CPF";
+  /** CPF clinics whose document is absent, or present but not a valid CPF. */
+  cpfStatus?: "missing" | "invalid";
   candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
@@ -629,6 +631,33 @@ export function buildFacilityListConditions(params: {
       eq(facilities.legalDocumentType, params.legalDocumentType),
     );
   }
+  if (params.cpfStatus) {
+    /**
+     * Both branches require `legal_document_type = 'CPF'`: a CNPJ clinic with
+     * no CNPJ is a real problem too, but it is not the one this warning counts,
+     * and folding it in would make the Desempenho number disagree with the list
+     * it opens.
+     *
+     * "Missing" is NULL *or* blank — `displayTaxIdentifier` in the app already
+     * renders a blank as absent, so a rep looking at an imported empty string
+     * sees "—" and would not understand its absence from a list of clinics
+     * without a CPF.
+     *
+     * The two sets are disjoint by construction: `invalid` requires a non-blank
+     * value, so no clinic is reported under both counts.
+     */
+    const isCpfClinic = eq(facilities.legalDocumentType, "CPF");
+    const blank = sql`(${facilities.legalDocument} is null or btrim(${facilities.legalDocument}) = '')`;
+    conditions.push(
+      params.cpfStatus === "missing"
+        ? and(isCpfClinic, blank)!
+        : and(
+            isCpfClinic,
+            sql`not ${blank}`,
+            sql`not is_valid_cpf(${facilities.legalDocument})`,
+          )!,
+    );
+  }
   if (params.clinicalFocusIds?.length) {
     // AND: clinic must offer every selected clinical focus.
     const ids = [...new Set(params.clinicalFocusIds)];
@@ -698,6 +727,50 @@ export function buildFacilityListConditions(params: {
 const profileFunnelStageRankSql = sql<number>`case p.purchase_funnel_stage
   when 'NEVER_PURCHASED' then 0 when 'OUTSIDE_WINDOW' then 1
   when 'PURCHASE_WINDOW' then 2 when 'CHURN' then 3 when 'INACTIVE' then 4 end`;
+
+/**
+ * Pin colour on the live map — the facility's worst-case bucket across the
+ * verticals in scope.
+ *
+ * This was the one place the bucket grouping was written out by hand, as
+ * `active = PURCHASE_WINDOW` and `inactive = OUTSIDE_WINDOW, CHURN`. When the
+ * grouping was corrected to follow the purchase timeline the copy was not, so a
+ * clinic that bought last week read Ativa in the list and Inativa on the map.
+ * Deriving the stage lists from `purchaseBucketToFunnelFilter` is what stops the
+ * two drifting again.
+ *
+ * Exported so a test can execute the real expression rather than a transcription
+ * of it — a duplicate in the test would keep passing while this drifted.
+ */
+export function buildMapPurchaseBucketSql(verticalFilterSql: SQL) {
+  const stagesIn = (bucket: FacilityPurchaseBucket) =>
+    sql.join(
+      purchaseBucketToFunnelFilter(bucket).stages.map((stage) => sql`${stage}`),
+      sql`, `,
+    );
+
+  return sql<"active" | "inactive" | "neverBought">`(
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM ${facilityVerticalProfiles} p
+        WHERE p.facility_id = facilities.id
+          AND p.is_active = true
+          ${verticalFilterSql}
+          AND p.purchase_funnel_stage IN (${stagesIn("active")})
+      ) THEN 'active'
+      WHEN EXISTS (
+        SELECT 1
+        FROM ${facilityVerticalProfiles} p
+        WHERE p.facility_id = facilities.id
+          AND p.is_active = true
+          ${verticalFilterSql}
+          AND p.purchase_funnel_stage IN (${stagesIn("inactive")})
+      ) THEN 'inactive'
+      ELSE 'neverBought'
+    END
+  )`;
+}
 
 function profileVerticalFilterSql(verticalIds?: number[]) {
   return verticalIds && verticalIds.length > 0
@@ -1248,27 +1321,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
             sql`, `,
           )})`
         : sql``;
-    const purchaseBucketSql = sql<"active" | "inactive" | "neverBought">`(
-      CASE
-        WHEN EXISTS (
-          SELECT 1
-          FROM ${facilityVerticalProfiles} p
-          WHERE p.facility_id = facilities.id
-            AND p.is_active = true
-            ${verticalFilterSql}
-            AND p.purchase_funnel_stage = 'PURCHASE_WINDOW'
-        ) THEN 'active'
-        WHEN EXISTS (
-          SELECT 1
-          FROM ${facilityVerticalProfiles} p
-          WHERE p.facility_id = facilities.id
-            AND p.is_active = true
-            ${verticalFilterSql}
-            AND p.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')
-        ) THEN 'inactive'
-        ELSE 'neverBought'
-      END
-    )`;
+    const purchaseBucketSql = buildMapPurchaseBucketSql(verticalFilterSql);
 
     const rows = await db
       .select({

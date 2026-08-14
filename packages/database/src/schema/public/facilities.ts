@@ -24,6 +24,7 @@ import {
   healthcareProviderTypeEnum,
   conformityRecordStatusEnum,
   facilityLegalDocumentTypeEnum,
+  emultecClientLinkSourceEnum,
 } from "./enums";
 import { territories } from "./territories";
 import { businessVerticals } from "./business-verticals";
@@ -46,7 +47,14 @@ export const facilities = pgTable(
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
-    /** Emultec `clientes.Id` — facility↔client link for order import. */
+    /**
+     * Emultec `clientes.Id`.
+     *
+     * @deprecated Superseded by `facility_emultec_clients`, which can hold the
+     * several Emultec clientes that legitimately belong to one clinic. Read and
+     * written only by the order importer; kept for one release so a rollback has
+     * somewhere to land. Do not add consumers.
+     */
     idClienteEmultec: bigint("id_cliente_emultec", { mode: "number" }),
     // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
     /** Required on every insert — no DB default (CNPJ vs CPF must be explicit). */
@@ -156,6 +164,44 @@ export const facilities = pgTable(
     index("facilities_unit_subtype_id_idx")
       .on(t.unitSubtypeId)
       .where(sql`${t.unitSubtypeId} IS NOT NULL`),
+  ]
+);
+
+/**
+ * Emultec `clientes.Id` → the clinic that client buys for.
+ *
+ * Replaces `facilities.id_cliente_emultec`, which could only ever hold one
+ * client per clinic. Emultec models a surgeon operating out of a clinic as their
+ * own pessoa-física row pointing at the clinic through `Id_Cliente_PJ`, so one
+ * clinic legitimately has several clientes — COT Centro Ortopédico has five, and
+ * 54 parent CNPJs carry 175 clientes between them. A column on `facilities`
+ * cannot express that no matter what index sits on it, and the value it did hold
+ * silently became "whichever of the N was written first".
+ *
+ * The constraint worth keeping is the other direction, and it survives as the
+ * primary key: one Emultec client resolves to exactly one clinic. Two clinics
+ * claiming the same client is a genuine conflict and still fails loudly.
+ */
+export const facilityEmultecClients = pgTable(
+  "facility_emultec_clients",
+  {
+    /** Emultec `clientes.Id`. One client, one clinic. */
+    idClienteEmultec: bigint("id_cliente_emultec", { mode: "number" }).primaryKey(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    /**
+     * Who established the link. The old column could not distinguish a
+     * deliberate operator decision from a link the importer inferred, which
+     * matters now that both write here.
+     */
+    source: emultecClientLinkSourceEnum("source").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    /** Deliberately not unique — several clientes per clinic is the normal case. */
+    index("facility_emultec_clients_facility_id_idx").on(t.facilityId),
   ]
 );
 

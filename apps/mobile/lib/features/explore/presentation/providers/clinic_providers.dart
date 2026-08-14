@@ -18,6 +18,7 @@ class ClinicsQuery {
     this.clinicalFocusIds,
     this.unitTypeIds,
     this.legalDocumentType,
+    this.cpfStatus,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -44,6 +45,10 @@ class ClinicsQuery {
 
   /// `CNPJ` or `CPF`, single choice.
   final String? legalDocumentType;
+
+  /// Desempenho CPF drill-down: `missing` or `invalid`. The CPF belongs to the
+  /// clinic, so this never interacts with the Linha filter beside it.
+  final String? cpfStatus;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -66,6 +71,7 @@ class ClinicsQuery {
       clinicalFocusIds: clinicalFocusIds,
       unitTypeIds: unitTypeIds,
       legalDocumentType: legalDocumentType,
+      cpfStatus: cpfStatus,
       purchaseFunnelStages: purchaseFunnelStages,
       purchaseProfile: purchaseProfile,
       purchaseIntervalMinDays: purchaseIntervalMinDays,
@@ -94,6 +100,7 @@ class ClinicsQuery {
         other.clinicalFocusIds == clinicalFocusIds &&
         other.unitTypeIds == unitTypeIds &&
         other.legalDocumentType == legalDocumentType &&
+        other.cpfStatus == cpfStatus &&
         _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
         other.purchaseProfile == purchaseProfile &&
         other.purchaseIntervalMinDays == purchaseIntervalMinDays &&
@@ -117,6 +124,7 @@ class ClinicsQuery {
     clinicalFocusIds,
     unitTypeIds,
     legalDocumentType,
+    cpfStatus,
     Object.hashAll(purchaseFunnelStages),
     purchaseProfile,
     purchaseIntervalMinDays,
@@ -170,6 +178,7 @@ final clinicsRepositoryProvider = Provider.autoDispose
         clinicalFocusIds: query.clinicalFocusIds,
         unitTypeIds: query.unitTypeIds,
         legalDocumentType: query.legalDocumentType,
+        cpfStatus: query.cpfStatus,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,
@@ -202,6 +211,7 @@ final _clinicsPageRepositoryProvider = Provider.autoDispose
         clinicalFocusIds: query.clinicalFocusIds,
         unitTypeIds: query.unitTypeIds,
         legalDocumentType: query.legalDocumentType,
+        cpfStatus: query.cpfStatus,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,
