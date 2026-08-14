@@ -309,6 +309,7 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
         userId: rep.userId,
         verticalId: 1,
         withinZoneIds: zones,
+        subjectRole: "rep",
       });
 
       // Same predicate on both sides, so this cannot drift — which is the
@@ -336,6 +337,7 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
       // Ground this rep does not work. Their patches must not be listed, and
       // their clinics must not be counted.
       withinZoneIds: [-1],
+      subjectRole: "rep",
     });
 
     expect(foreign!.territories).toEqual([]);

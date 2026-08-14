@@ -83,7 +83,6 @@ class _Profile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(currentUserRoleProvider);
-    final territories = member.territories.map((t) => t.name).join(' · ');
     // Only an admin reaches a manager's own team from here; a manager's roster
     // is their reps, and a rep has no team at all.
     final showsTeam =
@@ -104,8 +103,8 @@ class _Profile extends ConsumerWidget {
             (Icons.mail_outline_rounded, 'E-mail', member.email),
             if (member.phoneNumber != null)
               (Icons.phone_outlined, 'Telefone', member.phoneNumber!),
-            if (territories.isNotEmpty)
-              (Icons.layers_rounded, 'Território', territories),
+            // Território is not a row here: the map below names it and draws
+            // it, and a row repeating the name says strictly less.
             (
               Icons.event_outlined,
               'Membro desde',
@@ -136,11 +135,13 @@ class _Profile extends ConsumerWidget {
         const SizedBox(height: 10),
         _LinkCard(
           icon: Icons.local_hospital_rounded,
-          title: 'Clínicas associadas',
+          title: member.isRep ? 'Clínicas associadas' : 'Clínicas nas zonas',
           trailing: '${member.assignedClinicCount}',
           subtitle: member.assignedClinicCount == 0
               ? 'Nenhuma clínica nesta área'
-              : 'Ver e gerenciar as clínicas desta pessoa',
+              : member.isRep
+              ? 'Ver e gerenciar as clínicas desta pessoa'
+              : 'Todas as clínicas dentro das zonas deste gestor',
           onTap: member.assignedClinicCount == 0
               ? null
               : () => MetricClinicsRoute(
@@ -164,6 +165,31 @@ class _Profile extends ConsumerWidget {
               userId: member.userId,
               memberName: member.displayName,
             ).push(context),
+          ),
+        ],
+        // A manager answers for the gap in their ground; a rep cannot, because
+        // a clinic nobody holds is not in a rep's denominator at all. Shown
+        // even at zero — "nenhuma clínica descoberta" is worth stating, unlike
+        // an absent problem elsewhere on this screen.
+        if (member.unassignedClinicCount != null) ...[
+          const SizedBox(height: 10),
+          _LinkCard(
+            icon: Icons.person_off_outlined,
+            accent: member.unassignedClinicCount! > 0
+                ? AppColors.amber
+                : AppColors.navyBright,
+            title: 'Clínicas sem representante',
+            trailing: '${member.unassignedClinicCount}',
+            subtitle: member.unassignedClinicCount! > 0
+                ? 'Dentro das zonas, sem ninguém atendendo'
+                : 'Toda a zona está coberta',
+            onTap: member.unassignedClinicCount! == 0
+                ? null
+                : () => MetricClinicsRoute(
+                    metric: 'unassigned-clinics',
+                    verticalId: verticalId,
+                    subjectUserId: member.userId,
+                  ).push(context),
           ),
         ],
         // Spec 0009 R2 promised this report and nothing ever showed it. Absent

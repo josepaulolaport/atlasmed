@@ -388,10 +388,16 @@ export class GetTeamMemberUseCase {
           })
         : null;
 
+    // The role decides the denominator (spec 0014 §3), so it has to be known
+    // before the counts are taken rather than inferred from them.
+    const subject = await this.deps.directory.findUser(request.subjectUserId);
+    if (!subject) throw new ForbiddenError();
+
     const member = await this.deps.teamRepository.findMember({
       userId: request.subjectUserId,
       verticalId,
       withinZoneIds,
+      subjectRole: subject.roleName === Role.REP ? "rep" : "manager",
     });
 
     // A member the reader may reach but who has nothing in their ground is not

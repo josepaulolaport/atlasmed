@@ -323,6 +323,7 @@ class TeamMemberProfile {
     required this.territories,
     required this.assignedClinicCount,
     required this.outOfTerritoryCount,
+    this.unassignedClinicCount,
     this.name,
     this.phoneNumber,
     this.avatarUrl,
@@ -342,6 +343,11 @@ class TeamMemberProfile {
   /// Clinics they hold that no patch of theirs covers — spec 0009 R2's
   /// override, reported for the first time.
   final int outOfTerritoryCount;
+
+  /// Clinics in scope that nobody holds. Null for a rep: a clinic they do not
+  /// hold is not in their denominator at all, so the gap is not theirs to answer
+  /// for — it is their manager's.
+  final int? unassignedClinicCount;
 
   String get displayName => (name?.trim().isNotEmpty ?? false) ? name! : email;
 
@@ -369,7 +375,10 @@ class TeamMemberProfile {
           )
           .toList(growable: false),
       assignedClinicCount: _readInt(json['assignedClinicCount']),
-      outOfTerritoryCount: _readInt(json['outOfTerritoryCount']),
+      outOfTerritoryCount: _readInt(json["outOfTerritoryCount"]),
+      unassignedClinicCount: json["unassignedClinicCount"] == null
+          ? null
+          : _readInt(json["unassignedClinicCount"]),
     );
   }
 }

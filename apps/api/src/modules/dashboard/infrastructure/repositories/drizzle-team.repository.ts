@@ -40,6 +40,13 @@ export type TeamMemberProfile = TeamMemberRow & {
    * manager owns is that manager's business, not this reader's.
    */
   outOfTerritoryCount: number;
+  /**
+   * Clinics in scope that no rep holds — a zone question, so null for a rep.
+   *
+   * A manager is accountable for the gap; a rep cannot be, because a clinic
+   * they do not hold is not in their denominator at all (spec 0014 §3).
+   */
+  unassignedClinicCount: number | null;
 };
 
 /** A territory with its geometry, for the map (spec 0015 §6). */
@@ -336,6 +343,13 @@ export class DrizzleTeamRepository {
     userId: number;
     verticalId: number;
     withinZoneIds: number[] | null;
+    /**
+     * Which denominator the counts use (spec 0014 §3). A rep is measured on the
+     * clinics assigned to them; a manager on the clinics in their zones — and a
+     * manager holds no assignments at all, so counting those would report every
+     * manager as having zero clinics, which is what it did.
+     */
+    subjectRole: "rep" | "manager";
   }): Promise<TeamMemberProfile | null> {
     const zones = input.withinZoneIds;
     if (zones?.length === 0) return null;
@@ -357,6 +371,56 @@ export class DrizzleTeamRepository {
       ? sql` AND p.manager_zone_id IN (${zoneList})`
       : sql``;
 
+    // A manager's ground: the profiles derived into any zone they hold. Written
+    // as a correlated subquery on the user rather than taking zone ids from the
+    // caller, because the caller's zones are the *reader's* — and when an admin
+    // reads a manager those are not the same set.
+    const ownZones = sql`
+      SELECT z.id
+        FROM user_territory_assignments uz
+        JOIN territories z ON z.id = uz.territory_id AND z.is_active = true
+        JOIN territory_types zt
+          ON zt.id = z.territory_type_id AND zt.slug = ${MANAGER_ZONE_TYPE_SLUG}
+       WHERE uz.user_id = u.id AND z.vertical_id = ${input.verticalId}
+    `;
+
+    const clinicCount =
+      input.subjectRole === "manager"
+        ? sql`(SELECT COUNT(*)
+                 FROM facility_vertical_profiles p
+                 JOIN facilities f ON f.id = p.facility_id
+                WHERE p.vertical_id = ${input.verticalId}
+                  AND p.is_active = true
+                  AND f.deactivated_at IS NULL
+                  AND p.manager_zone_id IN (${ownZones}))::int`
+        : sql`(SELECT COUNT(*)
+                 FROM facility_vertical_rep_assignments a
+                 JOIN facility_vertical_profiles p
+                   ON p.id = a.facility_vertical_profile_id
+                 JOIN facilities f ON f.id = p.facility_id
+                WHERE a.user_id = u.id
+                  AND a.ended_at IS NULL
+                  AND p.vertical_id = ${input.verticalId}
+                  AND p.is_active = true
+                  AND f.deactivated_at IS NULL${profileScope})::int`;
+
+    // Only a manager has a gap to answer for: a clinic nobody holds is not in
+    // a rep's denominator at all.
+    const unassignedCount =
+      input.subjectRole === "manager"
+        ? sql`(SELECT COUNT(*)
+                 FROM facility_vertical_profiles p
+                 JOIN facilities f ON f.id = p.facility_id
+                WHERE p.vertical_id = ${input.verticalId}
+                  AND p.is_active = true
+                  AND f.deactivated_at IS NULL
+                  AND p.manager_zone_id IN (${ownZones})
+                  AND NOT EXISTS (
+                    SELECT 1 FROM facility_vertical_rep_assignments a
+                     WHERE a.facility_vertical_profile_id = p.id
+                       AND a.ended_at IS NULL))::int`
+        : sql`NULL::int`;
+
     const rows = (await db.execute(sql`
       SELECT u.id,
              NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), '') AS name,
@@ -376,17 +440,8 @@ export class DrizzleTeamRepository {
                    AND t.is_active = true${territoryScope}),
                '[]'
              ) AS territories,
-             (SELECT COUNT(*)
-                FROM facility_vertical_rep_assignments a
-                INNER JOIN facility_vertical_profiles p
-                  ON p.id = a.facility_vertical_profile_id
-                INNER JOIN facilities f ON f.id = p.facility_id
-               WHERE a.user_id = u.id
-                 AND a.ended_at IS NULL
-                 AND p.vertical_id = ${input.verticalId}
-                 AND p.is_active = true
-                 AND f.deactivated_at IS NULL${profileScope})::int
-               AS assigned_clinic_count,
+             ${clinicCount} AS assigned_clinic_count,
+             ${unassignedCount} AS unassigned_clinic_count,
              (SELECT COUNT(*)
                 FROM facility_vertical_rep_assignments a
                 INNER JOIN facility_vertical_profiles p
@@ -414,6 +469,7 @@ export class DrizzleTeamRepository {
       role_name: string;
       territories: Array<{ id: number; name: string }> | string;
       assigned_clinic_count: number | string;
+      unassigned_clinic_count: number | string | null;
       out_of_territory_count: number | string;
     }>;
 
@@ -434,6 +490,10 @@ export class DrizzleTeamRepository {
           ? (JSON.parse(row.territories) as Array<{ id: number; name: string }>)
           : row.territories,
       assignedClinicCount: Number(row.assigned_clinic_count),
+      unassignedClinicCount:
+        row.unassigned_clinic_count == null
+          ? null
+          : Number(row.unassigned_clinic_count),
       outOfTerritoryCount: Number(row.out_of_territory_count),
     };
   }

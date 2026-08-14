@@ -34,7 +34,8 @@ TeamMemberProfile _profile({
   String role = 'REP',
   int clinics = 242,
   int outOfTerritory = 0,
-  String status = 'ACTIVE',
+  int? unassigned,
+  String status = "ACTIVE",
   String? phone = '+55 21 99999-0000',
 }) => TeamMemberProfile(
   userId: 5,
@@ -47,6 +48,7 @@ TeamMemberProfile _profile({
   territories: const [(id: 9, name: 'Patch Flavio Ramalho')],
   assignedClinicCount: clinics,
   outOfTerritoryCount: outOfTerritory,
+  unassignedClinicCount: unassigned,
 );
 
 /// A territory map that is already loaded, so the profile's minimap does not
@@ -116,9 +118,49 @@ void main() {
     expect(find.text('Flavio Ramalho'), findsWidgets);
     expect(find.text('Representante'), findsOneWidget);
     expect(find.text('flavio.ramalho@atlasmed.com.br'), findsOneWidget);
-    expect(find.text('Patch Flavio Ramalho'), findsOneWidget);
     expect(find.text('ago. de 2026'), findsOneWidget);
     expect(find.text('242'), findsOneWidget);
+    // The territory is drawn, not listed. A row repeating the patch name beside
+    // a map of that patch said strictly less than the map did.
+    expect(find.text('Território'), findsNothing);
+  });
+
+  testWidgets('a manager is measured on their zones, not on assignments', (
+    tester,
+  ) async {
+    // A manager holds no rep assignments, so counting those reported every
+    // manager as having zero clinics — which is what the profile did.
+    await _pump(
+      tester,
+      _profile(role: 'MANAGER', clinics: 1134, unassigned: 0),
+      role: UserRoleName.admin,
+    );
+
+    expect(find.text('Clínicas nas zonas'), findsOneWidget);
+    expect(find.text('1134'), findsOneWidget);
+    expect(find.text('Clínicas associadas'), findsNothing);
+  });
+
+  testWidgets('a manager answers for the clinics nobody covers', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _profile(role: 'MANAGER', clinics: 1134, unassigned: 47),
+      role: UserRoleName.admin,
+    );
+
+    expect(find.text('Clínicas sem representante'), findsOneWidget);
+    expect(find.text('47'), findsOneWidget);
+  });
+
+  testWidgets('a rep is not asked about a gap that is not theirs', (
+    tester,
+  ) async {
+    // A clinic nobody holds is not in a rep's denominator at all — it is their
+    // manager's gap, and putting it on the rep would read as their failure.
+    await _pump(tester, _profile());
+    expect(find.text('Clínicas sem representante'), findsNothing);
   });
 
   testWidgets('leads to Desempenho rather than repeating it', (tester) async {

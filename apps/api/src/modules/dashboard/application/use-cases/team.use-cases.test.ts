@@ -125,12 +125,9 @@ describe("member profile (spec 0015 §4)", () => {
   function profileDeps(overrides: {
     zoneIds?: number[];
     member?: Record<string, unknown> | null;
+    subjectRole?: string;
   }) {
-    const seen: Array<{
-      userId: number;
-      verticalId: number;
-      withinZoneIds: number[] | null;
-    }> = [];
+    const seen: Array<Record<string, unknown>> = [];
     return {
       seen,
       deps: {
@@ -139,6 +136,7 @@ describe("member profile (spec 0015 §4)", () => {
             userId: number;
             verticalId: number;
             withinZoneIds: number[] | null;
+            subjectRole: string;
           }) => {
             seen.push(input);
             return overrides.member === undefined
@@ -147,10 +145,13 @@ describe("member profile (spec 0015 §4)", () => {
           },
         },
         directory: {
-          findUser: async () => null,
+          findUser: async (id: number) => ({
+            userId: id,
+            roleName: overrides.subjectRole ?? Role.REP,
+          }),
           findManagerZoneIds: async () => overrides.zoneIds ?? [11],
           findManagedUserIds: async () => [],
-        } satisfies DashboardDirectoryPort,
+        },
       } as unknown as ConstructorParameters<typeof GetTeamMemberUseCase>[0],
     };
   }
@@ -192,14 +193,23 @@ describe("member profile (spec 0015 §4)", () => {
       profileRequest(Role.MANAGER, 5),
     );
 
-    expect(seen[0]).toEqual({ userId: 5, verticalId: 1, withinZoneIds: [11, 12] });
+    expect(seen[0]).toMatchObject({
+      userId: 5,
+      verticalId: 1,
+      withinZoneIds: [11, 12],
+      subjectRole: "rep",
+    });
   });
 
   it("gives an admin the whole person", async () => {
     const { deps, seen } = profileDeps({});
     await new GetTeamMemberUseCase(deps).execute(profileRequest(Role.ADMIN, 5, 1));
 
-    expect(seen[0]).toEqual({ userId: 5, verticalId: 1, withinZoneIds: null });
+    expect(seen[0]).toMatchObject({
+      userId: 5,
+      verticalId: 1,
+      withinZoneIds: null,
+    });
   });
 
   it("lets a manager open their own profile", async () => {
