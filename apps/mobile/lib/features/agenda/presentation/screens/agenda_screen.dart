@@ -89,6 +89,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         onToday: preview.onToday,
         onRefresh: preview.onRefresh,
         onSearchChanged: _setSearch,
+        searchValue: _search,
       );
     }
 
@@ -115,6 +116,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        searchValue: _search,
         onOccurrenceTap: _editOccurrence,
       ),
       error: (error, _) => _AgendaScaffold(
@@ -128,6 +130,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        searchValue: _search,
         onOccurrenceTap: _editOccurrence,
       ),
       data: (occurrences) => _AgendaScaffold(
@@ -140,6 +143,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        searchValue: _search,
         onOccurrenceTap: _editOccurrence,
       ),
     );
@@ -366,6 +370,7 @@ class _AgendaScaffold extends StatelessWidget {
     this.onToday,
     this.onRefresh,
     this.onSearchChanged,
+    this.searchValue = '',
     this.onOccurrenceTap,
   });
 
@@ -381,6 +386,7 @@ class _AgendaScaffold extends StatelessWidget {
   final VoidCallback? onToday;
   final VoidCallback? onRefresh;
   final ValueChanged<String>? onSearchChanged;
+  final String searchValue;
   final ValueChanged<CalendarOccurrence>? onOccurrenceTap;
 
   @override
@@ -399,6 +405,7 @@ class _AgendaScaffold extends StatelessWidget {
             onToday: onToday,
             onRefresh: onRefresh,
             onSearchChanged: onSearchChanged,
+            searchValue: searchValue,
           ),
           Expanded(child: _body()),
         ],
@@ -438,6 +445,7 @@ class _AgendaToolbar extends StatelessWidget {
     this.onToday,
     this.onRefresh,
     this.onSearchChanged,
+    this.searchValue = '',
   });
 
   final DateTime periodStart;
@@ -448,6 +456,7 @@ class _AgendaToolbar extends StatelessWidget {
   final VoidCallback? onToday;
   final VoidCallback? onRefresh;
   final ValueChanged<String>? onSearchChanged;
+  final String searchValue;
 
   @override
   Widget build(BuildContext context) {
@@ -539,13 +548,73 @@ class _AgendaToolbar extends StatelessWidget {
                         ],
                       ),
                     const SizedBox(height: 8),
-                    TextField(
-                      key: const Key('agenda-search'),
-                      onChanged: onSearchChanged,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        prefixIcon: Icon(Icons.search_rounded),
-                        hintText: 'Buscar por compromisso ou clínica',
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.gray200),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0A000000),
+                            blurRadius: 2,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.search_rounded,
+                            size: 16,
+                            color: AppColors.gray500,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              key: const Key('agenda-search'),
+                              controller: TextEditingController.fromValue(
+                                TextEditingValue(
+                                  text: searchValue,
+                                  selection: TextSelection.collapsed(
+                                    offset: searchValue.length,
+                                  ),
+                                ),
+                              ),
+                              onChanged: onSearchChanged,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.gray900,
+                              ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                hintText: 'Buscar por compromisso ou clínica',
+                                hintStyle: TextStyle(color: AppColors.gray400),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                          if (searchValue.isNotEmpty)
+                            GestureDetector(
+                              onTap: () => onSearchChanged?.call(''),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gray200,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  size: 10,
+                                  color: AppColors.gray500,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
