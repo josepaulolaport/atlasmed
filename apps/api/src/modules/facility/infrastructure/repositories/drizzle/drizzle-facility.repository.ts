@@ -545,6 +545,8 @@ export function buildFacilityListConditions(params: {
   unitTypeIds?: number[];
   /** CNPJ or CPF. Single value — the enum has only these two. */
   legalDocumentType?: "CNPJ" | "CPF";
+  /** CPF clinics whose document is absent, or present but not a valid CPF. */
+  cpfStatus?: "missing" | "invalid";
   candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
@@ -627,6 +629,33 @@ export function buildFacilityListConditions(params: {
   if (params.legalDocumentType) {
     conditions.push(
       eq(facilities.legalDocumentType, params.legalDocumentType),
+    );
+  }
+  if (params.cpfStatus) {
+    /**
+     * Both branches require `legal_document_type = 'CPF'`: a CNPJ clinic with
+     * no CNPJ is a real problem too, but it is not the one this warning counts,
+     * and folding it in would make the Desempenho number disagree with the list
+     * it opens.
+     *
+     * "Missing" is NULL *or* blank — `displayTaxIdentifier` in the app already
+     * renders a blank as absent, so a rep looking at an imported empty string
+     * sees "—" and would not understand its absence from a list of clinics
+     * without a CPF.
+     *
+     * The two sets are disjoint by construction: `invalid` requires a non-blank
+     * value, so no clinic is reported under both counts.
+     */
+    const isCpfClinic = eq(facilities.legalDocumentType, "CPF");
+    const blank = sql`(${facilities.legalDocument} is null or btrim(${facilities.legalDocument}) = '')`;
+    conditions.push(
+      params.cpfStatus === "missing"
+        ? and(isCpfClinic, blank)!
+        : and(
+            isCpfClinic,
+            sql`not ${blank}`,
+            sql`not is_valid_cpf(${facilities.legalDocument})`,
+          )!,
     );
   }
   if (params.clinicalFocusIds?.length) {

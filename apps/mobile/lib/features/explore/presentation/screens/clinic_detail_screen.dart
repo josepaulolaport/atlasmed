@@ -41,6 +41,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_linha_bar.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_cpf_warning.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
@@ -732,6 +734,20 @@ class _ClinicDetailContent extends ConsumerWidget {
                     // select. An order belongs to an interaction; it is started
                     // from the interaction screen, which passes all three.
                   ],
+                ),
+                // Below the quick actions, not above them: that widget paints
+                // its own blue top half so it continues the header seamlessly
+                // and the white card straddles the seam. Anything inserted
+                // between the two detaches that blue and leaves a floating band
+                // across the screen.
+                ClinicCpfWarning(
+                  legalDocumentType: detail.registration?.legalDocumentType,
+                  legalDocument: detail.registration?.legalDocument,
+                  onOpenAdminInfo: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClinicAdminInfoScreen(detail: detail),
+                    ),
+                  ),
                 ),
                 ClinicTopShortcutsSection(
                   facilityId: clinicId,
