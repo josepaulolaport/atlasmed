@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -52,31 +52,9 @@ class ClinicPinCalloutContent extends StatelessWidget {
                 runSpacing: 3,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: establishment.status.color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        establishment.status.label,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: establishment.status.color,
-                        ),
-                      ),
-                    ],
-                  ),
                   if (establishment.specialtyLabel != null)
                     Text(
-                      '· ${establishment.specialtyLabel}',
+                      establishment.specialtyLabel!,
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: AppColors.gray500,
@@ -103,6 +81,49 @@ class ClinicPinCalloutContent extends StatelessWidget {
                   ),
                 ],
               ),
+              // Under the distance, not above it.
+              //
+              // Reads as identity first (name, neighbourhood, how far), then
+              // the commercial fact — which is the one thing here a rep acts
+              // on, so it sits closest to the link into the clinic.
+              if (establishment.purchaseBucket != null) ...[
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: PurchaseBucketFilter.color(
+                          establishment.purchaseBucket!,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    // The bucket's own name — the same one the Desempenho
+                    // donut and the list rows use for this clinic. It rendered
+                    // `ClinicStatus` before, whose mapping sent every bucket
+                    // that was not active or inactive to `rejected`, so a
+                    // clinic that had simply never bought was labelled
+                    // "Rejeição": not a softer wording, a claim that it turned
+                    // us down.
+                    Text(
+                      PurchaseBucketFilter.mapLabel(
+                        establishment.purchaseBucket!,
+                      ),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: PurchaseBucketFilter.color(
+                          establishment.purchaseBucket!,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const Divider(height: 16, color: AppColors.gray100),
               const Row(
                 mainAxisSize: MainAxisSize.min,

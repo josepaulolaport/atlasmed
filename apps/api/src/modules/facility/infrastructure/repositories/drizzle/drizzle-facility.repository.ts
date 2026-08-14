@@ -18,6 +18,7 @@ import {
   personFacilityClassifications,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
+import { expandAddressAbbreviations } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError, ValidationError } from "../../../../../shared/errors";
 import {
@@ -555,12 +556,33 @@ export function buildFacilityListConditions(params: {
   if (params.candidateIds) conditions.push(inArray(facilities.id, params.candidateIds));
   if (params.search) {
     const pattern = `%${params.search}%`;
+    /**
+     * Street-type rewrites of the typed term, matched against the address
+     * fields only.
+     *
+     * The registry stores "Av." and almost never "Avenida", so the term as
+     * typed misses 436 of 1443 addresses in the sample. [expandAddressAbbreviations]
+     * always returns the typed term first, and it is already covered by the
+     * clauses below, so only the rewrites are added here.
+     *
+     * Address fields only, deliberately. A street type does not appear in a
+     * CNPJ, a CNES code, a city or a state, and adding the rewrites to the
+     * municipality and state subqueries would multiply two correlated
+     * subqueries for matches that cannot exist. `neighborhood` is in because
+     * it genuinely carries them — Praça Seca is a district of Rio, and the
+     * cedilla nobody types on a phone is one of the rewrites.
+     */
+    const addressVariants = expandAddressAbbreviations(params.search).slice(1);
     conditions.push(or(
       ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
       ilike(facilities.tradeName, pattern), ilike(facilities.legalDocument, pattern),
       ilike(facilities.cnesCode, pattern),
       ilike(facilities.streetAddress, pattern),
       ilike(facilities.neighborhood, pattern),
+      ...addressVariants.flatMap((variant) => [
+        ilike(facilities.streetAddress, `%${variant}%`),
+        ilike(facilities.neighborhood, `%${variant}%`),
+      ]),
       inArray(
         facilities.municipalityId,
         db

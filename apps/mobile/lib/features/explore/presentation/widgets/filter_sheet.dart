@@ -7,9 +7,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/legal_document_
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_unit_types_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
-import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
@@ -95,6 +92,23 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     });
   }
 
+  /// Same drawer as Especialidade — search plus a multi-select list.
+  ///
+  /// The twelve CNES unit types have names like "Unidade De Apoio Diagnose E
+  /// Terapia (sadt Isolado)"; as chips they wrapped into a wall that pushed the
+  /// rest of the sheet off screen.
+  Future<void> _openUnitTypeDrawer() async {
+    final result = await SpecialtyFilterDrawer.show(
+      context,
+      kind: 'unit-type',
+      selected: Set<String>.from(_local['unitTypeIds'] ?? const []),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _local['unitTypeIds'] = result.toList(growable: false);
+    });
+  }
+
   Future<void> _openSpecialtyDrawer() async {
     final key = widget.kind == 'clinic' ? 'clinicalFocusIds' : 'specialties';
     final result = await SpecialtyFilterDrawer.show(
@@ -149,7 +163,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                             _toggleMulti('purchaseBucket', v),
                         onSelectProfile: (v) =>
                             _selectSingle('purchaseProfile', v),
-                        onToggleUnitType: (v) => _toggleMulti('unitTypeIds', v),
+                        onOpenUnitType: _openUnitTypeDrawer,
                         onSelectLegalDocumentType: (v) =>
                             _selectSingle('legalDocumentType', v),
                         onOpenSpecialty: _openSpecialtyDrawer,
@@ -299,7 +313,7 @@ class _ClinicFilters extends StatelessWidget {
   final ValueChanged<String> onSelectStatus;
   final ValueChanged<String> onTogglePurchaseBucket;
   final ValueChanged<String> onSelectProfile;
-  final ValueChanged<String> onToggleUnitType;
+  final VoidCallback onOpenUnitType;
   final ValueChanged<String> onSelectLegalDocumentType;
   final VoidCallback onOpenSpecialty;
   final TextEditingController minimumIntervalController;
@@ -315,7 +329,7 @@ class _ClinicFilters extends StatelessWidget {
     required this.onSelectStatus,
     required this.onTogglePurchaseBucket,
     required this.onSelectProfile,
-    required this.onToggleUnitType,
+    required this.onOpenUnitType,
     required this.onSelectLegalDocumentType,
     required this.onOpenSpecialty,
     required this.minimumIntervalController,
@@ -330,42 +344,33 @@ class _ClinicFilters extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!hideCommercialStatus) ...[
-          const _SectionHeader(title: 'Status'),
+        if (!hidePurchaseFunnel) ...[
+          const _SectionHeader(title: 'Status de compras'),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            // Compact enough for the three buckets to sit on one line at
+            // 390pt. Still a Wrap rather than a Row: on a 320pt phone they
+            // cannot fit however tight the padding, and wrapping beats
+            // clipping "Nunca compraram".
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: CommercialStatusFilter.values.map((value) {
-                final on = (local['status'] ?? []).contains(value);
-                final color = CommercialStatusFilter.color(value);
+              spacing: 6,
+              runSpacing: 6,
+              children: PurchaseBucketFilter.values.map((bucket) {
+                final selected = (local['purchaseBucket'] ?? []).contains(
+                  bucket,
+                );
+                final color = PurchaseBucketFilter.color(bucket);
                 return _ToggleChip(
-                  label: CommercialStatusFilter.label(value),
+                  label: PurchaseBucketFilter.label(bucket),
                   dotColor: color,
-                  selected: on,
-                  onTap: () => onSelectStatus(value),
+                  selected: selected,
+                  compact: true,
+                  onTap: () => onTogglePurchaseBucket(bucket),
                 );
               }).toList(),
             ),
           ),
         ],
-        const _SectionHeader(title: 'Especialidade'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: _SpecialtyNavRow(
-            count: local['clinicalFocusIds']?.length ?? 0,
-            onTap: onOpenSpecialty,
-          ),
-        ),
-        const _SectionHeader(title: 'Tipo de unidade'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: _UnitTypeChips(
-            selected: local['unitTypeIds'] ?? const [],
-            onToggle: onToggleUnitType,
-          ),
-        ),
         const _SectionHeader(title: 'Natureza jurídica'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
@@ -384,23 +389,42 @@ class _ClinicFilters extends StatelessWidget {
             }).toList(),
           ),
         ),
-        if (!hidePurchaseFunnel) ...[
-          const _SectionHeader(title: 'Status de compras'),
+        const _SectionHeader(title: 'Especialidade'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: _SpecialtyNavRow(
+            count: local['clinicalFocusIds']?.length ?? 0,
+            onTap: onOpenSpecialty,
+          ),
+        ),
+        const _SectionHeader(title: 'Tipo de unidade'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: _CatalogNavRow(
+            icon: Icons.local_hospital_outlined,
+            title: 'Escolher tipos de unidade',
+            count: local['unitTypeIds']?.length ?? 0,
+            // Masculine: "1 selecionado", against Especialidade's "1
+            // selecionada".
+            selectedWord: 'selecionado',
+            onTap: onOpenUnitType,
+          ),
+        ),
+        if (!hideCommercialStatus) ...[
+          const _SectionHeader(title: 'Situação cadastral'),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: PurchaseBucketFilter.values.map((bucket) {
-                final selected = (local['purchaseBucket'] ?? []).contains(
-                  bucket,
-                );
-                final color = PurchaseBucketFilter.color(bucket);
+              children: CommercialStatusFilter.values.map((value) {
+                final on = (local['status'] ?? []).contains(value);
+                final color = CommercialStatusFilter.color(value);
                 return _ToggleChip(
-                  label: PurchaseBucketFilter.label(bucket),
+                  label: CommercialStatusFilter.label(value),
                   dotColor: color,
-                  selected: selected,
-                  onTap: () => onTogglePurchaseBucket(bucket),
+                  selected: on,
+                  onTap: () => onSelectStatus(value),
                 );
               }).toList(),
             ),
@@ -472,61 +496,6 @@ class _ClinicFilters extends StatelessWidget {
   }
 }
 
-/// CNES unit types, multi-select.
-///
-/// OR semantics, matching the API: a facility has exactly one unit type, so
-/// requiring all of the selected ones would always return an empty list.
-class _UnitTypeChips extends ConsumerWidget {
-  const _UnitTypeChips({required this.selected, required this.onToggle});
-
-  final List<String> selected;
-  final ValueChanged<String> onToggle;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(facilityUnitTypesRepositoryProvider);
-    return RepositoryBuilder<
-      FacilityUnitTypesRepository,
-      List<FacilityUnitTypeOption>
-    >(
-      repository: repository,
-      builder: (context, snapshot, _) {
-        if (snapshot == null) {
-          return const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Carregando tipos de unidade…',
-              style: TextStyle(fontSize: 13, color: AppColors.gray500),
-            ),
-          );
-        }
-        if (snapshot.isEmpty) {
-          return const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Nenhum tipo de unidade disponível no seu escopo.',
-              style: TextStyle(fontSize: 13, color: AppColors.gray500),
-            ),
-          );
-        }
-
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: snapshot.map((option) {
-            final id = option.id.toString();
-            return _SimpleChip(
-              label: option.label,
-              selected: selected.contains(id),
-              onTap: () => onToggle(id),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-}
-
 class _SpecialtyNavRow extends StatelessWidget {
   const _SpecialtyNavRow({required this.count, required this.onTap});
 
@@ -534,10 +503,38 @@ class _SpecialtyNavRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  Widget build(BuildContext context) => _CatalogNavRow(
+    icon: Icons.medical_services_outlined,
+    title: 'Escolher especialidades',
+    count: count,
+    selectedWord: 'selecionada',
+    onTap: onTap,
+  );
+}
+
+/// The row that opens one of the catalogue drawers.
+class _CatalogNavRow extends StatelessWidget {
+  const _CatalogNavRow({
+    required this.icon,
+    required this.title,
+    required this.count,
+    required this.selectedWord,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final int count;
+
+  /// Portuguese agrees with the noun, so the caller supplies it.
+  final String selectedWord;
+  final VoidCallback onTap;
+
+  @override
   Widget build(BuildContext context) {
     final subtitle = count == 0
-        ? 'Todas'
-        : '$count selecionada${count == 1 ? '' : 's'}';
+        ? 'Todos'
+        : '$count $selectedWord${count == 1 ? '' : 's'}';
 
     return Material(
       color: AppColors.surfaceTertiary,
@@ -553,19 +550,15 @@ class _SpecialtyNavRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.medical_services_outlined,
-                size: 18,
-                color: AppColors.navyBright,
-              ),
+              Icon(icon, size: 18, color: AppColors.navyBright),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Escolher especialidades',
-                      style: TextStyle(
+                    Text(
+                      title,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.gray900,
@@ -621,11 +614,15 @@ class _ToggleChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Tighter padding and type, so a row of three fits without wrapping.
+  final bool compact;
+
   const _ToggleChip({
     required this.label,
     required this.dotColor,
     required this.selected,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -633,7 +630,10 @@ class _ToggleChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 9 : 12,
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
           color: selected ? dotColor.withValues(alpha: 0.1) : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
@@ -650,11 +650,11 @@ class _ToggleChip extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: compact ? 5 : 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: compact ? 12 : 13,
                 fontWeight: FontWeight.w600,
                 color: selected ? dotColor : AppColors.gray700,
               ),

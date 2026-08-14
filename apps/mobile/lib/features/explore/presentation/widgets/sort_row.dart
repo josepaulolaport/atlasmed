@@ -17,40 +17,60 @@ class SortRow extends StatelessWidget {
     this.includeSort = true,
   });
 
-  /// Human label for a sort key.
+  /// Short label for a sort key — one or two words.
+  ///
+  /// The direction is an arrow, not words. "Status de compras — inverso" was
+  /// 27 characters in a chip that sits beside the Clínicas/Médicos tabs, and it
+  /// overlapped them; every descending option carried the same "— inverso"
+  /// suffix, so the longest labels were the ones a rep switches to most.
   ///
   /// Must cover every key [SortSheet] offers. It used to handle four and fall
-  /// through to returning the key itself, so the chip on Explorar read
-  /// "purchase-funnel-desc" and "name-desc" — internal identifiers, shown to
-  /// reps — while the sheet displayed proper labels for the same options.
-  /// `sort_row_labels_test.dart` walks the sheet's real option list, so a new
-  /// option without a label here fails rather than ships.
+  /// through to returning the key itself, so the chip read
+  /// "purchase-funnel-desc" to reps. `sort_row_labels_test.dart` walks the
+  /// sheet's real option list, so a new option without a label here fails
+  /// rather than ships.
   static String labelFor(String key) {
     switch (key) {
       case 'name-asc':
-        return 'Nome A–Z';
       case 'name-desc':
-        return 'Nome Z–A';
+        return 'Nome';
       case 'distance':
-        return 'Mais próximos';
+        return 'Distância';
       case 'purchase-funnel-asc':
-        return 'Status de compras';
       case 'purchase-funnel-desc':
-        return 'Status de compras — inverso';
+        return 'Status';
       case 'purchase-interval-asc':
-        return 'Intervalo de compras';
       case 'purchase-interval-desc':
-        return 'Intervalo de compras — inverso';
+        return 'Intervalo';
       case 'last-purchase-desc':
-        return 'Última compra';
       case 'last-purchase-asc':
-        return 'Última compra — antiga';
+        return 'Última compra';
       case 'oldest-visit':
-        return 'Sem visita há mais tempo';
+        return 'Sem visita';
       case 'last-contact':
-        return 'Sem contato há mais tempo';
+        return 'Sem contato';
       default:
         return key;
+    }
+  }
+
+  /// Which way the current sort runs.
+  ///
+  /// Ascending is the arrow up: A→Z, nearest first, oldest date first. So
+  /// "Última compra ↓" is most recent first and "Nome ↑" is A–Z.
+  ///
+  /// Options with no opposite in the sheet — distance, and the two "há mais
+  /// tempo" sorts — still get an arrow, because they still have a direction and
+  /// a bare "Distância" would not say which end it starts from.
+  static SortChipDirection directionFor(String key) {
+    switch (key) {
+      case 'name-desc':
+      case 'purchase-funnel-desc':
+      case 'purchase-interval-desc':
+      case 'last-purchase-desc':
+        return SortChipDirection.descending;
+      default:
+        return SortChipDirection.ascending;
     }
   }
 
@@ -68,7 +88,7 @@ class SortRow extends StatelessWidget {
         children: [
           if (includeSort) ...[
             Center(
-              child: _SortChip(label: labelFor(sort), onTap: onSortTap),
+              child: _SortChip(sort: sort, onTap: onSortTap),
             ),
             if (filterChips.isNotEmpty) const SizedBox(width: 6),
           ],
@@ -94,18 +114,22 @@ class ExploreSortChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SortChip(label: SortRow.labelFor(sort), onTap: onTap);
+    return _SortChip(sort: sort, onTap: onTap);
   }
 }
 
+/// Which end an ordering starts from.
+enum SortChipDirection { ascending, descending }
+
 class _SortChip extends StatelessWidget {
-  final String label;
+  final String sort;
   final VoidCallback onTap;
 
-  const _SortChip({required this.label, required this.onTap});
+  const _SortChip({required this.sort, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final ascending = SortRow.directionFor(sort) == SortChipDirection.ascending;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -118,14 +142,18 @@ class _SortChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.swap_vert_rounded,
+            // Replaces the generic swap glyph, which looked the same for every
+            // sort and so said nothing about the current one.
+            Icon(
+              ascending
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
               size: 12,
               color: AppColors.gray900,
             ),
             const SizedBox(width: 5),
             Text(
-              label,
+              SortRow.labelFor(sort),
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

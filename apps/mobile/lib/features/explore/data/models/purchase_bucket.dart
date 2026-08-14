@@ -41,11 +41,16 @@ abstract final class PurchaseBucketFilter {
     _ => value,
   };
 
-  /// Live-map filter chips (singular).
+  /// The map's wording — one clinic, so singular, and feminine to agree with
+  /// "clínica".
+  ///
+  /// The same three buckets Desempenho counts, named the same way. It used to
+  /// read "Ativo / Inativo / Sem compras", which invented a third vocabulary
+  /// for facts the donut already called Ativas, Inativas and Nunca compraram.
   static String mapLabel(String value) => switch (value) {
-    active => 'Ativo',
-    inactive => 'Inativo',
-    neverBought => 'Sem compras',
+    active => 'Ativa',
+    inactive => 'Inativa',
+    neverBought => 'Nunca comprou',
     _ => value,
   };
 
