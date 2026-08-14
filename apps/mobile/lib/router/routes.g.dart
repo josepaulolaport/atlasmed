@@ -13,6 +13,14 @@ List<RouteBase> get $appRoutes => [
   $agendaNewRoute,
   $agendaEditRoute,
   $agendaOccurrenceEditRoute,
+  $subjectDashboardRoute,
+  $assignClinicRoute,
+  $memberTerritoryRoute,
+  $outOfTerritoryRoute,
+  $teamMemberProfileRoute,
+  $teamMemberRoute,
+  $repsWithoutPatchRoute,
+  $metricClinicsRoute,
   $purchaseBucketFacilitiesRoute,
   $cpfIssueFacilitiesRoute,
   $favoritosRoute,
@@ -355,6 +363,15 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
         ),
       ],
     ),
+    StatefulShellBranchData.$branch(
+      routes: [
+        GoRouteData.$route(
+          path: '/team',
+          hasOverriddenOnExit: false,
+          factory: $TeamRoute._fromState,
+        ),
+      ],
+    ),
   ],
 );
 
@@ -586,6 +603,26 @@ mixin $ProfileRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $TeamRoute on GoRouteData {
+  static TeamRoute _fromState(GoRouterState state) => const TeamRoute();
+
+  @override
+  String get location => GoRouteData.$location('/team');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 RouteBase get $agendaNewRoute => GoRouteData.$route(
   path: '/agenda/new',
   hasOverriddenOnExit: false,
@@ -692,6 +729,377 @@ mixin $AgendaOccurrenceEditRoute on GoRouteData {
       context.replace(location, extra: _self.$extra);
 }
 
+RouteBase get $subjectDashboardRoute => GoRouteData.$route(
+  path: '/team/member/:subjectUserId',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: SubjectDashboardRoute.$parentNavigatorKey,
+  factory: $SubjectDashboardRoute._fromState,
+);
+
+mixin $SubjectDashboardRoute on GoRouteData {
+  static SubjectDashboardRoute _fromState(GoRouterState state) =>
+      SubjectDashboardRoute(
+        subjectUserId: int.parse(state.pathParameters['subjectUserId']!),
+        subjectName: state.uri.queryParameters['subjectName'],
+        subjectRole: state.uri.queryParameters['subjectRole'],
+        withinManagerId: _$convertMapValue(
+          'withinManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+      );
+
+  SubjectDashboardRoute get _self => this as SubjectDashboardRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/member/${Uri.encodeComponent(_self.subjectUserId.toString())}',
+    queryParams: {
+      if (_self.subjectName != null) 'subjectName': _self.subjectName,
+      if (_self.subjectRole != null) 'subjectRole': _self.subjectRole,
+      if (_self.withinManagerId != null)
+        'withinManagerId': _self.withinManagerId!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+RouteBase get $assignClinicRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/assign-clinic',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AssignClinicRoute.$parentNavigatorKey,
+  factory: $AssignClinicRoute._fromState,
+);
+
+mixin $AssignClinicRoute on GoRouteData {
+  static AssignClinicRoute _fromState(GoRouterState state) => AssignClinicRoute(
+    userId: int.parse(state.pathParameters['userId']!),
+    memberName: state.uri.queryParameters['memberName'],
+  );
+
+  AssignClinicRoute get _self => this as AssignClinicRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/assign-clinic',
+    queryParams: {if (_self.memberName != null) 'memberName': _self.memberName},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $memberTerritoryRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/territory',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: MemberTerritoryRoute.$parentNavigatorKey,
+  factory: $MemberTerritoryRoute._fromState,
+);
+
+mixin $MemberTerritoryRoute on GoRouteData {
+  static MemberTerritoryRoute _fromState(GoRouterState state) =>
+      MemberTerritoryRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+        viaManagerId: _$convertMapValue(
+          'viaManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        isRep: _$convertMapValue(
+          'isRep',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ),
+      );
+
+  MemberTerritoryRoute get _self => this as MemberTerritoryRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/territory',
+    queryParams: {
+      if (_self.memberName != null) 'memberName': _self.memberName,
+      if (_self.viaManagerId != null)
+        'viaManagerId': _self.viaManagerId!.toString(),
+      if (_self.isRep != null) 'isRep': _self.isRep!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
+}
+
+RouteBase get $outOfTerritoryRoute => GoRouteData.$route(
+  path: '/team/profile/:userId/out-of-territory',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: OutOfTerritoryRoute.$parentNavigatorKey,
+  factory: $OutOfTerritoryRoute._fromState,
+);
+
+mixin $OutOfTerritoryRoute on GoRouteData {
+  static OutOfTerritoryRoute _fromState(GoRouterState state) =>
+      OutOfTerritoryRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+      );
+
+  OutOfTerritoryRoute get _self => this as OutOfTerritoryRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}/out-of-territory',
+    queryParams: {if (_self.memberName != null) 'memberName': _self.memberName},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $teamMemberProfileRoute => GoRouteData.$route(
+  path: '/team/profile/:userId',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: TeamMemberProfileRoute.$parentNavigatorKey,
+  factory: $TeamMemberProfileRoute._fromState,
+);
+
+mixin $TeamMemberProfileRoute on GoRouteData {
+  static TeamMemberProfileRoute _fromState(GoRouterState state) =>
+      TeamMemberProfileRoute(
+        userId: int.parse(state.pathParameters['userId']!),
+        memberName: state.uri.queryParameters['memberName'],
+        viaManagerId: _$convertMapValue(
+          'viaManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+      );
+
+  TeamMemberProfileRoute get _self => this as TeamMemberProfileRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/profile/${Uri.encodeComponent(_self.userId.toString())}',
+    queryParams: {
+      if (_self.memberName != null) 'memberName': _self.memberName,
+      if (_self.viaManagerId != null)
+        'viaManagerId': _self.viaManagerId!.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $teamMemberRoute => GoRouteData.$route(
+  path: '/team/manager/:managerId',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: TeamMemberRoute.$parentNavigatorKey,
+  factory: $TeamMemberRoute._fromState,
+);
+
+mixin $TeamMemberRoute on GoRouteData {
+  static TeamMemberRoute _fromState(GoRouterState state) => TeamMemberRoute(
+    managerId: int.parse(state.pathParameters['managerId']!),
+    managerName: state.uri.queryParameters['managerName'],
+  );
+
+  TeamMemberRoute get _self => this as TeamMemberRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/team/manager/${Uri.encodeComponent(_self.managerId.toString())}',
+    queryParams: {
+      if (_self.managerName != null) 'managerName': _self.managerName,
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $repsWithoutPatchRoute => GoRouteData.$route(
+  path: '/team/reps-without-patch',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: RepsWithoutPatchRoute.$parentNavigatorKey,
+  factory: $RepsWithoutPatchRoute._fromState,
+);
+
+mixin $RepsWithoutPatchRoute on GoRouteData {
+  static RepsWithoutPatchRoute _fromState(GoRouterState state) =>
+      const RepsWithoutPatchRoute();
+
+  @override
+  String get location => GoRouteData.$location('/team/reps-without-patch');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $metricClinicsRoute => GoRouteData.$route(
+  path: '/dashboard/metrics/:metric/clinics',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: MetricClinicsRoute.$parentNavigatorKey,
+  factory: $MetricClinicsRoute._fromState,
+);
+
+mixin $MetricClinicsRoute on GoRouteData {
+  static MetricClinicsRoute _fromState(GoRouterState state) =>
+      MetricClinicsRoute(
+        metric: state.pathParameters['metric']!,
+        verticalId: int.parse(state.uri.queryParameters['verticalId']!),
+        subjectUserId: _$convertMapValue(
+          'subjectUserId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        unitTypeIds: state.uri.queryParameters['unitTypeIds'],
+        managerIds: state.uri.queryParameters['managerIds'],
+        repIds: state.uri.queryParameters['repIds'],
+        stateIds: state.uri.queryParameters['stateIds'],
+        municipalityIds: state.uri.queryParameters['municipalityIds'],
+        withinManagerId: _$convertMapValue(
+          'withinManagerId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        manageForUserId: _$convertMapValue(
+          'manageForUserId',
+          state.uri.queryParameters,
+          int.tryParse,
+        ),
+        manageForName: state.uri.queryParameters['manageForName'],
+      );
+
+  MetricClinicsRoute get _self => this as MetricClinicsRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/dashboard/metrics/${Uri.encodeComponent(_self.metric)}/clinics',
+    queryParams: {
+      'verticalId': _self.verticalId.toString(),
+      if (_self.subjectUserId != null)
+        'subjectUserId': _self.subjectUserId!.toString(),
+      if (_self.unitTypeIds != null) 'unitTypeIds': _self.unitTypeIds,
+      if (_self.managerIds != null) 'managerIds': _self.managerIds,
+      if (_self.repIds != null) 'repIds': _self.repIds,
+      if (_self.stateIds != null) 'stateIds': _self.stateIds,
+      if (_self.municipalityIds != null)
+        'municipalityIds': _self.municipalityIds,
+      if (_self.withinManagerId != null)
+        'withinManagerId': _self.withinManagerId!.toString(),
+      if (_self.manageForUserId != null)
+        'manageForUserId': _self.manageForUserId!.toString(),
+      if (_self.manageForName != null) 'manageForName': _self.manageForName,
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 RouteBase get $purchaseBucketFacilitiesRoute => GoRouteData.$route(
   path: '/dashboard/facilities/:bucket',
   hasOverriddenOnExit: false,
@@ -733,15 +1141,6 @@ mixin $PurchaseBucketFacilitiesRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 RouteBase get $cpfIssueFacilitiesRoute => GoRouteData.$route(

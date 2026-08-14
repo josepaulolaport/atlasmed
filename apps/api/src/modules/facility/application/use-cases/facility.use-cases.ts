@@ -340,6 +340,40 @@ export class ListClinicalFocusesUseCase {
   }
 }
 
+/**
+ * The unit-type catalog (spec 0014 item 14) — what makes the `unit_type`
+ * dashboard filter possible at all.
+ *
+ * The catalog is populated: 39 types and 91 subtypes, and every one of the
+ * 1443 facilities carries a `unit_type_id`. `0055` dropped the old catalogs and
+ * `0056` recreated them, but the CNES load did run — so this filter has real
+ * options from the day it ships, and the reason it could not ship earlier was
+ * only that nothing exposed the names.
+ *
+ * Returns the catalog whether or not it is populated: an empty list is still
+ * the honest answer, because a filter with no options beats a filter whose
+ * options are unlabelled ids.
+ */
+export class ListUnitTypesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute() {
+    const catalog = await this.deps.facilityRepository.listUnitTypeCatalog();
+    return {
+      data: catalog.map((row) => ({
+        id: row.id,
+        cnesId: row.cnesId,
+        name: row.name,
+        subtypes: row.subtypes.map((subtype) => ({
+          id: subtype.id,
+          cnesId: subtype.cnesId,
+          name: subtype.name,
+        })),
+      })),
+    };
+  }
+}
+
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 

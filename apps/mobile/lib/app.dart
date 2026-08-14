@@ -7,7 +7,8 @@ import 'package:atlasmed_mobile_app/features/location/presentation/providers/loc
 import 'package:atlasmed_mobile_app/router/app_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:device_preview/device_preview.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
+import 'package:atlasmed_mobile_app/core/session/user_activity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,6 +76,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Spec 0015 §4.1: requests made while the app is not on screen are the
+    // token timer's, not a person's, and must not count as activity.
+    UserActivity.instance.setForeground(state == AppLifecycleState.resumed);
+
     if (!_sessionListenable.isAuthenticated ||
         state != AppLifecycleState.resumed) {
       return;
@@ -99,6 +104,13 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
     // DevicePreview; aqui conectamos locale e builder para que o dispositivo
     // simulado (MediaQuery) seja aplicado. Em plataformas nativas nada muda.
     locale: kIsWeb ? DevicePreview.locale(context) : null,
-    builder: kIsWeb ? DevicePreview.appBuilder : null,
+    builder: (context, child) {
+      final devicePreviewed = kIsWeb
+          ? DevicePreview.appBuilder(context, child)
+          : child ?? const SizedBox.shrink();
+      // Wraps everything so a touch anywhere counts, including inside the
+      // router's own pages.
+      return UserActivityTracker(child: devicePreviewed);
+    },
   );
 }

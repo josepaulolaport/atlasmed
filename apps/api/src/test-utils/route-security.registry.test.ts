@@ -10,9 +10,19 @@ function readRouteFile(relativePath: string): string {
   return readFileSync(join(SRC_ROOT, relativePath), "utf-8");
 }
 
+/**
+ * The injected-plugin form is safe only when its *default* is production auth:
+ * a test may pass a fake, but a caller that passes nothing must get the real
+ * thing. The annotation is matched loosely on purpose — `authPlugin: any` and
+ * `authPlugin: typeof auth` are equally fine, and requiring `any` verbatim
+ * would have penalised the better-typed one.
+ */
+const INJECTED_AUTH_DEFAULT = /authPlugin\s*:\s*[^=,)]+=\s*auth\b/;
+
 function declaresProductionAuth(content: string): boolean {
-  return content.includes(".use(auth)") || (
-    content.includes("authPlugin: any = auth") && content.includes(".use(authPlugin)")
+  return (
+    content.includes(".use(auth)") ||
+    (INJECTED_AUTH_DEFAULT.test(content) && content.includes(".use(authPlugin)"))
   );
 }
 

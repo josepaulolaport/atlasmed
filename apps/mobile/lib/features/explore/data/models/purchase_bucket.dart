@@ -87,9 +87,10 @@ abstract final class PurchaseBucketFilter {
     _ => null,
   };
 
-  /// Groups per-stage counts from `GET /dashboard/summary` into the three
-  /// display buckets. The API returns one count per stage and does no grouping
-  /// of its own — see `PurchaseFunnelStageCounts` on the server.
+  /// Groups per-stage counts from `GET /dashboard/metrics/purchase-buckets`
+  /// into the three display buckets. The API returns one count per stage and
+  /// does no grouping of its own — see `PurchaseFunnelStageCounts` on the
+  /// server.
   static Map<String, int> groupStageCounts(Map<String, int> stageCounts) {
     final grouped = <String, int>{active: 0, inactive: 0, neverBought: 0};
     for (final entry in stageCounts.entries) {

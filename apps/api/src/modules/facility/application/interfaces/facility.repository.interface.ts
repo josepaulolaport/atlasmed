@@ -5,6 +5,20 @@ export interface FacilityClinicalFocus {
   cnesCode: string | null;
 }
 
+export interface FacilityUnitSubtype {
+  id: number;
+  /** CNES code, unique only within the parent unit type. */
+  cnesId: string;
+  name: string;
+}
+
+export interface FacilityUnitType {
+  id: number;
+  cnesId: string;
+  name: string;
+  subtypes: FacilityUnitSubtype[];
+}
+
 export type FacilityCommercialStatus =
   | "UNREGISTERED"
   | "REGISTERED"
@@ -216,6 +230,21 @@ export interface FacilityRepository {
 
   /** CNES unit types some active facility has — Explorar filter options. */
   listUnitTypesInUse(): Promise<FacilityClinicalFocus[]>;
+
+  /**
+   * Unit-type catalog with its subtypes (spec 0014 item 14).
+   *
+   * `facilities.unit_type_id` has been readable for a long time and resolvable
+   * by nobody: the DTO emits the raw id and no endpoint exposed the catalog, so
+   * a client could show "42" and not "CLINICA/CENTRO DE ESPECIALIDADE". That is
+   * the reason spec 0014 §5 lists the `unit_type` dashboard filter as unable to
+   * ship — a filter whose options have no names is not a filter.
+   *
+   * Subtypes are nested rather than served separately because they are
+   * meaningless alone: `unit_subtypes.cnes_id` is unique only within its parent
+   * type, so a flat list would carry colliding codes.
+   */
+  listUnitTypeCatalog(): Promise<FacilityUnitType[]>;
 
   /**
    * Creates the facility **and** its vertical profile atomically.

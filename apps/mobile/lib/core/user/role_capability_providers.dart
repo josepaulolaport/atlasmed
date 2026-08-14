@@ -16,7 +16,11 @@ final canManageUsersProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canManageUsers),
 );
 
-/// Spec 0015 §6.0 — whether the CNES import entry point is shown at all.
+final canReadTeamProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canReadTeam),
+);
+
+/// Whether the CNES import entry point is shown at all.
 final canImportFacilityFromCnesProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canImportFacilityFromCnes),
 );

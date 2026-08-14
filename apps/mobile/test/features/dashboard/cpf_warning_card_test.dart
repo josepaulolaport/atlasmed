@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/cpf_warning_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_cpf_warning.dart';

@@ -16,6 +16,7 @@ import {
   personFacilities,
   personFacilityClassificationAssignments,
   personFacilityClassifications,
+  unitSubtypes,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { expandAddressAbbreviations } from "@atlasmed/facility-insights";
@@ -27,6 +28,7 @@ import {
 } from "../../../application/list-facilities-query";
 import type {
   FacilityClinicalFocus,
+  FacilityUnitType,
   FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
@@ -1055,6 +1057,52 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       name: row.name,
       cnesCode: row.cnesCode,
     }));
+  }
+
+  /**
+   * One left-joined pass, grouped in application code.
+   *
+   * The catalog is two small tables — 100-odd types at CNES's full size, and
+   * today both are empty. A second round-trip per type to fetch its subtypes
+   * would be N+1 for no benefit, and a lateral aggregate would be machinery for
+   * a table that fits in a page.
+   */
+  async listUnitTypeCatalog(): Promise<FacilityUnitType[]> {
+    const rows = await db
+      .select({
+        id: unitTypes.id,
+        cnesId: unitTypes.cnesId,
+        name: unitTypes.name,
+        subtypeId: unitSubtypes.id,
+        subtypeCnesId: unitSubtypes.cnesId,
+        subtypeName: unitSubtypes.name,
+      })
+      .from(unitTypes)
+      .leftJoin(unitSubtypes, eq(unitSubtypes.unitTypeId, unitTypes.id))
+      .orderBy(asc(unitTypes.name), asc(unitSubtypes.name));
+
+    const byTypeId = new Map<number, FacilityUnitType>();
+    for (const row of rows) {
+      let unitType = byTypeId.get(row.id);
+      if (!unitType) {
+        unitType = {
+          id: row.id,
+          cnesId: row.cnesId,
+          name: row.name,
+          subtypes: [],
+        };
+        byTypeId.set(row.id, unitType);
+      }
+      if (row.subtypeId !== null) {
+        unitType.subtypes.push({
+          id: row.subtypeId,
+          cnesId: row.subtypeCnesId!,
+          name: row.subtypeName!,
+        });
+      }
+    }
+
+    return [...byTypeId.values()];
   }
 
   async findById(id: number): Promise<FacilityRecord | null> {

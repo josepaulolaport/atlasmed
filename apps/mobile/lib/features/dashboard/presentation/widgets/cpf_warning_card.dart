@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 

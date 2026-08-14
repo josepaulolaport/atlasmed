@@ -4,6 +4,7 @@ import { db } from "../../../../infrastructure/database/db";
 import { isDatabaseReachable } from "../../../../test-utils/db-harness";
 import { DrizzleFacilityRepository } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
 import { DrizzleDashboardRepository } from "./drizzle-dashboard.repository";
+import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
 /**
  * The Desempenho CPF counts, against real rows.
@@ -31,6 +32,7 @@ const INVALID_CPF = "52998224724";
 interface Fixture {
   verticalA: number;
   verticalB: number;
+  municipalityId: number;
   /** CPF, no document, active in both linhas — the double-count trap. */
   twoLinhas: number;
   /** CPF, blank document, linha A only. */
@@ -167,9 +169,16 @@ async function seed(): Promise<Fixture> {
   });
   await linkVertical(deactivated, verticalA);
 
+  const municipality = await scalar<{ id: number | string }>(
+    db.execute(
+      sql`select id from municipalities where ibge_id = ${MUNICIPALITY_IBGE};`
+    )
+  );
+
   return {
     verticalA,
     verticalB,
+    municipalityId: Number(municipality.id),
     twoLinhas,
     blank,
     invalid,
@@ -189,63 +198,83 @@ describe.if(dbUp)("countCpfIssues", () => {
 
   afterAll(purge);
 
-  it("counts a clinic once however many linhas it sells", async () => {
-    // The bucket counts count profiles, so this clinic contributes two rows
-    // there. Counting rows here would report 3 missing where the list opens 2.
-    const counts = await repository.countCpfIssues({
-      verticalIds: [fixture.verticalA, fixture.verticalB],
-      facilityIds: null,
-    });
-
-    expect(counts.missing).toBe(2); // twoLinhas + blank
-    expect(counts.invalid).toBe(1);
-  });
+  /** The scope every metric takes (spec 0014 §4), narrowed to one linha. */
+  function filter(
+    verticalId: number,
+    overrides: Partial<DashboardProfileFilter> = {},
+  ): DashboardProfileFilter {
+    return {
+      verticalId,
+      zoneIds: null,
+      repUserIds: null,
+      stateIds: null,
+      municipalityIds: null,
+      unitTypeIds: null,
+      ...overrides,
+    };
+  }
 
   it("counts a blank document as missing and a bad checksum as invalid", async () => {
-    const counts = await repository.countCpfIssues({
-      verticalIds: [fixture.verticalA],
-      facilityIds: null,
-    });
+    const counts = await repository.countCpfIssues(filter(fixture.verticalA));
 
     // twoLinhas and blank, not the valid one and not the bad-checksum one.
-    expect(counts.missing).toBe(2);
-    expect(counts.invalid).toBe(1);
+    expect(counts).toEqual({ missing: 2, invalid: 1 });
   });
 
-  it("follows the Linha filter", async () => {
-    // Only the two-linha clinic is in B, and it has no document.
-    const counts = await repository.countCpfIssues({
-      verticalIds: [fixture.verticalB],
-      facilityIds: null,
-    });
+  it("counts a clinic once however many linhas it sells", async () => {
+    // The clinic in both linhas has one CPF. The count is per linha, so it
+    // contributes exactly one to each — never two to either, which is what
+    // `COUNT(DISTINCT facilities.id)` guards.
+    const a = await repository.countCpfIssues(filter(fixture.verticalA));
+    const b = await repository.countCpfIssues(filter(fixture.verticalB));
 
-    expect(counts).toEqual({ missing: 1, invalid: 0 });
+    expect(a.missing).toBe(2);
+    expect(b).toEqual({ missing: 1, invalid: 0 });
   });
 
-  it("honours a restricted facility set", async () => {
-    // Without this a rep would be warned about clinics they cannot open.
-    const counts = await repository.countCpfIssues({
-      verticalIds: [fixture.verticalA, fixture.verticalB],
-      facilityIds: [fixture.invalid],
-    });
+  it("pins one linha rather than counting across them", async () => {
+    // Spec 0014 §3. The bad-checksum clinic sells only linha A, so it must not
+    // reach a reader looking at linha B.
+    const counts = await repository.countCpfIssues(filter(fixture.verticalB));
 
-    expect(counts).toEqual({ missing: 0, invalid: 1 });
+    expect(counts.invalid).toBe(0);
+  });
+
+  it("follows the same geography filter as the cards beside it", async () => {
+    // Without this the warning counts the whole country while the donut next to
+    // it counts one state, and the rep has no way to tell which is wrong.
+    const inside = await repository.countCpfIssues(
+      filter(fixture.verticalA, { municipalityIds: [fixture.municipalityId] }),
+    );
+    const elsewhere = await repository.countCpfIssues(
+      filter(fixture.verticalA, { municipalityIds: [-1] }),
+    );
+
+    expect(inside).toEqual({ missing: 2, invalid: 1 });
+    expect(elsewhere).toEqual({ missing: 0, invalid: 0 });
   });
 
   it("ignores inactive profiles and deactivated clinics", async () => {
-    const counts = await repository.countCpfIssues({
-      verticalIds: [fixture.verticalA, fixture.verticalB],
-      facilityIds: [fixture.inactiveProfile, fixture.deactivated],
-    });
+    // Both are seeded with no document, so either leaking would push `missing`
+    // past 2.
+    const counts = await repository.countCpfIssues(filter(fixture.verticalA));
 
-    expect(counts).toEqual({ missing: 0, invalid: 0 });
+    expect(counts.missing).toBe(2);
+  });
+
+  it("matches nothing — not everything — for an empty scope", async () => {
+    // An empty zone list means "nothing in scope". Reading it as "no
+    // restriction" is how a scoped user ends up seeing global numbers.
+    await expect(
+      repository.countCpfIssues(filter(fixture.verticalA, { zoneIds: [] })),
+    ).resolves.toEqual({ missing: 0, invalid: 0 });
   });
 
   it("agrees with the list the warning opens", async () => {
     /**
      * The property a rep actually notices.
      *
-     * The card says "3 sem CPF" and tapping it opens `GET /facilities` with
+     * The card says "2 sem CPF" and tapping it opens `GET /facilities` with
      * `cpfStatus=missing`. These are two different queries against two
      * different builders — the count joins `facility_vertical_profiles` and
      * counts distinct facilities, the list applies `buildFacilityListConditions`
@@ -260,10 +289,17 @@ describe.if(dbUp)("countCpfIssues", () => {
       restrictToVerticalProfiles: true,
     } as unknown as Parameters<typeof facilityRepository.findAll>[0]["scope"];
 
-    const counts = await repository.countCpfIssues({
-      verticalIds,
-      facilityIds: null,
-    });
+    // The list spans both linhas, so the counts it is compared against are the
+    // union of the two — a clinic in both must still be one clinic.
+    const [a, b] = await Promise.all([
+      repository.countCpfIssues(filter(fixture.verticalA)),
+      repository.countCpfIssues(filter(fixture.verticalB)),
+    ]);
+    const union = {
+      // twoLinhas is missing in both, so a naive sum would say 3.
+      missing: a.missing + b.missing - 1,
+      invalid: a.invalid + b.invalid,
+    };
 
     for (const cpfStatus of ["missing", "invalid"] as const) {
       const { facilities: listed, total } = await facilityRepository.findAll({
@@ -277,21 +313,10 @@ describe.if(dbUp)("countCpfIssues", () => {
         facility.name.startsWith(MARK),
       );
 
-      expect(onlyOurs).toHaveLength(counts[cpfStatus]);
+      expect(onlyOurs).toHaveLength(union[cpfStatus]);
       // `total` drives the list's paging; if it disagreed with the rows the
       // last page would be empty or unreachable.
       expect(total).toBe(listed.length);
     }
-  });
-
-  it("returns zeros for an empty scope rather than counting everything", async () => {
-    // An empty facility set means "nothing in scope". Reading it as "no
-    // restriction" is how a scoped user ends up seeing global numbers.
-    await expect(
-      repository.countCpfIssues({ verticalIds: [fixture.verticalA], facilityIds: [] }),
-    ).resolves.toEqual({ missing: 0, invalid: 0 });
-    await expect(
-      repository.countCpfIssues({ verticalIds: [], facilityIds: null }),
-    ).resolves.toEqual({ missing: 0, invalid: 0 });
   });
 });

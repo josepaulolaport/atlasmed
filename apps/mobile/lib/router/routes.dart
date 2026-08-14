@@ -17,7 +17,14 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/potential_definitions_admin_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/member_territory_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/out_of_territory_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/assign_clinic_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_member_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/facility_drill_down_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
@@ -254,6 +261,12 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
         TypedGoRoute<ProfileRoute>(path: '/profile'),
       ],
     ),
+    // Appended rather than inserted next to Territórios: a branch's position is
+    // its `branchIndex`, so slotting it mid-list would silently renumber every
+    // branch after it. Display order lives in `appNavigationItems`.
+    TypedStatefulShellBranch<TeamBranch>(
+      routes: <TypedRoute<RouteData>>[TypedGoRoute<TeamRoute>(path: '/team')],
+    ),
   ],
 )
 class AppShellRoute extends StatefulShellRouteData {
@@ -313,12 +326,24 @@ class ProfileBranch extends StatefulShellBranchData {
   const ProfileBranch();
 }
 
+class TeamBranch extends StatefulShellBranchData {
+  const TeamBranch();
+}
+
 class DashboardRoute extends GoRouteData with $DashboardRoute {
   const DashboardRoute();
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       const NoTransitionPage(child: DashboardScreen());
+}
+
+class TeamRoute extends GoRouteData with $TeamRoute {
+  const TeamRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      const NoTransitionPage(child: TeamScreen());
 }
 
 class ExploreRoute extends GoRouteData with $ExploreRoute {
@@ -471,6 +496,248 @@ class AgendaOccurrenceEditRoute extends GoRouteData
     }
     return AgendaEditorRouteGuard(
       target: CalendarEditorTarget.editingOccurrence(occurrence),
+    );
+  }
+}
+
+/// Desempenho scoped to another person (spec 0014 §2, "Ver desempenho").
+///
+/// The same screen as the `/dashboard` tab — one screen, three entry points,
+/// three scopes — pushed over the shell so the viewer keeps their own tab state.
+@TypedGoRoute<SubjectDashboardRoute>(path: '/team/member/:subjectUserId')
+class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
+  const SubjectDashboardRoute({
+    required this.subjectUserId,
+    @TypedQueryParameter(name: 'subjectName') this.subjectName,
+    @TypedQueryParameter(name: 'subjectRole') this.subjectRole,
+    @TypedQueryParameter(name: 'withinManagerId') this.withinManagerId,
+  });
+
+  final int subjectUserId;
+  final String? subjectName;
+
+  /// Spec 0015 R2: the manager's team this subject was reached through, so an
+  /// admin's drill-down reads the population the roster row showed. A manager's
+  /// own constraint is derived server-side from their identity, so this is
+  /// never how a manager's scope is decided.
+  final int? withinManagerId;
+
+  /// Carried so the screen knows which cards the *subject* may be asked about —
+  /// "Clínicas não atribuídas" is a zone question and a rep holds no zones.
+  final String? subjectRole;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return DashboardScreen(
+      subjectUserId: subjectUserId,
+      subjectName: subjectName,
+      subjectRole: subjectRole,
+      withinManagerId: withinManagerId,
+    );
+  }
+}
+
+/// Giving a rep a clinic (spec 0015 R6) — inside their patch, or anywhere with
+/// a reason.
+@TypedGoRoute<AssignClinicRoute>(path: '/team/profile/:userId/assign-clinic')
+class AssignClinicRoute extends GoRouteData with $AssignClinicRoute {
+  const AssignClinicRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return AssignClinicScreen(userId: userId, memberName: memberName);
+  }
+}
+
+/// A member's territory, full screen (spec 0015 R9/R10).
+@TypedGoRoute<MemberTerritoryRoute>(path: '/team/profile/:userId/territory')
+class MemberTerritoryRoute extends GoRouteData with $MemberTerritoryRoute {
+  const MemberTerritoryRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+    @TypedQueryParameter(name: 'viaManagerId') this.viaManagerId,
+    @TypedQueryParameter(name: 'isRep') this.isRep,
+  });
+
+  final int userId;
+  final String? memberName;
+  final int? viaManagerId;
+
+  /// Decides what "nova área" draws — a patch or a zone.
+  final bool? isRep;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return MemberTerritoryScreen(
+      userId: userId,
+      memberName: memberName,
+      viaManagerId: viaManagerId,
+      isRep: isRep ?? true,
+    );
+  }
+}
+
+/// Clinics a rep holds outside their patches (spec 0009 R2 / 0015 §4.2).
+@TypedGoRoute<OutOfTerritoryRoute>(
+  path: '/team/profile/:userId/out-of-territory',
+)
+class OutOfTerritoryRoute extends GoRouteData with $OutOfTerritoryRoute {
+  const OutOfTerritoryRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return OutOfTerritoryScreen(userId: userId, memberName: memberName);
+  }
+}
+
+/// One person, in full (spec 0015 §4) — what a roster row opens onto.
+@TypedGoRoute<TeamMemberProfileRoute>(path: '/team/profile/:userId')
+class TeamMemberProfileRoute extends GoRouteData with $TeamMemberProfileRoute {
+  const TeamMemberProfileRoute({
+    required this.userId,
+    @TypedQueryParameter(name: 'memberName') this.memberName,
+    @TypedQueryParameter(name: 'viaManagerId') this.viaManagerId,
+  });
+
+  final int userId;
+  final String? memberName;
+
+  /// The manager whose team this person was reached through (spec 0015 R2).
+  /// Only meaningful for an admin — a manager's own scope is derived from their
+  /// identity server-side and cannot be widened from here.
+  final int? viaManagerId;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return TeamMemberScreen(
+      userId: userId,
+      memberName: memberName,
+      viaManagerId: viaManagerId,
+    );
+  }
+}
+
+/// One manager.s team, from the ADMIN roster (spec 0014 §6).
+@TypedGoRoute<TeamMemberRoute>(path: '/team/manager/:managerId')
+class TeamMemberRoute extends GoRouteData with $TeamMemberRoute {
+  const TeamMemberRoute({
+    required this.managerId,
+    @TypedQueryParameter(name: 'managerName') this.managerName,
+  });
+
+  final int managerId;
+  final String? managerName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return TeamScreen(managerId: managerId, managerName: managerName);
+  }
+}
+
+@TypedGoRoute<RepsWithoutPatchRoute>(path: '/team/reps-without-patch')
+class RepsWithoutPatchRoute extends GoRouteData with $RepsWithoutPatchRoute {
+  const RepsWithoutPatchRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const RepsWithoutPatchScreen();
+}
+
+/// A metric card's per-clinic breakdown (spec 0014 §4.1).
+///
+/// Carries the whole scope in the URL because the breakdown must answer for the
+/// same population the card counted — a drill-down that dropped a filter would
+/// list clinics the number never included.
+@TypedGoRoute<MetricClinicsRoute>(path: '/dashboard/metrics/:metric/clinics')
+class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
+  const MetricClinicsRoute({
+    required this.metric,
+    @TypedQueryParameter(name: 'verticalId') required this.verticalId,
+    @TypedQueryParameter(name: 'subjectUserId') this.subjectUserId,
+    @TypedQueryParameter(name: 'unitTypeIds') this.unitTypeIds,
+    @TypedQueryParameter(name: 'managerIds') this.managerIds,
+    @TypedQueryParameter(name: 'repIds') this.repIds,
+    @TypedQueryParameter(name: 'stateIds') this.stateIds,
+    @TypedQueryParameter(name: 'municipalityIds') this.municipalityIds,
+    @TypedQueryParameter(name: 'withinManagerId') this.withinManagerId,
+    @TypedQueryParameter(name: 'manageForUserId') this.manageForUserId,
+    @TypedQueryParameter(name: 'manageForName') this.manageForName,
+  });
+
+  final String metric;
+  final int verticalId;
+  final int? subjectUserId;
+
+  /// Spec 0015 R2 — carried so a drilled-in list reads the same population.
+  final int? withinManagerId;
+
+  /// Spec 0015 §4.2: set when the list is one person's caseload, which is what
+  /// makes the rows actionable.
+  final int? manageForUserId;
+  final String? manageForName;
+
+  /// Comma-separated ids. Strings rather than `List<int>` because go_router's
+  /// generator would encode a list as repeated `?stateIds=33&stateIds=35`,
+  /// while the API takes one comma-separated value.
+  final String? unitTypeIds;
+  final String? managerIds;
+  final String? repIds;
+  final String? stateIds;
+  final String? municipalityIds;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  static List<int> _ids(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    return raw
+        .split(',')
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return MetricClinicsScreen(
+      metric: metric,
+      manageForUserId: manageForUserId,
+      manageForName: manageForName,
+      scope: DashboardScopeArgs(
+        verticalId: verticalId,
+        subjectUserId: subjectUserId,
+        withinManagerId: withinManagerId,
+        unitTypeIds: _ids(unitTypeIds),
+        managerIds: _ids(managerIds),
+        repIds: _ids(repIds),
+        stateIds: _ids(stateIds),
+        municipalityIds: _ids(municipalityIds),
+      ),
     );
   }
 }

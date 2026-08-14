@@ -8,6 +8,7 @@ import type {
 import {
   AssignFacilityVerticalRepUseCase,
   DeactivateFacilityVerticalUseCase,
+  UNASSIGN_REASONS,
   UnassignFacilityVerticalRepUseCase,
 } from "./facility-vertical-rep.use-cases";
 
@@ -275,6 +276,67 @@ describe("UnassignFacilityVerticalRepUseCase", () => {
 
     expect(onChanged).toHaveBeenCalledWith([7]);
     expect(onFacilityChanged).toHaveBeenCalledWith(1);
+  });
+
+  it("records why it ended and who ended it (spec 0015 R7)", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const uc = new UnassignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({
+        endActive: async (params: Record<string, unknown>) => {
+          seen.push(params);
+          return { endedUserId: 7 };
+        },
+      }),
+    });
+
+    await uc.execute({
+      facilityId: 1,
+      verticalId: 10,
+      scope: scope(),
+      role: "MANAGER",
+      endReason: "clinic_closed",
+      endedByUserId: 2,
+    });
+
+    // I5 keeps the row forever, so the row is the only account of what
+    // happened. Without the author, a rep loses a clinic and the record says
+    // only that someone, at some point, decided so.
+    expect(seen[0]).toMatchObject({
+      endReason: "clinic_closed",
+      endedByUserId: 2,
+    });
+  });
+
+  it("keeps the old catch-all when no reason is given", async () => {
+    // Callers that predate the vocabulary still work, and their rows stay
+    // honest about being unexplained rather than borrowing a reason.
+    const seen: Array<Record<string, unknown>> = [];
+    const uc = new UnassignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({
+        endActive: async (params: Record<string, unknown>) => {
+          seen.push(params);
+          return { endedUserId: 7 };
+        },
+      }),
+    });
+
+    await uc.execute({
+      facilityId: 1,
+      verticalId: 10,
+      scope: scope(),
+      role: "MANAGER",
+    });
+
+    expect(seen[0]).toMatchObject({ endReason: "manual_unassign" });
+  });
+
+  it("offers no reason that belongs to the system", () => {
+    // `reassigned`, `boundary_impact` and `vertical_deactivated` are things the
+    // system did. Letting a person file a decision under one of those names
+    // would make the churn report unreadable in the direction that matters.
+    expect(UNASSIGN_REASONS).not.toContain("reassigned");
+    expect(UNASSIGN_REASONS).not.toContain("boundary_impact");
+    expect(UNASSIGN_REASONS).not.toContain("vertical_deactivated");
   });
 });
 

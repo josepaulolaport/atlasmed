@@ -1043,3 +1043,127 @@ describe("Auth Plugin", () => {
     });
   });
 });
+
+describe("last seen (spec 0015 §4.1)", () => {
+  const tokenService = new TokenService();
+
+  function harness(overrides: {
+    lastSeenAt?: Date | null;
+  } = {}) {
+    const updateLastSeen = mock(async () => {});
+    const user = {
+      id: 123,
+      email: "rep@atlasmed.com.br",
+      username: null,
+      status: "ACTIVE",
+      tokenVersion: 1,
+      role: { id: 3, name: "REP" },
+    };
+    const session = {
+      id: 1,
+      userId: 123,
+      refreshTokenHash: "hash",
+      ipAddress: null,
+      userAgent: null,
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      revokedAt: null,
+      createdAt: new Date().toISOString(),
+      lastSeenAt:
+        overrides.lastSeenAt === undefined
+          ? new Date().toISOString()
+          : (overrides.lastSeenAt?.toISOString() ?? null),
+      user,
+    };
+
+    const app = createTestApp().use(
+      createAuthPlugin({
+        tokenService,
+        sessionRepository: { updateLastSeen } as never,
+        userRepository: {
+          findById: mock(async () => user),
+          findUserAuthStatus: mock(async () => ({
+            status: "ACTIVE",
+            tokenVersion: 1,
+            roleId: 3,
+            roleName: "REP",
+          })),
+        } as never,
+        authCacheService: {
+          get: mock(async () => null),
+          set: mock(async () => {}),
+          invalidate: mock(async () => {}),
+          isRecentlyValidated: mock(async () => true),
+          markValidated: mock(async () => {}),
+        } as never,
+        sessionCacheService: {
+          getById: mock(async () => session),
+          set: mock(async () => {}),
+          invalidate: mock(async () => {}),
+          updateLastSeen: mock(async () => {}),
+          isMarkedRevoked: mock(async () => false),
+          clearRevoked: mock(async () => {}),
+          isRecentlyValidated: mock(async () => true),
+          markValidated: mock(async () => {}),
+        } as never,
+        scopeService: createMockScopeService(),
+        redis: { get: mock(async () => null), setex: mock(async () => {}) } as never,
+      }),
+    ).get("/t", () => ({ ok: true }));
+
+    return { app, updateLastSeen };
+  }
+
+  async function call(
+    app: ReturnType<typeof harness>["app"],
+    headers: Record<string, string> = {},
+  ) {
+    const token = await tokenService.signAccessToken({
+      sub: "123",
+      sid: "1",
+      role: "REP",
+      tokenVersion: 1,
+      iat: Math.floor(Date.now() / 1000),
+    });
+    const response = await app.handle(
+      new Request("http://localhost/t", {
+        headers: { Authorization: `Bearer ${token}`, ...headers },
+      }),
+    );
+    // The write is fire-and-forget, so let the microtask queue drain.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return response;
+  }
+
+  it("ignores traffic no person set in motion", async () => {
+    // The session token refreshes on an eight-minute timer. Counting that kept
+    // an untouched phone reporting its owner as active indefinitely.
+    const { app, updateLastSeen } = harness({ lastSeenAt: new Date(0) });
+    await call(app);
+
+    expect(updateLastSeen).not.toHaveBeenCalled();
+  });
+
+  it("records a request a person set in motion", async () => {
+    const { app, updateLastSeen } = harness({ lastSeenAt: new Date(0) });
+    await call(app, { "X-Client-Activity": "1" });
+
+    expect(updateLastSeen).toHaveBeenCalledWith(1);
+  });
+
+  it("writes at most once per window, without asking Redis", async () => {
+    // Throttled against the session already in hand, so the common request
+    // costs no round-trip at all — the previous implementation spent a Redis
+    // GET on every authenticated request to learn the same thing.
+    const { app, updateLastSeen } = harness({ lastSeenAt: new Date() });
+    await call(app, { "X-Client-Activity": "1" });
+
+    expect(updateLastSeen).not.toHaveBeenCalled();
+  });
+
+  it("records the first activity of a session that has none", async () => {
+    const { app, updateLastSeen } = harness({ lastSeenAt: null });
+    await call(app, { "X-Client-Activity": "1" });
+
+    expect(updateLastSeen).toHaveBeenCalledWith(1);
+  });
+});
