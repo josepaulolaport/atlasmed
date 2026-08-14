@@ -11,22 +11,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A roster that is already loaded, so the screen renders without HTTP.
-class _LoadedRoster extends Repository<List<TeamMember>> {
-  _LoadedRoster(this.members)
+class _LoadedRoster extends Repository<TeamRoster> {
+  _LoadedRoster(this.members, {this.invites = const []})
     : super(
         name: 'FakeTeamRepository',
         endpoint: Uri.parse('http://localhost/team'),
         resolveOnCreate: false,
       ) {
-    emit(data: members);
+    emit(data: _roster);
   }
 
   final List<TeamMember> members;
+  final List<PendingInvite> invites;
+
+  TeamRoster get _roster =>
+      TeamRoster(members: members, pendingInvites: invites);
 
   @override
-  Future<List<TeamMember>?> currentValueOrResolve() async {
-    await emit(data: members);
-    return members;
+  Future<TeamRoster?> currentValueOrResolve() async {
+    await emit(data: _roster);
+    return _roster;
   }
 }
 
@@ -58,13 +62,16 @@ Future<void> _pump(
   List<TeamMember> members, {
   UserRoleName role = UserRoleName.manager,
   int? managerId,
+  List<PendingInvite> invites = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         dashboardSelectedVerticalIdProvider.overrideWith((ref) => 1),
         currentUserRoleProvider.overrideWithValue(role),
-        teamProvider.overrideWith((ref, args) => _LoadedRoster(members)),
+        teamProvider.overrideWith(
+          (ref, args) => _LoadedRoster(members, invites: invites),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light,
@@ -158,6 +165,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('corresponde a "zzz"'), findsOneWidget);
+  });
+
+  testWidgets('someone invited holds the ground before they arrive', (
+    tester,
+  ) async {
+    // Spec 0015 R11. The roster is built on `users`, so until now you could
+    // invite a rep, draw their patch, and the team screen showed nothing —
+    // while the clinics inside that patch sat unstaffed.
+    await _pump(
+      tester,
+      [_member(userId: 5, name: 'Ana')],
+      invites: [
+        PendingInvite(
+          invitationId: 9,
+          name: 'Novo Rep',
+          email: 'novo@atlasmed.com.br',
+          roleName: 'REP',
+          territories: const [(id: 3, name: 'Patch Novo')],
+          expiresAt: DateTime.utc(2026, 9, 1),
+        ),
+      ],
+    );
+
+    expect(find.text('Novo Rep'), findsOneWidget);
+    expect(find.text('Convite pendente'), findsOneWidget);
+    expect(find.text('Patch Novo'), findsOneWidget);
+    // Inert: there is no profile to open and no metrics to show, so it must not
+    // look like a row you can tap through.
+    expect(find.byIcon(Icons.hourglass_empty_rounded), findsOneWidget);
+  });
+
+  testWidgets('a team of nobody but an invitation is not empty', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const [],
+      invites: [
+        PendingInvite(
+          invitationId: 9,
+          name: 'Novo Rep',
+          roleName: 'REP',
+          territories: const [],
+          expiresAt: DateTime.utc(2026, 9, 1),
+        ),
+      ],
+    );
+
+    expect(find.text('Nenhum representante nesta equipe'), findsNothing);
+    expect(find.text('Novo Rep'), findsOneWidget);
   });
 
   testWidgets('every row leads to one place — that person', (tester) async {

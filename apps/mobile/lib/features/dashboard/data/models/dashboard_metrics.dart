@@ -568,3 +568,72 @@ CascadedSelection cascadeSelection({
     childIds: kept,
   );
 }
+
+/// Someone invited to a team who has not accepted yet (spec 0015 R11).
+///
+/// Not a [TeamMember]: no user id, no clinics, no metrics. They occupy
+/// territory before they exist as a user, which is exactly why the roster has
+/// to show them — the clinics inside their staged patch are unstaffed and
+/// nothing else says so.
+class PendingInvite {
+  const PendingInvite({
+    required this.invitationId,
+    required this.roleName,
+    required this.territories,
+    required this.expiresAt,
+    this.name,
+    this.email,
+  });
+
+  final int invitationId;
+  final String? name;
+  final String? email;
+  final String roleName;
+  final List<({int id, String name})> territories;
+  final DateTime expiresAt;
+
+  String get displayName =>
+      (name?.trim().isNotEmpty ?? false) ? name! : (email ?? 'Convite');
+
+  factory PendingInvite.fromJson(Map<String, dynamic> json) {
+    return PendingInvite(
+      invitationId: readCrmId(json['invitationId'], 'invitationId'),
+      name: json['name'] as String?,
+      email: json['email'] as String?,
+      roleName: json['roleName'] as String? ?? '',
+      territories: (json['territories'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (t) => (
+              id: readCrmId(t['id'], 'id'),
+              name: t['name'] as String? ?? '',
+            ),
+          )
+          .toList(growable: false),
+      expiresAt:
+          DateTime.tryParse(json['expiresAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+/// A roster: the people on it, and the people arriving (spec 0015 R11).
+class TeamRoster {
+  const TeamRoster({required this.members, required this.pendingInvites});
+
+  final List<TeamMember> members;
+  final List<PendingInvite> pendingInvites;
+
+  factory TeamRoster.fromJson(Map<String, dynamic> json) {
+    return TeamRoster(
+      members: (json['data'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TeamMember.fromJson)
+          .toList(growable: false),
+      pendingInvites: (json['pendingInvites'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(PendingInvite.fromJson)
+          .toList(growable: false),
+    );
+  }
+}

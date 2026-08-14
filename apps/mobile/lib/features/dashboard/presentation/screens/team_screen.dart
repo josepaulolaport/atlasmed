@@ -102,8 +102,8 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
         onRefresh: () async => ref.invalidate(teamProvider(args)),
         child: RepositoryBuilder(
           repository: ref.watch(teamProvider(args)),
-          builder: (context, members, repo) {
-            if (members == null) {
+          builder: (context, roster, repo) {
+            if (roster == null) {
               // A skeleton, not a spinner: the rest of the app's lists load
               // this way and `list_skeletons_test.dart` holds them to it.
               return ListView(
@@ -111,9 +111,11 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                 children: const [TeamListSkeleton()],
               );
             }
+            final members = roster.members;
+            final invites = roster.pendingInvites;
             final isManagerRoster =
                 widget.managerId == null && role != UserRoleName.manager;
-            if (members.isEmpty) {
+            if (members.isEmpty && invites.isEmpty) {
               // A ListView rather than a Center: an empty roster is exactly
               // when someone reaches for pull-to-refresh, and a non-scrollable
               // child never fires it.
@@ -135,7 +137,10 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               // Header, plus the empty-search notice when it applies.
-              itemCount: visible.length + (visible.isEmpty ? 2 : 1),
+              itemCount:
+                  visible.length +
+                  invites.length +
+                  (visible.isEmpty && invites.isEmpty ? 2 : 1),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return _RosterHeader(
@@ -160,9 +165,19 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                           ),
                   );
                 }
-                if (visible.isEmpty) return _NoSearchMatch(term: _search);
+                if (visible.isEmpty && invites.isEmpty) {
+                  return _NoSearchMatch(term: _search);
+                }
+                // Spec 0015 R11: people who already occupy territory but have
+                // not arrived, listed last because they hold nothing yet.
+                final position = index - 1;
+                if (position >= visible.length) {
+                  return _PendingInviteTile(
+                    invite: invites[position - visible.length],
+                  );
+                }
                 return _MemberTile(
-                  member: visible[index - 1],
+                  member: visible[position],
                   sortBy: _sortBy,
                   peakClinics: peak,
                   isManagerRoster: isManagerRoster,
@@ -1118,6 +1133,88 @@ class _TeamEmptyState extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Someone who already occupies territory but has not arrived (spec 0015 R11).
+///
+/// Greyed and inert: there is no profile to open, no metrics to show and
+/// nothing to sort them by. The row exists so that a manager who invited
+/// somebody and drew them a patch can see that the patch is spoken for — which
+/// the roster, built on `users`, could not tell them until they accepted.
+class _PendingInviteTile extends StatelessWidget {
+  const _PendingInviteTile({required this.invite});
+
+  final PendingInvite invite;
+
+  @override
+  Widget build(BuildContext context) {
+    final territories = invite.territories.map((t) => t.name).join(' · ');
+
+    return Opacity(
+      opacity: 0.72,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: AppColors.surfaceSecondary,
+              ),
+              child: const Icon(
+                Icons.hourglass_empty_rounded,
+                size: 20,
+                color: AppColors.gray500,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    invite.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const _MemberMeta(
+                        icon: Icons.mail_outline_rounded,
+                        text: 'Convite pendente',
+                      ),
+                      if (territories.isNotEmpty)
+                        _MemberMeta(
+                          icon: Icons.layers_rounded,
+                          text: territories,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

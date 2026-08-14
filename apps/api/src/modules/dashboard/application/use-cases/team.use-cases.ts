@@ -10,6 +10,7 @@ import { resolveVerticalIds } from "../../../access/application/services/vertica
 import type {
   AssignableClinicRow,
   DrizzleTeamRepository,
+  PendingInviteRow,
   TeamMemberMetrics,
   TeamMemberProfile,
   TeamMemberRow,
@@ -122,6 +123,12 @@ export class ListTeamUseCase {
     sortBy: TeamSortKey;
     order: TeamOrder;
     data: TeamMemberDto[];
+    /**
+     * Spec 0015 R11. Kept beside the roster rather than inside it: an invite
+     * has no user id, no clinics and no metrics, and a synthetic id would let
+     * someone tap through to a profile that cannot exist.
+     */
+    pendingInvites: PendingInviteRow[];
   }> {
     const accessibleVerticalIds = resolveVerticalIds({
       role: request.viewerRole,
@@ -168,7 +175,7 @@ export class ListTeamUseCase {
 
     sortMembers(data, sortBy, order);
 
-    return { verticalId, sortBy, order, data };
+    return { verticalId, sortBy, order, data, pendingInvites: roster.pendingInvites };
   }
 
   /**
@@ -191,6 +198,7 @@ export class ListTeamUseCase {
     members: TeamMemberRow[];
     scope: "rep" | "manager";
     withinZoneIds: number[] | null;
+    pendingInvites: PendingInviteRow[];
   }> {
     if (request.viewerRole === Role.MANAGER) {
       // A manager's roster is their own reps. `managerId` cannot widen it:
@@ -205,14 +213,11 @@ export class ListTeamUseCase {
         userId: request.viewerId,
         verticalId,
       });
-      return {
-        members: await this.deps.teamRepository.listRepsUnderZones({
-          verticalId,
-          zoneIds,
-        }),
-        scope: "rep",
-        withinZoneIds: zoneIds,
-      };
+      const [members, pendingInvites] = await Promise.all([
+        this.deps.teamRepository.listRepsUnderZones({ verticalId, zoneIds }),
+        this.deps.teamRepository.listPendingInvites({ verticalId, zoneIds }),
+      ]);
+      return { members, scope: "rep", withinZoneIds: zoneIds, pendingInvites };
     }
 
     if (request.viewerRole === Role.ADMIN || request.viewerRole === Role.OPS) {
@@ -222,20 +227,20 @@ export class ListTeamUseCase {
           scope: "manager",
           // A manager IS the ground; there is nothing further to narrow to.
           withinZoneIds: null,
+          // A pending invite is staged against a patch, so it belongs to a
+          // manager's roster — never to the list of managers.
+          pendingInvites: [],
         };
       }
       const zoneIds = await this.deps.directory.findManagerZoneIds({
         userId: request.managerId,
         verticalId,
       });
-      return {
-        members: await this.deps.teamRepository.listRepsUnderZones({
-          verticalId,
-          zoneIds,
-        }),
-        scope: "rep",
-        withinZoneIds: zoneIds,
-      };
+      const [members, pendingInvites] = await Promise.all([
+        this.deps.teamRepository.listRepsUnderZones({ verticalId, zoneIds }),
+        this.deps.teamRepository.listPendingInvites({ verticalId, zoneIds }),
+      ]);
+      return { members, scope: "rep", withinZoneIds: zoneIds, pendingInvites };
     }
 
     // Spec 0014 §2: a REP has no team, so Equipe shows them nothing at all.

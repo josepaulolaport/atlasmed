@@ -37,6 +37,7 @@ function deps(overrides: {
   zoneIds?: number[];
   /** Feeds the batched query's coverage figure, and the per-member fakes. */
   metricByUser?: Record<number, number | null>;
+  pendingInvites?: Array<Record<string, unknown>>;
 }): Deps & {
   calls: {
     metricSubjects: number[];
@@ -65,6 +66,7 @@ function deps(overrides: {
       listManagers: async () => overrides.managers ?? [],
       listRepsUnderZones: async () => overrides.reps ?? [],
       listRepsWithoutPatch: async () => [],
+      listPendingInvites: async () => overrides.pendingInvites ?? [],
       findMemberMetrics: async (input: {
         userIds: number[];
         scope: string;
@@ -568,6 +570,39 @@ describe("Equipe roster (spec 0014 §6)", () => {
     );
 
     expect(d.calls.metricSubjects.sort()).toEqual([5, 6]);
+  });
+
+  it("shows people invited into the team but not yet arrived (0015 R11)", async () => {
+    // You invite someone, draw their patch, and until now the team screen
+    // showed nothing changed — while the clinics inside that patch sat
+    // unstaffed and nobody could see why.
+    const invite = {
+      invitationId: 9,
+      name: "Novo Rep",
+      email: "novo@atlasmed.com.br",
+      roleName: Role.REP,
+      territories: [{ id: 3, name: "Patch Novo" }],
+      expiresAt: "2026-09-01T00:00:00.000Z",
+    };
+    const d = deps({ reps: [member({ userId: 5 })], pendingInvites: [invite] });
+    const result = await new ListTeamUseCase(d).execute(request(Role.MANAGER));
+
+    expect(result.pendingInvites).toEqual([invite]);
+    // Beside the roster, never inside it: an invite has no user id, and a
+    // synthetic one would let it be tapped into a profile that cannot exist.
+    expect(result.data.map((row) => row.userId)).toEqual([5]);
+  });
+
+  it("never puts an invite on the list of managers", async () => {
+    // An invitation is staged against a patch, so it belongs to whichever
+    // manager owns that ground — never to the admin's roster of managers.
+    const d = deps({
+      managers: [member({ userId: 2, roleName: Role.MANAGER })],
+      pendingInvites: [{ invitationId: 9 }],
+    });
+    const result = await new ListTeamUseCase(d).execute(request(Role.ADMIN));
+
+    expect(result.pendingInvites).toEqual([]);
   });
 
   it("measures a rep roster against the zones it was built from (0015 R1)", async () => {

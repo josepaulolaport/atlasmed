@@ -478,3 +478,28 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     }
   });
 });
+
+describe.skipIf(!dbUp)("pending invites (spec 0015 R11)", () => {
+  test("the query runs and offers only live invitations", async () => {
+    // There are no invitations in this snapshot, so this proves the statement
+    // is executable and its predicates parse — not that it finds anything.
+    // What it cannot prove is checked by the use-case tests instead.
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const rows = await team.listPendingInvites({ verticalId: 1, zoneIds: zones });
+
+    expect(Array.isArray(rows)).toBe(true);
+    for (const row of rows) {
+      // Only PENDING and unexpired: a revoked or lapsed invitation is not
+      // somebody arriving, and listing it would make the roster a list of
+      // intentions rather than of people.
+      expect(new Date(row.expiresAt).getTime()).toBeGreaterThan(Date.now());
+      expect(row.territories.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("no zones means no invites, never every invite", async () => {
+    expect(
+      await team.listPendingInvites({ verticalId: 1, zoneIds: [] }),
+    ).toEqual([]);
+  });
+});

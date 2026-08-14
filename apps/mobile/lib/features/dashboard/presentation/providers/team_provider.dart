@@ -45,7 +45,7 @@ class TeamArgs {
 }
 
 final teamProvider = Provider.autoDispose
-    .family<Repository<List<TeamMember>>, TeamArgs>((ref, args) {
+    .family<Repository<TeamRoster>, TeamArgs>((ref, args) {
       final repository = teamRepository(
         verticalId: args.verticalId,
         managerId: args.managerId,

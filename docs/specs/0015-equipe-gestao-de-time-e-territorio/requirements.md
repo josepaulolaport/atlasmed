@@ -304,6 +304,10 @@ unapplied until the key was dropped. This design has four surfaces reading one f
 
 ## 10. Out of scope
 
+Everything R1–R13 specifies is built. What remains out of scope is unchanged in
+kind: these are things this spec deliberately does not answer.
+
+
 - **Field activity on the profile** — pending the visits module (§4.1).
 - **Whether Territórios stays visible to managers.** If it is hidden, this map becomes their
   only way to draw a patch and must carry the full editor. Deferred deliberately.

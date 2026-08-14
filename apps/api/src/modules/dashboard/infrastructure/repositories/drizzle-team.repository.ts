@@ -75,6 +75,24 @@ export type TeamMemberIdentity = Omit<
   "assignedClinicCount" | "unassignedClinicCount"
 >;
 
+/**
+ * Somebody invited to a team who has not accepted yet (spec 0015 R11).
+ *
+ * Not a `TeamMemberRow`: they have no user id, no clinics and no metrics, and
+ * giving them a synthetic one would let them be tapped through to a profile
+ * that cannot exist. They are a different kind of thing that belongs on the
+ * same list.
+ */
+export type PendingInviteRow = {
+  invitationId: number;
+  name: string | null;
+  email: string | null;
+  roleName: string;
+  /** The patch drawn for them, already staged against the invitation. */
+  territories: Array<{ id: number; name: string }>;
+  expiresAt: string;
+};
+
 /** A territory with its geometry, for the map (spec 0015 §6). */
 export type TerritoryFeature = {
   id: number;
@@ -464,6 +482,77 @@ export class DrizzleTeamRepository {
           : row.territories,
       outOfTerritoryCount: Number(row.out_of_territory_count),
     };
+  }
+
+  /**
+   * People invited into these zones who have not accepted yet (spec 0015 R11).
+   *
+   * The roster is `users INNER JOIN user_territory_assignments`, so an invited
+   * rep is invisible to it — you invite someone, draw their patch, and the team
+   * screen shows nothing changed while the clinics in that patch sit unstaffed.
+   * Invitations stage their territory before the user exists
+   * (`invitation_territory_assignments`), which is exactly what lets them be
+   * placed on the right manager's roster.
+   *
+   * Only PENDING and unexpired: a revoked or lapsed invitation is not somebody
+   * arriving, and showing it would make the roster a list of intentions.
+   */
+  async listPendingInvites(input: {
+    verticalId: number;
+    zoneIds: number[];
+  }): Promise<PendingInviteRow[]> {
+    if (input.zoneIds.length === 0) return [];
+
+    const zones = sql.join(
+      input.zoneIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+
+    const rows = (await db.execute(sql`
+      SELECT i.id,
+             NULLIF(TRIM(CONCAT_WS(' ', i.first_name, i.last_name)), '') AS name,
+             i.email,
+             r.name AS role_name,
+             i.expires_at,
+             COALESCE(
+               JSON_AGG(DISTINCT JSONB_BUILD_OBJECT('id', t.id, 'name', t.name))
+                 FILTER (WHERE t.id IS NOT NULL),
+               '[]'
+             ) AS territories
+        FROM invitations i
+        JOIN roles r ON r.id = i.role_id
+        JOIN invitation_territory_assignments ita ON ita.invitation_id = i.id
+        JOIN territories t ON t.id = ita.territory_id
+        JOIN territory_types tt
+          ON tt.id = t.territory_type_id AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+       WHERE i.status = 'PENDING'
+         AND i.revoked_at IS NULL
+         AND i.accepted_at IS NULL
+         AND i.expires_at > NOW()
+         AND ita.vertical_id = ${input.verticalId}
+         AND t.manager_territory_id IN (${zones})
+       GROUP BY i.id, i.first_name, i.last_name, i.email, r.name, i.expires_at
+       ORDER BY name NULLS LAST, i.id
+    `)) as unknown as Array<{
+      id: number | string;
+      name: string | null;
+      email: string | null;
+      role_name: string;
+      expires_at: Date | string;
+      territories: Array<{ id: number; name: string }> | string;
+    }>;
+
+    return rows.map((row) => ({
+      invitationId: Number(row.id),
+      name: row.name,
+      email: row.email,
+      roleName: row.role_name,
+      expiresAt: new Date(row.expires_at).toISOString(),
+      territories:
+        typeof row.territories === "string"
+          ? (JSON.parse(row.territories) as Array<{ id: number; name: string }>)
+          : row.territories,
+    }));
   }
 
   /**

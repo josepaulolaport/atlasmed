@@ -723,6 +723,18 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
   /// cascade-deleted (see `MockTerritoryRepository.deleteTerritory`).
   Future<void> _confirmAndDelete(Territory territory) async {
     final isZone = territory.kind == TerritoryKind.managerZone;
+
+    // Spec 0015 R12. The manager link is territory-derived (`users.manager_id`
+    // was dropped in migration 0044), so deleting the last patch does not merely
+    // free a polygon — it removes the rep from their team entirely. They then
+    // appear on no roster, hold no clinics, and only an admin can find them
+    // again through "representantes sem território". This is the one moment
+    // where that consequence is knowable, so it is the moment to say it.
+    final holderId = territory.assignedUserId;
+    final holderName = holderId == null
+        ? null
+        : ref.read(userByIdProvider(holderId)).valueOrNull?.name;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -731,7 +743,16 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
           isZone
               ? 'Esta zona de gerente será excluída. As áreas de representante '
                     'vinculadas a ela ficarão sem uma zona associada.'
-              : 'Esta área de representante será excluída permanentemente.',
+              : [
+                  if (holderName != null && holderName.isNotEmpty)
+                    '$holderName ficará sem território: sai da equipe do gestor '
+                        'e deixa de poder receber clínicas.'
+                  else
+                    'Esta área de representante será excluída permanentemente.',
+                  if (territory.clinicCount > 0)
+                    'As ${territory.clinicCount} clínicas desta área ficam sem '
+                        'representante.',
+                ].join('\n\n'),
         ),
         actions: [
           TextButton(

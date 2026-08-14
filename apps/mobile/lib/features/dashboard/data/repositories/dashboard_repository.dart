@@ -131,7 +131,7 @@ DashboardMetricRepository<TeamMemberProfile> teamMemberRepository({
 
 /// The Equipe roster. `sortBy` is what turns it into a leaderboard — the API
 /// computes only that metric per member (spec 0014 §6).
-DashboardMetricRepository<List<TeamMember>> teamRepository({
+DashboardMetricRepository<TeamRoster> teamRepository({
   required int verticalId,
   int? managerId,
   String sortBy = 'name',
@@ -139,10 +139,7 @@ DashboardMetricRepository<List<TeamMember>> teamRepository({
 }) => DashboardMetricRepository(
   path: '/team',
   args: DashboardScopeArgs(verticalId: verticalId),
-  parse: (json) => (json['data'] as List<dynamic>? ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .map(TeamMember.fromJson)
-      .toList(growable: false),
+  parse: TeamRoster.fromJson,
   extraQuery: {
     if (managerId != null) 'managerId': '$managerId',
     'sortBy': sortBy,
