@@ -121,10 +121,13 @@ but the visits module is still being built and this spec will not depend on it.
 - **Desempenho →** the spec 0014 subject dashboard, carrying §3.2's scope.
 - **Clínicas associadas (n) →** Explorar filtered to that person's clinics, same scope as the
   count. Each row carries a `⋯` menu: **Ver clínica** · **Desassociar**.
-- **Clínicas fora do território (n)** — active assignments carrying an override (§5.2). Spec
-  0009 R2 required this report and it was never built; the partial index
-  `facility_vertical_rep_assignments_override_idx` exists for it. Note the index is keyed on
-  `override_by_user_id` (who waived), so a per-rep count scans by `user_id` instead.
+- **Clínicas fora do território (n)** — active assignments carrying an override (§5.2).
+  `GET /facilities/out-of-territory-assignments` already implements spec 0009 R2's report,
+  vertical-scoped and paged; it gains a `userId` filter here so the card can open one
+  person's. What was missing was never the query — only a screen that shows it. The count on
+  the profile scans by `user_id`, since the partial index
+  `facility_vertical_rep_assignments_override_idx` is keyed on `override_by_user_id` (who
+  waived) rather than on who holds the clinic.
 - **Reps under this manager** — ADMIN viewing a MANAGER only. Small sequential cards into each
   rep's profile.
 

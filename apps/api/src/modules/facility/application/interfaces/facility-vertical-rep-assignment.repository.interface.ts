@@ -65,7 +65,9 @@ export interface FacilityVerticalRepAssignmentRepository {
   }>;
 
   /** End active assign only; profile untouched. Idempotent if none. */
+  /** Spec 0015 R7: an assignment that ends records why, and who ended it. */
   endActive(params: {
+    endedByUserId?: number | null;
     facilityId: number;
     verticalId: number;
     endReason: string;
@@ -95,6 +97,7 @@ export interface FacilityVerticalRepAssignmentRepository {
    */
   findOutOfTerritoryAssignments(params: {
     verticalIds?: number[];
+    userId?: number;
     limit: number;
     offset: number;
   }): Promise<{ rows: OutOfTerritoryAssignment[]; total: number }>;

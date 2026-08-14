@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
+import { UNASSIGN_REASONS } from "../../application/use-cases/facility-vertical-rep.use-cases";
 import { ordersUseCases } from "../../../orders/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
@@ -301,12 +302,14 @@ const listOutOfTerritoryAssignmentsRoute = new Elysia()
       return facilityUseCases.listOutOfTerritoryAssignments().execute({
         scope,
         role: user.role.name,
+        userId: query.userId,
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
       });
     },
     {
       query: t.Object({
+        userId: t.Optional(t.Number({ minimum: 1 })),
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
       }),
@@ -362,20 +365,31 @@ const unassignVerticalRepRoute = new Elysia()
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .delete(
     "/facilities/:id/verticals/:verticalId/rep",
-    async ({ params, getScope, getUser }) => {
+    async ({ params, query, getScope, getUser, getUserId }) => {
       const scope = await getScope();
       const user = await getUser();
+      const endedByUserId = await getUserId();
       return facilityUseCases.unassignVerticalRep().execute({
         facilityId: params.id,
         verticalId: params.verticalId,
         scope,
         role: user.role.name,
+        endReason: query.reason,
+        endedByUserId,
       });
     },
     {
       params: verticalPathParams,
+      // On the query string rather than in a body: a DELETE with a body is
+      // legal but unevenly supported, and this is one enum value.
+      query: t.Object({
+        reason: t.Optional(
+          t.Union(UNASSIGN_REASONS.map((reason) => t.Literal(reason))),
+        ),
+      }),
       detail: {
-        summary: "End active REP assignment for facility vertical",
+        summary:
+          "End active REP assignment for facility vertical, recording why and who",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },

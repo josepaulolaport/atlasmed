@@ -84,6 +84,8 @@ export class ListOutOfTerritoryAssignmentsUseCase {
   async execute(input: {
     scope: ScopeContext;
     role: string;
+    /** Spec 0015 §4.2: narrow the report to one person, for their profile. */
+    userId?: number;
     page?: number;
     limit?: number;
   }) {
@@ -103,6 +105,7 @@ export class ListOutOfTerritoryAssignmentsUseCase {
     const { rows, total } =
       await this.deps.repAssignmentRepository.findOutOfTerritoryAssignments({
         verticalIds,
+        userId: input.userId,
         limit,
         offset: (page - 1) * limit,
       });
@@ -229,6 +232,27 @@ export class AssignFacilityVerticalRepUseCase {
   }
 }
 
+/**
+ * Why an assignment ended, chosen rather than typed (spec 0015 R7).
+ *
+ * `manual_unassign` is the historical catch-all and stays as the default, so
+ * rows written before the vocabulary existed remain readable for what they are:
+ * someone unassigned this, reason unrecorded.
+ *
+ * The other end reasons the system writes — `reassigned`, `boundary_impact`,
+ * `vertical_deactivated` — are not in this list on purpose. They are things the
+ * system did, not choices a person made, and offering them here would let a
+ * human file a decision under a machine's name.
+ */
+export const UNASSIGN_REASONS = [
+  "manual_unassign",
+  "rep_changed",
+  "clinic_closed",
+  "wrong_assignment",
+] as const;
+
+export type UnassignReason = (typeof UNASSIGN_REASONS)[number];
+
 export class UnassignFacilityVerticalRepUseCase {
   constructor(
     private readonly deps: {
@@ -243,6 +267,15 @@ export class UnassignFacilityVerticalRepUseCase {
     verticalId: number;
     scope: ScopeContext;
     role: string;
+    /**
+     * Why, from a fixed vocabulary (spec 0015 R7). Free text was the obvious
+     * alternative and the wrong one: assignment churn nobody can aggregate is
+     * churn nobody can explain six months later.
+     *
+     * Defaults to the previous catch-all so existing callers keep working.
+     */
+    endReason?: UnassignReason;
+    endedByUserId?: number | null;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertActorVerticalInScope(input);
@@ -250,7 +283,8 @@ export class UnassignFacilityVerticalRepUseCase {
     const { endedUserId } = await this.deps.repAssignmentRepository.endActive({
       facilityId: input.facilityId,
       verticalId: input.verticalId,
-      endReason: "manual_unassign",
+      endReason: input.endReason ?? "manual_unassign",
+      endedByUserId: input.endedByUserId ?? null,
     });
 
     if (endedUserId != null) {
