@@ -624,19 +624,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                     );
                   },
                 ),
-                // Directly under the header: a rep opening the clinic to work
-                // it should see this before anything else, and the detail
-                // response already carries the document so it paints with the
-                // header rather than arriving late.
-                ClinicCpfWarning(
-                  legalDocumentType: detail.registration?.legalDocumentType,
-                  legalDocument: detail.registration?.legalDocument,
-                  onOpenAdminInfo: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ClinicAdminInfoScreen(detail: detail),
-                    ),
-                  ),
-                ),
                 DetailQuickActions(
                   themeColor: AppColors.navyBright,
                   actions: [
@@ -747,6 +734,20 @@ class _ClinicDetailContent extends ConsumerWidget {
                     // select. An order belongs to an interaction; it is started
                     // from the interaction screen, which passes all three.
                   ],
+                ),
+                // Below the quick actions, not above them: that widget paints
+                // its own blue top half so it continues the header seamlessly
+                // and the white card straddles the seam. Anything inserted
+                // between the two detaches that blue and leaves a floating band
+                // across the screen.
+                ClinicCpfWarning(
+                  legalDocumentType: detail.registration?.legalDocumentType,
+                  legalDocument: detail.registration?.legalDocument,
+                  onOpenAdminInfo: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClinicAdminInfoScreen(detail: detail),
+                    ),
+                  ),
                 ),
                 ClinicTopShortcutsSection(
                   facilityId: clinicId,
