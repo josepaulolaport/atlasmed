@@ -41,6 +41,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_linha_bar.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_cpf_warning.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
@@ -621,6 +623,19 @@ class _ClinicDetailContent extends ConsumerWidget {
                       photos: photos,
                     );
                   },
+                ),
+                // Directly under the header: a rep opening the clinic to work
+                // it should see this before anything else, and the detail
+                // response already carries the document so it paints with the
+                // header rather than arriving late.
+                ClinicCpfWarning(
+                  legalDocumentType: detail.registration?.legalDocumentType,
+                  legalDocument: detail.registration?.legalDocument,
+                  onOpenAdminInfo: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClinicAdminInfoScreen(detail: detail),
+                    ),
+                  ),
                 ),
                 DetailQuickActions(
                   themeColor: AppColors.navyBright,
