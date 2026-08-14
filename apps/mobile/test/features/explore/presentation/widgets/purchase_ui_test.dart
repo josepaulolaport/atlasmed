@@ -189,7 +189,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Nunca compraram'), findsOneWidget);
+      // Singular: this is one clinic's stage, not the Desempenho bucket.
+      expect(find.text('Nunca comprou'), findsOneWidget);
       // Buy-frequency line intentionally omitted from explore ClinicRow.
       expect(find.text('A cada 30 dias'), findsNothing);
       expect(tester.takeException(), isNull);

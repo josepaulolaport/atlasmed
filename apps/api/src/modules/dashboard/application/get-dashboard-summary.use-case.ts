@@ -59,13 +59,22 @@ export class GetDashboardSummaryUseCase {
           }),
     ]);
 
+    /**
+     * Share of profiled clinics that have ever bought.
+     *
+     * This was `(active + inactive) / total` over the old three buckets, which
+     * silently excluded the INACTIVE stage — a clinic that bought for two years
+     * and then lapsed counted as never having bought, and coverage read lower
+     * than reality. Stated over stages, the intent is plain: everything that is
+     * not NEVER_PURCHASED, and not a profile the funnel has yet to calculate.
+     */
+    const everPurchased =
+      purchaseStatus.total -
+      purchaseStatus.stages.NEVER_PURCHASED -
+      purchaseStatus.stages.UNKNOWN;
     const coveragePercent =
       purchaseStatus.total > 0
-        ? Math.round(
-            ((purchaseStatus.active + purchaseStatus.inactive) /
-              purchaseStatus.total) *
-              100,
-          )
+        ? Math.round((everPurchased / purchaseStatus.total) * 100)
         : 0;
 
     let mode: "overview" | "assigned" | "empty";

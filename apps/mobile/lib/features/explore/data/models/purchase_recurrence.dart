@@ -111,8 +111,23 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
     PurchaseFunnelStage.inactive => 'INACTIVE',
   };
 
-  /// Badge / chip label — Desempenho bucket convention (not raw funnel name).
-  String get label =>
+  /// Stage label, in the clinic's own terms.
+  ///
+  /// This used to route through `PurchaseBucketFilter.labelForFunnelApi`, so a
+  /// clinic due to buy and one served last week both rendered as the bucket's
+  /// label and looked identical — the distinction reps act on, discarded at the
+  /// last step. The bucket label is still the right thing for the donut and the
+  /// filter chips; a single clinic's badge should say what it actually is.
+  String get label => switch (this) {
+    PurchaseFunnelStage.neverPurchased => 'Nunca comprou',
+    PurchaseFunnelStage.outsideWindow => 'Em dia',
+    PurchaseFunnelStage.purchaseWindow => 'Janela de compra',
+    PurchaseFunnelStage.churn => 'Em risco',
+    PurchaseFunnelStage.inactive => 'Inativa',
+  };
+
+  /// The bucket's label, for surfaces that show the grouped view.
+  String get bucketLabel =>
       PurchaseBucketFilter.labelForFunnelApi(apiValue) ?? apiValue;
 
   Color get color =>

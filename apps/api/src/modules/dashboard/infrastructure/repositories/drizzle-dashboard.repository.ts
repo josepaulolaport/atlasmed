@@ -8,11 +8,39 @@ import {
 } from "@atlasmed/database";
 import { sql, eq, and, inArray, isNotNull, isNull } from "drizzle-orm";
 
+/**
+ * One count per `purchase_funnel_stage`, plus `UNKNOWN` for profiles the funnel
+ * has not calculated yet.
+ *
+ * The endpoint used to return three pre-grouped buckets (`active` /`inactive` /
+ * `neverBought`), which meant the grouping lived in SQL and no client could
+ * regroup or draw a finer breakdown — the counts for PURCHASE_WINDOW ("due to
+ * buy now") and OUTSIDE_WINDOW ("recently served") never left the server, even
+ * though they are the two states a rep acts on differently. Grouping is a
+ * presentation choice and now belongs to the client.
+ */
+export type PurchaseFunnelStageCounts = {
+  NEVER_PURCHASED: number;
+  OUTSIDE_WINDOW: number;
+  PURCHASE_WINDOW: number;
+  CHURN: number;
+  INACTIVE: number;
+  /** Profile exists but `purchase_funnel_stage` is null. */
+  UNKNOWN: number;
+};
+
 export type PurchaseStatusBuckets = {
-  active: number;
-  inactive: number;
-  neverBought: number;
+  stages: PurchaseFunnelStageCounts;
   total: number;
+};
+
+export const EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS: PurchaseFunnelStageCounts = {
+  NEVER_PURCHASED: 0,
+  OUTSIDE_WINDOW: 0,
+  PURCHASE_WINDOW: 0,
+  CHURN: 0,
+  INACTIVE: 0,
+  UNKNOWN: 0,
 };
 
 export type DashboardTerritoryFeature = {
@@ -56,12 +84,18 @@ export function buildPurchaseBucketsQuery(input: {
 
   return db
     .select({
-      active:
+      NEVER_PURCHASED:
+        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'NEVER_PURCHASED')::int`,
+      OUTSIDE_WINDOW:
+        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'OUTSIDE_WINDOW')::int`,
+      PURCHASE_WINDOW:
         sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'PURCHASE_WINDOW')::int`,
-      inactive:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IN ('OUTSIDE_WINDOW', 'CHURN'))::int`,
-      neverBought:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IN ('NEVER_PURCHASED', 'INACTIVE') OR ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
+      CHURN:
+        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'CHURN')::int`,
+      INACTIVE:
+        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'INACTIVE')::int`,
+      UNKNOWN:
+        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
       total: sql<number>`COUNT(*)::int`,
     })
     .from(facilityVerticalProfiles)
@@ -108,19 +142,26 @@ export class DrizzleDashboardRepository {
     verticalIds: number[];
     facilityIds: number[] | null;
   }): Promise<PurchaseStatusBuckets> {
-    if (input.verticalIds.length === 0) {
-      return { active: 0, inactive: 0, neverBought: 0, total: 0 };
-    }
+    const empty = {
+      stages: { ...EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS },
+      total: 0,
+    };
+    if (input.verticalIds.length === 0) return empty;
     if (input.facilityIds !== null && input.facilityIds.length === 0) {
-      return { active: 0, inactive: 0, neverBought: 0, total: 0 };
+      return empty;
     }
 
     const [row] = await buildPurchaseBucketsQuery(input);
 
     return {
-      active: Number(row?.active ?? 0),
-      inactive: Number(row?.inactive ?? 0),
-      neverBought: Number(row?.neverBought ?? 0),
+      stages: {
+        NEVER_PURCHASED: Number(row?.NEVER_PURCHASED ?? 0),
+        OUTSIDE_WINDOW: Number(row?.OUTSIDE_WINDOW ?? 0),
+        PURCHASE_WINDOW: Number(row?.PURCHASE_WINDOW ?? 0),
+        CHURN: Number(row?.CHURN ?? 0),
+        INACTIVE: Number(row?.INACTIVE ?? 0),
+        UNKNOWN: Number(row?.UNKNOWN ?? 0),
+      },
       total: Number(row?.total ?? 0),
     };
   }

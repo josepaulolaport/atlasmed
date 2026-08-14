@@ -37,6 +37,27 @@ describe("dashboard counts exclude deactivated facilities", () => {
     });
   }
 
+  it("counts each funnel stage separately rather than pre-grouping them", () => {
+    // Grouping is a presentation choice. When it lived in this SQL, the counts
+    // for PURCHASE_WINDOW and OUTSIDE_WINDOW were summed server-side and no
+    // client could tell "due to buy now" from "recently served".
+    const { sql } = buildPurchaseBucketsQuery({
+      verticalIds: [1],
+      facilityIds: null,
+    }).toSQL();
+
+    for (const stage of [
+      "NEVER_PURCHASED",
+      "OUTSIDE_WINDOW",
+      "PURCHASE_WINDOW",
+      "CHURN",
+      "INACTIVE",
+    ]) {
+      expect(sql).toContain(`= '${stage}'`);
+    }
+    expect(sql).not.toContain("IN ('OUTSIDE_WINDOW', 'CHURN')");
+  });
+
   it("keeps profile is_active as a separate predicate, not a substitute", () => {
     const buckets = buildPurchaseBucketsQuery({
       verticalIds: [1],
