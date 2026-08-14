@@ -3,6 +3,17 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- AtlasMed é um app de campo, usado em celular. Play filtra a instalação
+         em tablets a partir desta declaração. O Play Console também penaliza
+         apps sem suporte a telas grandes na avaliação de qualidade — a
+         exclusão é deliberada, não um esquecimento. Para reverter, basta
+         voltar os dois atributos para true. -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="false"
+        android:xlargeScreens="false" />
+
     <application
         android:label="AtlasMed"
         android:name="${applicationName}"
