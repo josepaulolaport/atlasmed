@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { CadastroDocumentFileRole } from "@atlasmed/database";
@@ -8,7 +8,6 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
-import { startCadastroFileUploadedWorkflow } from "../../../../infrastructure/temporal/temporal.client";
 import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import type {
@@ -16,59 +15,19 @@ import type {
   FileAssetRecord,
 } from "../interfaces/cadastro-submission.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
+import { daysUntil, isValidIsoDate } from "../utils/cadastro-validity.utils";
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
+/**
+ * How long a rejected document's files survive (spec 0011 §6).
+ *
+ * One week: long enough for a rep to see what was wrong and re-shoot the
+ * document, short enough that refused evidence is not kept indefinitely.
+ */
+const REJECTED_FILE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const UPLOAD_TTL_MS = 6 * 60 * 60 * 1000;
-
-function detectCadastroMime(bytes: Uint8Array): string | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return "image/jpeg";
-  }
-  if (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return "image/png";
-  }
-  if (
-    bytes.length >= 12 &&
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50
-  ) {
-    return "image/webp";
-  }
-  if (
-    bytes.length >= 5 &&
-    bytes[0] === 0x25 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x44 &&
-    bytes[3] === 0x46
-  ) {
-    return "application/pdf";
-  }
-  return null;
-}
-
-function countPdfPages(bytes: Uint8Array): number | null {
-  try {
-    const text = Buffer.from(bytes).toString("latin1");
-    const matches = text.match(/\/Type\s*\/Page\b/g);
-    return matches ? matches.length : null;
-  } catch {
-    return null;
-  }
-}
 
 async function markDocumentReadyIfAllFilesReady(
   repo: CadastroSubmissionRepository,
@@ -91,12 +50,29 @@ async function markDocumentReadyIfAllFilesReady(
   }
 }
 
-const INCOMPLETE_UPLOAD_STATUSES = new Set(["PENDING_UPLOAD", "UPLOADING"]);
+/**
+ * Every non-terminal file-asset status (D-14).
+ *
+ * READY and FAILED are the terminal pair; everything else means an attempt that
+ * stopped somewhere in the middle. This set used to be PENDING_UPLOAD and
+ * UPLOADING only, so a process that died between the UPLOADED write and the
+ * verification that follows it stranded the file in a state no sweep and no UI
+ * could clear. The comment this replaces recorded that the same class of bug had
+ * already reached production once and that the fix stopped one status short —
+ * enumerate the terminal states instead, so a new status is swept by default
+ * rather than forgotten by default.
+ */
+const TERMINAL_UPLOAD_STATUSES = new Set(["READY", "FAILED"]);
 
 /**
- * Drop abandoned initiate→PUT attempts that never finished.
+ * Drop abandoned upload attempts that never reached a terminal state.
  * Those ghosts block submit ("Aguarde o processamento…") even when later
  * uploads succeeded (e.g. after a storage outage).
+ *
+ * Verification is synchronous now (ADR 0008), so UPLOADED is transient inside a
+ * single `/uploads/complete` request: a file still sitting in it by submit time
+ * is one whose request died between the two writes, which is the same kind of
+ * ghost as a PUT that never happened.
  */
 async function pruneIncompleteDocumentUploads(
   repo: CadastroSubmissionRepository,
@@ -105,62 +81,59 @@ async function pruneIncompleteDocumentUploads(
   const files = await repo.listDocumentFiles(documentId);
   for (const file of files) {
     const status = file.fileAsset?.status;
-    if (!status || !INCOMPLETE_UPLOAD_STATUSES.has(status)) continue;
+    if (status && TERMINAL_UPLOAD_STATUSES.has(status)) continue;
     await repo.deleteDocumentFileByFileAssetId(file.fileAssetId);
   }
 }
 
-/** Validate uploaded bytes and mark the file READY (or FAILED). */
-async function processUploadedCadastroFile(input: {
+/**
+ * Ask the store whether the upload landed, and mark the file READY or FAILED
+ * from its answer. The store is the authority; the client only triggers the
+ * question (ADR 0008).
+ *
+ * What this replaces: a full byte download to hash, sniff and then re-upload
+ * two byte-identical copies under `/thumb` and `/preview` keys — all on the
+ * request thread. No client ever asked for those variants, so it cost three
+ * times the storage and the rep's latency for nothing.
+ *
+ * What is deliberately *not* checked any more:
+ *
+ * - **The checksum.** It was compared against `input.checksum ?? asset.sha256`,
+ *   both of which the client supplied. Hashing bytes to confirm they match the
+ *   hash the same client sent proves the transfer was faithful, not that the
+ *   file is what it claims.
+ * - **The magic number.** The presigned PUT pins Content-Type, so a file whose
+ *   bytes disagree with its declared type is still served as the declared type,
+ *   which `allowedMimeTypes` already restricted to images and PDFs at initiate.
+ *   The cost of dropping the sniff is that a corrupt file is caught by the
+ *   reviewer instead of at upload; the benefit is that no byte crosses the API.
+ *
+ * The byte count is kept, and is the one claim here the store can actually
+ * contradict: it is measured server-side and catches a truncated or swapped
+ * object, including one that would breach the size limit checked at initiate.
+ */
+async function verifyUploadedCadastroFile(input: {
   repo: CadastroSubmissionRepository;
   asset: FileAssetRecord;
-  checksum?: string;
 }): Promise<{ status: "READY" | "FAILED"; errorMessage?: string }> {
   const { repo, asset } = input;
   try {
-    const bytes = await storageService.download(asset.objectKey);
-    if (bytes.length === 0) {
-      throw new Error("Object empty or missing");
+    const head = await storageService.headObject(asset.objectKey);
+    if (!head.exists) {
+      throw new Error("Objeto não encontrado no storage");
     }
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const expected = input.checksum ?? asset.sha256;
-    if (expected && expected !== sha256) {
-      throw new Error("Checksum mismatch");
-    }
-
-    const detected = detectCadastroMime(bytes);
-    if (!detected) {
-      throw new Error("Unsupported or unrecognized file type");
-    }
-    const declared = asset.declaredMimeType.toLowerCase();
-    const declaredNorm = declared === "image/jpg" ? "image/jpeg" : declared;
-    // Allow image/* family mismatch after client re-encode (e.g. HEIC→PNG).
-    const bothImages =
-      declaredNorm.startsWith("image/") && detected.startsWith("image/");
-    if (detected !== declaredNorm && !bothImages) {
-      throw new Error(`MIME mismatch: declared ${declared}, detected ${detected}`);
-    }
-
-    const pageCount =
-      detected === "application/pdf" ? (countPdfPages(bytes) ?? 1) : 1;
-
-    let previewObjectKey: string | null = null;
-    let thumbObjectKey: string | null = null;
-    if (detected.startsWith("image/")) {
-      previewObjectKey = asset.objectKey.replace(/\/original$/, "/preview");
-      thumbObjectKey = asset.objectKey.replace(/\/original$/, "/thumb");
-      await storageService.upload(previewObjectKey, bytes, detected);
-      await storageService.upload(thumbObjectKey, bytes, detected);
+    if (
+      typeof head.contentLength === "number" &&
+      head.contentLength !== asset.sizeBytes
+    ) {
+      throw new Error(
+        `Tamanho divergente: ${asset.sizeBytes} bytes declarados, ${head.contentLength} armazenados`
+      );
     }
 
     await repo.updateFileAsset({
       id: asset.id,
       status: "READY",
-      sha256,
-      detectedMimeType: detected,
-      pageCount,
-      previewObjectKey,
-      thumbObjectKey,
       processedAt: new Date(),
       errorCode: null,
       errorMessage: null,
@@ -172,7 +145,7 @@ async function processUploadedCadastroFile(input: {
     await repo.updateFileAsset({
       id: asset.id,
       status: "FAILED",
-      errorCode: "PROCESSING_FAILED",
+      errorCode: "VERIFICATION_FAILED",
       errorMessage: message,
       processedAt: new Date(),
     });
@@ -191,6 +164,7 @@ function serializeFile(file: {
   id: number;
   position: number;
   role: string;
+  uploadedByName?: string | null;
   fileAsset?: {
     id: number;
     originalFilename: string;
@@ -220,7 +194,130 @@ function serializeFile(file: {
     errorCode: asset?.errorCode ?? undefined,
     errorMessage: asset?.errorMessage ?? undefined,
     objectKey: asset?.objectKey,
+    // "Enviado por Maria · há 2h" — the shared draft is only legible if a rep
+    // can see which of them, or which manager, sent a given file.
+    uploadedByName: file.uploadedByName ?? undefined,
   };
+}
+
+/**
+ * Statuses in which a document still accepts uploads and edits.
+ *
+ * This gate used to live on the package, which is what wedged clinics: a rep
+ * who submitted one requirement flipped the package to UNDER_REVIEW and could
+ * no longer upload into any *other* requirement. Per-document, that cannot
+ * happen — the linha's other documents are untouched.
+ */
+const EDITABLE_DOCUMENT_STATUSES = new Set([
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "CHANGES_REQUESTED",
+]);
+
+function assertDocumentEditable(status: string) {
+  if (!EDITABLE_DOCUMENT_STATUSES.has(status)) throw new ForbiddenError();
+}
+
+/**
+ * Validates the rep's validity date at submit and returns what to store.
+ *
+ * `undefined` means "leave the column alone"; `null` would clear it. A date is
+ * required exactly where the requirement declares one, and rejected where it
+ * does not — silently dropping a date the client sent would hide a client bug
+ * and lose data the rep typed.
+ */
+function assertValidityDateForSubmit(input: {
+  requiresValidityDate: boolean;
+  requirementName: string;
+  validUntil?: string | null;
+  today: Date;
+}): string | undefined {
+  const supplied = input.validUntil?.trim() || null;
+
+  if (!input.requiresValidityDate) {
+    if (supplied) {
+      throw new ValidationError([
+        {
+          field: "validUntil",
+          message: `${input.requirementName} não tem data de validade`,
+        },
+      ]);
+    }
+    return undefined;
+  }
+
+  if (!supplied) {
+    throw new ValidationError([
+      {
+        field: "validUntil",
+        message: `Informe a data de validade de ${input.requirementName}`,
+      },
+    ]);
+  }
+  if (!isValidIsoDate(supplied)) {
+    throw new ValidationError([
+      { field: "validUntil", message: "Data de validade inválida (AAAA-MM-DD)" },
+    ]);
+  }
+  // An already-expired document is not valid evidence, and a rep submitting one
+  // has almost certainly mistyped the year. Better a clear refusal now than an
+  // approval that the expiry warning immediately contradicts.
+  if (daysUntil(supplied, input.today) < 0) {
+    throw new ValidationError([
+      { field: "validUntil", message: "A data de validade já passou" },
+    ]);
+  }
+
+  return supplied;
+}
+
+/**
+ * The date to store when approving: the reviewer's correction if they made one,
+ * otherwise the rep's.
+ *
+ * Approval is the last point at which anyone looks at the document, so a
+ * requirement that declares a validity must not get past here without one —
+ * otherwise the expiry warning silently never fires for that clinic.
+ */
+function assertValidityDateForApproval(input: {
+  requiresValidityDate: boolean;
+  requirementName: string;
+  corrected?: string | null;
+  existing: string | null;
+}): string | undefined {
+  if (!input.requiresValidityDate) {
+    if (input.corrected) {
+      throw new ValidationError([
+        {
+          field: "validUntil",
+          message: `${input.requirementName} não tem data de validade`,
+        },
+      ]);
+    }
+    return undefined;
+  }
+
+  const chosen = input.corrected?.trim() || input.existing;
+  if (!chosen) {
+    throw new ValidationError([
+      {
+        field: "validUntil",
+        message: `Confirme a data de validade de ${input.requirementName}`,
+      },
+    ]);
+  }
+  if (!isValidIsoDate(chosen)) {
+    throw new ValidationError([
+      { field: "validUntil", message: "Data de validade inválida (AAAA-MM-DD)" },
+    ]);
+  }
+
+  // Deliberately no "must be in the future" check here. A reviewer correcting a
+  // date to one that has already passed is recording a fact about the document
+  // in front of them; the derived warning will show it as EXPIRED, which is the
+  // correct outcome rather than something to refuse.
+  return chosen;
 }
 
 async function serializeDocument(
@@ -232,12 +329,14 @@ async function serializeDocument(
   const files = await repo.listDocumentFiles(documentId);
   return {
     id: document.id,
-    submissionId: document.submissionId,
+    facilityId: document.facilityId,
+    facilityVerticalProfileId: document.facilityVerticalProfileId,
     requirementId: document.requirementId,
     title: document.title,
     status: document.status,
     version: document.version,
     reviewComment: document.reviewComment ?? undefined,
+    submittedAt: document.submittedAt?.toISOString(),
     requirement: document.requirement
       ? {
           id: document.requirement.id,
@@ -256,78 +355,28 @@ async function serializeDocument(
   };
 }
 
-export class EnsureDraftCadastroSubmissionUseCase {
+/**
+ * Opens (or returns) the document a rep is working on for one requirement.
+ *
+ * This replaces the old two-step "ensure a draft package, then create a
+ * document inside it". There is no package: the client names a requirement and
+ * gets back the row it uploads into.
+ *
+ * Re-uploading over a finished attempt (APPROVED / REJECTED / SUPERSEDED) opens
+ * the next version rather than mutating a reviewed row.
+ */
+export class CreateCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
     facilityId: number;
-    userId: number;
+    requirementId: number;
     scope: ScopeContext;
     verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
     if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
-
-    let draft = await this.deps.cadastroRepository.findDraftByFacility(
-      input.facilityId
-    );
-    if (!draft) {
-      const verticalId = await resolveCadastroVerticalId({
-        facilityId: input.facilityId,
-        assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-        isGlobal: input.scope.isGlobal,
-        facilityRepository: this.deps.facilityRepository,
-        verticalId: input.verticalId,
-      });
-      const latest = await this.deps.cadastroRepository.findLatestByFacility(
-        input.facilityId
-      );
-      draft = await this.deps.cadastroRepository.createSubmission({
-        facilityId: input.facilityId,
-        verticalId,
-        submittedByUserId: input.userId,
-        version: (latest?.version ?? 0) + 1,
-      });
-    }
-
-    const documents = await this.deps.cadastroRepository.findDocumentsBySubmission(
-      draft.id
-    );
-    const serializedDocs = await Promise.all(
-      documents.map((d) => serializeDocument(this.deps.cadastroRepository, d.id))
-    );
-
-    return {
-      id: draft.id,
-      facilityId: draft.facilityId,
-      status: draft.status,
-      version: draft.version,
-      submittedAt: draft.submittedAt?.toISOString(),
-      documents: serializedDocs.filter(Boolean),
-    };
-  }
-}
-
-export class CreateCadastroSubmissionDocumentUseCase {
-  constructor(private readonly deps: Dependencies) {}
-
-  async execute(input: {
-    facilityId: number;
-    submissionId: number;
-    requirementId: number;
-    scope: ScopeContext;
-  }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
 
     const requirement = await this.deps.conformityRepository.findRequirementById(
       input.requirementId
@@ -336,19 +385,40 @@ export class CreateCadastroSubmissionDocumentUseCase {
       throw new ResourceNotFoundError("ConformityRequirement", input.requirementId);
     }
 
-    const existing =
-      await this.deps.cadastroRepository.findDocumentBySubmissionAndRequirement(
-        input.submissionId,
-        input.requirementId
-      );
+    const existing = await this.deps.cadastroRepository.findWorkingDocument({
+      facilityId: input.facilityId,
+      requirementId: input.requirementId,
+    });
     if (existing) {
+      // An attempt already under review is not an editing surface.
+      assertDocumentEditable(existing.status);
       return serializeDocument(this.deps.cadastroRepository, existing.id);
     }
 
+    // A requirement with no vertical applies to every linha, so the document it
+    // produces is facility-scoped: uploaded once, counted everywhere (ADR 0007).
+    let facilityVerticalProfileId: number | null = null;
+    if (requirement.verticalId != null) {
+      const profile = await this.deps.facilityRepository.ensureVerticalProfile({
+        facilityId: input.facilityId,
+        verticalId: requirement.verticalId,
+      });
+      facilityVerticalProfileId = profile.id;
+    }
+
+    const history =
+      await this.deps.cadastroRepository.listDocumentsForFacilityRequirement({
+        facilityId: input.facilityId,
+        requirementId: input.requirementId,
+      });
+    const nextVersion = (history[0]?.version ?? 0) + 1;
+
     const document = await this.deps.cadastroRepository.createDocument({
-      submissionId: input.submissionId,
+      facilityId: input.facilityId,
+      facilityVerticalProfileId,
       requirementId: input.requirementId,
       title: requirement.name,
+      version: nextVersion,
     });
     return serializeDocument(this.deps.cadastroRepository, document.id);
   }
@@ -367,6 +437,8 @@ export class InitiateCadastroFileUploadUseCase {
     checksum?: string;
     role?: CadastroDocumentFileRole;
     position?: number;
+    /** Recorded on the asset so a shared draft is legible (spec 0011 §3.4). */
+    userId: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     if (!storageService.isConfigured()) {
@@ -378,18 +450,10 @@ export class InitiateCadastroFileUploadUseCase {
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
+    assertDocumentEditable(document.status);
 
     const req = document.requirement;
     if (!req) {
@@ -411,19 +475,39 @@ export class InitiateCadastroFileUploadUseCase {
       ]);
     }
 
-    const currentCount = await this.deps.cadastroRepository.countDocumentFiles(
-      document.id
-    );
-    if (currentCount >= req.maxFiles) {
+    const fileId = randomUUID();
+    const objectKey = `facilities/${input.facilityId}/documents/${document.id}/v${document.version}/files/${fileId}/original`;
+
+    // Limits, position and both inserts happen together under a lock on the
+    // document (D-15). Checking the limits here and inserting afterwards is
+    // what made them bypassable: two uploads read the same counts and both
+    // passed. The repository returns a verdict rather than throwing so the
+    // mapping to an HTTP error stays here.
+    const attached = await this.deps.cadastroRepository.attachFileToDocument({
+      documentId: document.id,
+      facilityId: input.facilityId,
+      bucket: storageService.bucket(),
+      objectKey,
+      originalFilename: input.filename,
+      declaredMimeType: mime,
+      sizeBytes: input.sizeBytes,
+      sha256: input.checksum ?? null,
+      role: input.role ?? "PAGE",
+      position: input.position,
+      maxFiles: req.maxFiles,
+      maxCombinedSizeBytes: req.maxCombinedSizeBytes,
+      uploadedByUserId: input.userId,
+    });
+
+    if (attached.outcome === "document_missing") {
+      throw new ResourceNotFoundError("SubmissionDocument", document.id);
+    }
+    if (attached.outcome === "max_files_exceeded") {
       throw new ValidationError([
         { field: "files", message: `Máximo de ${req.maxFiles} arquivos` },
       ]);
     }
-
-    const currentSize = await this.deps.cadastroRepository.sumDocumentFileSizes(
-      document.id
-    );
-    if (currentSize + input.sizeBytes > req.maxCombinedSizeBytes) {
+    if (attached.outcome === "max_combined_size_exceeded") {
       throw new ValidationError([
         {
           field: "sizeBytes",
@@ -432,31 +516,7 @@ export class InitiateCadastroFileUploadUseCase {
       ]);
     }
 
-    const fileId = randomUUID();
-    const objectKey = `facilities/${input.facilityId}/submissions/${submission.id}/documents/${document.id}/files/${fileId}/original`;
-
-    const asset = await this.deps.cadastroRepository.createFileAsset({
-      facilityId: input.facilityId,
-      bucket: storageService.bucket(),
-      objectKey,
-      originalFilename: input.filename,
-      declaredMimeType: mime,
-      sizeBytes: input.sizeBytes,
-      sha256: input.checksum ?? null,
-      status: "PENDING_UPLOAD",
-    });
-
-    const position =
-      input.position ??
-      (await this.deps.cadastroRepository.nextDocumentFilePosition(document.id));
-    const role = input.role ?? "PAGE";
-
-    await this.deps.cadastroRepository.createDocumentFile({
-      submissionDocumentId: document.id,
-      fileAssetId: asset.id,
-      position,
-      role,
-    });
+    const asset = attached.asset;
 
     const useMultipart = input.sizeBytes > DEFAULT_PART_SIZE;
     const expiresAt = new Date(Date.now() + UPLOAD_TTL_MS);
@@ -531,13 +591,31 @@ export class SignCadastroUploadPartsUseCase {
       throw new ResourceNotFoundError("UploadSession", input.uploadSessionId);
     }
 
+    // Part URLs must live as long as the session they belong to. Signed with
+    // the default TTL they expired after 1 hour against a 6-hour session, so a
+    // slow or resumed upload got `403 SignatureDoesNotMatch` *after* the bytes
+    // were already moving — the failure looked like a storage fault, not an
+    // expiry (spec 0011 §2.1).
+    const remainingSessionSeconds = Math.floor(
+      (session.expiresAt.getTime() - Date.now()) / 1000
+    );
+    if (remainingSessionSeconds <= 0) {
+      throw new ValidationError([
+        {
+          field: "uploadSessionId",
+          message: "Sessão de upload expirada. Inicie o envio novamente.",
+        },
+      ]);
+    }
+
     const parts = await Promise.all(
       input.partNumbers.map(async (partNumber) => ({
         partNumber,
         uploadUrl: await storageService.signedUploadPartUrl(
           asset.objectKey,
           session.storageUploadId,
-          partNumber
+          partNumber,
+          remainingSessionSeconds
         ),
       }))
     );
@@ -600,13 +678,6 @@ export class CompleteCadastroFileUploadUseCase {
         status: "COMPLETED",
         completedAt: new Date(),
       });
-    } else {
-      const head = await storageService.headObject(asset.objectKey);
-      if (!head.exists) {
-        throw new ValidationError([
-          { field: "fileId", message: "Upload não encontrado no storage" },
-        ]);
-      }
     }
 
     const uploaded = await this.deps.cadastroRepository.updateFileAsset({
@@ -618,36 +689,19 @@ export class CompleteCadastroFileUploadUseCase {
       errorMessage: null,
     });
 
-    await this.deps.cadastroRepository.updateFileAsset({
-      id: asset.id,
-      status: "PROCESSING",
-    });
-
-    // Process inline so READY does not depend on a running Temporal worker.
-    // Temporal is still started best-effort for audit / eventual worker path.
-    const processed = await processUploadedCadastroFile({
+    // Both branches verify against the store. The multipart branch used to skip
+    // the check entirely: a successful CompleteMultipartUpload says the parts
+    // were assembled, not that the result is the object the client promised, so
+    // it is exactly the branch where an assembled-but-wrong size can appear.
+    const verified = await verifyUploadedCadastroFile({
       repo: this.deps.cadastroRepository,
       asset: uploaded,
-      checksum: input.checksum,
     });
-
-    let workflowId: string | null = null;
-    try {
-      const started = await startCadastroFileUploadedWorkflow({
-        fileAssetId: asset.id,
-        bucket: asset.bucket,
-        objectKey: asset.objectKey,
-      });
-      workflowId = started.workflowId;
-    } catch {
-      // Worker optional when inline processing already finished.
-    }
 
     return {
       fileId: asset.id,
-      status: processed.status,
-      workflowId,
-      errorMessage: processed.errorMessage,
+      status: verified.status,
+      errorMessage: verified.errorMessage,
     };
   }
 }
@@ -669,18 +723,10 @@ export class ReorderCadastroDocumentFilesUseCase {
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
+    assertDocumentEditable(document.status);
 
     await this.deps.cadastroRepository.reorderDocumentFiles({
       submissionDocumentId: document.id,
@@ -717,46 +763,43 @@ export class GetCadastroFileSignedUrlUseCase {
   }
 }
 
-export class DeleteDraftCadastroSubmissionUseCase {
+/**
+ * Discards one unsent document and the files behind it.
+ *
+ * The package version of this deleted an entire clinic's cadastro in one call.
+ * A document is the unit, so this is the unit of discard too.
+ */
+export class DeleteCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
     facilityId: number;
-    submissionId: number;
+    documentId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
+    const document = await this.deps.cadastroRepository.findDocumentById(
+      input.documentId
     );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
+    if (!document || document.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
+    if (!EDITABLE_DOCUMENT_STATUSES.has(document.status)) {
       throw new ValidationError([
         {
-          field: "submissionId",
-          message: "Somente rascunhos podem ser excluídos",
+          field: "documentId",
+          message: "Documentos já enviados para revisão não podem ser excluídos",
         },
       ]);
     }
 
-    const documents =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-    const assetIds: number[] = [];
-    for (const doc of documents) {
-      const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-      for (const file of files) {
-        assetIds.push(file.fileAssetId);
-      }
-    }
-
-    // Collect assets before cascade removes document_files links.
+    // Read the assets before the cascade removes the document_files links.
+    const files = await this.deps.cadastroRepository.listDocumentFiles(document.id);
     const assets = await Promise.all(
-      assetIds.map((id) => this.deps.cadastroRepository.findFileAssetById(id))
+      files.map((f) => this.deps.cadastroRepository.findFileAssetById(f.fileAssetId))
     );
 
-    await this.deps.cadastroRepository.deleteSubmission(submission.id);
+    await this.deps.cadastroRepository.deleteDocument(document.id);
 
     for (const asset of assets) {
       if (!asset) continue;
@@ -776,101 +819,7 @@ export class DeleteDraftCadastroSubmissionUseCase {
       }
     }
 
-    return { deleted: true, submissionId: submission.id };
-  }
-}
-
-export class SubmitCadastroSubmissionUseCase {
-  constructor(private readonly deps: Dependencies) {}
-
-  async execute(input: {
-    facilityId: number;
-    submissionId: number;
-    userId: number;
-    scope: ScopeContext;
-  }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-    const facility = await this.deps.facilityRepository.findById(input.facilityId);
-    if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
-
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
-
-    const legalDocumentType = resolveFacilityLegalDocumentType(facility);
-    const requirements =
-      await this.deps.conformityRepository.findActiveRequirements({ legalDocumentType });
-    const documents =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-
-    const issues: Array<{ field: string; message: string }> = [];
-    for (const req of requirements) {
-      const doc = documents.find((d) => d.requirementId === req.id);
-      if (!doc) {
-        issues.push({
-          field: req.slug,
-          message: `Documento obrigatório ausente: ${req.name}`,
-        });
-        continue;
-      }
-      await pruneIncompleteDocumentUploads(
-        this.deps.cadastroRepository,
-        doc.id
-      );
-      const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-      if (files.length === 0) {
-        issues.push({
-          field: req.slug,
-          message: `Nenhum arquivo em: ${req.name}`,
-        });
-        continue;
-      }
-      const notReady = files.filter((f) => f.fileAsset?.status !== "READY");
-      if (notReady.length > 0) {
-        issues.push({
-          field: req.slug,
-          message: `Arquivos ainda não prontos em: ${req.name}`,
-        });
-      }
-      if (req.requiresFrontAndBack) {
-        const roles = new Set(files.map((f) => f.role));
-        if (!roles.has("FRONT") || !roles.has("BACK")) {
-          issues.push({
-            field: req.slug,
-            message: `${req.name} exige frente e verso`,
-          });
-        }
-      }
-    }
-
-    if (issues.length > 0) throw new ValidationError(issues);
-
-    for (const doc of documents) {
-      await this.deps.cadastroRepository.updateDocumentStatus({
-        id: doc.id,
-        status: "UNDER_REVIEW",
-      });
-    }
-
-    const updated = await this.deps.cadastroRepository.updateSubmissionStatus({
-      id: submission.id,
-      status: "UNDER_REVIEW",
-      submittedAt: new Date(),
-      submittedByUserId: input.userId,
-    });
-
-    return {
-      id: updated.id,
-      status: updated.status,
-      version: updated.version,
-      submittedAt: updated.submittedAt?.toISOString(),
-    };
+    return { deleted: true, documentId: document.id };
   }
 }
 
@@ -886,23 +835,37 @@ export class ReviewCadastroDocumentUseCase {
     comment?: string;
     reasonCode?: string;
     flaggedFileAssetIds?: number[];
+    /**
+     * The reviewer's correction to the rep's date, on approval only. Omitted
+     * means "confirm what the rep entered" (ADR 0008 §6).
+     */
+    validUntil?: string | null;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "UNDER_REVIEW") {
+    // Only the document actually awaiting a verdict can receive one.
+    if (document.status !== "UNDER_REVIEW" && document.status !== "SUBMITTED") {
       throw new ForbiddenError();
     }
+
+    // Confirm-or-correct, and only on approval: rejecting a document says
+    // nothing about when it expires, and writing a date onto a rejected row
+    // would put a validity on evidence that was refused.
+    const validUntil =
+      input.decision === "APPROVED"
+        ? assertValidityDateForApproval({
+            requiresValidityDate:
+              document.requirement?.requiresValidityDate ?? false,
+            requirementName: document.requirement?.name ?? document.title,
+            corrected: input.validUntil,
+            existing: document.validUntil,
+          })
+        : undefined;
 
     await this.deps.cadastroRepository.createReviewDecision({
       submissionDocumentId: document.id,
@@ -914,102 +877,53 @@ export class ReviewCadastroDocumentUseCase {
       flaggedFileAssetIds: input.flaggedFileAssetIds,
     });
 
+    // CHANGES_REQUESTED is now exactly this: one status write on one document.
+    //
+    // It used to supersede the package, open a new version, and clone every
+    // document and file row into it. A crash mid-loop left a superseded package
+    // beside a half-built draft, and the partial-unique DRAFT index then
+    // rejected every retry — the clinic's cadastro wedged permanently (D-16).
+    // The safest version of that clone is the one that does not exist.
     await this.deps.cadastroRepository.updateDocumentStatus({
       id: document.id,
       status: input.decision,
       reviewComment: input.comment ?? null,
+      ...(validUntil !== undefined ? { validUntil } : {}),
     });
 
-    const allDocs =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-
-    if (input.decision === "CHANGES_REQUESTED") {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "SUPERSEDED",
-      });
-      const next = await this.deps.cadastroRepository.createSubmission({
-        facilityId: input.facilityId,
-        verticalId:
-          submission.verticalId ??
-          (await resolveCadastroVerticalId({
-            facilityId: input.facilityId,
-            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-            isGlobal: input.scope.isGlobal,
-            facilityRepository: this.deps.facilityRepository,
-          })),
-        submittedByUserId: submission.submittedByUserId,
-        version: submission.version + 1,
-      });
-      // Clone non-flagged ready docs as APPROVED/READY into new draft for correction.
-      for (const doc of allDocs) {
-        const cloned = await this.deps.cadastroRepository.createDocument({
-          submissionId: next.id,
-          requirementId: doc.requirementId,
-          title: doc.title,
-        });
-        if (doc.id === document.id) {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "CHANGES_REQUESTED",
-            reviewComment: input.comment ?? null,
-            version: doc.version + 1,
-          });
-        } else if (doc.status === "APPROVED") {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "APPROVED",
-            version: doc.version,
-          });
-          const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-          for (const file of files) {
-            await this.deps.cadastroRepository.createDocumentFile({
-              submissionDocumentId: cloned.id,
-              fileAssetId: file.fileAssetId,
-              position: file.position,
-              role: file.role,
-            });
-          }
-        } else {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "DRAFT",
-            version: doc.version,
-          });
-        }
-      }
-      return {
+    // Retention (ADR 0008 §5). Rejected and superseded evidence keeps its row —
+    // status, version and the reviewer's comment survive, so "v2 — Reprovado —
+    // <comment>" still renders — but the bytes go after a week. Approved
+    // evidence is never deleted, and clearing the date matters: a document
+    // rejected and later approved must not keep a purge date from the earlier
+    // verdict.
+    if (input.decision === "REJECTED") {
+      await this.deps.cadastroRepository.setPurgeAfterForDocument({
         documentId: document.id,
-        decision: input.decision,
-        nextSubmissionId: next.id,
-        nextVersion: next.version,
-      };
+        purgeAfter: new Date(Date.now() + REJECTED_FILE_RETENTION_MS),
+      });
+    } else if (input.decision === "APPROVED") {
+      await this.deps.cadastroRepository.setPurgeAfterForDocument({
+        documentId: document.id,
+        purgeAfter: null,
+      });
     }
 
-    const statuses = (
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id)
-    ).map((d) => d.status);
-
-    if (statuses.every((s) => s === "APPROVED")) {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "APPROVED",
-      });
-      await this.deps.completionService.evaluateAndApply(
+    // Approving one document can complete a linha. Completion is evaluated for
+    // the linha this document belongs to; a facility-scoped document (no
+    // profile) can complete any of them, so every linha is re-evaluated.
+    if (input.decision === "APPROVED") {
+      const verticalIds = await this.resolveVerticalIdsToEvaluate(
         input.facilityId,
-        submission.verticalId ??
-          (await resolveCadastroVerticalId({
-            facilityId: input.facilityId,
-            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-            isGlobal: input.scope.isGlobal,
-            facilityRepository: this.deps.facilityRepository,
-          })),
+        document.facilityVerticalProfileId,
+        input.scope
       );
-    } else if (statuses.some((s) => s === "REJECTED") && statuses.every((s) => s === "APPROVED" || s === "REJECTED")) {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "REJECTED",
-      });
+      for (const verticalId of verticalIds) {
+        await this.deps.completionService.evaluateAndApply(
+          input.facilityId,
+          verticalId
+        );
+      }
     }
 
     return {
@@ -1017,46 +931,39 @@ export class ReviewCadastroDocumentUseCase {
       decision: input.decision,
     };
   }
-}
 
-export class ListCadastroPackageSubmissionsUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  private async resolveVerticalIdsToEvaluate(
+    facilityId: number,
+    facilityVerticalProfileId: number | null,
+    scope: ScopeContext
+  ): Promise<number[]> {
+    const profiles =
+      await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
+        facilityId,
+      ]);
+    const facilityProfiles = profiles.get(facilityId) ?? [];
 
-  async execute(input: {
-    status?: Array<"UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED">;
-    page?: number;
-    limit?: number;
-  }) {
-    const page = input.page ?? 1;
-    const limit = Math.min(input.limit ?? 20, 100);
-    const result = await this.deps.cadastroRepository.listSubmissions({
-      status: input.status ?? ["UNDER_REVIEW"],
-      page,
-      limit,
-    });
+    if (facilityVerticalProfileId != null) {
+      const owning = facilityProfiles.find(
+        (p) => p.id === facilityVerticalProfileId
+      );
+      if (owning) return [owning.verticalId];
+    }
 
-    const items = await Promise.all(
-      result.items.map(async (submission) => {
-        const facility = await this.deps.facilityRepository.findById(
-          submission.facilityId
-        );
-        const documents =
-          await this.deps.cadastroRepository.findDocumentsBySubmission(
-            submission.id
-          );
-        return {
-          id: submission.id,
-          facilityId: submission.facilityId,
-          facilityName: facility?.name,
-          status: submission.status,
-          version: submission.version,
-          submittedAt: submission.submittedAt?.toISOString(),
-          documentCount: documents.length,
-        };
-      })
-    );
+    if (facilityProfiles.length > 0) {
+      return facilityProfiles.map((p) => p.verticalId);
+    }
 
-    return { items, total: result.total, page, limit };
+    // No profiles at all: fall back to the caller's linha so a facility-scoped
+    // approval still records completion somewhere.
+    return [
+      await resolveCadastroVerticalId({
+        facilityId,
+        assignedVerticalIds: scope.assignedVerticalIds ?? [],
+        isGlobal: scope.isGlobal,
+        facilityRepository: this.deps.facilityRepository,
+      }),
+    ];
   }
 }
 
@@ -1080,20 +987,19 @@ export class ListCadastroRequirementSubmissionsUseCase {
       });
 
     const items = await Promise.all(
-      rows.map(async ({ document, submission }) => {
+      rows.map(async (document) => {
         const files = await this.deps.cadastroRepository.listDocumentFiles(
           document.id
         );
         return {
           documentId: document.id,
-          submissionId: submission.id,
           requirementId: document.requirementId,
           title: document.title,
           status: document.status,
-          version: submission.version,
+          version: document.version,
           documentVersion: document.version,
           reviewComment: document.reviewComment ?? undefined,
-          submittedAt: submission.submittedAt?.toISOString() ?? undefined,
+          submittedAt: document.submittedAt?.toISOString() ?? undefined,
           createdAt: document.createdAt.toISOString(),
           updatedAt: document.updatedAt.toISOString(),
           fileCount: files.length,
@@ -1115,6 +1021,8 @@ export class SubmitCadastroRequirementUseCase {
     userId: number;
     scope: ScopeContext;
     documentId?: number;
+    /** Required where the requirement declares one; rejected where it does not. */
+    validUntil?: string | null;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -1129,51 +1037,24 @@ export class SubmitCadastroRequirementUseCase {
       throw new ResourceNotFoundError("ConformityRequirement", input.requirementId);
     }
 
-    let document = input.documentId
+    const document = input.documentId
       ? await this.deps.cadastroRepository.findDocumentById(input.documentId)
-      : null;
+      : await this.deps.cadastroRepository.findWorkingDocument({
+          facilityId: input.facilityId,
+          requirementId: input.requirementId,
+        });
 
-    if (!document) {
-      const draft = await this.deps.cadastroRepository.findDraftByFacility(
-        input.facilityId
-      );
-      if (!draft) {
-        throw new ValidationError([
-          {
-            field: "requirementId",
-            message: "Nenhum rascunho com arquivos para enviar",
-          },
-        ]);
-      }
-      document =
-        await this.deps.cadastroRepository.findDocumentBySubmissionAndRequirement(
-          draft.id,
-          input.requirementId
-        );
-    }
-
-    if (!document || document.requirementId !== input.requirementId) {
+    if (
+      !document ||
+      document.requirementId !== input.requirementId ||
+      document.facilityId !== input.facilityId
+    ) {
       throw new ResourceNotFoundError(
         "SubmissionDocument",
         input.documentId ?? input.requirementId
       );
     }
-
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", document.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
-    if (
-      document.status !== "DRAFT" &&
-      document.status !== "READY" &&
-      document.status !== "CHANGES_REQUESTED" &&
-      document.status !== "PROCESSING"
-    ) {
+    if (!EDITABLE_DOCUMENT_STATUSES.has(document.status)) {
       throw new ValidationError([
         {
           field: "documentId",
@@ -1216,24 +1097,29 @@ export class SubmitCadastroRequirementUseCase {
       }
     }
 
-    await this.deps.cadastroRepository.updateDocumentStatus({
-      id: document.id,
-      status: "UNDER_REVIEW",
+    const validUntil = assertValidityDateForSubmit({
+      requiresValidityDate: requirement.requiresValidityDate,
+      requirementName: requirement.name,
+      validUntil: input.validUntil,
+      today: new Date(),
     });
 
-    const updated = await this.deps.cadastroRepository.updateSubmissionStatus({
-      id: submission.id,
+    // One write. Submitting this document leaves every other requirement for
+    // this clinic still editable — under the package, this call froze them all.
+    const updated = await this.deps.cadastroRepository.updateDocumentStatus({
+      id: document.id,
       status: "UNDER_REVIEW",
       submittedAt: new Date(),
       submittedByUserId: input.userId,
+      ...(validUntil !== undefined ? { validUntil } : {}),
     });
 
     return {
-      documentId: document.id,
-      submissionId: updated.id,
+      documentId: updated.id,
       status: "UNDER_REVIEW" as const,
       version: updated.version,
       submittedAt: updated.submittedAt?.toISOString(),
+      validUntil: updated.validUntil ?? undefined,
     };
   }
 }

@@ -1,5 +1,7 @@
-name: 🚀 Flutter Web — PR Preview
+name: 🌐 Flutter Web — PR Preview
 
+# ⚠️  Preview apenas do build Web (Firebase Hosting).
+# Para builds nativos com Shorebird, veja deploy-mobile-main.yml.
 on:
   pull_request:
     branches:

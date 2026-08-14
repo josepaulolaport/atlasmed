@@ -110,6 +110,7 @@ const EnvironmentSchema = Type.Object({
   EMULTEC_MYSQL_DATABASE: Type.String({ default: "atlasmed", minLength: 1 }),
 
 
+
   UNCLOUD_CONNECT: OptionalString(),
   TEMPORAL_DB_PASSWORD: OptionalString(),
   MINIO_ROOT_USER: OptionalString(),

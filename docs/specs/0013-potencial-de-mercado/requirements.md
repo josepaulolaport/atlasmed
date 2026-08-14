@@ -65,11 +65,25 @@ families of the same kind of product. Adding a JSONB column later is a one-line 
 removing one after code depends on it is not. Revisit when a product type genuinely does not fit.
 
 ### 2.1 Enforcement
-- `order_items.product_id` may reference only `ownership = OWN`.
+- `order_items.product_id` may reference only `ownership = OWN`. ✅ migration `0085`
 - `facility_product_usage.product_id` may reference only `ownership = COMPETITOR` — orders are
   authoritative for our quantities, so there is no manual entry for our own products.
+  ⏳ the table does not exist until P4-2; `facility_competitor_product_standards`, which it
+  replaces, is constrained the same way in `0085` meanwhile.
 
 Both as DB constraints, not application discipline.
+
+**Also enforced in `0085`, and missing from this spec until it was asked for:** an equivalence is
+directional, so `product_equivalences.product_id` may reference only `OWN` and
+`competitor_product_id` only `COMPETITOR`, and the two ids must differ — a product cannot be its
+own competitor. Before `0085` that held only because `LinkCompetitorProductUseCase` resolved each
+id through a differently scoped repository; nothing in the schema said it, and a direct insert
+could link a product to itself.
+
+**Mechanism.** Each referencing table carries a `GENERATED ALWAYS` column holding the ownership it
+accepts, and a composite foreign key onto `products(id, ownership)` — which is why `products`
+gained a redundant-looking `unique(id, ownership)`. Generated means no insert can set the column
+and no default can drift.
 
 ---
 
@@ -93,13 +107,49 @@ already used by `territories_id_vertical_id_uidx` and the manager-zone FK.
 
 ### 4.1 Structure
 
+> **§4.6 supersedes the month key.** One row per (profile, metric, product); `month` is dropped.
+
 | Table | Owner | Purpose |
 |---|---|---|
 | `product_potential_definitions` | admin | the metric per vertical (`ampolas_mes`, `label`). **Unchanged.** |
 | `product_potential_links` | admin | **our** products → definition (many products : one definition) |
 | `product_equivalences` | admin | our product ↔ competitor product |
-| `facility_product_usage` | **rep** | (profile, definition, competitor product) → quantity |
-| `facility_metric_snapshot` | system | (profile, definition) → ours, theirs, total, share |
+| `facility_product_usage` | **rep** | (profile, definition, competitor product, **month**) → quantity |
+| `facility_metric_snapshot` | system | (profile, definition, **month**) → ours, theirs, total, share |
+
+> **Decisions 2026-08-10 — the rep's entry, and the usage key.**
+>
+> **The rep types only a number.** The competitor product comes from the picker; the number is the
+> quantity of *that product* per month — **product units, not metric units** — and is multiplied by
+> that product's `metric_units`, exactly like our side multiplies order lines. Symmetric by
+> construction. Since every product sits at `metric_units = 1` until an admin sets real values
+> (§4.2), the rep's number passes through unchanged today.
+>
+> **Uniqueness is (profile, definition, product).** The same competitor product may carry a
+> separate quantity under each metric it belongs to. The §7 ambiguity is a *picker* problem, not a
+> storage one — the schema stays capable and the UI decides what to offer.
+
+> **Amendment 2026-08-11 — the key gains a month: (profile, definition, product, month).**
+>
+> The rep's number is a **monthly observation**, not a timeless attribute: they answer *quantas por
+> mês*, and that answer is true of a month. Stored without one, today's figure silently became the
+> answer for every month ever asked about.
+>
+> This matters because of an asymmetry. **`ours` already has perfect history** — every past month's
+> numerator is exactly recomputable from `orders.ordered_at`, forever. Only `theirs` lacked it. The
+> first P4-3 design compensated with a freeze rule (complete months stop being recomputable after a
+> three-month tail) so that recomputing March could not write today's competitor number onto it.
+> That worked, but it bought an arbitrary freeze horizon, snapshots whose meaning depended on when
+> you read them, a trend chart whose last three points moved whenever a rep edited a quantity, and a
+> reconciliation sweep promoted from optimisation to correctness — all to paper over one missing
+> column.
+>
+> With the month in the key, every one of those disappears and `facility_metric_snapshot` becomes a
+> **derived cache**: truncatable and rebuildable from scratch, deterministically, at any time.
+>
+> Changed the same day P4-2 merged, while the table had zero rows and no writer
+> (`setCompetitorQuantity` had no call sites — the picker is P4-5). It would not have been free
+> later.
 
 **`product_equivalences` is used only to populate the rep's picker.** It is not part of the
 metric's keying. A usage row, once created, stands on its own — so removing an equivalence does
@@ -114,6 +164,9 @@ facility-scoped, unlinked to metrics, and carried a single `standardized_quantit
 
 ### 4.2 Units
 
+> **§4.6 makes `metric_units` an information field.** It is no longer multiplied into any
+> calculation. The constraint this section describes now lives in catalogue discipline, not in code.
+
 `products.metric_units numeric` — how many metric units one product unit represents. A box of 5
 ampoules → `5`. A single ampoule → `1`.
 
@@ -125,28 +178,122 @@ plausibly enough that nobody notices.
 Accepted constraint: a product carries one `metric_units` value, so every metric it belongs to
 must measure in the same unit. Revisit if that ever fails.
 
+> **Decision 2026-08-10 — the values are admin data, not something we derive.**
+> All 12 production products carry `metric_units = 1` (the `0082` default) and an empty `unit`
+> text column, so there is nothing in the database to infer a box size from. Three names appear
+> twice under different EAN codes (e.g. REVISCON 1.0% as `4064544000182` and `8718802047995`),
+> which are plausibly different presentations — but "plausibly" is not a basis for multiplying
+> revenue figures.
+>
+> Phase 4 therefore ships the **mechanism** and leaves every value at 1. Nothing is invented.
+> **Until an admin sets real values, the numerator remains understated exactly as it is today** —
+> acceptance criterion §9.1 is *not* met by P4-1 alone, and that is deliberate.
+>
+> **Required of the admin UI (not yet built):** an editable `metric_units` per product, presented
+> as "how many metric units is one unit of this product" with the unit label from the definition
+> (e.g. *ampolas*). This is the only place the value can come from.
+
 ### 4.3 Calculation
 
+> **§4.6 replaces the month-keyed formulas below.** `theirs` is the standing figure per product,
+> `ours` the 90-day window, and there is no `[M]`.
+
+Per calendar month M, in the application timezone:
+
 ```
-ours_monthly   = Σ (order_items.quantity × products.metric_units)
-                 over orders for this profile, last N months ÷ N
-theirs_monthly = Σ (facility_product_usage.quantity × products.metric_units)
-total          = ours_monthly + theirs_monthly
-share          = ours_monthly ÷ total          (null when total = 0)
+ours[M]   = Σ (order_items.quantity × products.metric_units)
+            over eligible orders with ordered_at in [M, M+1)
+theirs[M] = Σ (facility_product_usage.quantity × products.metric_units)
+            over usage rows for month M
+total[M]  = ours[M] + theirs[M]
+share[M]  = ours[M] ÷ total[M]                 (null when total = 0)
 ```
 
-- **N configurable, default 3.** Both sides must represent the same period — the rep enters a
-  monthly figure, so ours must be a monthly average, not a 90-day sum.
+The **trailing N-month average is derived at read time** from those stored months — it is not a
+stored value:
+
+```
+ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
+```
+
+> **Amendment 2026-08-11 — store facts, derive views.** The formula previously read
+> "over orders for this profile, last N months ÷ N", which is a *rolling window* and cannot be
+> stored per month: it depends on when you ask. Three things follow from storing month facts
+> instead.
+>
+> The snapshot row becomes genuinely idempotent — no wall-clock reaches the computation, so
+> recomputing month M tomorrow yields exactly today's answer. This is what §4.4 requires of the
+> handler and what a reconciliation sweep needs in order to converge at all; a value that drifts
+> with the clock would mark every snapshot permanently stale.
+>
+> "March versus April" is answerable, because that is what is stored.
+>
+> **Changing N stops being a data migration and becomes a query change.**
+>
+> It also removes a live distortion: dividing by a constant 3 understated any clinic with fewer
+> than three months of orders by up to 3×.
+
+> **Amendment 2026-08-12 — a competitor figure is a standing rate, not a month to average.**
+> The distortion named directly above was fixed for `ours` and left in place for `theirs`:
+> the read computed `theirs = (Σ theirs[M-N+1 … M]) ÷ N`, so a rep who recorded one competitor at
+> 100/mês saw 33. The two months nobody had surveyed were counted as hard zeros — precisely the
+> "confident, wrong number" §4.4 refuses when it forbids backfilling months with no usage rows, and
+> precisely the distinction the read already honoured for the *all*-empty case by nulling the share.
+>
+> The rep answers **quantas por mês**, so what they enter *is* the monthly rate. It holds until they
+> replace it. The clinic screen therefore reads the **newest row per (definition, product)** and
+> sums across products:
+>
+> ```
+> theirs_now = Σ over products of latest(facility_product_usage.quantity) × products.metric_units
+> ```
+>
+> Same product recorded again → replaces. Different product → adds. A figure recorded long ago still
+> counts, per §6 — `updated_at` remains the only signal that it is old.
+>
+> **Removal clears every month the product carries.** With one standing figure per product, the
+> months behind it are the dates that figure changed, not separate surveys — so deleting only the
+> newest left the one before it standing and the product returned with an older number. Removing a
+> competitor means it no longer counts here at all; recording that a clinic uses less is an edit,
+> not a removal. Every month it appeared in is recomputed, including months outside the current
+> window, because the manager aggregates in spec 0014 §4 read them.
+>
+> **`facility_product_usage` is unchanged**, month key and all. The month rows are still the history
+> the snapshots and the §4.5 trend are built from; `theirs[M]` above still describes a *stored month*.
+> What changed is the read behind the clinic screen, which asks a different question: not "what was
+> true in each of the last three months" but "what is true now".
+
+> **Amendment 2026-08-12 — our own quantity is shown per product.** §6 gave the rep our total and
+> the competitor products behind theirs, with no way to see which of our products made up our own
+> number. The read now also returns `ourProducts`: the same 90-day window, grouped by product and
+> normalised to a month, largest first, listing only products actually sold in the window.
+>
+> It is derived from orders, so it is read-only — there is nothing to add, edit or remove. With the
+> competitor change above, both lists now sum to the total above them; neither did before.
+
+- **N configurable, default 3**, a single global constant (`MONTHS_IN_WINDOW`) — not
+  per-definition, not database-backed. It now lives on the **read** path, where a presentation
+  constant belongs. Revisit only when two metrics genuinely need different windows.
+- **Month boundaries are `America/São_Paulo`**, not UTC. `orders.ordered_at` is `timestamp without
+  time zone` on a UTC server, so UTC bounds would place an order taken 31 March 22:00 in São Paulo
+  into April — and the rep who entered it would disagree with the chart. No existing figure moves:
+  all 1,131 production orders are Emultec imports stamped at noon UTC, whose date component is the
+  same in both zones. It matters for orders created in-app, which carry a real timestamp.
 - Eligible orders follow ADR 0003: `status ∈ (APPROVED, INVOICED)`, `type ∈ (SALE, CONSIGNMENT)`.
   **This corrects a live inconsistency** — the penetration query currently filters `type = 'SALE'`
   only while the funnel counts both.
 - **Written-off lines are included** (user decision).
+- **`CONSIGNMENT` is included** alongside `SALE` (user decision, 2026-08-10) — confirming the
+  §4.3 rule against the live query, which filters `type = 'SALE'` only.
 - Scoping is structural: orders key on `facility_vertical_profile_id` (spec 0010 §4), so the
   numerator no longer needs — and no longer silently omits — a vertical filter.
 - `share` is **null**, never `0`, when there is no data. "No sales" and "no information" must be
   distinguishable.
 
 ### 4.4 Storage, history & recalculation
+
+> **§4.6 removes the history.** One snapshot row per (profile, metric); backfill is deleted; the
+> reconciliation sweep narrows to orders and gains a nightly full pass.
 
 Stored in `facility_metric_snapshot`, not computed per request — so it is dashboardable and
 historical. Recomputed on:
@@ -156,6 +303,69 @@ historical. Recomputed on:
 3. a rep adds or removes a competitor product
 
 **Not** on equivalence changes (§4.1).
+
+> **Decision 2026-08-10 — asynchronous for orders, synchronous for the rep.**
+> A rep editing a quantity (2) or adding/removing a competitor product (3) recomputes **inline**,
+> so the number they just changed is correct when the screen redraws.
+>
+> Order writes (1) **enqueue** a recompute keyed on the affected profile, deduplicated. The Emultec
+> importer upserts tens of orders per run every ten minutes and would otherwise recompute the same
+> profile once per order, turning one import into dozens of identical recomputations — and putting
+> the metric's cost on the critical path of an importer that must stay a considerate guest of a
+> third-party database.
+>
+> The recompute must be **idempotent**: running it twice for the same (profile, definition, month)
+> produces the same row.
+>
+> **Decision 2026-08-10 — idempotency lives in the handler; correctness lives in a sweep.**
+>
+> The handler is a **pure function of stored state**: for one (profile, definition, month) it reads
+> the orders and usage rows, computes, and UPSERTs that single row. Never a delta, never an
+> increment. Run once or fifty times, concurrently or out of order, the row is identical. This is
+> what makes at-least-once delivery acceptable.
+>
+> Transport is `purchaseRecurrenceWorkflow`'s pattern — a Temporal workflow started from the API —
+> because an equivalent per-profile derived value already recomputes from orders that way, and one
+> convention should cover both.
+>
+> **But a Temporal start is a network call outside the database transaction.** Commit an order,
+> crash before starting the workflow, and that snapshot is never recomputed and nothing reports it.
+> A Postgres job table enqueued in the same transaction would close that specific hole, at the cost
+> of a second async mechanism — and it would still not survive a call site that simply forgets to
+> enqueue, or a script writing rows directly.
+>
+> So the trigger is **not** where correctness comes from. A **scheduled reconciliation sweep**
+> recomputes any (profile, month) whose inputs changed after the snapshot's `computed_at`, compared
+> against `max(orders.updated_at)` / `max(usage.updated_at)` for that profile. Consequences:
+>
+> - a lost trigger costs one sweep interval of staleness, not a permanently wrong number
+> - the trigger becomes a latency optimisation, not a correctness requirement
+> - the §4.4 backfill command is the same sweep over an explicit month range
+>
+> ⚠️ The sweep must not scan every profile every run — at ~14k clinics that does not hold up. It
+> keys on `computed_at` versus input timestamps, which needs an index, and the query plan must be
+> checked against real data rather than assumed.
+
+> **Amendment 2026-08-11 — the snapshot is a derived cache, and the sweep is no longer correctness.**
+>
+> Once usage carries a month (§4.1), **both inputs have history**, so every row is a pure function
+> of stored state for all time — not merely for the recent past. The snapshot table can be
+> truncated and rebuilt from scratch, deterministically, and reproduce itself exactly.
+>
+> What that changes:
+>
+> - **the sweep drops from correctness to latency.** A sweep that never runs costs staleness, not a
+>   wrong number, because the truth is always recoverable from the inputs
+> - **the backfill command is just a rebuild** over an explicit month range, not an escape hatch
+> - **no month ever changes meaning after the fact** — stability is structural, not a policy
+>
+> Index reality, measured rather than assumed: `orders_updated_at_profile_id_idx` on
+> `(updated_at, facility_vertical_profile_id)` already gives the sweep its range scan.
+> `facility_product_usage` has **no `updated_at` index** and needs one before it grows.
+>
+> **The sweep must still report, not just repair.** It emits `recomputed N, differed M`; a nonzero
+> `differed` means a trigger was lost. A sweep that silently corrects is the counter-instead-of-an-
+> alarm this codebase has been bitten by before.
 
 **Granularity: one row per (profile, definition, month).** Calendar months, not sliding windows.
 
@@ -173,15 +383,180 @@ Calendar months instead:
 The current month is partial: show it as **parcial** alongside the last complete month, and plot
 only complete months.
 
-### 4.5 Historical view
+> **Decision 2026-08-10 — no historical backfill; snapshots begin at the current month.**
+> Backfilling from the 1131 existing orders would produce months with a real numerator and an
+> absent denominator (competitor quantities did not exist then), so every reconstructed month would
+> read as share = 100%. That is not history, it is an artefact that looks like history.
+>
+> A **backfill command must still exist**, idempotent and restricted to an explicit month range —
+> needed to repair a gap after an incident, and to populate history once competitor data has been
+> collected for a period. It is a tool, not part of the migration.
 
-The clinic's Potencial de mercado section offers **"ver mais"** — a per-metric history showing the
-trend of our quantity, competitor quantity, total market and share over complete months.
+> **Still true after the 2026-08-11 amendment, and for a sharper reason.** With usage keyed by
+> month, a backfilled month simply *has no usage rows*: `theirs = 0`, so `total = ours` and
+> `share = 100%`. Not a null, not a gap — a confident, wrong number. The rule stands: snapshots
+> begin at the current month, and history is populated only for periods where competitor data was
+> actually collected.
 
-This is why snapshots are retained rather than overwritten. It also feeds the aggregate views in
-spec 0014, so a manager can see their share moving over time rather than only its current value.
+### 4.5 Historical view — withdrawn by §4.6
+
+> **Withdrawn 2026-08-12.** There is no history. The metric is one value per clinic per metric and
+> the snapshot is a cache of it, not a record of what was once true. "Ver mais" is not built and is
+> not planned; if a trend is ever wanted it needs a deliberate design, because the inputs no longer
+> record when they changed.
+
+~~The clinic's Potencial de mercado section offers **"ver mais"** — a per-metric history showing the
+trend of our quantity, competitor quantity, total market and share over complete months.~~
+
+~~This is why snapshots are retained rather than overwritten. It also feeds the aggregate views in
+spec 0014, so a manager can see their share moving over time rather than only its current value.~~
+
+The snapshot is still what spec 0014 aggregates — that has not changed. What changed is that it
+aggregates **one current row per profile**, not a window of months.
 
 ---
+
+### 4.6 Amendment 2026-08-12 — one value, no history
+
+This supersedes the month-keyed model in §4.1, §4.3 and §4.4 for everything except the stored
+history that already exists. The metric answers **one question**: what is true at this clinic, for
+this metric, now. It is not a series and nothing reads it as one.
+
+#### The value
+
+```
+theirs = Σ over competitor products of the quantity standing for that product
+ours   = Σ (order_items.quantity) over eligible orders in the last 90 days, ÷ 90 × 30
+total  = ours + theirs
+share  = ours ÷ total
+```
+
+**One row per (clinic-linha profile, metric).** `month` leaves `facility_product_usage` and
+`facility_metric_snapshots`; both unique keys lose it. A competitor product carries one figure and
+the rep replaces it — the same product recorded again *replaces*, a different product *adds*.
+
+**`ours` keeps the 90-day rolling window** normalised to a 30-day month. It is a rolling read, not
+a stored month, and it moves with the calendar as much as with orders — which is why the nightly
+recompute below is part of the design and not a safety net.
+
+#### `metric_units` becomes an information field
+
+The calculation uses raw quantities. `products.metric_units` is displayed, never multiplied.
+
+> ⚠️ **This reinstates the arithmetic §4.2 was written to fix**, and is safe only while every
+> product in a metric is measured in the same unit. It is true today — all 54 products carry
+> `metric_units = 1.000` — so the multiplier is already a no-op and removing it changes no number.
+> The day someone records a box of five, our side and theirs diverge silently and plausibly.
+> The constraint has moved out of the code and into catalogue discipline; nothing enforces it.
+> Revisit before the catalogue carries mixed units.
+
+#### Which other brands count toward a metric
+
+A metric's products are curated in one place only: the catalogue links **our** variants to the
+definition. There is no screen, route or use case that links a competitor product to a metric, and
+there should not be — it would be a second list to maintain, able to disagree with the first.
+
+So a competitor product counts toward a metric when it is the **equivalent of one of our products
+linked to that metric** — `product_equivalences`, maintained by the comparativo screen. Derived,
+never curated.
+
+The same derivation governs three things, deliberately:
+
+| surface | behaviour |
+|---|---|
+| the picker | offers exactly this set |
+| the write | refuses anything outside it |
+| the read | counts exactly this set |
+
+A picker that can offer what the write refuses produces error messages; a write that accepts what
+the read discards produces silence. Silence is what happened: the read once joined
+`product_potential_links` directly, which holds only our products, so **every** competitor quantity
+a rep recorded was filtered out of the answer. The write succeeded and the screen redrew unchanged.
+
+This is what §7 assumed from the start — both of its consequences below are consequences *of this
+rule*. The read deviated from it and nothing caught the deviation, because the database test seeded
+competitor products straight into `product_potential_links`, a shape production cannot produce.
+
+#### Zero is not a quantity
+
+A competitor quantity must be **greater than zero** — rejected at the API, by a database check, and
+in the client. "They sell none here" is not a quantity; it is the claim below.
+
+#### "Nenhuma outra marca" — the claim that legitimises 100%
+
+A flag per (profile, metric), set by a rep, meaning *no other brand is sold at this clinic for this
+metric*.
+
+- It may only be **turned on while the competitor list is empty**.
+- Adding a competitor product **clears it automatically**, and saves.
+- It records **when** it was set: a stale claim still counts, and the date is the only signal that
+  it is old (§6). *Who* set it is deliberately not stored — it would be written on every claim and
+  read by nothing, the same shape spec 0009 R9 deleted as `assigned_by`. The day a screen asks for
+  it, the column comes back with the reader that justifies it.
+
+It is the *only* thing that makes `share = 100%` legitimate. Without it:
+
+| competitor rows | flag | result |
+|---|---|---|
+| some | off | share calculated |
+| none | **on** | share calculated, `theirs = 0`, share = 100% |
+| none | off | **not calculated** — the market is unknown, share is null |
+
+A clinic with no orders *and* no competitors has `total = 0` and no share to report, flag or not —
+there is nothing to divide. The flag asserts that the competitor side is genuinely empty; it does
+not assert that we sell anything.
+
+This replaces the previous rule where a recorded zero was the fact that legitimised 100%. Zero can
+no longer be recorded, so the distinction moves from a value to an explicit assertion.
+
+#### When the value is recomputed
+
+| trigger | scope |
+|---|---|
+| competitor added, edited or removed | that profile, inline |
+| "nenhuma outra marca" toggled | that profile, inline |
+| our orders change | that profile, via the hourly watermark sweep |
+| **nightly, every profile** | the 90-day window has moved even where nothing changed |
+| product linked to / unlinked from a metric | **backlogged** — see below |
+
+The hourly sweep's watermark narrows to **orders only**. Usage changes no longer need watching
+because every usage write already recomputes inline before it returns.
+
+That trade has a cost worth stating: the usage watermark was also the net that caught an inline
+recompute which never ran — a crash between the write and the recompute. **The nightly pass is now
+the only thing that repairs it**, so a lost recompute is wrong for up to a day rather than up to an
+hour. Acceptable, and not silent: the sweep reports `differed`, and a nonzero count means an inline
+recompute was lost.
+
+The **nightly pass is what keeps `ours` true.** A rolling window drifts daily with no event at all,
+and the watermark query selects exactly the profiles where nothing happened — that is, none of them.
+Without a full pass a quiet clinic's number freezes at whatever the window said when it was last
+touched.
+
+#### Unlinking a product leaves its rows dormant
+
+`theirs` joins `product_potential_links`, so unlinking a product from a metric stops its recorded
+quantities counting — matching `ours`, which has always joined the link table. The rows are **not
+deleted**: the link may be restored and the figures are still the rep's, and if the metric itself is
+deleted the product cannot be chosen again anyway.
+
+Dormant rows that silently reactivate on relinking are accepted deliberately here. They are the same
+shape as a defect fixed on 2026-08-12 — a removed competitor returning from an older row — and the
+difference is that relinking is a deliberate admin act, not a rep expecting something to be gone.
+
+#### What is deleted with the months
+
+`start-metric-snapshot-backfill.ts`, the `BACKFILL` workflow mode and its month-range expansion
+exist only to populate history. With one row there is nothing to backfill: the value is recomputed,
+never reconstructed. The §4.4 rule "snapshots begin at the current month, and history is populated
+only for periods where competitor data was actually collected" becomes vacuous and goes with them.
+
+#### Backlog
+
+**Recomputing every clinic when the catalogue changes.** Linking or unlinking a product, or editing
+one, changes the answer for every clinic holding orders or usage for it. Recompute is per-profile
+today and there is no fan-out. Until it exists those clinics are corrected by the nightly pass
+rather than immediately.
 
 ## 5. Emultec: products are never imported
 
@@ -212,9 +587,16 @@ Section renamed **"Potencial de mercado"** (from `'Potencial & share'`,
 old string and will fail.
 
 **Rep, on the clinic screen:** sees each metric for the active linha with our quantity (read-only,
-from orders), the competitor products already recorded with their quantities, the market total and
-our share. Adds a competitor product — chosen from those equivalent to our products in that metric
-— and enters a quantity. Edits or removes quantities.
+from orders) **broken down by product**, the competitor products already recorded with their
+quantities, the market total and our share. Adds a competitor product — chosen from those
+equivalent to our products in that metric — and enters a quantity. Edits or removes quantities.
+
+Per §4.6: both lists are in the products' own units, ours labelled as the 90-day average and theirs
+as what stands recorded. A quantity must be **greater than zero**; the rep cannot type a zero to
+mean "they sell none here". That claim is a checkbox, **"Nenhuma outra marca"**, offered only while
+the competitor list is empty and cleared automatically the moment a product is added. It is the only
+thing that makes a 100% share legitimate, and it carries "atualizado em <data>" for the same reason
+a quantity does.
 
 Each entered quantity shows **"atualizado em <data>"**. Stale figures still count as current
 (user decision), so the date is the only signal that a number is old — no logic, just honesty.
@@ -227,13 +609,21 @@ Dead UI to remove or wire: `ClinicProductsSection` ("Share na clínica") is neve
 
 ## 7. Deferred
 
-- A competitor product reachable from two of our products in **different** metrics is ambiguous.
-  Documented, not solved — revisit if it occurs.
-- Competitor products not equivalent to any of our products are unreachable in the picker and
-  their usage unrecordable. Accepted.
+- A competitor product reachable from two of our products in **different** metrics counts toward
+  both (§4.6). Resolved rather than deferred: it competes with us in both, so both should say so.
+  The read selects DISTINCT, so reaching the same metric by two routes is still one row.
+- Competitor products not equivalent to any of our products are unreachable in the picker and their
+  usage unrecordable (§4.6). Accepted: the rep is blocked until the catalogue maps the brand, which
+  is visible and fixable — unlike the figure silently vanishing, which is what happened instead.
 - JSONB product attributes (§2).
 - Any manual quantity for our own products (a clinic buying our product via a distributor
   understates our share). Orders are authoritative.
+- **Recomputing every affected clinic when the catalogue changes** (§4.6). Linking, unlinking or
+  editing a product changes the answer for every clinic holding orders or usage for it; recompute is
+  per-profile and there is no fan-out. Those clinics are corrected by the nightly pass instead.
+- **Mixed units within a metric** (§4.6). `metric_units` no longer multiplies, so a metric whose
+  products are measured differently would compare unlike quantities. Safe while the catalogue is
+  uniform; nothing enforces that it stays so.
 
 ## 8. Defects closed
 
@@ -242,13 +632,29 @@ See `.ai/backlog/2026-08-09-defect-register.md`.
 
 ## 9. Acceptance criteria
 
-1. Ten boxes of 5 ampoules register as **50** ampoules, not 10.
-2. A clinic with orders and no competitor data shows share = **100 %**; with neither, share is
-   **null**, not 0 %.
+> Four of these were written against the month-keyed model and are restated below by §4.6.
+> They are kept visible rather than edited away, because each was true of a design that shipped.
+
+1. ~~Ten boxes of 5 ampoules register as **50** ampoules, not 10.~~
+   **§4.6:** ten boxes register as **10**. `metric_units` is an information field and the
+   calculation uses raw quantities, which holds only while a metric's products share a unit.
+2. ~~A clinic with orders and no competitor data shows share = **100 %**; with neither, share is
+   **null**, not 0 %.~~
+   **§4.6:** orders and no competitor data shows **no share at all** — the market is unknown.
+   100% requires the rep to have asserted "Nenhuma outra marca". Never 0% for an unknown market.
 3. Adding a competitor quantity changes the snapshot without a request-time recomputation.
-4. Removing an equivalence leaves every clinic's numbers unchanged.
+4. ~~Removing an equivalence leaves every clinic's numbers unchanged.~~
+   **§4.6:** unlinking a product from a metric **changes** the numbers — its recorded quantities
+   stop counting, matching our own side, which has always joined the link. The rows are kept, not
+   deleted, and count again if the product is relinked.
 5. An Emultec order referencing an unregistered product **dead-letters and raises**, rather than
    inserting a null product.
-6. Our quantity and the rep's quantity represent the same period.
+6. ~~Our quantity and the rep's quantity represent the same period.~~
+   **§4.6:** they do not, and the screen says so. Ours is a 90-day average; theirs is the figure
+   standing now. Each list states its own period rather than implying a shared one.
 7. `order_items` cannot reference a `COMPETITOR` product; `facility_product_usage` cannot
    reference an `OWN` product.
+8. A competitor quantity of zero is **rejected**; "they sell none here" is the
+   "Nenhuma outra marca" flag, which is offered only while the list is empty.
+9. A clinic untouched for a week still reports a correct `ours` — the nightly pass recomputes it as
+   the 90-day window slides.

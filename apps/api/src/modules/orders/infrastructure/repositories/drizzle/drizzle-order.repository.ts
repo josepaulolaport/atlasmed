@@ -219,6 +219,7 @@ export class DrizzleOrderRepository implements OrderRepository {
       id: order.order.id,
       idAvulsaEmultec: order.order.idAvulsaEmultec,
       verticalId: order.verticalId,
+      facilityVerticalProfileId: order.order.facilityVerticalProfileId,
       status: order.order.status,
       type: order.order.type,
       orderedAt: order.order.orderedAt,

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "bunx tsc -p tsconfig.json --skipLibCheck",
-    "test": "bun test"
+    "test": "bun test",
+    "storage:check": "bun src/check-writable.ts"
   },
   "dependencies": {
     "@atlasmed/config": "workspace:*",

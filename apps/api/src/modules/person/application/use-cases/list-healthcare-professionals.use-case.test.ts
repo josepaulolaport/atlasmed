@@ -182,6 +182,143 @@ describe("ListHealthcareProfessionalsUseCase Meili resilience", () => {
     );
   });
 
+  it("excludes a facility in the Meili filter", async () => {
+    let filter: string | undefined;
+    const useCase = new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository: {
+        findAll: async () => ({ professionals: [], total: 0 }),
+        findAllByIds: async () => [personRecord(1)],
+      } as unknown as HealthcareProfessionalRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>(
+          _index: string,
+          _query: string,
+          options: { filter?: string }
+        ) => {
+          filter = options.filter;
+          return { hits: [{ id: 1 }] as unknown as T[], estimatedTotalHits: 1 };
+        },
+      } satisfies TestSearchService,
+    });
+
+    await useCase.execute({
+      search: "Ana",
+      excludeFacilityId: 685,
+      scope: globalScope,
+    });
+
+    // `NOT (… = …)` rather than `!=`: the attribute is an array, so `= 685`
+    // means "contains 685" and only the whole containment can be negated.
+    //
+    // On `clinicalFacilityIds`, not `activeFacilityIds`. The SQL condition is
+    // scoped to the HEALTHCARE_PROFESSIONAL classification; excluding on every
+    // link made the two paths disagree, so a doctor who is an administrative
+    // contact at 685 was offered while browsing and withheld while searching.
+    expect(filter).toContain("NOT (clinicalFacilityIds = 685)");
+    expect(filter).not.toContain("NOT (activeFacilityIds = 685)");
+  });
+
+  it("keeps scope enforcement on every link, not just the clinical ones", async () => {
+    // The two fields answer different questions and must not be conflated in
+    // the other direction either: scope is about what a user may see, so
+    // narrowing it to clinical links would hide people a rep is entitled to.
+    let filter: string | undefined;
+    const useCase = new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository: {
+        findAll: async () => ({ professionals: [], total: 0 }),
+        findAllByIds: async () => [],
+      } as unknown as HealthcareProfessionalRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>(
+          _index: string,
+          _query: string,
+          options: { filter?: string }
+        ) => {
+          filter = options.filter;
+          return { hits: [] as unknown as T[], estimatedTotalHits: 0 };
+        },
+      } satisfies TestSearchService,
+    });
+
+    await useCase.execute({
+      search: "Ana",
+      scope: {
+        isGlobal: false,
+        facilityIds: [10, 11],
+        territoryIds: [],
+        oversightZoneIds: [],
+      } as unknown as Parameters<typeof useCase.execute>[0]["scope"],
+    });
+
+    expect(filter).toContain("activeFacilityIds IN [10, 11]");
+    expect(filter).not.toContain("clinicalFacilityIds IN");
+  });
+
+  it("carries the exclusion into the SQL path as well", async () => {
+    /**
+     * The SQL branch is not a slower twin of the Meili one — it is what runs
+     * whenever Meili is unconfigured, errors, or produces an oversized filter.
+     * An exclusion applied to Meili alone would pass every search test and lapse
+     * in exactly the conditions that make the pool large enough to matter.
+     */
+    let seen: { excludeFacilityId?: number } | undefined;
+    const useCase = new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository: {
+        findAll: async (params: { excludeFacilityId?: number }) => {
+          seen = params;
+          return { professionals: [], total: 0 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as HealthcareProfessionalRepository,
+      searchService: {
+        isConfigured: () => false,
+        search: async <T extends Record<string, unknown>>() => ({
+          hits: [] as unknown as T[],
+        }),
+      } satisfies TestSearchService,
+    });
+
+    await useCase.execute({
+      search: "Ana",
+      excludeFacilityId: 685,
+      scope: globalScope,
+    });
+
+    expect(seen?.excludeFacilityId).toBe(685);
+  });
+
+  it("hydrates a Meili page with the exclusion still applied", async () => {
+    // Meili's index can lag a fresh association. SQL is the authority, so the
+    // hydrate has to carry the same condition or a stale hit slips through.
+    let seen: { excludeFacilityId?: number } | undefined;
+    const useCase = new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository: {
+        findAll: async () => ({ professionals: [], total: 0 }),
+        findAllByIds: async (params: { excludeFacilityId?: number }) => {
+          seen = params;
+          return [personRecord(1)];
+        },
+      } as unknown as HealthcareProfessionalRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>() => ({
+          hits: [{ id: 1 }] as unknown as T[],
+          estimatedTotalHits: 1,
+        }),
+      } satisfies TestSearchService,
+    });
+
+    await useCase.execute({
+      search: "Ana",
+      excludeFacilityId: 685,
+      scope: globalScope,
+    });
+
+    expect(seen?.excludeFacilityId).toBe(685);
+  });
+
   it("falls back to SQL when hydrate drops Meili hits", async () => {
     let findAllCalls = 0;
     const useCase = new ListHealthcareProfessionalsUseCase({

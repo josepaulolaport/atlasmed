@@ -5,7 +5,7 @@ import { facilityUseCases } from "../../composition";
 import { ordersUseCases } from "../../../orders/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
-import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
+import { cadastroDocumentsRoute } from "./cadastro-documents.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 
@@ -51,6 +51,15 @@ const listFacilitiesRoute = new Elysia()
           }),
         ),
         clinicalFocusIds: t.Optional(t.String()),
+        unitTypeIds: t.Optional(
+          t.String({
+            description:
+              "Comma-separated CNES unit type ids; a facility matches any of them",
+          }),
+        ),
+        legalDocumentType: t.Optional(
+          t.String({ description: "CNPJ or CPF" }),
+        ),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),
@@ -73,6 +82,23 @@ const listClinicalFocusesRoute = new Elysia()
     {
       detail: {
         summary: "List clinical focus catalog for filters",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  );
+
+const listFacilityUnitTypesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/unit-types",
+    async () => {
+      return facilityUseCases.listFacilityUnitTypes().execute();
+    },
+    {
+      detail: {
+        summary: "List CNES unit types in use, for filters",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -106,8 +132,10 @@ const createFacilityRoute = new Elysia()
         municipalityId: t.Integer({ minimum: 1 }),
         legalDocumentType: t.Union([t.Literal("CNPJ"), t.Literal("CPF")]),
         legalDocument: t.Optional(t.Union([t.String(), t.Null()])),
-        lat: t.Optional(t.Number()),
-        lng: t.Optional(t.Number()),
+        // Spec 0009 R5: a clinic without a position cannot be owned by anyone,
+        // so it cannot be created. `facilities.location` is NOT NULL.
+        lat: t.Number(),
+        lng: t.Number(),
         verticalId: t.Optional(t.Integer({ minimum: 1 })),
       }),
     }
@@ -264,6 +292,40 @@ const listVerticalRepAssignmentsRoute = new Elysia()
     },
   );
 
+/**
+ * Spec 0009 R2's acceptance criterion: an overridden assignment "appears in an
+ * out-of-territory report". Read permission on FACILITY, scoped by the caller's
+ * verticals — an override is outside the geometry by definition, so territory
+ * scope would hide exactly what the report exists to show.
+ */
+const listOutOfTerritoryAssignmentsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/out-of-territory-assignments",
+    async ({ query, getScope, getUser }) => {
+      const scope = await getScope();
+      const user = await getUser();
+      return facilityUseCases.listOutOfTerritoryAssignments().execute({
+        scope,
+        role: user.role.name,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List rep assignments held outside the rep's patch, with who overrode and why",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  );
+
 const assignVerticalRepRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
@@ -280,15 +342,23 @@ const assignVerticalRepRoute = new Elysia()
         assignedByUserId,
         scope,
         role: user.role.name,
+        overrideReason: body.overrideReason,
       });
     },
     {
       params: verticalPathParams,
       body: t.Object({
         userId: t.Number({ minimum: 1 }),
+        /**
+         * Spec 0009 R2: assigning a rep outside their patch is allowed when it
+         * is on the record. Omit it and the patch-coverage check (I2) applies as
+         * before.
+         */
+        overrideReason: t.Optional(t.String({ minLength: 1 })),
       }),
       detail: {
-        summary: "Assign or replace REP for facility vertical",
+        summary:
+          "Assign or replace REP for facility vertical (overrideReason assigns outside the rep's patch, on the record)",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
@@ -412,36 +482,6 @@ const updateFacilityBillingEmailRoute = new Elysia()
     }
   );
 
-const downloadFacilityCadastroFileRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY"))
-  .get(
-    "/facilities/cadastro/files/*",
-    async ({ params, set, getScope }) => {
-      const key = params["*"];
-      if (typeof key !== "string") {
-        throw new ValidationError([
-          { field: "key", message: "Invalid cadastro file key" },
-        ]);
-      }
-      const scope = await getScope();
-      const result = await facilityUseCases.downloadFacilityCadastroFile().execute({
-        storageKey: key,
-        scope,
-      });
-      set.headers["content-type"] = result.contentType;
-      set.headers["cache-control"] = "private, max-age=3600";
-      return result.bytes;
-    },
-    {
-      detail: {
-        summary: "Download a Cadastro document by storage key",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
 const approveFacilityCadastroRecordRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CADASTRO_SUBMISSION"))
@@ -505,7 +545,8 @@ const listCadastroSubmissionsRoute = new Elysia()
   .use(requirePermission("read", "CADASTRO_SUBMISSION"))
   .get(
     "/cadastro/submissions",
-    async ({ query }) => {
+    async ({ query, getScope }) => {
+      const scope = await getScope();
       return facilityUseCases.listCadastroSubmissions().execute({
         status: query.status as
           | "SUBMITTED"
@@ -514,6 +555,7 @@ const listCadastroSubmissionsRoute = new Elysia()
           | "UNDER_REVIEW"
           | "APPROVED"
           | undefined,
+        scope,
         page: query.page,
         limit: query.limit,
       });
@@ -895,12 +937,13 @@ const downloadFacilityPhotoRoute = new Elysia()
   );
 
 export const facilitiesRoute = new Elysia()
-  .use(cadastroSubmissionsRoute)
+  .use(cadastroDocumentsRoute)
   .use(mapFacilitiesRoute)
   .use(personProjectionsRoute)
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  .use(listFacilityUnitTypesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)
@@ -910,10 +953,10 @@ export const facilitiesRoute = new Elysia()
   .use(updateFacilityNoteRoute)
   .use(deleteFacilityNoteRoute)
   .use(downloadFacilityPhotoRoute)
-  .use(downloadFacilityCadastroFileRoute)
   .use(listFacilityPhotosRoute)
   .use(uploadFacilityPhotoRoute)
   .use(listVerticalRepAssignmentsRoute)
+  .use(listOutOfTerritoryAssignmentsRoute)
   .use(assignVerticalRepRoute)
   .use(unassignVerticalRepRoute)
   .use(deactivateFacilityVerticalRoute)

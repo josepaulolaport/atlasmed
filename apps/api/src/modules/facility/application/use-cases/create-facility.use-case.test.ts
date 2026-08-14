@@ -21,6 +21,7 @@ const dermatologiaId = 20;
 
 function verticalProfile(verticalId: number): FacilityVerticalProfileRecord {
   return {
+    id: 900 + verticalId,
     verticalId,
     verticalCode: verticalId === ortopediaId ? "ORTOPEDIA" : "DERMATOLOGIA",
     verticalName: verticalId === ortopediaId ? "Ortopédica" : "Dermatológica",
@@ -149,6 +150,7 @@ function inMemoryRepository(): FacilityRepository & {
     findAllByIds: async () => [],
     findById: async (id) => stored.get(id) ?? null,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypesInUse: async () => [],
     create: async (data) => {
       const id = nextId++;
       // Mirrors the adapter contract: facility and profile land together.
@@ -182,6 +184,8 @@ describe("CreateFacilityUseCase", () => {
       stateId: 1,
       municipalityId: 1,
       legalDocumentType: "CNPJ",
+      lat: -23.5,
+      lng: -46.6,
       verticalId: ortopediaId,
       role: Role.REP,
       scope: scopeFor([ortopediaId], []),
@@ -216,6 +220,8 @@ describe("CreateFacilityUseCase", () => {
       stateId: 1,
       municipalityId: 1,
       legalDocumentType: "CNPJ",
+      lat: -23.5,
+      lng: -46.6,
       role: Role.REP,
       scope: scopeFor([dermatologiaId], []),
     });
@@ -237,6 +243,8 @@ describe("CreateFacilityUseCase", () => {
         stateId: 1,
         municipalityId: 1,
         legalDocumentType: "CNPJ",
+        lat: -23.5,
+        lng: -46.6,
         verticalId: dermatologiaId,
         role: Role.REP,
         scope: scopeFor([ortopediaId], []),
@@ -256,6 +264,8 @@ describe("CreateFacilityUseCase", () => {
         stateId: 1,
         municipalityId: 1,
         legalDocumentType: "CNPJ",
+        lat: -23.5,
+        lng: -46.6,
         role: Role.REP,
         scope: scopeFor([ortopediaId, dermatologiaId], []),
       }),
@@ -286,6 +296,8 @@ describe("CreateFacilityUseCase — ADMIN (global scope, all verticals)", () => 
         stateId: 1,
         municipalityId: 1,
         legalDocumentType: "CNPJ",
+        lat: -23.5,
+        lng: -46.6,
         role: Role.ADMIN,
         scope: globalScopeFor([ortopediaId, dermatologiaId]),
       }),
@@ -302,6 +314,8 @@ describe("CreateFacilityUseCase — ADMIN (global scope, all verticals)", () => 
       stateId: 1,
       municipalityId: 1,
       legalDocumentType: "CNPJ",
+      lat: -23.5,
+      lng: -46.6,
       verticalId: dermatologiaId,
       role: Role.ADMIN,
       scope: globalScopeFor([ortopediaId, dermatologiaId]),
@@ -334,6 +348,8 @@ describe("CreateFacilityUseCase — ADMIN (global scope, all verticals)", () => 
       stateId: 1,
       municipalityId: 1,
       legalDocumentType: "CNPJ",
+      lat: -23.5,
+      lng: -46.6,
       role: Role.ADMIN,
       scope: globalScopeFor([ortopediaId]),
     });
@@ -352,6 +368,8 @@ describe("CreateFacilityUseCase — ADMIN (global scope, all verticals)", () => 
         stateId: 1,
         municipalityId: 1,
         legalDocumentType: "CNPJ",
+        lat: -23.5,
+        lng: -46.6,
         role: Role.ADMIN,
         scope: globalScopeFor([]),
       }),

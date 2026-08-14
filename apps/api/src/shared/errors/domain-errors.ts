@@ -294,6 +294,48 @@ export class CalendarVersionConflictError extends AppError {
   }
 }
 
+/**
+ * Spec 0009 R6: the server recomputes which clinics a boundary change would
+ * de-assign and requires the caller's accepted set to match it exactly. A
+ * mismatch means the impact set moved between preview and save — a conflict,
+ * not a malformed request, so the caller can re-prompt on the delta rather than
+ * guessing what changed.
+ */
+export class BoundaryImpactSetChangedError extends AppError {
+  constructor(delta: { added: number[]; removed: number[] }) {
+    super(
+      "BOUNDARY_IMPACT_SET_CHANGED",
+      409,
+      "The clinics affected by this boundary change are no longer the ones you accepted",
+      delta,
+    );
+  }
+}
+
+/**
+ * Spec 0009 R5: moving a clinic would leave rep assignments outside their
+ * patch. A conflict rather than a validation failure — the request is
+ * well-formed, the world just disagrees with it — and it carries who would be
+ * stranded so the caller can decide, rather than guess.
+ */
+export class FacilityCoverageLossError extends AppError {
+  constructor(
+    losingCoverage: Array<{
+      facilityVerticalProfileId: number;
+      verticalId: number;
+      userId: number;
+      userName: string;
+    }>
+  ) {
+    super(
+      "FACILITY_COVERAGE_LOSS",
+      409,
+      "Moving this clinic leaves rep assignments outside their patch",
+      { losingCoverage },
+    );
+  }
+}
+
 // ============================================================================
 // Gone Errors (410)
 // ============================================================================

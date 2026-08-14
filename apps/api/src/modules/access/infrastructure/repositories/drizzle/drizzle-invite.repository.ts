@@ -11,6 +11,13 @@ import {
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
+import { isPostgresUniqueViolation } from "../../../../../shared/utils/postgres-unique-violation";
+
+/** The indexes that carry "one live invitation per person" (spec: users.ts). */
+const PENDING_IDENTITY_INDEXES = [
+  "invitations_pending_email_uidx",
+  "invitations_pending_phone_number_uidx",
+];
 
 import type {
   InviteRepository,
@@ -33,9 +40,34 @@ async function fetchInviteWithRole(inviteId: number) {
 }
 
 export class DrizzleInviteRepository implements InviteRepository {
+  /**
+   * The caller checks for a live invitation first, but check-then-insert is not
+   * atomic: two overlapping requests both find nothing and both insert. A
+   * partial unique index on PENDING invitations is what actually holds the rule,
+   * so the loser of that race is translated back into the same conflict the
+   * pre-check raises rather than escaping as an opaque 500.
+   */
   async create(params: CreateInviteParams) {
     await this.cleanupExpired();
 
+    try {
+      return await this.insertInvite(params);
+    } catch (error) {
+      // Only the two identity indexes mean "someone already has a live invite".
+      // A token_hash collision is a different failure entirely, and reporting it
+      // as a duplicate invitation would send the caller looking for one that
+      // does not exist.
+      if (isPostgresUniqueViolation(error, PENDING_IDENTITY_INDEXES)) {
+        throw new ResourceConflictError(
+          "Invitation",
+          "A pending invitation already exists for this user"
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async insertInvite(params: CreateInviteParams) {
     const inviteId = await db.transaction(async (tx) => {
       const [inserted] = await tx
         .insert(invitations)
@@ -401,7 +433,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           await tx.insert(userTerritoryAssignments).values({
             userId: user.id,
             territoryId: row.territoryId,
-            assignedBy: inviteLock.invitedByUserId,
           });
         }
 

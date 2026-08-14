@@ -14,7 +14,7 @@ Import whitelist EVISC / REVISCON / TRUVISC lines from Emultec MySQL (`avulsa` �
 | Docker | worker host must run `docker run --rm mysql:8 …` against Emultec |
 | Products synced | `id_produto_emultec` for whitelist ids |
 | Sellers mapped | `users.id_vendedor_emultec` (manual) |
-| Facilities resolvable | CNES-eligible + stamp and/or unique CNPJ/CPF match |
+| Facilities resolvable | active + link in `facility_emultec_clients` and/or unique CNPJ/CPF match (CNES not required) |
 
 ## One-time / rare setup
 
@@ -32,7 +32,29 @@ UPDATE users SET id_vendedor_emultec = $<id>, updated_at = now()
 WHERE id = $<user_id> AND deleted_at IS NULL;
 ```
 
-Stamp `facilities.id_cliente_emultec` only on exact unique CNES CNPJ/CPF match. Do not stamp PF→PJ buyer ids.
+Links live in `facility_emultec_clients`, keyed on the Emultec client:
+
+```sql
+INSERT INTO facility_emultec_clients (id_cliente_emultec, facility_id, source)
+VALUES ($<id_cliente>, $<facility_id>, 'MANUAL');
+```
+
+**One clinic may hold several clients, and normally does.** Emultec models a
+surgeon working out of a clinic as their own pessoa-física row pointing at the
+clinic through `Id_Cliente_PJ` — COT Centro Ortopédico has five, and 54 parent
+CNPJs carry 175 between them. The reverse is a genuine conflict and the primary
+key rejects it: one client resolves to exactly one clinic.
+
+Linking by hand is mostly optional. The importer records a link itself the first
+time a clinic is reached by the client's own CNPJ/CPF (`source` = `AUTO_CNPJ` /
+`AUTO_CPF`), never repointing a link that already exists. PF→PJ buyers are left
+unlinked on purpose: that path matches the *parent* company's CNPJ, a cached
+link would win over document matching, and a surgeon who moves clinics would
+keep resolving to the old one. Their parent pointer is re-read from Emultec on
+every run, so leaving it dynamic costs one lookup and cannot go stale.
+
+`facilities.id_cliente_emultec` is superseded and no longer read. It is kept for
+one release as a rollback target and dropped after.
 
 ### 3. Provision 10-minute schedule (after deploy)
 
@@ -78,7 +100,14 @@ Also allowed: `emultec-order-import-every-10m` and CLI Temporal ids (`-backfill`
 | `RECONCILE` | Date window on `Data` / `Finalizado_Data` / `Sem_Faturamento_Data` |
 | `HYBRID` (default) | **DLQ replay** → RECONCILE → INCREMENTAL |
 
-Facility resolve: stamp → PF→PJ CNPJ → CNPJ-14 → CPF-11 (unique CNES only).
+Facility resolve: link → PF→PJ CNPJ → CNPJ-14 → CPF-11.
+
+Order type comes from `avulsa.Natureza`, not from status: `VENDA` → `SALE`,
+`DOACAO` → `DONATION`, blank → `SALE`, anything else → `OTHER`. About a third of
+the whitelist volume is donated product (6 277 orders, ~R$1.8k average against
+~R$10.4k for a sale), and the purchase funnel counts only `SALE` /
+`CONSIGNMENT`, so donations are now excluded because of what they are rather
+than because they happen to carry `SEM FATURAMENTO`. Candidates must be active; a unique match is required (two active facilities on one document → `facility_ambiguous`). CNES registration is not a precondition — requiring it made a facility with an exact CNPJ match invisible to the importer, which excluded individual surgeons and distributors by construction.
 
 ## Digests and dead letters
 
@@ -140,5 +169,12 @@ POST /sync
 SELECT COUNT(*) AS orders FROM orders WHERE id_avulsa_emultec IS NOT NULL;
 SELECT COUNT(*) FROM order_items WHERE id_avulsa_item_emultec IS NOT NULL;
 SELECT COUNT(*) FROM users WHERE id_vendedor_emultec IS NOT NULL AND deleted_at IS NULL;
-SELECT COUNT(*) FROM facilities WHERE id_cliente_emultec IS NOT NULL;
+SELECT COUNT(*) AS links, COUNT(DISTINCT facility_id) AS clinicas
+FROM facility_emultec_clients;
+
+-- Clinics holding several clients — expected, not a fault.
+SELECT facility_id, COUNT(*) AS clientes
+FROM facility_emultec_clients
+GROUP BY facility_id HAVING COUNT(*) > 1
+ORDER BY clientes DESC;
 ```

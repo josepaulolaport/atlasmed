@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/legal_document_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
@@ -42,6 +43,10 @@ ClinicsQuery buildClinicsQuery(ExploreState state, {int? verticalId}) {
     purchaseBucket: purchaseBuckets.length == 1 ? purchaseBuckets.first : null,
     productIds: _commaJoin(state.filters['products']),
     clinicalFocusIds: _commaJoin(state.filters['clinicalFocusIds']),
+    unitTypeIds: _commaJoin(state.filters['unitTypeIds']),
+    // Single value: the API rejects a list, and sending an unknown string is a
+    // 400 rather than a silently unfiltered page.
+    legalDocumentType: _legalDocumentType(state.filters['legalDocumentType']),
     purchaseFunnelStages: funnelStages
         .map(purchaseFunnelStageFromApi)
         .whereType<PurchaseFunnelStage>()
@@ -87,6 +92,14 @@ String? _nonEmpty(String value) {
 String? _first(List<String>? values) {
   if (values == null || values.isEmpty) return null;
   return values.first;
+}
+
+/// Drops anything the API would reject. A stale persisted filter value would
+/// otherwise 400 the whole list instead of just being ignored.
+String? _legalDocumentType(List<String>? values) {
+  final value = _first(values);
+  if (value == null || !LegalDocumentTypeFilter.isValid(value)) return null;
+  return value;
 }
 
 String? _commaJoin(List<String>? values) {

@@ -1,12 +1,25 @@
 export interface SiblingOverlapConflict {
   id: number;
-  code: string;
-  overlapRatio: number;
+  slug: string;
+  /** Absolute intersection area. Spec 0009 R3 judges overlap in m², not as a share. */
+  overlapSquareMeters: number;
 }
 
 export interface OverlappingTerritory {
   id: number;
-  code: string;
+  slug: string;
+}
+
+/**
+ * An active rep assignment that a proposed move would invalidate: one of the
+ * rep's patches covers the clinic where it stands, and none covers where it is
+ * going (spec 0009 R5, invariant I2).
+ */
+export interface AssignmentLosingCoverage {
+  facilityVerticalProfileId: number;
+  verticalId: number;
+  userId: number;
+  userName: string;
 }
 
 export interface ClinicAssignmentTerritoryMatch {
@@ -28,12 +41,24 @@ export interface GeoJsonGeometry {
 
 export interface ManagerZoneCandidate {
   id: number;
-  code: string;
+  slug: string;
   name: string;
 }
 
 export interface TerritorySpatialRepository {
   getBoundaryAsGeoJson(territoryId: number): Promise<GeoJsonGeometry | null>;
+
+  /**
+   * Boundaries for a set of territories in one query.
+   *
+   * Listing screens draw every territory at once, so fetching geometry one id at
+   * a time turns a list of N into N round trips. Territories with no boundary —
+   * a supported state, see `territory_types.can_have_boundary` — are simply
+   * absent from the result rather than present as null.
+   */
+  getBoundariesAsGeoJson(
+    territoryIds: number[]
+  ): Promise<Map<number, GeoJsonGeometry>>;
 
   saveBoundary(
     territoryId: number,
@@ -57,6 +82,18 @@ export interface TerritorySpatialRepository {
     lat: number,
     options?: { excludeTerritoryId?: number }
   ): Promise<ClinicAssignmentTerritoryMatch[]>;
+
+  /**
+   * Spec 0009 R5: the coverage delta for a proposed move. Only assignments that
+   * would *become* invalid — an assignment whose rep never covered the clinic is
+   * already an override or already broken, and warning about it every time a pin
+   * moves is the alert fatigue the requirement calls out.
+   */
+  findAssignmentsLosingPatchCoverage(input: {
+    facilityId: number;
+    lat: number;
+    lng: number;
+  }): Promise<AssignmentLosingCoverage[]>;
 
   /** Spec 0006: true if user has an active rep patch covering the facility point. */
   userHasRepPatchCoveringFacility(
@@ -96,7 +133,7 @@ export interface TerritorySpatialRepository {
   findRepPatchesOutsideManagerZone(input: {
     managerZoneId: number;
     managerZoneGeoJson: GeoJsonGeometry;
-  }): Promise<Array<{ id: number; code: string }>>;
+  }): Promise<Array<{ id: number; slug: string }>>;
 
   updateBoundaryMetadata(territoryId: number): Promise<void>;
 }

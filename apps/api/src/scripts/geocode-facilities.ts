@@ -30,6 +30,7 @@ import { sql } from "drizzle-orm";
 import { createMapboxClient } from "@atlasmed/mapbox";
 import { MapboxError } from "@atlasmed/mapbox";
 import { db } from "../infrastructure/database/db";
+import { facilityLocationService } from "../modules/facility/composition";
 import {
   composeAddressQuery,
   lookupBrazilianPostalCode,
@@ -257,18 +258,28 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
   }));
 }
 
+/**
+ * Spec 0009 R5 / D-18: goes through the location service like every other
+ * writer. This used to UPDATE `facilities.location` directly, so the clinics it
+ * moved never had their manager-zone membership recomputed — a script quietly
+ * producing clinics whose derived ownership disagreed with their position.
+ *
+ * `acceptCoverageLoss` is set because backfilling a coordinate onto a clinic
+ * that never had one cannot strand a rep: the delta is computed against the old
+ * point, and there was none. A clinic that *does* have a position is not
+ * re-geocoded by this script.
+ */
 async function persistLocation(
   id: number,
   lat: number,
   lng: number
 ): Promise<void> {
-  await db.execute(sql`
-    update facilities
-    set
-      location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
-      updated_at = now()
-    where id = ${id}
-  `);
+  await facilityLocationService.applyLocation({
+    facilityId: id,
+    lat,
+    lng,
+    acceptCoverageLoss: true,
+  });
 }
 
 async function geocodeOne(

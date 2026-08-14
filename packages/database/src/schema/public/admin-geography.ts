@@ -5,6 +5,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  unique,
   foreignKey,
   check,
 } from "drizzle-orm/pg-core";
@@ -77,7 +78,7 @@ export const municipalities = pgTable(
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL`),
     /** Enables facilities (municipality_id, state_id) → municipalities (id, state_id). */
-    uniqueIndex("municipalities_id_state_id_uidx").on(t.id, t.stateId),
+    unique("municipalities_id_state_id_uidx").on(t.id, t.stateId),
     index("municipalities_state_id_idx").on(t.stateId),
     index("municipalities_name_idx").on(t.name),
     index("municipalities_boundary_gist_idx")
@@ -103,7 +104,7 @@ export const districts = pgTable(
   (t) => [
     uniqueIndex("districts_ibge_id_uidx").on(t.ibgeId),
     /** Enables neighborhoods (district_id, municipality_id) → districts (id, municipality_id). */
-    uniqueIndex("districts_id_municipality_id_uidx").on(t.id, t.municipalityId),
+    unique("districts_id_municipality_id_uidx").on(t.id, t.municipalityId),
     index("districts_municipality_id_idx").on(t.municipalityId),
     index("districts_name_idx").on(t.name),
     index("districts_boundary_gist_idx")
@@ -129,7 +130,7 @@ export const subdistricts = pgTable(
   (t) => [
     uniqueIndex("subdistricts_ibge_id_uidx").on(t.ibgeId),
     /** Enables neighborhoods (subdistrict_id, district_id) → subdistricts (id, district_id). */
-    uniqueIndex("subdistricts_id_district_id_uidx").on(t.id, t.districtId),
+    unique("subdistricts_id_district_id_uidx").on(t.id, t.districtId),
     index("subdistricts_district_id_idx").on(t.districtId),
     index("subdistricts_name_idx").on(t.name),
     index("subdistricts_boundary_gist_idx")

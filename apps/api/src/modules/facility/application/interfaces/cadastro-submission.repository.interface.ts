@@ -3,30 +3,33 @@ import type {
   CadastroDocumentStatus,
   CadastroFileAssetStatus,
   CadastroReviewDecision,
-  CadastroSubmissionStatus,
   CadastroUploadSessionStatus,
 } from "@atlasmed/database";
 
-export interface CadastroSubmissionRecord {
-  id: number;
-  facilityId: number;
-  verticalId: number | null;
-  submittedByUserId: number | null;
-  status: CadastroSubmissionStatus;
-  version: number;
-  submittedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
+/**
+ * A cadastro document — the unit of the pipeline (ADR 0007). There is no
+ * package record above it.
+ */
 export interface SubmissionDocumentRecord {
   id: number;
-  submissionId: number;
+  facilityId: number;
+  /** NULL = facility-scoped: satisfies this requirement for every linha. */
+  facilityVerticalProfileId: number | null;
   requirementId: number;
   title: string;
   status: CadastroDocumentStatus;
   version: number;
   reviewComment: string | null;
+  /**
+   * When this document stops being valid evidence. Null where the requirement
+   * declares no validity (`requirement.requiresValidityDate`).
+   *
+   * The expiry warning is derived from this at read time — there is no stored
+   * EXPIRING_SOON status to keep in step (ADR 0008 §4).
+   */
+  validUntil: string | null;
+  submittedByUserId: number | null;
+  submittedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   requirement?: {
@@ -40,6 +43,7 @@ export interface SubmissionDocumentRecord {
     maxFileSizeBytes: number;
     maxCombinedSizeBytes: number;
     requiresFrontAndBack: boolean;
+    requiresValidityDate: boolean;
   };
 }
 
@@ -62,6 +66,10 @@ export interface FileAssetRecord {
   height: number | null;
   errorCode: string | null;
   errorMessage: string | null;
+  /** Who uploaded it (spec 0011 §3.4). Null for rows predating attribution. */
+  uploadedByUserId: number | null;
+  /** When the bytes may be deleted; null means never (spec 0011 §6). */
+  purgeAfter: Date | null;
   uploadedAt: Date | null;
   processedAt: Date | null;
   createdAt: Date;
@@ -76,6 +84,12 @@ export interface DocumentFileRecord {
   role: CadastroDocumentFileRole;
   createdAt: Date;
   fileAsset?: FileAssetRecord;
+  /**
+   * Display name of whoever uploaded the file — "Enviado por Maria" (spec 0011
+   * §7). Joined here rather than resolved per file by the caller, which would
+   * be one query per row.
+   */
+  uploadedByName?: string | null;
 }
 
 export interface UploadSessionRecord {
@@ -90,68 +104,82 @@ export interface UploadSessionRecord {
 }
 
 export interface CadastroSubmissionRepository {
-  findDraftByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
-  findById(id: number): Promise<CadastroSubmissionRecord | null>;
-  findLatestByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
-  createSubmission(input: {
-    facilityId: number;
-    verticalId: number;
-    submittedByUserId?: number | null;
-    version: number;
-  }): Promise<CadastroSubmissionRecord>;
-  updateSubmissionStatus(input: {
-    id: number;
-    status: CadastroSubmissionStatus;
-    submittedAt?: Date | null;
-    submittedByUserId?: number | null;
-  }): Promise<CadastroSubmissionRecord>;
-  deleteSubmission(id: number): Promise<void>;
-  listSubmissions(input: {
-    status?: CadastroSubmissionStatus[];
-    page: number;
-    limit: number;
-  }): Promise<{ items: CadastroSubmissionRecord[]; total: number }>;
-
   findDocumentById(id: number): Promise<SubmissionDocumentRecord | null>;
-  findDocumentsBySubmission(submissionId: number): Promise<SubmissionDocumentRecord[]>;
-  findDocumentBySubmissionAndRequirement(
-    submissionId: number,
-    requirementId: number
-  ): Promise<SubmissionDocumentRecord | null>;
-  /** Documents for a facility+requirement, newest package first. */
+  /**
+   * The document a rep is currently working on for this requirement: the
+   * highest version that has not been closed out. Null when the requirement has
+   * never been touched, or when every attempt is finished (APPROVED/REJECTED/
+   * SUPERSEDED) and the next upload should open a new version.
+   */
+  findWorkingDocument(input: {
+    facilityId: number;
+    requirementId: number;
+  }): Promise<SubmissionDocumentRecord | null>;
+  /** All versions for a facility+requirement, newest first. */
   listDocumentsForFacilityRequirement(input: {
     facilityId: number;
     requirementId: number;
     excludeDraft?: boolean;
-  }): Promise<
-    Array<{
-      document: SubmissionDocumentRecord;
-      submission: CadastroSubmissionRecord;
-    }>
-  >;
-  /** Ops review queue: documents across facilities by document status. */
+  }): Promise<SubmissionDocumentRecord[]>;
+  /**
+   * Every document for a facility, across all requirements, newest version
+   * first (`version DESC, updatedAt DESC`).
+   *
+   * Exists for the checklist, which needs the working document *and* the
+   * history for every requirement on the page. Asking per requirement made that
+   * two queries each; with the per-document file lookups it reached four per
+   * requirement, and `/cadastro` was reliably the slowest endpoint on the clinic
+   * screen at ~1.7s. Unfiltered by status on purpose: the working document and
+   * the submitted history want different status sets, and one pass over the
+   * facility's rows answers both.
+   */
+  listDocumentsByFacility(facilityId: number): Promise<SubmissionDocumentRecord[]>;
+  /**
+   * Files for many documents at once, ordered by document then `position`.
+   *
+   * Each record carries `submissionDocumentId`, so the caller groups without a
+   * second lookup. An empty input returns empty without touching the database —
+   * `IN ()` is not valid SQL.
+   */
+  listDocumentFilesForDocuments(
+    documentIds: number[]
+  ): Promise<DocumentFileRecord[]>;
+  /**
+   * Ops review queue: documents across facilities by document status.
+   *
+   * `facilityIds` restricts the queue to what the reviewer may see. Omitting it
+   * means unrestricted, which only a global scope may ask for. An empty array
+   * is a real restriction — see nothing — never a shorthand for everything.
+   */
   listDocumentsForReview(input: {
     status: CadastroDocumentStatus[];
+    facilityIds?: number[];
     page: number;
     limit: number;
   }): Promise<{
     items: Array<{
       document: SubmissionDocumentRecord;
-      submission: CadastroSubmissionRecord;
+      facilityId: number;
       submittedByName: string | null;
     }>;
     total: number;
   }>;
   createDocument(input: {
-    submissionId: number;
+    facilityId: number;
+    facilityVerticalProfileId: number | null;
     requirementId: number;
     title: string;
+    version?: number;
   }): Promise<SubmissionDocumentRecord>;
+  deleteDocument(id: number): Promise<void>;
   updateDocumentStatus(input: {
     id: number;
     status: CadastroDocumentStatus;
     reviewComment?: string | null;
+    validUntil?: string | null;
     version?: number;
+    submittedAt?: Date | null;
+    submittedByUserId?: number | null;
   }): Promise<SubmissionDocumentRecord>;
 
   createFileAsset(input: {
@@ -183,7 +211,65 @@ export interface CadastroSubmissionRepository {
     processedAt?: Date | null;
   }): Promise<FileAssetRecord>;
 
+  /**
+   * Adds one file to a document atomically: limit checks, position allocation,
+   * the `file_assets` row and the `document_files` link, all under a lock on
+   * the parent document (D-15, spec 0011 §4.4).
+   *
+   * Every part of this used to be a separate read-then-write. Two uploads to
+   * one document read the same count, the same total size and the same next
+   * position, so `maxFiles` and `maxCombinedSizeBytes` were both bypassable and
+   * the loser hit a raw unique violation on `document_files_document_position_uidx`
+   * — surfacing as a 500.
+   *
+   * Worse, the `file_assets` row was inserted *before* the link, so the loser
+   * left an asset with no `document_files` row: invisible to the checklist,
+   * invisible to the prune, and holding bytes nobody could reach. Doing both
+   * inserts in one transaction makes that orphan unrepresentable rather than
+   * something to clean up afterwards.
+   *
+   * Limits come from the caller because they live on the requirement, and the
+   * verdict is returned rather than thrown so the decision about which HTTP
+   * error to raise stays in the use case.
+   */
+  attachFileToDocument(input: {
+    documentId: number;
+    facilityId: number;
+    bucket: string;
+    objectKey: string;
+    originalFilename: string;
+    declaredMimeType: string;
+    sizeBytes: number;
+    sha256?: string | null;
+    role: CadastroDocumentFileRole;
+    position?: number;
+    maxFiles: number;
+    maxCombinedSizeBytes: number;
+    /**
+     * Nullable here because the column is: rows predating attribution have
+     * none, and a deleted account nulls it. The *use case* always supplies a
+     * real id — every upload arrives on an authenticated route (spec 0011 §3.4).
+     */
+    uploadedByUserId: number | null;
+  }): Promise<
+    | { outcome: "attached"; asset: FileAssetRecord; position: number }
+    | { outcome: "document_missing" }
+    | { outcome: "max_files_exceeded" }
+    | { outcome: "max_combined_size_exceeded" }
+  >;
+
   listDocumentFiles(documentId: number): Promise<DocumentFileRecord[]>;
+  /**
+   * Schedules — or cancels — deletion of every file under a document.
+   *
+   * `null` clears the schedule, which is what approval does: approved evidence
+   * is kept forever, and a document that was rejected and later approved must
+   * not carry a stale purge date from its earlier verdict.
+   */
+  setPurgeAfterForDocument(input: {
+    documentId: number;
+    purgeAfter: Date | null;
+  }): Promise<void>;
   findDocumentFileByFileAssetId(
     fileAssetId: number
   ): Promise<DocumentFileRecord | null>;

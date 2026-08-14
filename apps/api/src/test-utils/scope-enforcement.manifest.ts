@@ -80,6 +80,14 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],
   },
+  "modules/facility/application/use-cases/cnes-import.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+  "modules/facility/application/use-cases/cnes-association.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
   "modules/facility/application/use-cases/facility-note.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],

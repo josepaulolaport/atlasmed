@@ -1,9 +1,8 @@
 import { auditLogService } from "../../infrastructure/audit/audit-log.service";
 import {
-  facilityGeocodingService,
+  facilityLocationService,
   facilityRepositories,
 } from "../facility/composition";
-import { territoryMembershipService } from "../territory/composition";
 import { FieldSuggestionApplyService } from "./application/services/field-suggestion-apply.service";
 import {
   ApproveFieldSuggestionUseCase,
@@ -16,15 +15,12 @@ import { DrizzleFieldSuggestionRepository } from "./infrastructure/repositories/
 
 const fieldSuggestionRepository = new DrizzleFieldSuggestionRepository();
 
-async function handleFacilityLocationChanged(facilityId: number): Promise<void> {
-  await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
-  await territoryMembershipService.assignFacilityById(facilityId);
-}
-
+// Spec 0009 R5: approvals write locations through the one service that owns
+// them, so geocoding, the coverage delta and the membership recompute happen
+// here for the same reasons they happen everywhere else.
 const applyService = new FieldSuggestionApplyService({
   facilityRepository: facilityRepositories.facility,
-  facilityGeocodingService,
-  onFacilityLocationChanged: handleFacilityLocationChanged,
+  locationService: facilityLocationService,
 });
 
 const deps = {

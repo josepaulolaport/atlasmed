@@ -1,4 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
+import type { AnyDatabase } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
 import type {
   GeoJsonGeometry,
@@ -8,6 +9,7 @@ import type {
   ClinicAssignmentTerritoryMatch,
   SiblingOverlapConflict,
   ManagerZoneCandidate,
+  AssignmentLosingCoverage,
 } from "../../../application/interfaces/territory-spatial.repository.interface";
 import { OperationNotAllowedError } from "../../../../../shared/errors";
 import {
@@ -16,8 +18,15 @@ import {
 } from "../../../application/constants/territory-roles.constants";
 
 export class DrizzleTerritorySpatialRepository implements TerritorySpatialRepository {
+  /**
+ * Accepts a transaction handle so spec 0009 R1 can validate a boundary inside
+ * the same transaction that later mutates it. Defaults to the shared pool, so
+ * every existing caller is unchanged.
+ */
+  constructor(private readonly database: AnyDatabase = db) {}
+
   async getBoundaryAsGeoJson(territoryId: number): Promise<GeoJsonGeometry | null> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT ST_AsGeoJSON(boundary)::text AS geojson
       FROM territories
       WHERE id = ${territoryId}
@@ -32,6 +41,33 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     return JSON.parse(raw) as GeoJsonGeometry;
   }
 
+  async getBoundariesAsGeoJson(
+    territoryIds: number[]
+  ): Promise<Map<number, GeoJsonGeometry>> {
+    if (territoryIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.database.execute(sql`
+      SELECT id, ST_AsGeoJSON(boundary)::text AS geojson
+      FROM territories
+      WHERE id IN (${sql.join(
+        territoryIds.map((id) => sql`${id}`),
+        sql`, `
+      )})
+        AND boundary IS NOT NULL
+    `) as Array<{ id: number | string; geojson: string | null }>;
+
+    const boundaries = new Map<number, GeoJsonGeometry>();
+    for (const row of rows) {
+      if (!row.geojson) {
+        continue;
+      }
+      boundaries.set(Number(row.id), JSON.parse(row.geojson) as GeoJsonGeometry);
+    }
+    return boundaries;
+  }
+
   async saveBoundary(
     territoryId: number,
     geoJson: GeoJsonGeometry,
@@ -41,7 +77,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
 
     const geoJsonString = JSON.stringify(geoJson);
 
-    const validation = await db.execute(sql`
+    const validation = await this.database.execute(sql`
       SELECT
         ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS is_valid,
         ST_IsValidReason(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS reason
@@ -55,7 +91,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         );
       }
 
-      await db.execute(sql`
+      await this.database.execute(sql`
         UPDATE territories
         SET boundary = ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)),
             updated_at = NOW()
@@ -64,7 +100,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       return;
     }
 
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326),
           updated_at = NOW()
@@ -73,7 +109,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async deleteBoundary(territoryId: number): Promise<void> {
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET boundary = NULL,
           updated_at = NOW()
@@ -82,7 +118,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async hasBoundary(territoryId: number): Promise<boolean> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT boundary IS NOT NULL AS has_boundary
       FROM territories
       WHERE id = ${territoryId}
@@ -91,7 +127,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async getBoundaryBoundingBox(territoryId: number): Promise<TerritoryBoundingBox | null> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT
         ST_XMin(extent)::float AS min_lng,
         ST_YMin(extent)::float AS min_lat,
@@ -134,8 +170,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   ): Promise<OverlappingTerritory[]> {
     const geoJsonString = JSON.stringify(geoJson);
 
-    const rows = await db.execute(sql`
-      SELECT t.id, t.code
+    const rows = await this.database.execute(sql`
+      SELECT t.id, t.slug
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       WHERE t.id != ${territoryId}
@@ -144,9 +180,9 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND ST_Intersects(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
         AND NOT ST_Touches(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
-    `) as Array<{ id: number; code: string }>;
+    `) as Array<{ id: number; slug: string }>;
 
-    return rows.map((row) => ({ id: Number(row.id), code: row.code }));
+    return rows.map((row) => ({ id: Number(row.id), slug: row.slug }));
   }
 
   /**
@@ -158,7 +194,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     options?: { excludeTerritoryId?: number }
   ): Promise<ClinicAssignmentTerritoryMatch[]> {
     const excludeTerritoryId = options?.excludeTerritoryId ?? null;
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT t.id, t.vertical_id
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
@@ -179,11 +215,77 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     }));
   }
 
+  async findAssignmentsLosingPatchCoverage(input: {
+    facilityId: number;
+    lat: number;
+    lng: number;
+  }): Promise<AssignmentLosingCoverage[]> {
+    const rows = (await this.database.execute(sql`
+      WITH proposed AS (
+        SELECT ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326) AS geom
+      )
+      SELECT
+        fvp.id AS facility_vertical_profile_id,
+        fvp.vertical_id,
+        fvra.user_id,
+        COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS user_name
+      FROM facility_vertical_profiles fvp
+      INNER JOIN facilities f ON f.id = fvp.facility_id
+      INNER JOIN facility_vertical_rep_assignments fvra
+        ON fvra.facility_vertical_profile_id = fvp.id
+        AND fvra.ended_at IS NULL
+        -- Spec 0009 R2: an overridden assignment is already outside the
+        -- geometry on purpose, so moving the clinic cannot invalidate it.
+        AND fvra.override_reason IS NULL
+      INNER JOIN users u ON u.id = fvra.user_id
+      CROSS JOIN proposed
+      WHERE fvp.facility_id = ${input.facilityId}
+        AND fvp.is_active = true
+        AND f.location IS NOT NULL
+        -- Valid today: one of this rep's patches covers where the clinic stands.
+        AND EXISTS (
+          SELECT 1
+          FROM user_territory_assignments uta
+          INNER JOIN territories t ON t.id = uta.territory_id
+          INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+          WHERE uta.user_id = fvra.user_id
+            AND t.is_active = true
+            AND t.boundary IS NOT NULL
+            AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+            AND ST_Covers(t.boundary, f.location::geometry)
+        )
+        -- Invalid at the destination: none of them covers where it is going.
+        AND NOT EXISTS (
+          SELECT 1
+          FROM user_territory_assignments uta
+          INNER JOIN territories t ON t.id = uta.territory_id
+          INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+          WHERE uta.user_id = fvra.user_id
+            AND t.is_active = true
+            AND t.boundary IS NOT NULL
+            AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+            AND ST_Covers(t.boundary, proposed.geom)
+        )
+    `)) as Array<{
+      facility_vertical_profile_id: string;
+      vertical_id: string;
+      user_id: string;
+      user_name: string;
+    }>;
+
+    return rows.map((row) => ({
+      facilityVerticalProfileId: Number(row.facility_vertical_profile_id),
+      verticalId: Number(row.vertical_id),
+      userId: Number(row.user_id),
+      userName: row.user_name,
+    }));
+  }
+
   async userHasRepPatchCoveringFacility(
     userId: number,
     facilityId: number
   ): Promise<boolean> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT 1 AS ok
       FROM user_territory_assignments uta
       INNER JOIN territories t ON t.id = uta.territory_id
@@ -216,13 +318,16 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     const geoJsonString = JSON.stringify(input.geoJson);
 
     if (input.mode === "manager_zone") {
-      const rows = await db.execute(sql`
+      const rows = await this.database.execute(sql`
         WITH proposed AS (
           SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
         )
         SELECT
           f.id AS facility_id,
-          f.display_name AS facility_name,
+          -- f.name, not f.display_name: the Drizzle field is displayName but it
+          -- maps to the name column (facilities.ts:43). Raw SQL gets no such
+          -- translation, and display_name has never existed.
+          f.name AS facility_name,
           fvp.id AS facility_vertical_profile_id,
           fvra.user_id AS consultant_user_id,
           COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
@@ -234,6 +339,10 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         INNER JOIN facility_vertical_rep_assignments fvra
           ON fvra.facility_vertical_profile_id = fvp.id
           AND fvra.ended_at IS NULL
+          -- Spec 0009 R2: an overridden assignment is deliberately outside the
+          -- geometry, so a boundary change is not evidence against it. An
+          -- override a recompute can erase is not an override.
+          AND fvra.override_reason IS NULL
         INNER JOIN users u ON u.id = fvra.user_id
         CROSS JOIN proposed
         WHERE f.deactivated_at IS NULL
@@ -256,7 +365,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       }));
     }
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH proposed AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       ),
@@ -269,7 +378,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       )
       SELECT
         f.id AS facility_id,
-        f.display_name AS facility_name,
+        -- See the manager-zone branch above: the column is name, not display_name.
+        f.name AS facility_name,
         fvp.id AS facility_vertical_profile_id,
         fvra.user_id AS consultant_user_id,
         COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
@@ -283,6 +393,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         ON fvra.facility_vertical_profile_id = fvp.id
         AND fvra.ended_at IS NULL
         AND fvra.user_id = pr.user_id
+        -- Spec 0009 R2: see the manager-zone branch above.
+        AND fvra.override_reason IS NULL
       INNER JOIN users u ON u.id = fvra.user_id
       CROSS JOIN proposed
       WHERE f.deactivated_at IS NULL
@@ -324,18 +436,18 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }): Promise<SiblingOverlapConflict[]> {
     const geoJsonString = JSON.stringify(input.geoJson);
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH child AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
       SELECT
         t.id,
-        t.code,
-        CASE
-          WHEN ST_Area(child.geom::geography) = 0 THEN 0
-          ELSE ST_Area(ST_Intersection(t.boundary, child.geom)::geography)
-            / ST_Area(child.geom::geography)
-        END AS overlap_ratio
+        t.slug,
+        -- Spec 0009 R3: absolute area, not a share of the proposed polygon. As a
+        -- ratio the same sliver read as negligible on a state and alarming on a
+        -- city, which is backwards — an overlap is real or it is float noise,
+        -- and that does not depend on the size of what it overlaps.
+        ST_Area(ST_Intersection(t.boundary, child.geom)::geography) AS overlap_sq_m
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN child
@@ -351,12 +463,12 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
-    `) as Array<{ id: string; code: string; overlap_ratio: number }>;
+    `) as Array<{ id: string; slug: string; overlap_sq_m: number }>;
 
     return rows.map((row) => ({
       id: Number(row.id),
-      code: row.code,
-      overlapRatio: Number(row.overlap_ratio),
+      slug: row.slug,
+      overlapSquareMeters: Number(row.overlap_sq_m),
     }));
   }
 
@@ -367,11 +479,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     const geoJsonString = JSON.stringify(input.geoJson);
     const verticalId = input.verticalId ?? null;
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH patch AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
-      SELECT t.id, t.code, t.name
+      SELECT t.id, t.slug, t.name
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN patch
@@ -381,11 +493,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND (${verticalId}::bigint IS NULL OR t.vertical_id = ${verticalId})
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
-    `) as Array<{ id: number; code: string; name: string }>;
+    `) as Array<{ id: number; slug: string; name: string }>;
 
     return rows.map((row) => ({
       id: Number(row.id),
-      code: row.code,
+      slug: row.slug,
       name: row.name,
     }));
   }
@@ -393,14 +505,14 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   async findRepPatchesOutsideManagerZone(input: {
     managerZoneId: number;
     managerZoneGeoJson: GeoJsonGeometry;
-  }): Promise<Array<{ id: number; code: string }>> {
+  }): Promise<Array<{ id: number; slug: string }>> {
     const geoJsonString = JSON.stringify(input.managerZoneGeoJson);
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH zone AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
-      SELECT p.id, p.code
+      SELECT p.id, p.slug
       FROM territories p
       INNER JOIN territory_types tt ON tt.id = p.territory_type_id
       CROSS JOIN zone
@@ -409,13 +521,13 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND p.boundary IS NOT NULL
         AND tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND NOT ST_CoveredBy(p.boundary, zone.geom)
-    `) as Array<{ id: number; code: string }>;
+    `) as Array<{ id: number; slug: string }>;
 
-    return rows.map((row) => ({ id: Number(row.id), code: row.code }));
+    return rows.map((row) => ({ id: Number(row.id), slug: row.slug }));
   }
 
   async updateBoundaryMetadata(territoryId: number): Promise<void> {
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET
         boundary_min_lng = bbox.min_lng,

@@ -7,6 +7,7 @@ import {
   orders,
   states,
 } from "@atlasmed/database";
+import { sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./facility-purchase-recurrence.repository";
 
@@ -41,13 +42,25 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
         .values({ code: "T-DERMA", name: "T-DERMA" })
         .returning({ id: businessVerticals.id });
 
+      // Derived, not literal: `states.ibge_id` and `abbreviation` are UNIQUE, and
+      // the CNES loader's test commits a permanent `99` / `ZZ` state into the same
+      // database instead of rolling back. The literals here collided with it.
+      const suffix = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
       const [state] = await tx
         .insert(states)
-        .values({ name: "T-State", ibgeId: "99", abbreviation: "TT" })
+        .values({
+          name: `T-State-${suffix}`,
+          ibgeId: `T${suffix}`.slice(0, 12),
+          abbreviation: suffix.slice(0, 2).toUpperCase(),
+        })
         .returning({ id: states.id });
       const [municipality] = await tx
         .insert(municipalities)
-        .values({ stateId: state!.id, name: "T-City", ibgeId: "9999999" })
+        .values({
+          stateId: state!.id,
+          name: "T-City",
+          ibgeId: `T${suffix}`.slice(0, 12),
+        })
         .returning({ id: municipalities.id });
 
       const [facility] = await tx
@@ -57,6 +70,8 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
           legalDocumentType: "CNPJ",
           stateId: state!.id,
           municipalityId: municipality!.id,
+          // Spec 0009 R5: every clinic has a position.
+          location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
         })
         .returning({ id: facilities.id });
 

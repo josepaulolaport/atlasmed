@@ -46,7 +46,7 @@ class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
 
       final metadata = <String, String>{
         'method': request.method.name.toUpperCase(),
-        'headers': _hideJwt(headers.toString()),
+        'headers': redactHeaders(headers).toString(),
         'url': request.url.toString(),
         'body': encodedBody ?? '',
       };
@@ -91,6 +91,7 @@ class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
         statusCode: response.statusCode,
         body: response.body,
         headers: response.headers,
+        requestHeaders: headers,
       );
     } on SocketException catch (e) {
       BaseRepository.logger(

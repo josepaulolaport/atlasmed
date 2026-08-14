@@ -126,7 +126,7 @@ class ComparisonSection extends StatelessWidget {
         Expanded(
           child: competitorRows.isEmpty
               ? const _EmptyState(
-                  message: 'Nenhum concorrente cadastrado ainda',
+                  message: 'Nenhuma outra marca cadastrada ainda',
                 )
               // Every row shares the same [_competitorRowHeight] extent, which
               // is what lets [_RowSnapScrollPhysics] snap cleanly to a row

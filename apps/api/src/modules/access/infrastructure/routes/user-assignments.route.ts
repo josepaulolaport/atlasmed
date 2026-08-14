@@ -7,7 +7,7 @@ import {
 import { accessUseCases, accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
-export const userAssignmentsRoute = new Elysia({
+const userAssignmentMutationsRoute = new Elysia({
   detail: {
     tags: ["Users"],
   },
@@ -72,11 +72,9 @@ export const userAssignmentsRoute = new Elysia({
     {
       body: t.Object({
         verticalId: t.String({ description: "Business vertical ID to assign to the user" }),
-        managerId: t.Optional(
-          t.Union([t.String(), t.Null()], {
-            description: "Per-vertical reporting manager (REP)",
-          }),
-        ),
+        // Spec 0009 R9: `managerId` is gone. Dead since migration 0044 dropped
+        // per-vertical reporting managers — the hierarchy is territory-derived,
+        // so a manager cannot be asserted here. It was accepted and discarded.
       }),
     },
   )
@@ -165,7 +163,23 @@ export const userAssignmentsRoute = new Elysia({
         verticalId: t.String({ description: "Business vertical ID" }),
       }),
     },
-  )
+  );
+
+/**
+ * Who is assigned to a territory. Its own instance, and deliberately so.
+ *
+ * `requirePermission` installs a scoped `onBeforeHandle`, so declaring this
+ * guard at the end of the chain above made the route demand `manage USER` as
+ * well — a permission only ADMIN holds. A MANAGER picking a zone has
+ * `read TERRITORY` and got a 403 the client never surfaced: it treats any
+ * non-200 as "nobody assigned", so occupied zones simply looked free.
+ */
+const territoryAssignmentsRoute = new Elysia({
+  detail: {
+    tags: ["Users"],
+  },
+})
+  .use(auth)
   .use(requirePermission("read", "TERRITORY"))
   .get(
     "/territories/:id/assignments",
@@ -173,3 +187,7 @@ export const userAssignmentsRoute = new Elysia({
       return accessUseCases.getTerritoryAssignments().execute(params.id);
     },
   );
+
+export const userAssignmentsRoute = new Elysia()
+  .use(userAssignmentMutationsRoute)
+  .use(territoryAssignmentsRoute);

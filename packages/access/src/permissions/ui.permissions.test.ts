@@ -85,10 +85,13 @@ describe("ui.permissions", () => {
   });
 
   describe("canReadCadastroSubmissions", () => {
-    it("should allow ADMIN, MANAGER, OPS and deny REP", () => {
+    // ADR 0008: cadastro review is back-office work — OPS and ADMIN only.
+    // MANAGER lost it deliberately; this is the gate the nav reads, so the
+    // assertion below is also what hides the screen.
+    it("allows ADMIN and OPS, denies MANAGER and REP", () => {
       expect(canReadCadastroSubmissions(Role.ADMIN)).toBe(true);
-      expect(canReadCadastroSubmissions(Role.MANAGER)).toBe(true);
       expect(canReadCadastroSubmissions(Role.OPS)).toBe(true);
+      expect(canReadCadastroSubmissions(Role.MANAGER)).toBe(false);
       expect(canReadCadastroSubmissions(Role.REP)).toBe(false);
     });
   });

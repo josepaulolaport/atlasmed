@@ -10,6 +10,8 @@ import { logger } from "./logger";
 import { closeEmultecMysqlPool } from "./emultec/emultec-mysql";
 import { ensurePurchaseRecurrenceSchedules } from "./scripts/ensure-purchase-recurrence-schedule";
 import { ensureEmultecOrderImportSchedules } from "./scripts/ensure-emultec-order-import-schedule";
+import { ensureCadastroSweepSchedule } from "./scripts/ensure-cadastro-sweep-schedule";
+import { ensureMetricSnapshotSchedules } from "./scripts/ensure-metric-snapshot-schedule";
 
 /** Idempotent — safe to run on every boot. Logs and continues on failure so a
  * transient Temporal hiccup never blocks the worker from picking up tasks. */
@@ -20,6 +22,8 @@ async function ensureSchedules(config: WorkerConfig): Promise<void> {
     await Promise.all([
       ensurePurchaseRecurrenceSchedules(client.schedule, { taskQueue: config.taskQueue }),
       ensureEmultecOrderImportSchedules(client.schedule, { taskQueue: config.taskQueue }),
+      ensureCadastroSweepSchedule(client.schedule, { taskQueue: config.taskQueue }),
+      ensureMetricSnapshotSchedules(client.schedule, { taskQueue: config.taskQueue }),
     ]);
   } catch (error) {
     logger.error("AtlasMed Temporal worker schedule provisioning failed", error);

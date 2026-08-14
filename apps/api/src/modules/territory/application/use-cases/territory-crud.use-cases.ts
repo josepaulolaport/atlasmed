@@ -7,9 +7,12 @@ import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
 import { isManagerZoneType, isRepPatchType } from "../constants/territory-roles.constants";
 import {
-  applyTerritoryBoundary,
   assertBoundaryProvidedForType,
+  planTerritoryBoundary,
+  resolveBoundaryOutcome,
+  toBoundaryCommitCommand,
 } from "../services/territory-boundary.application";
+import type { TerritoryTransactionPort } from "../interfaces/territory-transaction.port.interface";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import { assertSinglePolygonForEditableTerritory } from "../utils/territory-boundary.utils";
 import { normalizeTerritorySlug } from "../constants/territory-slug.constants";
@@ -59,6 +62,19 @@ interface TerritoryCrudDependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
+  /**
+   * Spec 0009 R1, extended to creation. `createTerritory` used to insert the row
+   * and *then* validate the boundary, so a geometry rejected for containment or
+   * sibling overlap left an orphan territory behind and returned an error — the
+   * same shape as D-01, one step smaller.
+   */
+  transactionPort: TerritoryTransactionPort;
+  /** Rebuilds containment against transaction-bound repositories. */
+  buildContainmentService: (repos: {
+    territoryRepository: TerritoryRepository;
+    territoryTypeRepository: TerritoryTypeRepository;
+    spatialRepository: TerritorySpatialRepository;
+  }) => TerritoryContainmentService;
   membershipService?: TerritoryDeletionMembershipPort;
   onTerritoryDeactivated?: (territoryId: number) => Promise<void>;
   onBoundaryChanged?: (territoryId: number) => Promise<void>;
@@ -81,7 +97,6 @@ function serializeTerritory(territory: {
   id: number;
   name: string;
   slug: string;
-  code: string;
   verticalId: number;
   territoryTypeId: number;
   territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
@@ -102,7 +117,16 @@ function serializeTerritory(territory: {
     id: territory.id,
     name: territory.name,
     slug: territory.slug,
-    code: territory.code,
+    /**
+     * Spec 0009 R9: `territories.code` is gone. The field stays in the response
+     * for one release, derived from the slug, because installed mobile builds
+     * parse it as a non-null String and would crash on a missing key. Drop it
+     * once those builds have aged out — expand and contract, not a big-bang
+     * break of clients already on phones.
+     *
+     * @deprecated identify a territory by `id`, display `name` or `slug`.
+     */
+    code: territory.slug.toUpperCase(),
     verticalId: territory.verticalId,
     territoryTypeId: territory.territoryTypeId,
     territoryType: serializeTerritoryType(territory.territoryType),
@@ -165,31 +189,62 @@ export class TerritoryCrudUseCases {
       assertSinglePolygonForEditableTerritory(type, boundary, "create_territory");
     }
 
-    const territory = await this.deps.territoryRepository.create({
-      name: input.name.trim(),
-      slug,
-      code: slug.toUpperCase(),
-      verticalId: input.verticalId,
-      territoryTypeId: type.id,
-    });
+    // Spec 0009 R1, extended to creation: the row and its geometry are one unit.
+    // Containment and sibling-overlap checks need the territory's own id — a
+    // patch resolves its manager zone, a zone excludes itself from the overlap
+    // query — so the row has to exist before they can run. Inside a transaction
+    // that is fine; outside one it left an orphan territory whenever the
+    // geometry was rejected.
+    const { territory, boundaryResolution } = await this.deps.transactionPort.run(
+      async (tx) => {
+        const created = await tx.territoryRepository.create({
+          name: input.name.trim(),
+          slug,
+          verticalId: input.verticalId,
+          territoryTypeId: type.id,
+        });
 
-    let boundaryResolution:
-      | Awaited<ReturnType<typeof applyTerritoryBoundary>>
-      | undefined;
+        if (!type.canHaveBoundary || !boundary) {
+          return { territory: created, boundaryResolution: undefined };
+        }
 
-    if (type.canHaveBoundary) {
-      boundaryResolution = await applyTerritoryBoundary(
-        {
-          territoryRepository: this.deps.territoryRepository,
-          territoryTypeRepository: this.deps.territoryTypeRepository,
-          spatialRepository: this.deps.spatialRepository,
-          containmentService: this.deps.containmentService,
-          onBoundaryChanged: this.deps.onBoundaryChanged,
-          onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
-        },
-        { ...territory, territoryType: type },
-        boundary
-      );
+        const plan = await planTerritoryBoundary(
+          {
+            territoryRepository: tx.territoryRepository,
+            territoryTypeRepository: tx.territoryTypeRepository,
+            spatialRepository: tx.spatialRepository,
+            containmentService: this.deps.buildContainmentService({
+              territoryRepository: tx.territoryRepository,
+              territoryTypeRepository: tx.territoryTypeRepository,
+              spatialRepository: tx.spatialRepository,
+            }),
+          },
+          { ...created, territoryType: type },
+          boundary
+        );
+
+        // A new territory owns no clinics yet, so nothing is de-assigned here.
+        const result = await tx.boundaryWriter.commitBoundaryChange(
+          toBoundaryCommitCommand(created.id, plan, {
+            endForProfileIds: [],
+            endReason: "territory_created",
+          })
+        );
+
+        return {
+          territory: created,
+          boundaryResolution: resolveBoundaryOutcome(plan, result),
+        };
+      }
+    );
+
+    // Published only after commit, so nothing reacts to a territory that rolled
+    // back — the same rule the boundary save follows.
+    if (boundaryResolution?.mode === "rep_patch") {
+      await this.deps.onBoundaryChanged?.(territory.id);
+      await this.deps.onManagerTerritoryChanged?.(boundaryResolution.managerTerritoryId);
+    } else if (boundaryResolution?.mode === "manager_zone") {
+      await this.deps.onBoundaryChanged?.(territory.id);
     }
 
     const serialized = serializeTerritory(await this.enrichTerritory(territory.id));
@@ -204,7 +259,11 @@ export class TerritoryCrudUseCases {
     };
   }
 
-  async getTerritory(id: number, scope: ScopeContext) {
+  async getTerritory(
+    id: number,
+    scope: ScopeContext,
+    include?: { boundary?: boolean }
+  ) {
     // Spec 0010 §2.2 — reading a territory by id must respect territory scope.
     assertResourceInScope(scope, "territory", id);
 
@@ -212,13 +271,29 @@ export class TerritoryCrudUseCases {
     if (!territory) {
       return null;
     }
-    return serializeTerritory(await this.enrichTerritory(id));
+    const serialized = serializeTerritory(await this.enrichTerritory(id));
+    if (!include?.boundary) {
+      return serialized;
+    }
+    // Same contract as the list route, so a caller can read one territory or a
+    // page of them without switching shapes.
+    return {
+      ...serialized,
+      boundary: await this.deps.spatialRepository.getBoundaryAsGeoJson(id),
+    };
   }
 
+  /**
+   * @param include Extra data to embed per row. `boundary` exists because every
+   *   client that lists territories also draws them: without it each caller
+   *   followed the list with one `GET /territories/:id/boundary` per row, and
+   *   the mobile pickers did so sequentially.
+   */
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number }
+    filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number },
+    include?: { boundary?: boolean }
   ) {
     // Spec 0010 §2.2/§2.1 — `verticalId` may only narrow the caller's assigned set,
     // never widen it. Throws before any query when the filter is not assigned.
@@ -256,10 +331,23 @@ export class TerritoryCrudUseCases {
       );
     }
 
+    const boundaries = include?.boundary
+      ? await this.deps.spatialRepository.getBoundariesAsGeoJson(
+          filtered.map((t) => t.id)
+        )
+      : null;
+
     const enriched = await Promise.all(
-      filtered.map(async (t) =>
-        serializeTerritory(await this.enrichTerritory(t.id))
-      )
+      filtered.map(async (t) => {
+        const serialized = serializeTerritory(await this.enrichTerritory(t.id));
+        if (!boundaries) {
+          return serialized;
+        }
+        // Explicitly null, not absent, when the territory has no geometry: the
+        // caller asked for boundaries, so "this one has none" is an answer and
+        // must not be read as "not loaded".
+        return { ...serialized, boundary: boundaries.get(t.id) ?? null };
+      })
     );
 
     if (format === "flat") {
@@ -409,14 +497,13 @@ export class TerritoryCrudUseCases {
    * "tree" format nests rep patches under their manager zone
    * (via managerTerritoryId); everything else is a root node.
    */
-  private buildTree(
-    territories: ReturnType<typeof serializeTerritory>[]
-  ): Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> {
+  private buildTree<T extends ReturnType<typeof serializeTerritory>>(
+    territories: T[]
+  ): Array<T & { children: unknown[] }> {
     const byId = new Map(
       territories.map((t) => [t.id, { ...t, children: [] as unknown[] }])
     );
-    const roots: Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> =
-      [];
+    const roots: Array<T & { children: unknown[] }> = [];
 
     for (const territory of byId.values()) {
       if (territory.managerTerritoryId && byId.has(territory.managerTerritoryId)) {

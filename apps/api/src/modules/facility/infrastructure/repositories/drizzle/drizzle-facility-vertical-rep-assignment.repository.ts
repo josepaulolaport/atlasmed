@@ -2,10 +2,10 @@ import {
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
 } from "@atlasmed/database";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceConflictError } from "../../../../../shared/errors";
-import { isPostgresUniqueViolation } from "../../../../person/infrastructure/repositories/drizzle/postgres-unique-violation";
+import { isPostgresUniqueViolation } from "../../../../../shared/utils/postgres-unique-violation";
 import type {
   FacilityVerticalRepAssignmentRecord,
   FacilityVerticalRepAssignmentRepository,
@@ -28,6 +28,8 @@ function mapAssignment(
     endedAt: row.endedAt,
     assignedByUserId: row.assignedByUserId,
     endReason: row.endReason,
+    overrideReason: row.overrideReason,
+    overrideByUserId: row.overrideByUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -36,6 +38,96 @@ function mapAssignment(
 export class DrizzleFacilityVerticalRepAssignmentRepository
   implements FacilityVerticalRepAssignmentRepository
 {
+  async findOutOfTerritoryAssignments(params: {
+    verticalIds?: number[];
+    limit: number;
+    offset: number;
+  }): Promise<{
+    rows: Array<{
+      assignmentId: number;
+      facilityId: number;
+      facilityName: string;
+      verticalId: number;
+      userId: number;
+      userName: string;
+      overrideReason: string;
+      overrideByUserId: number | null;
+      overrideByName: string | null;
+      startedAt: Date;
+    }>;
+    total: number;
+  }> {
+    // Spec 0009 R2: "how many out-of-territory assignments exist, who approved
+    // them, why". Active overrides only — an ended one is history, not an
+    // exposure. Vertical ids are bound as a string and parsed in SQL because the
+    // driver cannot encode a JS array against an explicit cast.
+    const verticalIdCsv = (params.verticalIds ?? [])
+      .filter((id) => Number.isFinite(id))
+      .join(",");
+
+    const rows = (await db.execute(sql`
+      WITH scope AS (
+        SELECT COALESCE(
+          string_to_array(NULLIF(${verticalIdCsv}, ''), ',')::bigint[],
+          ARRAY[]::bigint[]
+        ) AS vertical_ids
+      )
+      SELECT
+        fvra.id AS assignment_id,
+        f.id AS facility_id,
+        f.name AS facility_name,
+        fvp.vertical_id,
+        fvra.user_id,
+        COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS user_name,
+        fvra.override_reason,
+        fvra.override_by_user_id,
+        COALESCE(ob.first_name || ' ' || ob.last_name, ob.email) AS override_by_name,
+        fvra.started_at,
+        count(*) OVER () AS total
+      FROM facility_vertical_rep_assignments fvra
+      INNER JOIN facility_vertical_profiles fvp
+        ON fvp.id = fvra.facility_vertical_profile_id
+      INNER JOIN facilities f ON f.id = fvp.facility_id
+      INNER JOIN users u ON u.id = fvra.user_id
+      LEFT JOIN users ob ON ob.id = fvra.override_by_user_id
+      CROSS JOIN scope s
+      WHERE fvra.ended_at IS NULL
+        AND fvra.override_reason IS NOT NULL
+        AND (cardinality(s.vertical_ids) = 0 OR fvp.vertical_id = ANY(s.vertical_ids))
+      ORDER BY fvra.started_at DESC, fvra.id DESC
+      LIMIT ${params.limit} OFFSET ${params.offset}
+    `)) as Array<{
+      assignment_id: string;
+      facility_id: string;
+      facility_name: string;
+      vertical_id: string;
+      user_id: string;
+      user_name: string;
+      override_reason: string;
+      override_by_user_id: string | null;
+      override_by_name: string | null;
+      started_at: Date;
+      total: string;
+    }>;
+
+    return {
+      total: rows.length > 0 ? Number(rows[0]!.total) : 0,
+      rows: rows.map((row) => ({
+        assignmentId: Number(row.assignment_id),
+        facilityId: Number(row.facility_id),
+        facilityName: row.facility_name,
+        verticalId: Number(row.vertical_id),
+        userId: Number(row.user_id),
+        userName: row.user_name,
+        overrideReason: row.override_reason,
+        overrideByUserId:
+          row.override_by_user_id == null ? null : Number(row.override_by_user_id),
+        overrideByName: row.override_by_name,
+        startedAt: row.started_at,
+      })),
+    };
+  }
+
   async findByFacilityVertical(
     facilityId: number,
     verticalId: number,
@@ -138,6 +230,8 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
     verticalId: number;
     userId: number;
     assignedByUserId: number;
+    overrideReason?: string | null;
+    overrideByUserId?: number | null;
   }): Promise<{
     assignment: FacilityVerticalRepAssignmentRecord;
     previousUserId: number | null;
@@ -208,6 +302,8 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
             .set({
               endedAt: new Date(),
               endReason: "reassigned",
+              // Spec 0009 R2/R5: who ended it, not only why.
+              endedByUserId: params.assignedByUserId,
               updatedAt: new Date(),
             })
             .where(eq(facilityVerticalRepAssignments.id, current.id));
@@ -219,6 +315,8 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
             facilityVerticalProfileId: profile.id,
             userId: params.userId,
             assignedByUserId: params.assignedByUserId,
+            overrideReason: params.overrideReason ?? null,
+            overrideByUserId: params.overrideByUserId ?? null,
           })
           .returning();
 

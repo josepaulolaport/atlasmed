@@ -5,15 +5,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef FacilityPotentialArgs = ({int facilityId, int verticalId});
 
-final facilityPotentialsProvider = FutureProvider.autoDispose
-    .family<FacilityPotentialsPage, FacilityPotentialArgs>((ref, args) async {
-      final repo = FacilityPotentialRepository(
-        facilityId: args.facilityId,
-        verticalId: args.verticalId,
-      );
-      ref.onDispose(repo.dispose);
-      return repo.load();
-    });
+/// The potential page for one clinic-linha.
+///
+/// A notifier rather than a plain future because every write already answers
+/// the question this provider asks: the server recomputes and returns the whole
+/// page, so re-fetching it would be asking twice and risking two answers. The
+/// write hands the page straight in through [applyServerPage].
+class FacilityPotentials
+    extends
+        AutoDisposeFamilyAsyncNotifier<
+          FacilityPotentialsPage,
+          FacilityPotentialArgs
+        > {
+  @override
+  Future<FacilityPotentialsPage> build(FacilityPotentialArgs arg) async {
+    final repo = FacilityPotentialRepository(
+      facilityId: arg.facilityId,
+      verticalId: arg.verticalId,
+    );
+    ref.onDispose(repo.dispose);
+    return repo.load();
+  }
+
+  /// Adopts the page a write returned.
+  ///
+  /// This is the recomputed answer, produced inside the same request that made
+  /// the change, so the screen updates the moment the sheet closes — no second
+  /// round trip, and no window where the rep reads the figure they just
+  /// replaced.
+  void applyServerPage(FacilityPotentialsPage page) {
+    state = AsyncData(page);
+  }
+}
+
+final facilityPotentialsProvider = AsyncNotifierProvider.autoDispose
+    .family<FacilityPotentials, FacilityPotentialsPage, FacilityPotentialArgs>(
+      FacilityPotentials.new,
+    );
 
 /// Resolves active Linha then loads potentials for the clinic.
 final clinicDetailPotentialsProvider = FutureProvider.autoDispose

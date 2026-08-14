@@ -634,6 +634,27 @@ describe("InviteUserUseCase", () => {
         } as never,
         spatialRepository: {} as never,
         containmentService: {} as never,
+        // Spec 0009 R1: creation runs inside the transaction port. This test's
+        // claim is that the scope guard rejects *before* any row is created, so
+        // the port only has to pass through — `createTerritoryRow` still throws
+        // if anything reaches it.
+        transactionPort: {
+          run: async (fn: (deps: never) => Promise<unknown>) =>
+            fn({
+              territoryRepository: {
+                findBySlug: async () => null,
+                create: createTerritoryRow,
+              },
+              territoryTypeRepository: {
+                findBySlug: async () => PATCH_TYPE,
+                findById: async () => PATCH_TYPE,
+              },
+              spatialRepository: {},
+              boundaryWriter: { commitBoundaryChange: async () => ({}) },
+              lockTerritory: async () => true,
+            } as never),
+        } as never,
+        buildContainmentService: () => ({}) as never,
       }) as TerritoryCrudUseCases;
 
       mockUserRepository.findById = mock(async () =>

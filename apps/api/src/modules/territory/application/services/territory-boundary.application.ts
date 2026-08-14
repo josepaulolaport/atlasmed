@@ -33,7 +33,7 @@ export type TerritoryBoundaryResolution =
   | {
       mode: "rep_patch";
       managerTerritoryId: number;
-      managerZoneCandidates: Array<{ id: number; code: string; name: string }>;
+      managerZoneCandidates: Array<{ id: number; slug: string; name: string }>;
       clinicRecomputeEnqueued: boolean;
     }
   | {
@@ -56,7 +56,7 @@ export type TerritoryBoundaryPlan =
       mode: "rep_patch";
       boundary: GeoJsonGeometry;
       managerTerritoryId: number;
-      managerZoneCandidates: Array<{ id: number; code: string; name: string }>;
+      managerZoneCandidates: Array<{ id: number; slug: string; name: string }>;
     }
   | { mode: "manager_zone"; boundary: GeoJsonGeometry }
   | { mode: "other"; boundary: GeoJsonGeometry };
@@ -122,63 +122,20 @@ export async function planTerritoryBoundary(
 }
 
 /**
- * Write phase for a plan produced by {@link planTerritoryBoundary}.
- * Must only be called with a plan that validated successfully.
+ * `applyTerritoryBoundary` and `commitTerritoryBoundary` are gone (spec 0009 R1).
+ *
+ * Between them they were a second, un-transactional way to write a boundary:
+ * validate, then save the geometry, then fire side effects — each step its own
+ * commit. `saveBoundary` stopped using them when R1 landed, leaving
+ * `createTerritory` as the only caller and the only place a rejected geometry
+ * could still leave a half-made territory behind.
+ *
+ * Both write paths now go through `planTerritoryBoundary` +
+ * `TerritoryBoundaryWriter.commitBoundaryChange` inside one transaction. Leaving
+ * the old pair exported was the standing invitation for a third caller to
+ * reintroduce D-01, which the R1 diagnosis called out and which creation had in
+ * fact never stopped doing.
  */
-export async function commitTerritoryBoundary(
-  deps: ApplyTerritoryBoundaryDeps,
-  territory: TerritoryRecord,
-  plan: TerritoryBoundaryPlan
-): Promise<TerritoryBoundaryResolution> {
-  if (plan.mode === "rep_patch") {
-    await deps.spatialRepository.saveBoundary(territory.id, plan.boundary);
-
-    await deps.territoryRepository.update(territory.id, {
-      managerTerritoryId: plan.managerTerritoryId,
-    });
-
-    // Spec 0006: patch edits do not recompute clinic→zone membership.
-    await deps.onBoundaryChanged?.(territory.id);
-    await deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);
-
-    return {
-      mode: "rep_patch",
-      managerTerritoryId: plan.managerTerritoryId,
-      managerZoneCandidates: plan.managerZoneCandidates,
-      clinicRecomputeEnqueued: false,
-    };
-  }
-
-  if (plan.mode === "manager_zone") {
-    await deps.spatialRepository.saveBoundary(territory.id, plan.boundary);
-
-    const repPatchCount = await deps.territoryRepository.countRepPatchesByManagerZone(
-      territory.id
-    );
-
-    await deps.onBoundaryChanged?.(territory.id);
-
-    return {
-      mode: "manager_zone",
-      repPatchCount,
-    };
-  }
-
-  await deps.spatialRepository.saveBoundary(territory.id, plan.boundary, {
-    repairInvalid: true,
-  });
-
-  return { mode: "other" };
-}
-
-export async function applyTerritoryBoundary(
-  deps: ApplyTerritoryBoundaryDeps,
-  territory: TerritoryRecord,
-  geoJson: GeoJsonGeometry
-): Promise<TerritoryBoundaryResolution> {
-  const plan = await planTerritoryBoundary(deps, territory, geoJson);
-  return commitTerritoryBoundary(deps, territory, plan);
-}
 
 export interface AtomicBoundaryCommitDeps {
   boundaryWriter: TerritoryBoundaryWriter;
@@ -186,16 +143,26 @@ export interface AtomicBoundaryCommitDeps {
   onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
 
-function toCommitCommand(
+export function toBoundaryCommitCommand(
   territoryId: number,
   plan: TerritoryBoundaryPlan,
-  assignments: { endForProfileIds: number[]; endReason: string }
+  assignments: {
+    endForProfileIds: number[];
+    endReason: string;
+    /**
+     * Spec 0009 R2/R5: who ended these assignments. Manager-zone edits are
+     * ADMIN-only, so without this an admin's redraw ends rep assignments a
+     * manager made and leaves only `end_reason` behind — why, never who.
+     */
+    endedByUserId?: number | null;
+  }
 ): BoundaryCommitCommand {
   const base = {
     territoryId,
     boundary: plan.boundary,
     endAssignmentsForProfileIds: assignments.endForProfileIds,
     endReason: assignments.endReason,
+    endedByUserId: assignments.endedByUserId ?? null,
   };
 
   if (plan.mode === "rep_patch") {
@@ -215,29 +182,15 @@ function toCommitCommand(
 }
 
 /**
- * Spec 0009 R1: commit a validated plan together with the rep de-assignments it
- * requires, in a single transaction owned by the writer.
- *
- * Notifications fire only after the writer resolves — i.e. after commit — so a
- * membership recompute or scope-cache invalidation never reads uncommitted rows
- * or acts on a change that later rolled back.
+ * Describe what a committed plan produced. Pure: the caller publishes side
+ * effects itself, after the transaction commits.
  */
-export async function commitTerritoryBoundaryAtomically(
-  deps: AtomicBoundaryCommitDeps,
-  territory: TerritoryRecord,
+export function resolveBoundaryOutcome(
   plan: TerritoryBoundaryPlan,
-  assignments: { endForProfileIds: number[]; endReason: string }
-): Promise<TerritoryBoundaryResolution> {
-  const result = await deps.boundaryWriter.commitBoundaryChange(
-    toCommitCommand(territory.id, plan, assignments)
-  );
-
-  // Committed. Side effects are safe to publish from here on.
+  result: { repPatchCount?: number | null }
+): TerritoryBoundaryResolution {
   if (plan.mode === "rep_patch") {
     // Spec 0006: patch edits do not recompute clinic→zone membership.
-    await deps.onBoundaryChanged?.(territory.id);
-    await deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);
-
     return {
       mode: "rep_patch",
       managerTerritoryId: plan.managerTerritoryId,
@@ -247,8 +200,6 @@ export async function commitTerritoryBoundaryAtomically(
   }
 
   if (plan.mode === "manager_zone") {
-    await deps.onBoundaryChanged?.(territory.id);
-
     return { mode: "manager_zone", repPatchCount: result.repPatchCount ?? 0 };
   }
 

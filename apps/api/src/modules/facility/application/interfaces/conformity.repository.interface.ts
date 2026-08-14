@@ -22,6 +22,7 @@ export interface ConformityRequirementRecord {
   maxFileSizeBytes: number;
   maxCombinedSizeBytes: number;
   requiresFrontAndBack: boolean;
+  requiresValidityDate: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,12 @@ export interface ConformityRecordRow {
 export interface ConformityRepository {
   findActiveRequirements(params?: {
     legalDocumentType?: FacilityLegalDocumentType | null;
+    /**
+     * Restrict to this vertical's requirements plus the facility-scoped ones
+     * (null vertical_id). Omitted means the whole active catalogue — correct
+     * for admin listings, wrong for a clinic's checklist (D-49).
+     */
+    verticalId?: number | null;
   }): Promise<ConformityRequirementRecord[]>;
 
   findRequirementById(id: number): Promise<ConformityRequirementRecord | null>;

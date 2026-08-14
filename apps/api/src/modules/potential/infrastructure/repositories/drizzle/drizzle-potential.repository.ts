@@ -1,18 +1,23 @@
 import {
-  facilityPotentialValues,
+  facilityMetricSnapshots,
+  facilityProductUsage,
   facilityVerticalProfiles,
-  orderItems,
-  orders,
   productPotentialDefinitions,
   productPotentialLinks,
+  productEquivalences,
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import {
+  createMetricSnapshotStore,
+  listTheirsStanding,
+  sumOursByProduct,
+  type Database,
+} from "@atlasmed/database";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
-  DefinitionQtySum,
-  FacilityPotentialValueRecord,
+  FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
   ProductPotentialLinkRecord,
@@ -33,6 +38,13 @@ function mapDefinition(
 }
 
 export class DrizzlePotentialRepository implements PotentialRepository {
+  /**
+   * Injectable so the metric arithmetic can be asserted inside a rolled-back
+   * transaction against real rows. Defaults to the shared client, so every
+   * existing caller is unchanged.
+   */
+  constructor(private readonly database: Database = db) {}
+
   async listDefinitions(input: {
     verticalId: number;
     includeDeleted?: boolean;
@@ -43,7 +55,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     if (!input.includeDeleted) {
       conditions.push(isNull(productPotentialDefinitions.deletedAt));
     }
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(productPotentialDefinitions)
       .where(and(...conditions))
@@ -54,7 +66,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   async findDefinitionById(
     id: number,
   ): Promise<PotentialDefinitionRecord | null> {
-    const [row] = await db
+    const [row] = await this.database
       .select()
       .from(productPotentialDefinitions)
       .where(eq(productPotentialDefinitions.id, id))
@@ -67,7 +79,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     key: string;
     label: string;
   }): Promise<PotentialDefinitionRecord> {
-    const [row] = await db
+    const [row] = await this.database
       .insert(productPotentialDefinitions)
       .values({
         verticalId: input.verticalId,
@@ -86,7 +98,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       updatedAt: new Date(),
     };
     if (input.label !== undefined) patch.label = input.label;
-    const [row] = await db
+    const [row] = await this.database
       .update(productPotentialDefinitions)
       .set(patch)
       .where(
@@ -100,7 +112,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async softDeleteDefinition(id: number): Promise<boolean> {
-    const [row] = await db
+    const [row] = await this.database
       .update(productPotentialDefinitions)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
@@ -113,47 +125,68 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return Boolean(row);
   }
 
-  async listFacilityValues(input: {
+  /** Resolves the commercial unit a clinic's linha corresponds to. */
+  async findProfileId(input: {
     facilityId: number;
-    definitionIds: number[];
-  }): Promise<FacilityPotentialValueRecord[]> {
-    if (input.definitionIds.length === 0) return [];
-    const rows = await db
-      .select()
-      .from(facilityPotentialValues)
+    verticalId: number;
+  }): Promise<number | null> {
+    const [row] = await this.database
+      .select({ id: facilityVerticalProfiles.id })
+      .from(facilityVerticalProfiles)
       .where(
         and(
-          eq(facilityPotentialValues.facilityId, input.facilityId),
-          inArray(facilityPotentialValues.definitionId, input.definitionIds),
+          eq(facilityVerticalProfiles.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.verticalId, input.verticalId),
         ),
-      );
-    return rows.map((row) => ({
-      facilityId: row.facilityId,
-      definitionId: row.definitionId,
-      quantity: Number(row.quantity),
-      updatedByUserId: row.updatedByUserId,
-      updatedAt: row.updatedAt,
-    }));
+      )
+      .limit(1);
+    return row?.id ?? null;
   }
 
-  async upsertFacilityValue(input: {
-    facilityId: number;
+  /** Stored snapshots — delegated, so the read path and the sweep agree. */
+
+  /**
+   * The quantity standing for each competitor product of a metric.
+   *
+   * One row per product (§4.6). Products no longer linked to the metric are
+   * excluded, matching our own side — their rows stay put and count again if
+   * the link is restored.
+   */
+  async listUsage(input: { profileId: number; definitionIds: number[] }) {
+    return listTheirsStanding(this.database, input);
+  }
+
+
+  /**
+   * Sets the quantity standing for (profile, definition, product).
+   *
+   * Recording the same product again replaces the figure — a competitor carries
+   * one number and the rep corrects it (§4.6). The vertical comes from the
+   * definition, so the two composite foreign keys cannot disagree.
+   */
+  async upsertUsage(input: {
+    profileId: number;
     definitionId: number;
+    verticalId: number;
+    productId: number;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void> {
-    await db
-      .insert(facilityPotentialValues)
+    await this.database
+      .insert(facilityProductUsage)
       .values({
-        facilityId: input.facilityId,
+        facilityVerticalProfileId: input.profileId,
         definitionId: input.definitionId,
+        verticalId: input.verticalId,
+        productId: input.productId,
         quantity: String(input.quantity),
         updatedByUserId: input.updatedByUserId,
       })
       .onConflictDoUpdate({
         target: [
-          facilityPotentialValues.facilityId,
-          facilityPotentialValues.definitionId,
+          facilityProductUsage.facilityVerticalProfileId,
+          facilityProductUsage.definitionId,
+          facilityProductUsage.productId,
         ],
         set: {
           quantity: String(input.quantity),
@@ -163,81 +196,130 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async deleteFacilityValue(input: {
-    facilityId: number;
+  /**
+   * Records or withdraws "no other brand is sold here".
+   *
+   * Upserts, because the claim can be made about a clinic no recompute has
+   * touched yet — and writes only the claim's two columns, never the derived
+   * figures, which are the recompute's to own.
+   */
+  async setNoOtherBrands(input: {
+    profileId: number;
     definitionId: number;
+    verticalId: number;
+    value: boolean;
   }): Promise<void> {
-    await db
-      .delete(facilityPotentialValues)
+    const claim = {
+      noOtherBrands: input.value,
+      noOtherBrandsSetAt: input.value ? new Date() : null,
+    };
+    await this.database
+      .insert(facilityMetricSnapshots)
+      .values({
+        facilityVerticalProfileId: input.profileId,
+        definitionId: input.definitionId,
+        verticalId: input.verticalId,
+        oursQty: "0",
+        theirsQty: "0",
+        ...claim,
+      })
+      .onConflictDoUpdate({
+        target: [
+          facilityMetricSnapshots.facilityVerticalProfileId,
+          facilityMetricSnapshots.definitionId,
+        ],
+        set: claim,
+      });
+  }
+
+  async listNoOtherBrands(input: { profileId: number; definitionIds: number[] }) {
+    if (input.definitionIds.length === 0) return [];
+    const rows = await this.database
+      .select({
+        definitionId: facilityMetricSnapshots.definitionId,
+        noOtherBrands: facilityMetricSnapshots.noOtherBrands,
+        setAt: facilityMetricSnapshots.noOtherBrandsSetAt,
+      })
+      .from(facilityMetricSnapshots)
       .where(
         and(
-          eq(facilityPotentialValues.facilityId, input.facilityId),
-          eq(facilityPotentialValues.definitionId, input.definitionId),
+          eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
+          inArray(facilityMetricSnapshots.definitionId, input.definitionIds),
         ),
       );
+    return rows;
+  }
+
+  async deleteUsageForProduct(input: {
+    profileId: number;
+    definitionId: number;
+    productId: number;
+  }): Promise<boolean> {
+    const deleted = await this.database
+      .delete(facilityProductUsage)
+      .where(
+        and(
+          eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
+          eq(facilityProductUsage.definitionId, input.definitionId),
+          eq(facilityProductUsage.productId, input.productId),
+        ),
+      )
+      .returning({ productId: facilityProductUsage.productId });
+    return deleted.length > 0;
   }
 
   /**
-   * Penetration numerator.
+   * Our quantity per (metric, calendar month), in metric units.
    *
-   * Previously filtered `orders.facility_id` alone and ignored the vertical
-   * entirely, so a clinic active in two linhas counted *every* linha's sales
-   * toward each one's penetration. Spec 0010 §4 predicted this would be fixed by
-   * the re-keying, and it is: orders now carry the profile, and the profile is
-   * what a vertical means.
+   * Delegates to the shared store in `@atlasmed/database`: the reconciliation
+   * sweep runs the identical query from the Temporal worker, and this query is
+   * not plumbing — it encodes ADR 0003's eligible statuses and types, the
+   * `metric_units` multiplication and the São Paulo month boundary, every one of
+   * which was silently wrong at some point before P4-1.
    */
   async sumAtlasmedQtyByDefinition(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
-    since: Date;
-  }): Promise<DefinitionQtySum[]> {
-    if (input.definitionIds.length === 0) return [];
-    const rows = await db
-      .select({
-        definitionId: productPotentialLinks.definitionId,
-        totalQty: sql<string>`coalesce(sum(${orderItems.quantity}), 0)`,
-      })
-      .from(orderItems)
-      .innerJoin(orders, eq(orders.id, orderItems.orderId))
-      .innerJoin(
-        facilityVerticalProfiles,
-        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
-      )
-      .innerJoin(
-        productPotentialLinks,
-        eq(productPotentialLinks.productId, orderItems.productId),
-      )
-      .where(
-        and(
-          eq(facilityVerticalProfiles.facilityId, input.facilityId),
-          eq(facilityVerticalProfiles.verticalId, input.verticalId),
-          eq(orders.type, "SALE"),
-          inArray(orders.status, ["APPROVED", "INVOICED"]),
-          gte(orders.orderedAt, input.since),
-          inArray(productPotentialLinks.definitionId, input.definitionIds),
-        ),
-      )
-      .groupBy(productPotentialLinks.definitionId);
-
-    return rows.map((row) => ({
-      definitionId: row.definitionId,
-      totalQty: Number(row.totalQty),
-    }));
+    rangeStart: Date;
+    rangeEnd: Date;
+  }) {
+    return createMetricSnapshotStore(this.database).sumOurs(input);
   }
 
+  async sumAtlasmedQtyByDefinitionAndProduct(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionIds: number[];
+    rangeStart: Date;
+    rangeEnd: Date;
+  }) {
+    return sumOursByProduct(this.database, input);
+  }
+
+
+  /**
+   * Links a product to a metric, replacing whatever it was linked to *in that
+   * linha*. Its links in other linhas are untouched.
+   *
+   * The conflict target is (product_id, vertical_id) rather than the primary
+   * key: re-linking a product within a linha should move it to the new metric,
+   * not add a second one. That is precisely the rule 0086 put in the schema.
+   */
   async linkProduct(input: {
     productId: number;
     definitionId: number;
+    verticalId: number;
   }): Promise<void> {
-    await db
+    await this.database
       .insert(productPotentialLinks)
       .values({
         productId: input.productId,
         definitionId: input.definitionId,
+        verticalId: input.verticalId,
       })
       .onConflictDoUpdate({
-        target: productPotentialLinks.productId,
+        target: [productPotentialLinks.productId, productPotentialLinks.verticalId],
         set: {
           definitionId: input.definitionId,
           updatedAt: new Date(),
@@ -245,10 +327,18 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async unlinkProduct(productId: number): Promise<boolean> {
-    const deleted = await db
+  async unlinkProduct(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<boolean> {
+    const deleted = await this.database
       .delete(productPotentialLinks)
-      .where(eq(productPotentialLinks.productId, productId))
+      .where(
+        and(
+          eq(productPotentialLinks.productId, input.productId),
+          eq(productPotentialLinks.definitionId, input.definitionId),
+        ),
+      )
       .returning({ productId: productPotentialLinks.productId });
     return deleted.length > 0;
   }
@@ -256,7 +346,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   async listProductsForDefinition(
     definitionId: number,
   ): Promise<ProductPotentialLinkRecord[]> {
-    const rows = await db
+    const rows = await this.database
       .select({
         productId: productPotentialLinks.productId,
         definitionId: productPotentialLinks.definitionId,
@@ -274,7 +364,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     productId: number;
     verticalId: number;
   }): Promise<boolean> {
-    const [row] = await db
+    const [row] = await this.database
       .select({ id: productVerticals.id })
       .from(productVerticals)
       .where(
@@ -287,16 +377,55 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return Boolean(row);
   }
 
-  async findLinkByProductId(
-    productId: number,
-  ): Promise<{ productId: number; definitionId: number } | null> {
-    const [row] = await db
+  /**
+   * One specific link. Takes the definition as well as the product because a
+   * product may now be linked in several linhas — asking by product alone no
+   * longer identifies a row.
+   */
+  /**
+   * The other brands that count toward a metric, derived through equivalences.
+   *
+   * `product_potential_links` holds only our products — the catalogue screen
+   * links variants, and there is no way to link a competitor product to a
+   * metric. So a competitor belongs to the metric when it is the equivalent of
+   * one of ours that is linked to it, which is a relation the comparativo
+   * screen already maintains.
+   */
+  async listCompetitorProductsForDefinition(definitionId: number) {
+    const rows = await this.database
+      .selectDistinct({
+        productId: products.id,
+        productName: products.name,
+        productCode: products.code,
+      })
+      .from(productEquivalences)
+      .innerJoin(
+        productPotentialLinks,
+        eq(productPotentialLinks.productId, productEquivalences.productId),
+      )
+      .innerJoin(products, eq(products.id, productEquivalences.competitorProductId))
+      .where(eq(productPotentialLinks.definitionId, definitionId))
+      .orderBy(asc(products.name));
+    return rows;
+  }
+
+  async findLink(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<{ productId: number; definitionId: number; verticalId: number } | null> {
+    const [row] = await this.database
       .select({
         productId: productPotentialLinks.productId,
         definitionId: productPotentialLinks.definitionId,
+        verticalId: productPotentialLinks.verticalId,
       })
       .from(productPotentialLinks)
-      .where(eq(productPotentialLinks.productId, productId))
+      .where(
+        and(
+          eq(productPotentialLinks.productId, input.productId),
+          eq(productPotentialLinks.definitionId, input.definitionId),
+        ),
+      )
       .limit(1);
     return row ?? null;
   }

@@ -29,36 +29,115 @@ const listFacilityPotentialsRoute = new Elysia()
     },
   );
 
-const patchFacilityPotentialsRoute = new Elysia()
+// The rep records one competitor product at a time — the picker supplies the
+// product, the rep types only a quantity (spec 0013 §6).
+const setFacilityProductUsageRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .patch(
-    "/facilities/:id/potentials",
+  .put(
+    "/facilities/:id/potentials/:definitionId/usage/:productId",
     async ({ params, body, getScope, getUserId }) => {
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
-      return potentialUseCases.patchFacilityPotentials().execute({
+      return potentialUseCases.setFacilityProductUsage().execute({
         facilityId: params.id,
         verticalId: body.verticalId,
+        definitionId: params.definitionId,
+        productId: params.productId,
+        quantity: body.quantity,
         userId,
         scope,
-        values: body.values,
       });
     },
     {
       detail: {
-        summary: "Update facility potential quantities for a Linha",
+        summary: "Set the quantity standing for a competitor product",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+        productId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         verticalId: t.Number({ minimum: 1 }),
-        values: t.Array(
-          t.Object({
-            definitionId: t.Number({ minimum: 1 }),
-            quantity: t.Union([t.Number(), t.Null()]),
-          }),
-        ),
+        // Strictly positive (§4.6). Zero is not a quantity — "they sell none
+        // here" is the nenhuma-outra-marca claim, which is dated.
+        quantity: t.Number({ exclusiveMinimum: 0 }),
+      }),
+    },
+  );
+
+const removeFacilityProductUsageRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .delete(
+    "/facilities/:id/potentials/:definitionId/usage/:productId",
+    async ({ params, query, getScope }) => {
+      const scope = await getScope();
+      return potentialUseCases.removeFacilityProductUsage().execute({
+        facilityId: params.id,
+        verticalId: query.verticalId,
+        definitionId: params.definitionId,
+        productId: params.productId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Remove a competitor product from a metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+        productId: t.Number({ minimum: 1 }),
+      }),
+      query: t.Object({
+        verticalId: t.Number({ minimum: 1 }),
+        // No month: a competitor is removed from the metric outright. The
+        // parameter was optional and no client ever sent it.
+      }),
+    },
+  );
+
+/**
+ * The rep asserting that no other brand is sold at this clinic for this metric.
+ *
+ * A write, not a filter: it is the only thing that makes a 100% share
+ * legitimate, so it carries the date it was asserted — a stale claim still
+ * counts, and that date is the only signal it is old.
+ */
+const setNoOtherBrandsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .put(
+    "/facilities/:id/potentials/:definitionId/no-other-brands",
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return potentialUseCases.setNoOtherBrands().execute({
+        facilityId: params.id,
+        verticalId: body.verticalId,
+        definitionId: params.definitionId,
+        value: body.value,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Declare that no other brand is sold at this clinic for a metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+      }),
+      body: t.Object({
+        verticalId: t.Number({ minimum: 1 }),
+        value: t.Boolean(),
       }),
     },
   );
@@ -184,6 +263,36 @@ const listDefinitionProductsRoute = new Elysia()
     },
   );
 
+/**
+ * The other brands a rep may record against a metric.
+ *
+ * Derived, not curated: a competitor product counts toward a metric when it is
+ * the equivalent of one of our products linked to that metric. The catalogue
+ * has no way to link a competitor to a definition, so this is the only answer
+ * there is — and it is the same set the write validates against.
+ */
+const listDefinitionCompetitorProductsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CATALOG"))
+  .get(
+    "/potential-definitions/:id/competitor-products",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return potentialUseCases.listDefinitionCompetitorProducts().execute({
+        definitionId: params.id,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "List the other brands that count toward a potential metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    },
+  );
+
 const linkProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CATALOG"))
@@ -199,7 +308,8 @@ const linkProductRoute = new Elysia()
     },
     {
       detail: {
-        summary: "Link product to a potential definition (1:1)",
+        summary:
+          "Link product to a potential definition (replaces its link in that Linha)",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
@@ -213,32 +323,41 @@ const linkProductRoute = new Elysia()
 const unlinkProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CATALOG"))
+  // The definition is part of the path because a product may be linked in
+  // several Linhas since spec 0013 §3 — the product alone no longer names a row.
   .delete(
-    "/products/:id/potential-definition",
+    "/products/:id/potential-definitions/:definitionId",
     async ({ params, getScope }) => {
       const scope = await getScope();
       return potentialUseCases.unlinkProduct().execute({
         productId: params.id,
+        definitionId: params.definitionId,
         scope,
       });
     },
     {
       detail: {
-        summary: "Unlink product from potential definition",
+        summary: "Unlink product from one potential definition",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+      }),
     },
   );
 
 export const potentialRoute = new Elysia()
   .use(listFacilityPotentialsRoute)
-  .use(patchFacilityPotentialsRoute)
+  .use(setFacilityProductUsageRoute)
+  .use(removeFacilityProductUsageRoute)
+  .use(setNoOtherBrandsRoute)
   .use(listDefinitionsRoute)
   .use(createDefinitionRoute)
   .use(updateDefinitionRoute)
   .use(deleteDefinitionRoute)
   .use(listDefinitionProductsRoute)
+  .use(listDefinitionCompetitorProductsRoute)
   .use(linkProductRoute)
   .use(unlinkProductRoute);

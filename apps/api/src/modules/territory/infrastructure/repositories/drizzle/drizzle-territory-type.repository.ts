@@ -1,4 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
+import type { AnyDatabase } from "@atlasmed/database";
 import { territories, territoryTypes } from "@atlasmed/database";
 import { eq, and, asc, sql } from "drizzle-orm";
 import type {
@@ -23,8 +24,15 @@ function mapType(record: {
 }
 
 export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
+  /**
+ * Accepts a transaction handle so spec 0009 R1 can validate a boundary inside
+ * the same transaction that later mutates it. Defaults to the shared pool, so
+ * every existing caller is unchanged.
+ */
+  constructor(private readonly database: AnyDatabase = db) {}
+
   async findById(id: number): Promise<TerritoryTypeRecord | null> {
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(territoryTypes)
       .where(eq(territoryTypes.id, id));
@@ -32,7 +40,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
   }
 
   async findBySlug(slug: string): Promise<TerritoryTypeRecord | null> {
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(territoryTypes)
       .where(eq(territoryTypes.slug, slug.toLowerCase()));
@@ -40,7 +48,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
   }
 
   async findAll(activeOnly = true): Promise<TerritoryTypeRecord[]> {
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(territoryTypes)
       .where(activeOnly ? eq(territoryTypes.isActive, true) : undefined)
@@ -49,7 +57,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
   }
 
   async create(input: CreateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
-    const [record] = await db
+    const [record] = await this.database
       .insert(territoryTypes)
       .values({
         slug: input.slug.toLowerCase(),
@@ -63,7 +71,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
   }
 
   async update(id: number, input: UpdateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
-    const [record] = await db
+    const [record] = await this.database
       .update(territoryTypes)
       .set({ ...input, updatedAt: new Date() })
       .where(eq(territoryTypes.id, id))
@@ -72,7 +80,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
   }
 
   async countTerritoriesUsingType(id: number): Promise<number> {
-    const [result] = await db
+    const [result] = await this.database
       .select({ count: sql<number>`count(*)` })
       .from(territories)
       .where(and(eq(territories.territoryTypeId, id), eq(territories.isActive, true)));

@@ -12,6 +12,16 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "REVOKED",
 ]);
 
+/**
+ * How a `facility_emultec_clients` row came to exist. `MANUAL` is an operator
+ * decision; the `AUTO_*` values record which document the importer matched on.
+ */
+export const emultecClientLinkSourceEnum = pgEnum("emultec_client_link_source", [
+  "MANUAL",
+  "AUTO_CNPJ",
+  "AUTO_CPF",
+]);
+
 export const userStatusEnum = pgEnum("user_status", [
   "ACTIVE",
   "INACTIVE",
@@ -129,18 +139,10 @@ export const orderTypeEnum = pgEnum("order_type", [
   "OTHER",
 ]);
 
-/** Cadastro package (submission) lifecycle. */
-export const cadastroSubmissionStatusEnum = pgEnum("cadastro_submission_status", [
-  "DRAFT",
-  "SUBMITTED",
-  "UNDER_REVIEW",
-  "CHANGES_REQUESTED",
-  "APPROVED",
-  "REJECTED",
-  "SUPERSEDED",
-]);
-
-/** Logical document within a cadastro submission. */
+/**
+ * Cadastro document lifecycle. The document is the unit — there is no package
+ * status above it (ADR 0007).
+ */
 export const cadastroDocumentStatusEnum = pgEnum("cadastro_document_status", [
   "DRAFT",
   "PROCESSING",

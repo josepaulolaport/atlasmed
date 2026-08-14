@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/product.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ── PStatusChip ──────────────────────────────────────────────

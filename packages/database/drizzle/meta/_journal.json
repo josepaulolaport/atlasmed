@@ -589,6 +589,153 @@
       "when": 1786376060155,
       "tag": "0083_competitor_products_merge",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1786385734761,
+      "tag": "0084_cadastro_document_is_the_unit",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1786390268058,
+      "tag": "0085_product_ownership_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1786403476413,
+      "tag": "0086_potential_links_per_vertical",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1786411170008,
+      "tag": "0087_facility_product_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1786411218862,
+      "tag": "0088_retire_legacy_potential_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1786412520812,
+      "tag": "0089_cadastro_requirement_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1786415065842,
+      "tag": "0090_metric_snapshots_and_monthly_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1786417402773,
+      "tag": "0091_facility_location_required",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1786421346699,
+      "tag": "0092_territory_ownership_completion",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1786422991835,
+      "tag": "0093_cadastro_attribution_and_retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1786422992835,
+      "tag": "0094_seed_ortopedia_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1786426014799,
+      "tag": "0095_assignment_history_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1786569595071,
+      "tag": "0096_one_value_per_clinic_metric_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1786571430757,
+      "tag": "0097_one_value_per_metric_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1786571460724,
+      "tag": "0098_drop_metric_month_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1786571470971,
+      "tag": "0099_no_other_brands_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1786571471715,
+      "tag": "0100_share_requires_a_known_market",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1786574840028,
+      "tag": "0101_cnes_registry_and_ingestion",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1786574841028,
+      "tag": "0102_seed_cnes_occupations",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1786574842028,
+      "tag": "0103_shorten_remaining_occupations",
+      "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1786657935603,
+      "tag": "0104_emultec_client_links",
+      "breakpoints": true
     }
   ]
 }

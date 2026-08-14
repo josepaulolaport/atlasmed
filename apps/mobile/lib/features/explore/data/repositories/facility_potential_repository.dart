@@ -11,7 +11,7 @@ class FacilityPotentialException implements Exception {
   final String? message;
 }
 
-/// `GET/PATCH /facilities/:id/potentials`.
+/// `GET /facilities/:id/potentials` plus per-competitor usage writes.
 class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
     with SessionEnvironmentMixin<FacilityPotentialsPage> {
   FacilityPotentialRepository({
@@ -44,35 +44,73 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
     return page;
   }
 
-  Future<FacilityPotentialsPage> patchValues(
-    List<({int definitionId, double? quantity})> values,
-  ) async {
+  /// Sets one competitor product's monthly quantity for one metric.
+  /// The rep supplies only the quantity — spec 0013 §6.
+  Future<FacilityPotentialsPage> setCompetitorQuantity({
+    required int definitionId,
+    required int productId,
+    required double quantity,
+  }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/potentials',
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/potentials'
+          '/$definitionId/usage/$productId',
         ),
-        method: RepositoryHttpMethod.patch,
+        method: RepositoryHttpMethod.put,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'verticalId': verticalId,
-          'values': values
-              .map(
-                (v) => {'definitionId': v.definitionId, 'quantity': v.quantity},
-              )
-              .toList(growable: false),
-        },
+        body: {'verticalId': verticalId, 'quantity': quantity},
       ),
     );
+    return _decode(response, 'Falha ao salvar a quantidade');
+  }
 
+  Future<FacilityPotentialsPage> removeCompetitor({
+    required int definitionId,
+    required int productId,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/potentials'
+          '/$definitionId/usage/$productId?verticalId=$verticalId',
+        ),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+    return _decode(response, 'Falha ao remover a marca');
+  }
+
+  /// Records or withdraws "nenhuma outra marca" for one metric.
+  ///
+  /// The server returns the recomputed page, so the section refreshes from the
+  /// same answer the write produced rather than asking again.
+  Future<FacilityPotentialsPage> setNoOtherBrands({
+    required int definitionId,
+    required bool value,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/potentials'
+          '/$definitionId/no-other-brands',
+        ),
+        method: RepositoryHttpMethod.put,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'verticalId': verticalId, 'value': value},
+      ),
+    );
+    return _decode(response, 'Falha ao salvar');
+  }
+
+  FacilityPotentialsPage _decode(dynamic response, String failureMessage) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw FacilityPotentialException(
-        'Falha ao salvar potencial (${response.statusCode})',
+        '$failureMessage (${response.statusCode})',
       );
     }
-
     return FacilityPotentialsPage.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
+      jsonDecode(response.body as String) as Map<String, dynamic>,
     );
   }
 }

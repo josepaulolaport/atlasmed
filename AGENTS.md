@@ -7,11 +7,11 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | Path | Tech | Purpose |
 |---|---|---|
 | `apps/api` | Bun + Elysia | Backend API, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization |
-| `apps/mobile` | Flutter | **The product surface.** All feature work lands here |
+| `apps/mobile` | Flutter | **The product surface.** Shorebird OTA + Fastlane CD — see `apps/mobile/Makefile` |
 | `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
-| ~~`packages/cnes-ingestion`~~ | — | **Removed.** A *narrowed* `registry` schema is reintroduced by ADR 0006 — see § CNES |
+| `packages/cnes-ingestion` | basic-ftp | Reads the monthly CNES export over ranged FTP into `registry.*`. Reintroduced narrowed by ADR 0006; worker and join key by ADR 0009 |
 | `packages/mapbox` | — | Mapbox API client wrappers (geocoding, directions, matrix) |
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
@@ -293,7 +293,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | General API work | `docs/architecture/current.md` |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | Database change | this file → `packages/database` section |
-| CNES / registry | `docs/architecture/adr/0006-cnes-registry-reintroduction.md`, `docs/specs/0012-cnes-registry-professional-associations/requirements.md` |
+| CNES / registry | `docs/architecture/adr/0009-cnes-ingestion-worker-and-join-key.md`, `docs/architecture/adr/0006-cnes-registry-reintroduction.md`, `docs/specs/0012-cnes-registry-professional-associations/requirements.md` |
 | Territory / clinic ownership | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
 | Verticals / facility profiles | `docs/specs/0010-verticals-and-profiles/requirements.md` |
 | Cadastro | `docs/specs/0011-cadastro-pipeline/requirements.md` |
@@ -320,6 +320,37 @@ Do not resurrect it, and do not plan work against it.
 
 **Stack migration note:** Migration to React Native + Expo is documented in `docs/architecture/adr/0002-mobile-stack.md`. Until then, treat Flutter as active.
 
+### Build & CD tooling
+
+| Tool | Propósito | Config |
+|---|---|---|
+| **Shorebird** | Over-the-air updates + release builds (Android AAB, iOS IPA) | `shorebird.yaml` (app ID), `shorebird-patches.json` (patch manifest) |
+| **Cider** | Version management (semver + build number) + CHANGELOG | CLI-only, ativado on-demand no CI |
+| **Makefile** | Orchestração de build: `make android`, `make ios`, `make patch-release`, `make web` | `apps/mobile/Makefile` — targets documentados |
+| **Fastlane** | Upload de artefatos ao Google Play internal e TestFlight | `fastlane/Fastfile`, `fastlane/Appfile`, `Gemfile` |
+| **FVM** | Flutter SDK version pinning | `.fvmrc` — `3.44.1` |
+
+### Release workflow (GitHub Actions — `deploy-mobile-main.yml`)
+
+Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possível executar manualmente com `workflow_dispatch` (`store|patch`, `dry_run=true` por padrão):
+
+1. **Resolve mode** — decide se é `store` (release completa) ou `patch` (OTA)
+   - execução manual usa o modo escolhido
+   - push usa `store` se houver label `release/store` ou mudanças em android/, ios/, pubspec.yaml, shorebird.yaml ou config.production.json
+   - fallback seguro para `store` quando o manifest está vazio
+2. **Setup** — Flutter analyze + test (compartilhado entre os modos)
+3. **Store mode** (macOS):
+   - `cider bump minor --bump-build` apenas em deploy real
+   - instala upload keystore Android, service account Google Play, certificado Apple Distribution e provisioning profile
+   - `shorebird release android` → AAB → Fastlane → Google Play internal
+   - `shorebird release ios` → IPA → Fastlane → TestFlight
+   - dry-run compila sem publicar, alterar versão ou fazer commit
+4. **Patch mode** (macOS):
+   - não altera a versão: cada entrada do manifest aponta para uma release Shorebird existente
+   - `shorebird patch` para cada entrada Android/iOS no manifest
+   - dry-run adiciona `--dry-run` e não publica patches
+5. **Web deploy** (Firebase Hosting) continua em paralelo via `deploy-production.yml`
+
 ### Conventions
 
 - Widgets are small. Split UI, state, and data access into separate files.
@@ -327,6 +358,11 @@ Do not resurrect it, and do not plan work against it.
 - Preserve fast route recalculation and map interaction — profile before adding heavy widgets.
 - Handle offline first for visit logging: assume network can fail mid-form.
 - Respect GPS/battery: no continuous foreground GPS unless the user is actively navigating.
+- Version é gerenciada pelo Cider, nunca editada manualmente no `pubspec.yaml`.
+- Patches Shorebird são declarativos: adicione ao `shorebird-patches.json` e o CI aplica.
+- `config.production.json` NÃO é versionado — materializado no CI via `CONFIG_PRODUCTION_JSON_BASE64`.
+- Flutter SDK version pinned via FVM (`.fvmrc`).
+- Android signing config deve ser configurada via `android/key.properties` (não versionado).
 
 ### Required docs
 
@@ -340,12 +376,15 @@ Do not resurrect it, and do not plan work against it.
 | Desempenho / Equipe | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
 | API-backed mobile feature | this file → `apps/api` section (contract + DTO discipline) |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
+| **Build / CD / Shorebird** | `apps/mobile/Makefile`, `apps/mobile/scripts/resolve-shorebird-patches.sh`, `.github/workflows/deploy-mobile-main.yml` |
 
 ### Anti-patterns
 
 - Do not import from other apps.
 - Do not couple to database row types — consume backend DTOs only.
 - Do not add new native plugins without noting platform impact (iOS + Android build changes).
+- Do not edit version manualmente em `pubspec.yaml` — use `make bump-minor` ou `make bump-patch`.
+- Do not pular o setup do Shorebird — toda mudança em android/ ou ios/ exige store release.
 
 ---
 
@@ -366,7 +405,7 @@ Do not resurrect it, and do not plan work against it.
 | Task | Load |
 |---|---|
 | General worker work | `docs/architecture/current.md` |
-| CNES | `docs/architecture/adr/0006-cnes-registry-reintroduction.md` — a narrow `registry` schema is permitted; FTP/archive/Temporal ingest is **not** |
+| CNES | ADR `0009-cnes-ingestion-worker-and-join-key.md` first, then ADR 0006 — 0009 supersedes it on the worker, the `ingestion` ledger and the join key |
 | Emultec order import | `docs/ops/emultec-order-import.md` |
 | Persistence from workflow | this file → `packages/database` section |
 | Workflow triggered by API | this file → `apps/api` section (only the trigger surface) |
@@ -603,19 +642,29 @@ DATABASE_URL=<url> bun run db:migrate
 
 ---
 
-## CNES — ingest removed, narrow registry reintroduced
+## CNES — a narrow registry, loaded by a monthly worker
 
 The original ingest vertical was deleted in `a3e32ac5`: FTP/archive/Temporal monthly ingest, the
-registry warehouse READ/confirm surface, and Postgres schemas `registry` / `ingestion`
-(`facilities.cnes_unit_id` dropped). **Do not bring any of that back.**
+registry warehouse READ/confirm surface, and Postgres schemas `registry` / `ingestion`. **The
+weight that got it deleted stays deleted** — see the out-of-scope list below.
 
-**ADR 0006 reintroduces a deliberately narrower `registry` schema** — three read-only tables
-(facilities, deduplicated professionals, vínculo links), loaded manually, used to suggest which
-professionals CNES associates with a clinic. See `docs/specs/0012-cnes-registry-professional-associations/`.
+**ADR 0006** reintroduced a deliberately narrower `registry` schema, used to suggest which
+professionals CNES associates with a clinic. **ADR 0009** then widened it on evidence:
 
-Explicitly still out of scope: FTP adapter · archive storage · Temporal ingest workflows ·
-`ingestion` schema · run/diff/suggestion tables · a `/registry/*` API module · any write-back
-from `registry` to `public`.
+- The load is a **Temporal worker**, not a manual script, and it reads the export **over ranged
+  FTP without downloading it** — the archive is 725 MB and 2.87 GB extracted, and only the six
+  entries it needs are fetched.
+- **`ingestion` is back, as one table.** `cnes_runs` is a run ledger. The diff and suggestion
+  tables are not coming back.
+- The professional join key is **one column**, measured at 100 % coverage on the real export:
+  `registry.professionals.cnes_id` = `person_healthcare_profiles.cnes_professional_id`. ADR 0006
+  guessed that column was dead weight; it is the key.
+- A user may **import a doctor** CNES lists at their clinic, creating a `public` person from
+  registry data after confirming it (spec 0012 §5).
+
+Still out of scope: archive storage · diff/suggestion tables · a suggestion review surface · a
+`/registry/*` API module · **automated** write-back from `registry` to `public` · national-scale
+registry data.
 
 Widening that boundary needs a new ADR.
 

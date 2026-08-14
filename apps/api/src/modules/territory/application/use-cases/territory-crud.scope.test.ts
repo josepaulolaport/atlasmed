@@ -55,7 +55,12 @@ const FLAT_TYPE = { ...PATCH_TYPE, canHaveBoundary: false };
 
 function buildUseCases(
   territories: FakeTerritory[],
-  options?: { onCreate?: (row: { verticalId: number }) => void }
+  options?: {
+    onCreate?: (row: { verticalId: number }) => void;
+    /** Territory ids that have geometry; everything else has none. */
+    boundariesFor?: number[];
+    boundaryCalls?: number[][];
+  }
 ) {
   const byId = new Map(territories.map((t) => [t.id, t]));
   const type = options?.onCreate ? FLAT_TYPE : PATCH_TYPE;
@@ -88,6 +93,18 @@ function buildUseCases(
 
   const spatialRepository = {
     hasBoundary: async () => false,
+    getBoundariesAsGeoJson: async (ids: number[]) => {
+      options?.boundaryCalls?.push(ids);
+      const withGeometry = options?.boundariesFor ?? [];
+      return new Map(
+        ids
+          .filter((id) => withGeometry.includes(id))
+          .map((id) => [
+            id,
+            { type: "Polygon" as const, coordinates: [[[id, 0]]] },
+          ])
+      );
+    },
   } as unknown as TerritorySpatialRepository;
 
   return new TerritoryCrudUseCases({
@@ -95,6 +112,25 @@ function buildUseCases(
     territoryTypeRepository,
     spatialRepository,
     containmentService: {} as TerritoryContainmentService,
+    // Spec 0009 R1: creation runs inside the transaction port. The fake hands
+    // back the same repositories, so these scope tests still exercise the real
+    // ordering without needing a database.
+    transactionPort: {
+      run: async (fn: (deps: never) => Promise<unknown>) =>
+        fn({
+          territoryRepository,
+          territoryTypeRepository,
+          spatialRepository,
+          boundaryWriter: {
+            commitBoundaryChange: async () => ({
+              endedAssignmentCount: 0,
+              repPatchCount: 0,
+            }),
+          },
+          lockTerritory: async () => true,
+        } as never),
+    } as never,
+    buildContainmentService: () => ({}) as TerritoryContainmentService,
   });
 }
 
@@ -220,6 +256,66 @@ describe("TerritoryCrudUseCases vertical/territory scope (spec 0010 §2.2)", () 
       )) as { data: Array<{ id: number }> };
 
       expect(result.data.map((t) => t.id)).toEqual([10]);
+    });
+  });
+
+  describe("listTerritories include=boundary", () => {
+    it("embeds geometry for the whole page in one lookup", async () => {
+      const boundaryCalls: number[][] = [];
+      const useCases = buildUseCases([territory(10, 1), territory(11, 1)], {
+        boundariesFor: [10, 11],
+        boundaryCalls,
+      });
+
+      const result = (await useCases.listTerritories(
+        "flat",
+        createGlobalScopeContext(),
+        undefined,
+        { boundary: true }
+      )) as { data: Array<{ id: number; boundary: unknown }> };
+
+      // One batched call for the page, not one per territory — the whole point.
+      expect(boundaryCalls).toEqual([[10, 11]]);
+      expect(result.data.map((t) => t.boundary)).toEqual([
+        { type: "Polygon", coordinates: [[[10, 0]]] },
+        { type: "Polygon", coordinates: [[[11, 0]]] },
+      ]);
+    });
+
+    it("keeps a territory that has no boundary, as an explicit null", async () => {
+      // `territories.boundary` is nullable and `territory_types.can_have_boundary`
+      // exists, so a territory without geometry is a supported state. Dropping it
+      // from the list would hide a real row; reporting it as absent would read as
+      // "not loaded".
+      const useCases = buildUseCases([territory(10, 1), territory(11, 1)], {
+        boundariesFor: [10],
+      });
+
+      const result = (await useCases.listTerritories(
+        "flat",
+        createGlobalScopeContext(),
+        undefined,
+        { boundary: true }
+      )) as { data: Array<{ id: number; boundary: unknown }> };
+
+      expect(result.data.map((t) => t.id)).toEqual([10, 11]);
+      expect(result.data[1]?.boundary).toBeNull();
+    });
+
+    it("does not query geometry when the caller did not ask for it", async () => {
+      const boundaryCalls: number[][] = [];
+      const useCases = buildUseCases([territory(10, 1)], {
+        boundariesFor: [10],
+        boundaryCalls,
+      });
+
+      const result = (await useCases.listTerritories(
+        "flat",
+        createGlobalScopeContext()
+      )) as { data: Array<Record<string, unknown>> };
+
+      expect(boundaryCalls).toEqual([]);
+      expect(result.data[0]).not.toHaveProperty("boundary");
     });
   });
 });

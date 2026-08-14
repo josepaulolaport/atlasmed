@@ -1,0 +1,1 @@
+ALTER TABLE "facilities" ALTER COLUMN "location" SET NOT NULL;

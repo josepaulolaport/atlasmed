@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/legal_document_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
@@ -16,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doct
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_query_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
@@ -155,7 +157,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       await ref.read(exploreProvider.notifier).refreshGpsAndList();
       _gpsTimer = Timer.periodic(_gpsInterval, (_) {
         if (!mounted) return;
-        ref.read(exploreProvider.notifier).refreshGpsAndList();
+        // Nobody asked for this one, so it only spends requests if the rep has
+        // actually moved. The first load above and pull-to-refresh below are
+        // explicit and always reload.
+        ref.read(exploreProvider.notifier).refreshGpsAndList(onlyIfMoved: true);
       });
     });
   }
@@ -401,6 +406,48 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               next['clinicalFocusIds'] = (next['clinicalFocusIds'] ?? [])
                   .where((x) => x != id)
                   .toList();
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
+            },
+          ),
+        );
+      }
+      final unitTypeCatalog = ref
+          .watch(facilityUnitTypesRepositoryProvider)
+          .currentValue;
+      final unitTypeLabels = {
+        for (final option in unitTypeCatalog ?? const [])
+          option.id.toString(): option.label,
+      };
+      for (final id in (state.filters['unitTypeIds'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            // Falls back to the raw id only while the catalog is still loading.
+            label: unitTypeLabels[id] ?? id,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['unitTypeIds'] = (next['unitTypeIds'] ?? [])
+                  .where((x) => x != id)
+                  .toList();
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
+            },
+          ),
+        );
+      }
+      for (final value in (state.filters['legalDocumentType'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: LegalDocumentTypeFilter.shortLabel(value),
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['legalDocumentType'] = [];
               notifier.applyFilters(
                 filters: next,
                 radiusKm: state.radiusKm,

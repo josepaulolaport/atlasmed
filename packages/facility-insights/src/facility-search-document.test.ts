@@ -18,6 +18,9 @@ describe("mapFacilitySearchDocument", () => {
         state: "SP",
         streetAddress: "Rua Augusta",
         neighborhood: "Consolação",
+        unitTypeId: 3,
+        legalDocumentType: "CNPJ",
+        clinicalFocusIds: [9, 4, 4],
         verticalIds: [10],
         territoryIds: [20],
         repUserIds: [7, 3, 3],
@@ -43,8 +46,35 @@ describe("mapFacilitySearchDocument", () => {
       territoryAssignmentStatus: "assigned",
       streetAddress: "Rua Augusta",
       neighborhood: "Consolação",
+      unitTypeId: 3,
+      legalDocumentType: "CNPJ",
+      // De-duplicated and sorted, like repUserIds: the filter is an AND over
+      // membership, so a repeat would only bloat the document.
+      clinicalFocusIds: [4, 9],
       _geo: { lat: -23.55, lng: -46.63 },
     });
+  });
+
+  it("emits both filter fields as null when the facility has neither", () => {
+    // They must be present-and-null rather than absent: Meili cannot filter a
+    // field some documents omit, and CNES data has gaps in both columns.
+    const document = mapFacilitySearchDocument({
+      id: 2,
+      displayName: "Sem cadastro completo",
+      legalName: null,
+      tradeName: null,
+      legalDocument: null,
+      cnesCode: null,
+      city: null,
+      state: null,
+      latitude: null,
+      longitude: null,
+      deactivatedAt: null,
+    });
+
+    expect(document).toHaveProperty("unitTypeId", null);
+    expect(document).toHaveProperty("legalDocumentType", null);
+    expect(document).toHaveProperty("clinicalFocusIds", []);
   });
 
   it("returns null for deactivated facilities", () => {

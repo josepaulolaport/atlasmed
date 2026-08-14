@@ -1,7 +1,19 @@
 import { wrapActivity } from "../instrumentation/wrap-activity";
 
 import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
-import { processCadastroFileUploadedActivity as processCadastroFileUploadedActivityImpl } from "./cadastro-file-processing.activities";
+import { sweepCadastroUploadsActivity as sweepCadastroUploadsActivityImpl } from "./cadastro-sweep.activities";
+import {
+  discoverCnesReferenceActivity as discoverCnesReferenceActivityImpl,
+  ensureCnesArchiveActivity as ensureCnesArchiveActivityImpl,
+  finishCnesRunActivity as finishCnesRunActivityImpl,
+  ingestCnesRegistryActivity as ingestCnesRegistryActivityImpl,
+  pruneCnesArchivesActivity as pruneCnesArchivesActivityImpl,
+  startCnesRunActivity as startCnesRunActivityImpl,
+} from "./cnes-ingestion.activities";
+import {
+  logMetricSnapshotLifecycle as logMetricSnapshotLifecycleImpl,
+  recalculateMetricSnapshotsBatch as recalculateMetricSnapshotsBatchImpl,
+} from "./metric-snapshot.activities";
 
 import {
   logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
@@ -30,11 +42,6 @@ export const rebuildSearchIndexActivity = wrapActivity(
   rebuildSearchIndexActivityImpl
 );
 
-export const processCadastroFileUploadedActivity = wrapActivity(
-  "processCadastroFileUploaded",
-  processCadastroFileUploadedActivityImpl
-);
-
 export const importEmultecOrdersPageActivity = wrapActivity(
   "importEmultecOrdersPage",
   importEmultecOrdersPageActivityImpl
@@ -58,4 +65,49 @@ export const startEmultecImportRunActivity = wrapActivity(
 export const finishEmultecImportRunActivity = wrapActivity(
   "finishEmultecImportRun",
   finishEmultecImportRunActivityImpl
+);
+
+export const sweepCadastroUploadsActivity = wrapActivity(
+  "sweepCadastroUploads",
+  sweepCadastroUploadsActivityImpl
+);
+
+export const discoverCnesReferenceActivity = wrapActivity(
+  "discoverCnesReference",
+  discoverCnesReferenceActivityImpl
+);
+
+export const ensureCnesArchiveActivity = wrapActivity(
+  "ensureCnesArchive",
+  ensureCnesArchiveActivityImpl
+);
+
+export const startCnesRunActivity = wrapActivity(
+  "startCnesRun",
+  startCnesRunActivityImpl
+);
+
+export const ingestCnesRegistryActivity = wrapActivity(
+  "ingestCnesRegistry",
+  ingestCnesRegistryActivityImpl
+);
+
+export const pruneCnesArchivesActivity = wrapActivity(
+  "pruneCnesArchives",
+  pruneCnesArchivesActivityImpl
+);
+
+export const finishCnesRunActivity = wrapActivity(
+  "finishCnesRun",
+  finishCnesRunActivityImpl
+);
+
+export const recalculateMetricSnapshotsBatch = wrapActivity(
+  "recalculateMetricSnapshotsBatch",
+  recalculateMetricSnapshotsBatchImpl
+);
+
+export const logMetricSnapshotLifecycle = wrapActivity(
+  "logMetricSnapshotLifecycle",
+  logMetricSnapshotLifecycleImpl
 );

@@ -8,7 +8,7 @@ export * from "./clinical-focuses";
 export * from "./admin-geography";
 export * from "./facilities";
 export * from "./persons";
-export * from "./cadastro-submissions";
+export * from "./cadastro-documents";
 export * from "./field-suggestions";
 export * from "./catalog";
 export * from "./facility-potential";

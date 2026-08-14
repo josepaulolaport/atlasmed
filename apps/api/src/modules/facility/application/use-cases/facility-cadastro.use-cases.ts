@@ -1,9 +1,6 @@
-import { randomUUID } from "node:crypto";
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import type { AvatarStoragePort } from "../../../access/application/use-cases/update-avatar.use-case";
 import {
-  ForbiddenError,
   ResourceNotFoundError,
   ValidationError,
 } from "../../../../shared/errors";
@@ -12,6 +9,7 @@ import type { FacilityRepository } from "../interfaces/facility.repository.inter
 import type {
   CadastroSubmissionRepository,
   DocumentFileRecord,
+  SubmissionDocumentRecord,
 } from "../interfaces/cadastro-submission.repository.interface";
 import {
   FacilityCadastroCompletionService,
@@ -20,48 +18,7 @@ import {
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
-
-const MAX_DOC_BYTES = 10 * 1024 * 1024;
-const documentExtensions: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/jpg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "application/pdf": "pdf",
-};
-
-function resolveDocumentExtension(file: File): string | null {
-  const type = (file.type || "").toLowerCase().trim();
-  if (type && documentExtensions[type]) return documentExtensions[type]!;
-
-  // iOS / pickers sometimes omit Content-Type — fall back to filename.
-  const name = (file.name || "").toLowerCase();
-  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "jpg";
-  if (name.endsWith(".png")) return "png";
-  if (name.endsWith(".webp")) return "webp";
-  if (name.endsWith(".pdf")) return "pdf";
-  return null;
-}
-
-function resolveDocumentContentType(file: File, extension: string): string {
-  const type = (file.type || "").toLowerCase().trim();
-  if (type === "image/jpeg" || type === "image/jpg") return "image/jpeg";
-  if (type === "image/png" || type === "image/webp" || type === "application/pdf") {
-    return type;
-  }
-  switch (extension) {
-    case "jpg":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "webp":
-      return "image/webp";
-    case "pdf":
-      return "application/pdf";
-    default:
-      return type || "application/octet-stream";
-  }
-}
+import { deriveExpiry } from "../utils/cadastro-validity.utils";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,10 +31,52 @@ const REQUIREMENT_SLUG_ORDER = [
   "licenca_sanitaria",
 ] as const;
 
+/**
+ * A document still open for work: the checklist's "working document".
+ *
+ * Must stay identical to the status list in
+ * `CadastroSubmissionRepository.findWorkingDocument`. The checklist now decides
+ * this in memory over one facility-wide query rather than asking per
+ * requirement, so a status added there and not here would quietly stop being
+ * treated as open on this page while every other caller kept seeing it.
+ */
+const OPEN_DOCUMENT_STATUSES = new Set([
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "CHANGES_REQUESTED",
+]);
+
+/**
+ * Actually sent for review — the history the page shows. Mirrors the
+ * `excludeDraft: true` branch of `listDocumentsForFacilityRequirement`, which
+ * is why DRAFT/PROCESSING/READY are absent and SUPERSEDED is present.
+ */
+const SUBMITTED_DOCUMENT_STATUSES = new Set([
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "CHANGES_REQUESTED",
+  "SUPERSEDED",
+]);
+
+function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
+  const out = new Map<K, T[]>();
+  for (const item of items) {
+    const k = key(item);
+    const bucket = out.get(k);
+    if (bucket) bucket.push(item);
+    else out.set(k, [item]);
+  }
+  return out;
+}
+
 interface Dependencies {
   facilityRepository: FacilityRepository;
   conformityRepository: ConformityRepository;
-  storage: AvatarStoragePort & { download(key: string): Promise<Uint8Array> };
   completionService: FacilityCadastroCompletionService;
   cadastroRepository?: CadastroSubmissionRepository;
 }
@@ -117,10 +116,6 @@ function sortRequirementsByCatalogOrder<T extends { slug: string }>(items: T[]):
     if (aRank !== bRank) return aRank - bRank;
     return a.slug.localeCompare(b.slug);
   });
-}
-
-function cadastroFileUrl(key: string): string {
-  return `/api/v1/facilities/cadastro/files/${key}`;
 }
 
 function mapRecordStatusToUi(
@@ -203,7 +198,7 @@ function serializeDocumentFile(file: DocumentFileRecord) {
 export class GetFacilityCadastroChecklistUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: number; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext; now?: Date }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -213,9 +208,14 @@ export class GetFacilityCadastroChecklistUseCase {
 
     const legalDocumentType = resolveFacilityLegalDocumentType(facility);
 
+    // One cadastro page per clinic (ADR 0007). The rep sees the requirements of
+    // the linhas they and the clinic have in common, plus the facility-scoped
+    // ones — not a per-linha switcher, and never another linha's documents.
     const requirements = sortRequirementsByCatalogOrder(
-      await this.deps.conformityRepository.findActiveRequirements({
+      await this.loadRequirementsForCaller({
+        facilityId: input.facilityId,
         legalDocumentType,
+        scope: input.scope,
       })
     );
     const records = await this.deps.conformityRepository.findRecordsByFacility(
@@ -223,64 +223,89 @@ export class GetFacilityCadastroChecklistUseCase {
     );
     const recordByRequirement = new Map(records.map((r) => [r.requirementId, r]));
 
-    const draft =
-      (await this.deps.cadastroRepository?.findDraftByFacility(input.facilityId)) ??
-      (await this.deps.cadastroRepository?.findLatestByFacility(input.facilityId));
-    const submissionDocs = draft
-      ? await this.deps.cadastroRepository!.findDocumentsBySubmission(draft.id)
+    // The whole checklist's documents in one query, then grouped in memory.
+    //
+    // This used to ask per requirement: the working document, the history, and
+    // then the files of each — up to four round trips per row, which made
+    // /cadastro the slowest endpoint on the clinic screen at ~1.7s. The
+    // per-requirement helpers still exist and are still used elsewhere; the
+    // checklist just stopped calling them once per row.
+    const allDocuments = this.deps.cadastroRepository
+      ? await this.deps.cadastroRepository.listDocumentsByFacility(input.facilityId)
       : [];
-    const submissionDocByRequirement = new Map(
-      submissionDocs.map((d) => [d.requirementId, d])
-    );
+    const documentsByRequirement = groupBy(allDocuments, (d) => d.requirementId);
+
+    // Both passes below read from the same already-sorted list, so the ordering
+    // the repository guarantees (version DESC, updatedAt DESC) is what decides
+    // "working" and "latest" — exactly as when Postgres decided it per query.
+    const workingByRequirement = new Map<number, SubmissionDocumentRecord>();
+    const historyByRequirement = new Map<number, SubmissionDocumentRecord[]>();
+    for (const [requirementId, docs] of documentsByRequirement) {
+      const working = docs.find((d) => OPEN_DOCUMENT_STATUSES.has(d.status));
+      if (working) workingByRequirement.set(requirementId, working);
+      historyByRequirement.set(
+        requirementId,
+        docs.filter((d) => SUBMITTED_DOCUMENT_STATUSES.has(d.status))
+      );
+    }
+
+    // One files query for every document the page will render — the working
+    // document and the approved one for each requirement.
+    const fileDocumentIds = new Set<number>();
+    for (const requirement of requirements) {
+      const history = historyByRequirement.get(requirement.id) ?? [];
+      const approved = history.find((d) => d.status === "APPROVED");
+      const working =
+        workingByRequirement.get(requirement.id) ?? approved ?? history[0];
+      if (working) fileDocumentIds.add(working.id);
+      if (approved) fileDocumentIds.add(approved.id);
+    }
+    const allFiles = this.deps.cadastroRepository
+      ? await this.deps.cadastroRepository.listDocumentFilesForDocuments([
+          ...fileDocumentIds,
+        ])
+      : [];
+    const filesByDocument = groupBy(allFiles, (f) => f.submissionDocumentId);
 
     const documents = await Promise.all(
       requirements.map(async (requirement) => {
-        const submissionDoc = submissionDocByRequirement.get(requirement.id);
         const record = recordByRequirement.get(requirement.id);
 
-        const history = this.deps.cadastroRepository
-          ? await this.deps.cadastroRepository.listDocumentsForFacilityRequirement({
-              facilityId: input.facilityId,
-              requirementId: requirement.id,
-              excludeDraft: true,
-            })
-          : [];
+        const workingDocument = workingByRequirement.get(requirement.id) ?? null;
+
+        const history = historyByRequirement.get(requirement.id) ?? [];
         const latestSubmitted = history[0] ?? null;
         const approvedEntry =
-          history.find((h) => h.document.status === "APPROVED") ?? null;
+          history.find((document) => document.status === "APPROVED") ?? null;
 
         // List/detail pill: approved → pending review → rejected. Never "ready"/Pronto.
         const uiStatus = approvedEntry
           ? ("approved" as const)
           : latestSubmitted
-            ? mapSubmissionDocumentUiStatus(latestSubmitted.document.status)
+            ? mapSubmissionDocumentUiStatus(latestSubmitted.status)
             : mapRecordStatusToUi(record?.status);
 
         // Two screens want two different documents, so they get two fields.
         //
         // Top level (documentId / documentStatus / files) = the WORKING
         // document — what the rep is editing right now, in precedence order:
-        //   1. the document in the facility's current (draft or latest)
-        //      package: the row the compose screen uploads into, so its files
-        //      must be visible while it is still a DRAFT (spec 0011 §8.1 /
-        //      D-08 — returning the approved document's files here left the
-        //      client poll loop with nothing to match and "Enviar" disabled on
-        //      every re-upload over an already-approved requirement);
-        //   2. the approved document, when there is no working draft;
+        //   1. the open attempt at this requirement: the row the compose screen
+        //      uploads into, so its files must be visible while it is still a
+        //      DRAFT (spec 0011 §8.1 / D-08 — returning the approved document's
+        //      files here left the client poll loop with nothing to match and
+        //      "Enviar" disabled on every re-upload over an already-approved
+        //      requirement);
+        //   2. the approved document, when there is no open attempt;
         //   3. the last document actually sent for review.
         //
         // `currentApproved` (below) carries the APPROVED document and its own
         // files — that is what the "DOCUMENTO ATUAL" card renders under its
         // "Versão aprovada vN" label.
         const workingDoc =
-          submissionDoc ?? approvedEntry?.document ?? latestSubmitted?.document ?? null;
-        const files = workingDoc
-          ? await this.deps.cadastroRepository!.listDocumentFiles(workingDoc.id)
-          : [];
+          workingDocument ?? approvedEntry ?? latestSubmitted ?? null;
+        const files = workingDoc ? (filesByDocument.get(workingDoc.id) ?? []) : [];
         const approvedFiles = approvedEntry
-          ? await this.deps.cadastroRepository!.listDocumentFiles(
-              approvedEntry.document.id
-            )
+          ? (filesByDocument.get(approvedEntry.id) ?? [])
           : [];
 
         return {
@@ -294,23 +319,38 @@ export class GetFacilityCadastroChecklistUseCase {
           uiStatus,
           documentId: workingDoc?.id,
           documentStatus: workingDoc?.status,
-          latestSubmittedStatus: latestSubmitted?.document.status,
-          latestSubmittedAt:
-            latestSubmitted?.submission.submittedAt?.toISOString() ?? undefined,
+          latestSubmittedStatus: latestSubmitted?.status,
+          latestSubmittedAt: latestSubmitted?.submittedAt?.toISOString() ?? undefined,
           currentApproved: approvedEntry
             ? {
-                documentId: approvedEntry.document.id,
-                submissionId: approvedEntry.submission.id,
-                version: approvedEntry.submission.version,
-                submittedAt:
-                  approvedEntry.submission.submittedAt?.toISOString() ??
-                  undefined,
-                reviewComment: approvedEntry.document.reviewComment ?? undefined,
+                documentId: approvedEntry.id,
+                version: approvedEntry.version,
+                submittedAt: approvedEntry.submittedAt?.toISOString() ?? undefined,
+                reviewComment: approvedEntry.reviewComment ?? undefined,
                 fileCount: approvedFiles.length,
                 files: approvedFiles.map(serializeDocumentFile),
               }
             : undefined,
           files: files.map(serializeDocumentFile),
+          // Derived here, never stored (ADR 0008 §4). The date on the document
+          // is the truth; this is a function of it and today, so it cannot go
+          // stale and no nightly job can stop writing it.
+          // The upload limits travel with the checklist so the client can refuse
+          // an oversized file before any request (spec 0011 §7). They were only
+          // on the POST /documents response, which meant the client had to
+          // create a document just to learn them — a read with a side effect,
+          // leaving an empty DRAFT behind whenever the file was then rejected.
+          allowedMimeTypes: requirement.allowedMimeTypes,
+          maxFiles: requirement.maxFiles,
+          maxFileSizeBytes: requirement.maxFileSizeBytes,
+          maxCombinedSizeBytes: requirement.maxCombinedSizeBytes,
+          requiresFrontAndBack: requirement.requiresFrontAndBack,
+          requiresValidityDate: requirement.requiresValidityDate,
+          validUntil: workingDoc?.validUntil ?? undefined,
+          expiry: deriveExpiry(
+            (approvedEntry ?? workingDoc)?.validUntil,
+            input.now ?? new Date()
+          ) ?? undefined,
           record: record ? serializeRecord(record) : undefined,
         };
       })
@@ -341,9 +381,6 @@ export class GetFacilityCadastroChecklistUseCase {
       legalDocumentType,
       billingEmail,
       commercialStatus: facility.commercialStatus ?? undefined,
-      submissionId: draft?.id,
-      submissionStatus: draft?.status,
-      submissionVersion: draft?.version,
       documents,
       billing: billingRow,
       counts: {
@@ -354,6 +391,62 @@ export class GetFacilityCadastroChecklistUseCase {
         complete: pendingCount === 0 && validatedFileCount === documents.length && billingComplete,
       },
     };
+  }
+
+  /**
+   * The requirements this caller should see for this clinic: the linhas they
+   * have in common, plus every facility-scoped requirement.
+   *
+   * A rep working Ortopedia at a clinic that runs Ortopedia and Dermatologia
+   * sees Ortopedia's documents and the shared ones — never Dermatologia's. A
+   * global user sees every linha the clinic actually runs. When there is no
+   * overlap at all, only the facility-scoped documents remain, which is the
+   * honest answer: nothing linha-specific applies.
+   */
+  private async loadRequirementsForCaller(input: {
+    facilityId: number;
+    legalDocumentType: ReturnType<typeof resolveFacilityLegalDocumentType>;
+    scope: ScopeContext;
+  }) {
+    const profiles =
+      await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
+        input.facilityId,
+      ]);
+    const clinicVerticalIds = (profiles.get(input.facilityId) ?? [])
+      .filter((profile) => profile.isActive)
+      .map((profile) => profile.verticalId);
+
+    const assigned = input.scope.assignedVerticalIds ?? [];
+    const verticalIds = input.scope.isGlobal
+      ? clinicVerticalIds
+      : clinicVerticalIds.filter((id) => assigned.includes(id));
+
+    if (verticalIds.length === 0) {
+      // No shared linha: only requirements that apply to everyone. Asking
+      // without a verticalId would return every linha's documents, which is
+      // exactly the leak D-49 fixed elsewhere.
+      const all = await this.deps.conformityRepository.findActiveRequirements({
+        legalDocumentType: input.legalDocumentType,
+      });
+      return all.filter((requirement) => requirement.verticalId == null);
+    }
+
+    // Each call already includes the unscoped requirements (null vertical means
+    // applies-to-all, ADR 0007), so dedupe by id after the union.
+    const perVertical = await Promise.all(
+      verticalIds.map((verticalId) =>
+        this.deps.conformityRepository.findActiveRequirements({
+          legalDocumentType: input.legalDocumentType,
+          verticalId,
+        })
+      )
+    );
+
+    const byId = new Map<number, (typeof perVertical)[number][number]>();
+    for (const requirement of perVertical.flat()) {
+      byId.set(requirement.id, requirement);
+    }
+    return [...byId.values()];
   }
 }
 
@@ -402,136 +495,6 @@ export class UpdateFacilityBillingEmailUseCase {
       billingEmail: email,
       ...completion,
     };
-  }
-}
-
-export class SubmitFacilityCadastroDocumentUseCase {
-  constructor(private readonly deps: Dependencies) {}
-
-  async execute(input: {
-    facilityId: number;
-    requirementId: number;
-    scope: ScopeContext;
-    file: File;
-  }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-
-    const facility = await this.deps.facilityRepository.findById(input.facilityId);
-    if (!facility) {
-      throw new ResourceNotFoundError("Facility", input.facilityId);
-    }
-
-    const requirement = await this.deps.conformityRepository.findRequirementById(
-      input.requirementId
-    );
-    if (!requirement || !requirement.isActive) {
-      throw new ResourceNotFoundError("ConformityRequirement", input.requirementId);
-    }
-
-    if (
-      requirement.appliesToLegalDocumentType != null &&
-      facility.legalDocumentType != null &&
-      requirement.appliesToLegalDocumentType !== facility.legalDocumentType
-    ) {
-      throw new ForbiddenError();
-    }
-
-    const extension = resolveDocumentExtension(input.file);
-    if (!extension) {
-      throw new ValidationError([
-        {
-          field: "file",
-          message: "Documento deve ser JPEG, PNG, WebP ou PDF",
-        },
-      ]);
-    }
-
-    if (input.file.size === 0 || input.file.size > MAX_DOC_BYTES) {
-      throw new ValidationError([
-        { field: "file", message: "Documento deve ter entre 1 byte e 10 MB" },
-      ]);
-    }
-
-    const contentType = resolveDocumentContentType(input.file, extension);
-    const safeName = (input.file.name || `${requirement.slug}.${extension}`)
-      .replace(/[^\w.\-]+/g, "_")
-      .replace(/_+/g, "_");
-
-    const existing = await this.deps.conformityRepository.findRecordByFacilityAndRequirement(
-      input.facilityId,
-      input.requirementId
-    );
-    if (existing?.storageKey) {
-      try {
-        await this.deps.storage.delete(existing.storageKey);
-      } catch {
-        // Best-effort cleanup of prior object.
-      }
-    }
-
-    const key = `facilities/${input.facilityId}/cadastro/${requirement.slug}/${randomUUID()}.${extension}`;
-    await this.deps.storage.upload(
-      key,
-      new Uint8Array(await input.file.arrayBuffer()),
-      contentType
-    );
-
-    const record = await this.deps.conformityRepository.upsertSubmittedRecord({
-      facilityId: input.facilityId,
-      requirementId: input.requirementId,
-      storageKey: key,
-      url: cadastroFileUrl(key),
-      contentType,
-      fileName: safeName || `${requirement.slug}.${extension}`,
-    });
-
-    const resolvedVerticalId = await resolveCadastroVerticalId({
-      facilityId: input.facilityId,
-      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-      isGlobal: input.scope.isGlobal,
-      facilityRepository: this.deps.facilityRepository,
-    });
-
-    await this.deps.completionService.evaluateAndApply(
-      input.facilityId,
-      resolvedVerticalId,
-    );
-
-    return serializeRecord(record);
-  }
-}
-
-export class DownloadFacilityCadastroFileUseCase {
-  constructor(
-    private readonly deps: Pick<Dependencies, "conformityRepository" | "storage">
-  ) {}
-
-  async execute(input: { storageKey: string; scope: ScopeContext }) {
-    if (
-      !/^facilities\/[a-zA-Z0-9_-]+\/cadastro\/[a-z0-9_]+\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/.test(
-        input.storageKey
-      )
-    ) {
-      throw new ValidationError([
-        { field: "key", message: "Invalid cadastro file key" },
-      ]);
-    }
-
-    const record = await this.deps.conformityRepository.findRecordByStorageKey(
-      input.storageKey
-    );
-    if (!record || !record.contentType) {
-      throw new ResourceNotFoundError("ConformityRecord", input.storageKey);
-    }
-
-    // The storage key is a capability: it embeds a v4 UUID, so it is not
-    // enumerable, but it never expires and cannot be revoked. Re-check scope on
-    // every read — via the facility the record already names — so losing scope
-    // actually revokes access, and do it before any bytes are fetched.
-    assertResourceInScope(input.scope, "facility", record.facilityId);
-
-    const bytes = await this.deps.storage.download(input.storageKey);
-    return { bytes, contentType: record.contentType };
   }
 }
 
@@ -679,11 +642,28 @@ export class ListCadastroSubmissionsUseCase {
 
   async execute(input: {
     status?: "SUBMITTED" | "VALIDATED" | "REJECTED" | "UNDER_REVIEW" | "APPROVED";
+    scope: ScopeContext;
     page?: number;
     limit?: number;
   }) {
     const page = input.page && input.page > 0 ? input.page : 1;
     const limit = input.limit && input.limit > 0 ? Math.min(input.limit, 100) : 50;
+
+    // D-07: this queue never filtered by scope, so every reviewer saw every
+    // territory. It cannot use `assertResourceInScope` — there is no single
+    // resource to check — so the restriction is pushed into the query.
+    //
+    // ADMIN is global and keeps the whole queue. OPS is not global: its
+    // `facilityIds` is every facility profiled in the linhas it is assigned
+    // (scope-resolver.service.ts), so this scopes by linha rather than by
+    // territory, which is what makes a facility no reviewer can see impossible.
+    const facilityIds = input.scope.isGlobal ? undefined : input.scope.facilityIds;
+
+    // An empty scope means "nothing", not "everything". Returning early keeps
+    // that explicit rather than trusting an empty IN () to behave.
+    if (facilityIds !== undefined && facilityIds.length === 0) {
+      return { data: [], page, limit, total: 0 };
+    }
 
     // Prefer versioned submission documents (per-requirement send flow).
     if (this.deps.cadastroRepository) {
@@ -691,15 +671,14 @@ export class ListCadastroSubmissionsUseCase {
       const { items, total } =
         await this.deps.cadastroRepository.listDocumentsForReview({
           status: documentStatuses,
+          facilityIds,
           page,
           limit,
         });
 
       const data = await Promise.all(
-        items.map(async ({ document, submission, submittedByName }) => {
-          const facility = await this.deps.facilityRepository.findById(
-            submission.facilityId
-          );
+        items.map(async ({ document, facilityId, submittedByName }) => {
+          const facility = await this.deps.facilityRepository.findById(facilityId);
           const files = await this.deps.cadastroRepository!.listDocumentFiles(
             document.id
           );
@@ -729,7 +708,7 @@ export class ListCadastroSubmissionsUseCase {
           const first = serializedFiles[0];
           return {
             id: document.id,
-            facilityId: submission.facilityId,
+            facilityId,
             requirementId: document.requirementId,
             requirement: document.requirement
               ? {
@@ -747,11 +726,9 @@ export class ListCadastroSubmissionsUseCase {
                 },
             status: mapDocumentStatusForOpsQueue(document.status),
             documentStatus: document.status,
-            submissionId: submission.id,
-            submissionStatus: submission.status,
             uiStatus: mapSubmissionDocumentUiStatus(document.status),
-            submittedAt: submission.submittedAt?.toISOString(),
-            submittedByUserId: submission.submittedByUserId ?? undefined,
+            submittedAt: document.submittedAt?.toISOString(),
+            submittedByUserId: document.submittedByUserId ?? undefined,
             submittedByName: submittedByName ?? undefined,
             validatedAt:
               document.status === "APPROVED"
