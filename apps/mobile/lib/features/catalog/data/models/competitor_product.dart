@@ -23,7 +23,10 @@ class CompetitorProduct {
   final double price17;
   final double price18;
   final double price20;
-  final DateTime brasindiceUpdatedAt;
+
+  /// Null when the competitor has no Brasíndice record — every competitor
+  /// row in production ships without one, so this must never be a hard parse.
+  final DateTime? brasindiceUpdatedAt;
 
   factory CompetitorProduct.fromJson(Map<String, dynamic> json) {
     double readPrice(Object? value) => switch (value) {
@@ -41,8 +44,8 @@ class CompetitorProduct {
       price17: readPrice(json['price17']),
       price18: readPrice(json['price18']),
       price20: readPrice(json['price20']),
-      brasindiceUpdatedAt: DateTime.parse(
-        json['brasindiceUpdatedAt'] as String,
+      brasindiceUpdatedAt: DateTime.tryParse(
+        json['brasindiceUpdatedAt'] as String? ?? '',
       ),
     );
   }

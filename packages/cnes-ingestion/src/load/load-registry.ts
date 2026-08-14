@@ -56,6 +56,12 @@ export interface LoadRegistryOptions {
   csvDir?: string;
   onProgress?: (message: string, detail?: Record<string, unknown>) => void;
   /**
+   * Rows between progress reports from inside the write loops. Defaults to
+   * `PROGRESS_EVERY_ROWS`; tests lower it so they can assert the reports exist
+   * without a fixture the size of a real competence.
+   */
+  progressEveryRows?: number;
+  /**
    * Last gate before the roster is replaced. Throwing here aborts the run with
    * the old snapshot intact.
    *
@@ -149,6 +155,15 @@ const BATCH = 1_000;
  * no conflict target, no foreign key, nothing to resolve per row.
  */
 const STAGING_BATCH = 5_000;
+
+/**
+ * How often a write loop reports progress, in rows.
+ *
+ * Small enough that the gap between two reports stays far inside the activity's
+ * 5-minute `heartbeatTimeout` even when Postgres is slow: at the ~1 250 rows/s
+ * measured against production, 25 000 rows is about 20 seconds.
+ */
+const PROGRESS_EVERY_ROWS = 25_000;
 
 function chunk<T>(items: readonly T[], size = BATCH): T[][] {
   const out: T[][] = [];
@@ -246,6 +261,31 @@ export async function loadRegistryFromCsv(
 ): Promise<LoadRegistryResult> {
   const { db, reference } = options;
   const log = options.onProgress ?? (() => {});
+
+  /**
+   * Progress from inside a write loop, so Temporal can tell work from a corpse.
+   *
+   * `onProgress` is what the activity turns into a heartbeat, and it was only
+   * ever called *between* steps. The establishment upsert writes 631 973 rows
+   * and the workload staging millions more, both without reading another byte
+   * of the archive — so the run went silent for minutes while working hardest,
+   * and the 5-minute `heartbeatTimeout` killed it as a dead worker. The retry
+   * restarts the load from the top and reaches the same silence, which is how
+   * one slow write loop consumed both attempts on 2026-08-14.
+   *
+   * Throttled by rows rather than called per batch: a heartbeat every 1 000-row
+   * flush is thousands of needless RPCs, and the point is only to prove the
+   * activity is alive well inside the window.
+   */
+  const progressEveryRows = options.progressEveryRows ?? PROGRESS_EVERY_ROWS;
+  function rowProgress(step: string) {
+    let reported = 0;
+    return (rows: number) => {
+      if (rows - reported < progressEveryRows) return;
+      reported = rows;
+      log(step, { rows });
+    };
+  }
   const source =
     options.source ??
     (options.csvDir
@@ -491,6 +531,7 @@ export async function loadRegistryFromCsv(
   const cnesIdByUnitCode = new Map<string, string>();
   const facilitiesFoundInDump = new Set<string>();
   const facilityBuffer: (typeof registryFacilities.$inferInsert)[] = [];
+  const beatFacilities = rowProgress("facilities upserting");
 
   async function flushFacilities() {
     if (facilityBuffer.length === 0) return;
@@ -533,6 +574,7 @@ export async function loadRegistryFromCsv(
       });
     result.facilitiesUpserted += facilityBuffer.length;
     facilityBuffer.length = 0;
+    beatFacilities(result.facilitiesUpserted);
   }
 
   for await (const r of source.records("establishments")) {
@@ -747,11 +789,13 @@ export async function loadRegistryFromCsv(
    */
   const stagedSusIds = new Set<string>();
   const cargaBuffer: (typeof cnesCargaStaging.$inferInsert)[] = [];
+  const beatCarga = rowProgress("workload staging");
   async function flushCarga() {
     if (cargaBuffer.length === 0) return;
     await db.insert(cnesCargaStaging).values(cargaBuffer);
     result.cargaStaged += cargaBuffer.length;
     cargaBuffer.length = 0;
+    beatCarga(result.cargaStaged);
   }
 
   for await (const r of source.records("workload")) {
@@ -794,6 +838,7 @@ export async function loadRegistryFromCsv(
   await flushCarga();
 
   const stagedProfessionalBuffer: (typeof cnesProfessionalStaging.$inferInsert)[] = [];
+  const beatStagedProfessionals = rowProgress("professionals staging");
   async function flushStagedProfessionals() {
     if (stagedProfessionalBuffer.length === 0) return;
     await db
@@ -802,6 +847,7 @@ export async function loadRegistryFromCsv(
       .onConflictDoNothing();
     result.professionalsStaged += stagedProfessionalBuffer.length;
     stagedProfessionalBuffer.length = 0;
+    beatStagedProfessionals(result.professionalsStaged);
   }
 
   for await (const r of source.records("professionals")) {
@@ -931,6 +977,7 @@ export async function loadRegistryFromCsv(
   // the whole SUS is dropped — vínculo and registrations included — and counted.
   const foundSus = new Set<string>();
   const professionalBuffer: (typeof registryProfessionals.$inferInsert)[] = [];
+  const beatProfessionals = rowProgress("professionals upserting");
 
   async function flushProfessionals() {
     if (professionalBuffer.length === 0) return;
@@ -952,6 +999,7 @@ export async function loadRegistryFromCsv(
       });
     result.professionalsUpserted += professionalBuffer.length;
     professionalBuffer.length = 0;
+    beatProfessionals(result.professionalsUpserted);
   }
 
   /*

@@ -326,6 +326,65 @@ void main() {
     expect(find.text('Visita de acompanhamento'), findsNothing);
   });
 
+  testWidgets('uses the Explore search field decoration', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        AgendaScreen.content(
+          occurrences: const [],
+          onPreviousPeriod: () {},
+          onNextPeriod: () {},
+          onToday: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('agenda-search')),
+    );
+    final decoration = field.decoration!;
+
+    expect(decoration.border, InputBorder.none);
+    expect(decoration.isDense, isTrue);
+    expect(decoration.contentPadding, EdgeInsets.zero);
+  });
+
+  testWidgets('clears the search using the Explore-style clear control', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        AgendaScreen.content(
+          occurrences: [
+            _occurrence(
+              id: 1,
+              date: '2026-08-03',
+              time: '09:00',
+              title: 'Visita de acompanhamento',
+              facility: 'Clínica Norte',
+              status: InteractionStatus.scheduled,
+            ),
+          ],
+          onPreviousPeriod: () {},
+          onNextPeriod: () {},
+          onToday: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('agenda-search')), 'inexistente');
+    await tester.pump();
+    expect(find.text('Visita de acompanhamento'), findsNothing);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pump();
+
+    expect(find.text('Visita de acompanhamento'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+  });
+
   testWidgets('toolbar stays overflow-free on narrow high text scale', (
     tester,
   ) async {

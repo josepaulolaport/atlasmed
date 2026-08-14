@@ -385,8 +385,9 @@ class _VariantQuickView extends StatelessWidget {
 /// this product's family were last published — styled like the codes panel
 /// in [VariantInfoCard] so it reads as part of the same product detail.
 class _PublicationFooter extends StatelessWidget {
-  final DateTime brasindiceDate;
-  final DateTime simproDate;
+  /// Null when the family ships without a Brasíndice/Simpro record.
+  final DateTime? brasindiceDate;
+  final DateTime? simproDate;
 
   const _PublicationFooter({
     required this.brasindiceDate,
@@ -419,14 +420,14 @@ class _PublicationFooter extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Brasíndice: ${formatDate(brasindiceDate)}',
+                  'Brasíndice: ${brasindiceDate == null ? '—' : formatDate(brasindiceDate!)}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.gray500,
                   ),
                 ),
                 Text(
-                  'Simpro: ${formatDate(simproDate)}',
+                  'Simpro: ${simproDate == null ? '—' : formatDate(simproDate!)}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.gray500,

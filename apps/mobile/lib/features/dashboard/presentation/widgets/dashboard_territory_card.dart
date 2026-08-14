@@ -53,7 +53,7 @@ class DashboardTerritoryCard extends StatelessWidget {
               GestureDetector(
                 onTap: () => const MapRoute().go(context),
                 child: const Text(
-                  'Abrir mapa >',
+                  'Abrir mapa',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
