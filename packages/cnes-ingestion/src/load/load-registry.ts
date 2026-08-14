@@ -1089,7 +1089,36 @@ export async function loadRegistryFromCsv(
     }
   }
 
-  for (const part of chunk(registrationRows)) {
+  /*
+   * Drop rows this load would make collide with each other before Postgres sees
+   * them, keeping the first claimant exactly as the per-row path did.
+   *
+   * The identity guard `(council, UF, number)` cannot be named as a conflict
+   * target — the statement already targets `(professional, council, UF)` — so
+   * two rows in one batch claiming the same CRM abort the whole statement. The
+   * fallback then retried all 1 000 rows one at a time, and because conflicts
+   * are spread through the file that degraded almost every batch to per-row: a
+   * measured 8 rows/s against 125 724 rows, over four hours, on an activity
+   * with a two-hour timeout.
+   */
+  const identityOwner = new Map<string, string>();
+  const dedupedRegistrationRows: typeof registrationRows = [];
+  for (const row of registrationRows) {
+    const identity = `${row.councilCnesId}${KEY_SEPARATOR}${row.stateCode}${KEY_SEPARATOR}${row.registrationNumber}`;
+    const owner = identityOwner.get(identity);
+    if (owner === undefined) {
+      identityOwner.set(identity, row.professionalCnesId);
+      dedupedRegistrationRows.push(row);
+      continue;
+    }
+    if (owner === row.professionalCnesId) continue;
+    result.registrationsConflicted += 1;
+    conflictSamples.push(
+      `${row.councilCnesId}/${row.stateCode}/${row.registrationNumber} claimed by another SUS id (this one: ${row.professionalCnesId})`
+    );
+  }
+
+  for (const part of chunk(dedupedRegistrationRows)) {
     // Two conflict targets are in play and only one can be named per statement.
     // `(professional, council, UF)` is the row we own and want refreshed;
     // `(council, UF, number)` is the global identity guard, whose violation means
@@ -1098,21 +1127,46 @@ export async function loadRegistryFromCsv(
     // letting one bad row discard 999 good ones.
     const before = result.registrationsUpserted;
     try {
-      await db
-        .insert(registryProfessionalRegistrations)
-        .values(part)
-        .onConflictDoUpdate({
-          target: [
-            registryProfessionalRegistrations.professionalCnesId,
-            registryProfessionalRegistrations.councilCnesId,
-            registryProfessionalRegistrations.stateCode,
-          ],
-          set: {
-            registrationNumber: sql`excluded.registration_number`,
-            updatedAt: sql`now()`,
-          },
-        });
-      result.registrationsUpserted = before + part.length;
+      /*
+       * `where not exists` is what keeps the batch whole.
+       *
+       * A CRM already held in the table by a different SUS id would raise the
+       * identity unique and abort all 1 000 rows with it. Excluding those rows
+       * in the statement leaves only the conflict target the upsert names, so
+       * the batch cannot be aborted by a row it was always going to skip —
+       * and skipping is exactly what the per-row path did, keeping the first
+       * owner rather than moving a doctor's identity onto a stranger.
+       */
+      const written = await db.execute(sql`
+        insert into registry.professional_registrations
+          (professional_cnes_id, council_cnes_id, state_code, registration_number)
+        select v.professional, v.council, v.state, v.number
+          from (values ${sql.join(
+            part.map(
+              (row) =>
+                sql`(${row.professionalCnesId}::text, ${row.councilCnesId}::text, ${row.stateCode}::text, ${row.registrationNumber}::text)`
+            ),
+            sql`, `
+          )}) as v(professional, council, state, number)
+         where not exists (
+           select 1
+             from registry.professional_registrations held
+            where held.council_cnes_id = v.council
+              and held.state_code = v.state
+              and held.registration_number = v.number
+              and held.professional_cnes_id <> v.professional
+         )
+        on conflict (professional_cnes_id, council_cnes_id, state_code)
+        do update set registration_number = excluded.registration_number,
+                      updated_at = now()
+        returning 1
+      `);
+      const affected = Array.isArray(written)
+        ? written.length
+        : ((written as unknown as { count?: number }).count ?? 0);
+      result.registrationsUpserted = before + affected;
+      // The rows the guard held back are the conflicts the counter exists for.
+      result.registrationsConflicted += part.length - affected;
     } catch {
       for (const row of part) {
         try {
