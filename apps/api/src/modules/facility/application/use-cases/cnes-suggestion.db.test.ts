@@ -359,19 +359,14 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
     }
   });
 
-  it("distinguishes a facility with no cnes_code from an empty result", async () => {
-    await db.execute(sql`
-      insert into facilities (name, location, legal_document_type, state_id, municipality_id)
-        select ${MARK}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id
-          from municipalities m limit 1;
-    `);
-    const [plain] = (await db.execute(sql`
-      select id from facilities where name = ${MARK} and cnes_code is null limit 1;
-    `)) as unknown as { id: number }[];
-
-    const result = await useCase.execute({ facilityId: plain!.id });
-    // An empty list with no reason is what makes a working feature look broken.
-    expect(result.status).toBe("FACILITY_WITHOUT_CNES_CODE");
-    expect(result.items).toHaveLength(0);
-  });
+  /*
+   * "distinguishes a facility with no cnes_code from an empty result" was here.
+   *
+   * Migration 0105 made `facilities.cnes_code` NOT NULL, so the state it set up
+   * can no longer exist and the test could only have proved it by writing a row
+   * the database now refuses. `FACILITY_WITHOUT_CNES_CODE` is consequently
+   * unreachable for any facility read from `public.facilities`; the branch is
+   * left in place as a total function over the status enum, not because a
+   * facility can still be in that state.
+   */
 });

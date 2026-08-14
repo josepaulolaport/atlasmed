@@ -28,7 +28,14 @@ export async function getTemporalClient(): Promise<Client> {
   return clientPromise;
 }
 
-export type SearchSyncEntity = "facilities" | "persons";
+/**
+ * `facility_candidates` is here because the monthly CNES load replaces every row
+ * of `registry.facilities`, and that index is otherwise maintained only by
+ * per-import upserts. The ingestion workflow rebuilds it itself; this is the
+ * repair path for when that step failed, and it existed as a worker capability
+ * with no way to reach it.
+ */
+export type SearchSyncEntity = "facilities" | "persons" | "facility_candidates";
 type StartWorkflowResult = { workflowId: string; runId: string; existing: boolean };
 
 type SearchSyncWorkflowDescriptionHandle = {
@@ -149,6 +156,85 @@ export interface MetricSnapshotTriggerInput {
   facilityVerticalProfileId: number;
 }
 
+export interface CnesIngestionTriggerInput {
+  /** Load this competência instead of discovering the newest published. */
+  reference?: { year: number; month: number };
+  /** Reload a competência already marked COMPLETED. */
+  force?: boolean;
+}
+
+type CnesIngestionTemporalClient = {
+  workflow: {
+    start(
+      workflowType: "cnesIngestionWorkflow",
+      options: {
+        taskQueue: string;
+        workflowId: string;
+        args: [CnesIngestionTriggerInput];
+      }
+    ): Promise<SearchSyncWorkflowStartHandle>;
+    getHandle(workflowId: string): SearchSyncWorkflowDescriptionHandle;
+  };
+};
+
+/**
+ * One id per competência, or one for "whatever is newest".
+ *
+ * The workflow id *is* the mutual exclusion. A CNES load reads a 735 MB archive
+ * and rewrites `registry.*` wholesale; two of them at once would race on the same
+ * tables, which is why the weekly schedule uses `SKIP`. An on-demand trigger has
+ * to obey the same rule, and asking under a fixed id is how — Temporal refuses
+ * the second start rather than the database discovering the conflict.
+ *
+ * A discovery run gets a distinct id from a targeted one so that "load whatever
+ * is newest" and "reload 2026-07" are not treated as the same request.
+ */
+export function cnesIngestionTriggerWorkflowId(
+  input: CnesIngestionTriggerInput
+): string {
+  if (!input.reference) return "cnes-ingestion-trigger-latest";
+  const month = String(input.reference.month).padStart(2, "0");
+  return `cnes-ingestion-trigger-${input.reference.year}${month}`;
+}
+
+/**
+ * Start an ingestion now rather than waiting for Sunday.
+ *
+ * `existing: true` is a normal answer, not a failure: it means a load for this
+ * competência is already running and the caller should watch that one.
+ */
+export async function startCnesIngestionWorkflowWithClient(
+  client: CnesIngestionTemporalClient,
+  input: CnesIngestionTriggerInput
+): Promise<StartWorkflowResult> {
+  const workflowId = cnesIngestionTriggerWorkflowId(input);
+
+  try {
+    const handle = await client.workflow.start("cnesIngestionWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [input],
+    });
+    return { workflowId, runId: handle.firstExecutionRunId, existing: false };
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      const description = await client.workflow.getHandle(workflowId).describe();
+      return { workflowId, runId: description.runId, existing: true };
+    }
+    throw error;
+  }
+}
+
+export async function startCnesIngestionWorkflow(
+  input: CnesIngestionTriggerInput
+): Promise<StartWorkflowResult> {
+  const client = await getTemporalClient();
+  return startCnesIngestionWorkflowWithClient(
+    client as unknown as CnesIngestionTemporalClient,
+    input
+  );
+}
+
 type MetricSnapshotTemporalClient = {
   workflow: {
     start(
@@ -218,15 +304,27 @@ export async function startMetricSnapshotTriggerWorkflow(
   return startMetricSnapshotTriggerWorkflowWithClient(await getTemporalClient(), input);
 }
 
+/**
+ * An allowlist, not a pattern match — this decides what an admin may `describe`
+ * through the operations endpoint, so it names ids rather than accepting any
+ * string that happens to look like one.
+ */
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
   return workflowId === fullSearchSyncWorkflowId("facilities")
     || workflowId === fullSearchSyncWorkflowId("persons")
+    || workflowId === fullSearchSyncWorkflowId("facility_candidates")
     || workflowId === purchaseRecurrenceBackfillWorkflowId()
     || workflowId === emultecOrderImportWorkflowId()
     || workflowId === "emultec-order-import-every-10m"
     || workflowId === "emultec-order-import-backfill"
     || workflowId === "emultec-order-import-reconcile"
-    || workflowId === "emultec-order-import-incremental";
+    || workflowId === "emultec-order-import-incremental"
+    // Started by this endpoint, so its status has to be readable from it too.
+    || workflowId === cnesIngestionTriggerWorkflowId({})
+    || /^cnes-ingestion-trigger-\d{6}$/.test(workflowId)
+    // The weekly schedule's own run, so an admin can check the last scheduled
+    // load without reaching for the Temporal UI.
+    || workflowId === "cnes-ingestion-weekly";
 }
 
 export async function describeSearchSyncWorkflow(workflowId: string): Promise<{

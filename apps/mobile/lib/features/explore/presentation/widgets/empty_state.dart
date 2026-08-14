@@ -9,12 +9,17 @@ class EmptyState extends StatelessWidget {
   final bool hasActiveFilters;
   final VoidCallback? onClearFilters;
 
+  /// Shown under the message. The clinics tab puts "Buscar no CNES" here: not
+  /// finding a clinic is exactly the moment spec 0015 §6 describes.
+  final Widget? footer;
+
   const EmptyState({
     super.key,
     required this.query,
     required this.kind,
     this.hasActiveFilters = false,
     this.onClearFilters,
+    this.footer,
   });
 
   @override
@@ -89,6 +94,7 @@ class EmptyState extends StatelessWidget {
                 child: const Text('Limpar filtros'),
               ),
             ],
+            if (footer != null) ...[const SizedBox(height: 16), footer!],
           ],
         ),
       ),

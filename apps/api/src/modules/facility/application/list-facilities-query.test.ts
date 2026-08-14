@@ -100,6 +100,25 @@ describe("parseListFacilitiesQuery", () => {
     ).toThrow();
   });
 
+  it("accepts only the two cpfStatus values", () => {
+    expect(parseListFacilitiesQuery({ cpfStatus: "missing" })).toMatchObject({
+      cpfStatus: "missing",
+    });
+    expect(parseListFacilitiesQuery({ cpfStatus: "invalid" })).toMatchObject({
+      cpfStatus: "invalid",
+    });
+    // Rejected, not ignored: an unrecognised value would otherwise return an
+    // unfiltered list, and the rep would read every clinic they have as one
+    // missing its CPF.
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "both" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "MISSING" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ cpfStatus: "" })).toThrow();
+  });
+
+  it("leaves cpfStatus undefined when absent", () => {
+    expect(parseListFacilitiesQuery({}).cpfStatus).toBeUndefined();
+  });
+
   it("leaves both new filters undefined when absent", () => {
     // Absent must stay absent: defaulting either would filter a list the rep
     // did not ask to filter.

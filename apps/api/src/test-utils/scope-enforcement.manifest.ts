@@ -50,6 +50,20 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertCanMutateUser"],
   },
 
+  "modules/facility/application/use-cases/facility-bookmark.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope", "facility"],
+  },
+  /**
+   * A doctor has no scope of their own — visibility is inherited from the
+   * clinics they are attached to, so the guard is "is any of their clinics
+   * mine" rather than an id check against a scope list.
+   */
+  "modules/person/application/use-cases/person-bookmark.use-cases.ts": {
+    kind: "domain-policy",
+    patterns: ["isPersonInScope", "assertVisibleDoctor"],
+  },
+
   "modules/catalog/application/use-cases/catalog.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facility"],

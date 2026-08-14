@@ -8,6 +8,16 @@ const ORDERS = ["asc", "desc"] as const;
 /** Mirrors `facility_legal_document_type` in the database. */
 const LEGAL_DOCUMENT_TYPES = ["CNPJ", "CPF"] as const;
 
+/**
+ * The two ways a CPF clinic's document can be wrong, kept apart.
+ *
+ * Desempenho reports them as separate counts because they need different
+ * fixes: `missing` is a clinic nobody has entered a CPF for, `invalid` is one
+ * where the number on file fails the módulo-11 check. Merging them would give
+ * a rep a number they cannot act on without opening every row.
+ */
+const CPF_STATUSES = ["missing", "invalid"] as const;
+
 /** Dashboard / Desempenho purchase buckets (matches countPurchaseBuckets SQL). */
 const PURCHASE_BUCKETS = ["active", "inactive", "neverBought"] as const;
 
@@ -18,6 +28,7 @@ export type FacilityPurchaseBucket = (typeof PURCHASE_BUCKETS)[number];
 export type FacilitySearchSort = (typeof SORTS)[number];
 export type FacilitySearchOrder = (typeof ORDERS)[number];
 export type FacilityLegalDocumentType = (typeof LEGAL_DOCUMENT_TYPES)[number];
+export type FacilityCpfStatus = (typeof CPF_STATUSES)[number];
 
 /**
  * Desempenho drill-down buckets → `facility_vertical_profiles.purchase_funnel_stage`.
@@ -91,6 +102,8 @@ export interface ListFacilitiesQuery {
    */
   unitTypeIds?: number[];
   legalDocumentType?: FacilityLegalDocumentType;
+  /** Desempenho drill-down: CPF clinics whose document is absent or invalid. */
+  cpfStatus?: FacilityCpfStatus;
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;
   purchaseIntervalMinDays?: number;
@@ -128,6 +141,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
         .filter((id) => Number.isInteger(id) && id > 0)
     : undefined;
   const legalDocumentType = query.legalDocumentType;
+  const cpfStatus = query.cpfStatus;
   const purchaseFunnelStages = typeof query.purchaseFunnelStage === "string"
     ? query.purchaseFunnelStage.split(",").map((stage) => stage.trim()).filter(Boolean)
     : undefined;
@@ -182,6 +196,19 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
       message: "legalDocumentType must be CNPJ or CPF",
     });
   }
+  if (
+    cpfStatus !== undefined &&
+    (typeof cpfStatus !== "string" ||
+      !CPF_STATUSES.includes(cpfStatus as FacilityCpfStatus))
+  ) {
+    // Rejected rather than ignored, like every other enum here: a value the
+    // server does not understand would otherwise return an unfiltered list,
+    // and the rep would read every clinic they have as one missing its CPF.
+    issues.push({
+      field: "cpfStatus",
+      message: "cpfStatus must be missing or invalid",
+    });
+  }
   if (query.purchaseFunnelStage !== undefined && (!purchaseFunnelStages?.length || purchaseFunnelStages.some((stage) => !PURCHASE_FUNNEL_STAGES.includes(stage as FacilityPurchaseFunnelStage)))) issues.push({ field: "purchaseFunnelStage", message: "purchaseFunnelStage is invalid" });
   if (purchaseProfile !== undefined && (typeof purchaseProfile !== "string" || !PURCHASE_PROFILES.includes(purchaseProfile as FacilityPurchaseProfileFilter))) issues.push({ field: "purchaseProfile", message: "purchaseProfile is invalid" });
   if (purchaseIntervalMinDays !== undefined && (!Number.isInteger(purchaseIntervalMinDays) || purchaseIntervalMinDays < 1 || purchaseIntervalMinDays > 3650)) issues.push({ field: "purchaseIntervalMinDays", message: "purchaseIntervalMinDays must be an integer between 1 and 3650" });
@@ -203,6 +230,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     clinicalFocusIds,
     unitTypeIds,
     legalDocumentType: legalDocumentType as FacilityLegalDocumentType | undefined,
+    cpfStatus: cpfStatus as FacilityCpfStatus | undefined,
     purchaseFunnelStages: purchaseFunnelStages as FacilityPurchaseFunnelStage[] | undefined,
     purchaseProfile: purchaseProfile as FacilityPurchaseProfileFilter | undefined,
     purchaseIntervalMinDays,

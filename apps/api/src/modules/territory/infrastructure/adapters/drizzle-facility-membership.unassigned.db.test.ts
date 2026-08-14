@@ -103,9 +103,9 @@ async function seed(tx: Tx) {
   }) => {
     const facility = await one<{ id: number }>(
       tx.execute(sql`
-        INSERT INTO facilities (name, legal_document_type, state_id, municipality_id, location)
+        INSERT INTO facilities (name, legal_document_type, state_id, municipality_id, location, cnes_code)
         VALUES (${input.name}, 'CNPJ', ${state.id}, ${municipality.id},
-                ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326))
+                ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326), gen_random_uuid()::text)
         RETURNING id
       `)
     );

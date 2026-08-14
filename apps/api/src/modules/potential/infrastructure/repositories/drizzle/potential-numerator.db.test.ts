@@ -44,6 +44,8 @@ async function seedScenario(tx: Tx, suffix: string) {
   const [facility] = await tx
     .insert(facilities)
     .values({
+      // Spec 0015: every facility carries the CNES establishment it came from.
+      cnesCode: crypto.randomUUID(),
       displayName: `T-CLINIC-${suffix}`,
       legalDocumentType: "CNPJ",
       stateId: state!.id,

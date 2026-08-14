@@ -1,5 +1,6 @@
 import {
   describeSearchSyncWorkflow,
+  startCnesIngestionWorkflow,
   startEmultecOrderImportWorkflow,
   startFullSearchSyncWorkflow,
   startPurchaseRecurrenceBackfillWorkflow,
@@ -14,6 +15,7 @@ export const searchSyncUseCases = {
     start: startFullSearchSyncWorkflow,
     startOrdersBackfill: startPurchaseRecurrenceBackfillWorkflow,
     startEmultecOrderImport: startEmultecOrderImportWorkflow,
+    startCnesIngestion: startCnesIngestionWorkflow,
   }),
   status: () => new GetSearchSyncStatusUseCase({ describe: describeSearchSyncWorkflow }),
 };

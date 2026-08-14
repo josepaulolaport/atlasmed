@@ -34,7 +34,25 @@ export async function finishEmultecImportRun(input: {
   status: EmultecImportRunStatus;
   fetched: number;
   upserted: number;
+  /**
+   * Of `upserted`, how many actually wrote a row.
+   *
+   * Log-only for now — `emultec_order_import_runs` has no column for it, and
+   * adding one was not worth a second migration. It is the number that says
+   * whether a run did anything: `upserted: 200, changed: 0` is a healthy
+   * re-read, while the same run before write-only-when-changed would have
+   * triggered a recurrence recalculation for 200 orders.
+   */
+  changed?: number;
   skipped: number;
+  /**
+   * Orders imported whose `facility_emultec_clients` link write failed.
+   *
+   * The link is best-effort by design — an order that resolved correctly must
+   * not be dead-lettered over a bookkeeping row — but a swallowed error with no
+   * number attached is how a broken link table stays invisible. Normally 0.
+   */
+  linkFailures?: number;
   skipReasons: Record<string, number>;
   watermarkAfter?: number | null;
   errorMessage?: string | null;
@@ -58,7 +76,9 @@ export async function finishEmultecImportRun(input: {
     status: input.status,
     fetched: input.fetched,
     upserted: input.upserted,
+    changed: input.changed,
     skipped: input.skipped,
+    linkFailures: input.linkFailures,
     skipReasonsJson: JSON.stringify(input.skipReasons),
     watermarkAfter: input.watermarkAfter ?? undefined,
     errorMessage: input.errorMessage ?? undefined,

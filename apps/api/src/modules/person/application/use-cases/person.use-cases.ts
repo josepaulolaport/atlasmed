@@ -1,3 +1,4 @@
+import type { PersonBookmarkRepository } from "../interfaces/person-bookmark.repository.interface";
 import { ResourceNotFoundError } from "../../../../shared/errors";
 import { formatPrimaryRegistrationDisplay } from "../../infrastructure/repositories/drizzle/load-primary-registration-display-map";
 import type {
@@ -10,6 +11,11 @@ import type { PersonProfessionalRegistrationRepository } from "../interfaces/per
 interface Dependencies {
   personRepository: PersonRepository;
   registrationRepository?: PersonProfessionalRegistrationRepository;
+  /**
+   * Optional: when wired, the detail response carries `isBookmarked`, so the
+   * icon is right on first paint instead of flipping after a second request.
+   */
+  personBookmarkRepository?: PersonBookmarkRepository;
 }
 
 function serializeRegistrationSummary(
@@ -83,14 +89,29 @@ async function serializePerson(
 export class GetPersonUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { personId: number }) {
+  async execute(input: { personId: number; userId?: number }) {
     const person = await this.deps.personRepository.findActiveById(
       input.personId
     );
     if (!person) {
       throw new ResourceNotFoundError("Person", input.personId);
     }
-    return serializePerson(person, this.deps.registrationRepository);
+
+    const bookmarkRepository = this.deps.personBookmarkRepository;
+    const isBookmarked =
+      bookmarkRepository && input.userId
+        ? (
+            await bookmarkRepository.findBookmarkedIds({
+              userId: input.userId,
+              personIds: [person.id],
+            })
+          ).length > 0
+        : false;
+
+    return {
+      ...(await serializePerson(person, this.deps.registrationRepository)),
+      isBookmarked,
+    };
   }
 }
 

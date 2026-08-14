@@ -17,6 +17,7 @@ import {
 } from "../../../../infrastructure/search/meili-filter";
 import { reportSearchMeiliFallback } from "../../../../infrastructure/search/search-resilience";
 import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
+import type { FacilityBookmarkRepository } from "../interfaces/facility-bookmark.repository.interface";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
@@ -66,6 +67,14 @@ interface Dependencies {
   /** Keep Meili facilities index in sync after create/update (best-effort). */
   onFacilityChanged?: (facilityId: number) => Promise<void>;
   purchaseRecurrenceService?: PurchaseRecurrenceService;
+  /**
+   * Optional: when wired, the detail response carries `isBookmarked`.
+   *
+   * Inline rather than a second request, so the icon renders in its true state
+   * on first paint. Fetching it separately would show every saved clinic as
+   * unsaved for a frame and then flip.
+   */
+  facilityBookmarkRepository?: FacilityBookmarkRepository;
 }
 
 export class ListFacilitiesUseCase {
@@ -84,6 +93,7 @@ export class ListFacilitiesUseCase {
     clinicalFocusIds?: number[];
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -121,6 +131,7 @@ export class ListFacilitiesUseCase {
         clinicalFocusIds: input.clinicalFocusIds,
         unitTypeIds: input.unitTypeIds,
         legalDocumentType: input.legalDocumentType,
+        cpfStatus: input.cpfStatus,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -176,7 +187,13 @@ export class ListFacilitiesUseCase {
           : undefined,
         // OR across the selected unit types, matching the SQL. Both of these
         // are plain facility columns, so the indexed value cannot drift from
-        // the row the way an order-derived field would.
+        // the row *as long as every writer goes through the application* —
+        // the index is maintained by `upsertFacilitySearchDocument` on change,
+        // and nothing else refreshes it. A data migration is a writer that
+        // does not, and migration 0107 proved it: it corrected seven rows'
+        // `unit_type_id` in SQL, and those documents kept answering the old
+        // filter until the index was rebuilt. Any migration touching an
+        // indexed facility column needs a rebuild alongside it.
         input.unitTypeIds?.length
           ? inFilter("unitTypeId", input.unitTypeIds)
           : undefined,
@@ -249,6 +266,7 @@ export class ListFacilitiesUseCase {
           clinicalFocusIds: input.clinicalFocusIds,
           unitTypeIds: input.unitTypeIds,
           legalDocumentType: input.legalDocumentType,
+          cpfStatus: input.cpfStatus,
           purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile,
           purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -325,7 +343,13 @@ export class ListClinicalFocusesUseCase {
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: number; scope: ScopeContext; role: string; verticalId?: number }) {
+  async execute(input: {
+    facilityId: number;
+    scope: ScopeContext;
+    role: string;
+    verticalId?: number;
+    userId?: number;
+  }) {
     const listScope = buildFacilityListScope({
       scope: input.scope,
       role: input.role,
@@ -362,9 +386,23 @@ export class GetFacilityUseCase {
         ? assignedVerticalIds
         : listScope.verticalIds;
 
-    return serializeFacility(clinic, listScope.verticalIds, {
-      exposeProfileVerticalIds,
-    });
+    const bookmarkRepository = this.deps.facilityBookmarkRepository;
+    const isBookmarked =
+      bookmarkRepository && input.userId
+        ? (
+            await bookmarkRepository.findBookmarkedIds({
+              userId: input.userId,
+              facilityIds: [clinic.id],
+            })
+          ).length > 0
+        : false;
+
+    return {
+      ...serializeFacility(clinic, listScope.verticalIds, {
+        exposeProfileVerticalIds,
+      }),
+      isBookmarked,
+    };
   }
 }
 
@@ -383,11 +421,38 @@ export class CreateFacilityUseCase {
      */
     lat: number;
     lng: number;
+    /**
+     * Spec 0015: required, and it must name an establishment the registry holds.
+     *
+     * Importing from CNES is the only way a facility comes into existence, so a
+     * create with no registry behind it is not a partially-filled record but one
+     * the model has no meaning for. `facilities.cnes_code` is NOT NULL, which
+     * makes "every facility came from CNES" true regardless of this check; the
+     * check adds that the code names something real rather than any string.
+     *
+     * Optional in the type so a missing one is reported as a field error rather
+     * than failing to compile at the route, which passes the body through whole.
+     */
+    cnesCode?: string;
     /** Required unless the caller has exactly one accessible vertical. */
     verticalId?: number;
     scope: ScopeContext;
     role: string;
   }) {
+    const cnesCode = input.cnesCode?.trim();
+    if (!cnesCode) {
+      throw new ValidationError([
+        { field: "cnesCode", message: "cnesCode is required" },
+      ]);
+    }
+    if (!(await this.deps.facilityRepository.registryHasEstablishment(cnesCode))) {
+      throw new ValidationError([
+        {
+          field: "cnesCode",
+          message: `CNES ${cnesCode} is not an establishment the registry knows`,
+        },
+      ]);
+    }
     // A facility with no vertical profile is invisible to every non-global
     // scope, so creation must resolve exactly one vertical (spec 0010 §1.7).
     // resolveVerticalIds wraps resolveAccessibleVerticalIds: it throws
@@ -428,6 +493,7 @@ export class CreateFacilityUseCase {
       legalDocument: input.legalDocument,
       lat: coordinates.lat,
       lng: coordinates.lng,
+      cnesCode,
       verticalId,
     });
 

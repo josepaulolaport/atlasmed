@@ -7,6 +7,9 @@ import 'package:flutter/painting.dart';
 // ═══════════════════════════════════════════════════════════════
 
 class Facility {
+  /// Whether the caller has this clinic in Favoritos (detail responses only).
+  final bool isBookmarked;
+
   final int id;
   final String name;
 
@@ -29,6 +32,7 @@ class Facility {
   final String? updatedAt;
 
   const Facility({
+    this.isBookmarked = false,
     required this.id,
     required this.name,
     this.address,
@@ -63,6 +67,7 @@ class Facility {
     );
 
     return Facility(
+      isBookmarked: dto.isBookmarked,
       id: dto.id,
       name: dto.name,
       address: FacilityAddress(

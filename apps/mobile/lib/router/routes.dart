@@ -18,8 +18,9 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/potent
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/facility_drill_down_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
@@ -492,10 +493,48 @@ class PurchaseBucketFacilitiesRoute extends GoRouteData
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return PurchaseBucketFacilitiesScreen(
-      bucket: bucket,
+    return FacilityDrillDownScreen(bucket: bucket, verticalId: verticalId);
+  }
+}
+
+/// Clinics whose CPF is missing or invalid, opened from the Desempenho warning.
+///
+/// Its own route rather than a query parameter on the bucket one: the two are
+/// different slices, and a bucket path segment carrying a CPF status would be
+/// a lie in every deep link and analytics event.
+@TypedGoRoute<CpfIssueFacilitiesRoute>(path: '/dashboard/cpf-issues/:cpfStatus')
+class CpfIssueFacilitiesRoute extends GoRouteData
+    with $CpfIssueFacilitiesRoute {
+  const CpfIssueFacilitiesRoute({
+    required this.cpfStatus,
+    @TypedQueryParameter(name: 'verticalId') this.verticalId,
+  });
+
+  /// `missing` | `invalid`.
+  final String cpfStatus;
+  final int? verticalId;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return FacilityDrillDownScreen(
+      cpfStatus: cpfStatus,
+      title: cpfStatus == 'invalid' ? 'CPF inválido' : 'Sem CPF cadastrado',
       verticalId: verticalId,
     );
+  }
+}
+
+@TypedGoRoute<FavoritosRoute>(path: '/explore/favoritos')
+class FavoritosRoute extends GoRouteData with $FavoritosRoute {
+  const FavoritosRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return const FavoritosScreen();
   }
 }
 

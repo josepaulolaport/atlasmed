@@ -8,6 +8,9 @@
 #
 # Flags passadas ao shorebird patch:
 #   --allow-asset-diffs --allow-native-diffs
+#
+# Variáveis de ambiente:
+#   SHOREBIRD_DRY_RUN  Acrescenta --dry-run
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -102,10 +105,17 @@ run_patches() {
 
     echo "▶️  Patching $platform @ $releaseVersion ..."
 
+    # Patches iOS não precisam de IPA assinada; Android não aceita essa flag.
+    platform_flags=()
+    if [ "$platform" = "ios" ]; then
+      platform_flags+=(--no-codesign)
+    fi
+
     if shorebird patch \
       --platforms="$platform" \
       --release-version="$releaseVersion" \
       "${FLAGS[@]}" \
+      ${platform_flags[@]+"${platform_flags[@]}"} \
       -- --dart-define-from-file=config.production.json --no-tree-shake-icons; then
       echo "  ✅ $platform @ $releaseVersion patched successfully"
       echo "| $platform | $releaseVersion | ✅ |" >> "$STEP_SUMMARY"

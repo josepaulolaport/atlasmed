@@ -66,6 +66,9 @@ async function seedFacility(tx: Tx, geo: Geo, name: string): Promise<number> {
     .values({
       displayName: name,
       legalDocumentType: "CNPJ",
+      // Spec 0015: every facility names a CNES establishment. The value is
+      // arbitrary here, only its uniqueness matters — the index is total.
+      cnesCode: crypto.randomUUID(),
       stateId: geo.stateId,
       municipalityId: geo.municipalityId,
       // Spec 0009 R5: every clinic has a position.

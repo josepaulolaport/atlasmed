@@ -19,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/expl
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_import_entry_button.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
@@ -27,6 +28,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specia
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
@@ -205,7 +207,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const AtlasAppBar(page: 'Explorar'),
+      // Favoritos is reachable only from Explorar, where clinics and doctors
+      // are browsed — it is a shortcut into the same two lists, not a new
+      // top-level destination.
+      appBar: const AtlasAppBar(
+        page: 'Explorar',
+        actions: [FavoritosAppBarButton()],
+      ),
       body: Column(
         children: [
           const SizedBox(height: 16),
@@ -223,6 +231,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onTap: () => _showSortSheet(state, notifier),
             ),
           ),
+          /*
+           * Spec 0015 §6.0. The persistent way into the CNES list, beside the
+           * clinics the user already works. It hides itself for roles that may
+           * not import, and the API enforces the same rule independently.
+           */
+          if (isClinic)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: CnesImportEntryButton(initialQuery: state.query),
+              ),
+            ),
           if (filterChips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),

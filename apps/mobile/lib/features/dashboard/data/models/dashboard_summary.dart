@@ -125,10 +125,44 @@ class DashboardTerritorySummary {
   }
 }
 
+/// CPF clinics whose document cannot be used, split by why.
+///
+/// Two numbers because the fixes differ: [missing] needs somebody to find out
+/// the CPF, [invalid] needs somebody to correct a number already on file.
+///
+/// The CPF belongs to the clinic, not to a linha — the Linha filter decides
+/// *which clinics are yours*, never whether a document is valid.
+class DashboardCpfIssues {
+  const DashboardCpfIssues({required this.missing, required this.invalid});
+
+  /// No CPF on file: null, or blank once trimmed.
+  final int missing;
+
+  /// A CPF is on file but fails the módulo-11 check.
+  final int invalid;
+
+  int get total => missing + invalid;
+
+  /// Nothing needs the rep's attention, so the card does not render.
+  bool get isClear => total == 0;
+
+  /// Zeros when the key is absent, so an older client against a newer API — or
+  /// the reverse — degrades to "no warning" instead of throwing on a screen
+  /// that has nothing to do with CPFs.
+  factory DashboardCpfIssues.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const DashboardCpfIssues(missing: 0, invalid: 0);
+    return DashboardCpfIssues(
+      missing: json['missing'] as int? ?? 0,
+      invalid: json['invalid'] as int? ?? 0,
+    );
+  }
+}
+
 class DashboardSummary {
   const DashboardSummary({
     required this.purchaseStatus,
     required this.territory,
+    required this.cpfIssues,
     this.verticalId,
   });
 
@@ -136,6 +170,7 @@ class DashboardSummary {
   final int? verticalId;
   final DashboardPurchaseStatus purchaseStatus;
   final DashboardTerritorySummary territory;
+  final DashboardCpfIssues cpfIssues;
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
     return DashboardSummary(
@@ -145,6 +180,9 @@ class DashboardSummary {
       ),
       territory: DashboardTerritorySummary.fromJson(
         json['territory'] as Map<String, dynamic>,
+      ),
+      cpfIssues: DashboardCpfIssues.fromJson(
+        json['cpfIssues'] as Map<String, dynamic>?,
       ),
     );
   }

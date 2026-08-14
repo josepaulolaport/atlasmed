@@ -171,6 +171,8 @@ export interface FacilityRepository {
     /** CNES unit type IDs — facility matches any selected (OR). */
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    /** CPF clinics whose document is absent, or present but not a valid CPF. */
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -195,6 +197,8 @@ export interface FacilityRepository {
     clinicalFocusIds?: number[];
     unitTypeIds?: number[];
     legalDocumentType?: "CNPJ" | "CPF";
+    /** CPF clinics whose document is absent, or present but not a valid CPF. */
+    cpfStatus?: "missing" | "invalid";
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -226,9 +230,14 @@ export interface FacilityRepository {
     legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
+    /** Required: `facilities.cnes_code` is NOT NULL (spec 0015). */
+    cnesCode: string;
     /** Vertical the created facility gets its first profile in. */
     verticalId: number;
   }): Promise<FacilityRecord>;
+
+  /** True when the CNES registry holds this establishment. */
+  registryHasEstablishment(cnesCode: string): Promise<boolean>;
 
   update(
     id: number,

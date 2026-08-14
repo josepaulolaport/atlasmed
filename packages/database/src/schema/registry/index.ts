@@ -2,6 +2,7 @@ import {
   pgSchema,
   text,
   integer,
+  numeric,
   boolean,
   timestamp,
   bigint,
@@ -112,11 +113,18 @@ export const registryStates = registrySchema.table(
 export const registryMunicipalities = registrySchema.table(
   "municipalities",
   {
-    /** IBGE code. */
+    /** IBGE code without its check digit — six digits, matching `cnes_code`. */
     cnesId: text("cnes_id").primaryKey(),
     name: text("name").notNull(),
     stateCnesId: text("state_cnes_id").notNull(),
-    /** → public.municipalities.id */
+    /**
+     * → public.municipalities.id — **many-to-one, not a bijection.**
+     *
+     * CNES subdivides the Distrito Federal into 31 regiões administrativas and
+     * gives each its own code; IBGE has one município there, Brasília. So 31
+     * registry rows point at one público município, and this is the whole of the
+     * 5 604 / 5 571 gap (plus two Ministry codes carrying no establishment).
+     */
     atlasmedId: integer("atlasmed_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -129,10 +137,102 @@ export const registryMunicipalities = registrySchema.table(
     })
       .onUpdate("cascade")
       .onDelete("restrict"),
-    uniqueIndex("registry_municipalities_atlasmed_id_uidx")
+    /*
+     * Not unique — see `atlasmedId`. It was, and the DF's 31 localities cannot
+     * all bridge to Brasília under a unique index. Nothing reads this column as
+     * a reverse lookup, so the uniqueness bought nothing and forbade the truth.
+     */
+    index("registry_municipalities_atlasmed_id_idx")
       .on(t.atlasmedId)
       .where(sql`${t.atlasmedId} IS NOT NULL`),
     index("registry_municipalities_state_cnes_id_idx").on(t.stateCnesId),
+  ]
+);
+
+// ─── Establishment catalogues — mirrored whole, bridged selectively ──────────
+//
+// Spec 0015 §3.2. These mirror `tbTipoUnidade`, `tbSubTipo` and
+// `tbMotivoDesativacao` faithfully — all 39 / 91 / 14 rows — while `atlasmed_id`
+// carries a second, editorial fact: **whether we import establishments of that
+// kind at all**.
+//
+// The allowlist lives here rather than in `public.unit_types` because that table
+// already holds all 39 types, so "the type exists" would pass for every one of
+// them. Putting the decision on the bridge means unmapped is
+// mirrored-but-never-offered, widening the set is one UPDATE with no deploy, and
+// a type CNES invents next year is invisible until a human looks at it.
+
+/** `tbTipoUnidade` → `public.unit_types`. `atlasmed_id` set = importable (§3.2). */
+export const registryUnitTypes = registrySchema.table(
+  "unit_types",
+  {
+    /** CO_TIPO_UNIDADE, always two digits — the loader lpads before writing. */
+    cnesId: text("cnes_id").primaryKey(),
+    name: text("name").notNull(),
+    /** → public.unit_types.id. Null = mirrored, never offered for import. */
+    atlasmedId: bigint("atlasmed_id", { mode: "number" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("registry_unit_types_atlasmed_id_uidx")
+      .on(t.atlasmedId)
+      .where(sql`${t.atlasmedId} IS NOT NULL`),
+  ]
+);
+
+/**
+ * `tbSubTipo` → `public.unit_subtypes`.
+ *
+ * Keyed on the pair because **subtype codes are not globally unique** — CNES
+ * scopes them by unit type, and `public.unit_subtypes_unit_type_id_cnes_id_key`
+ * already says the same thing.
+ */
+export const registryUnitSubtypes = registrySchema.table(
+  "unit_subtypes",
+  {
+    unitTypeCnesId: text("unit_type_cnes_id").notNull(),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
+    /** → public.unit_subtypes.id */
+    atlasmedId: bigint("atlasmed_id", { mode: "number" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({
+      name: "registry_unit_subtypes_pkey",
+      columns: [t.unitTypeCnesId, t.cnesId],
+    }),
+    foreignKey({
+      name: "registry_unit_subtypes_unit_type_cnes_id_fk",
+      columns: [t.unitTypeCnesId],
+      foreignColumns: [registryUnitTypes.cnesId],
+    })
+      .onUpdate("cascade")
+      .onDelete("restrict"),
+    uniqueIndex("registry_unit_subtypes_atlasmed_id_uidx")
+      .on(t.atlasmedId)
+      .where(sql`${t.atlasmedId} IS NOT NULL`),
+  ]
+);
+
+/** `tbMotivoDesativacao` → `public.deactivation_reasons`. */
+export const registryDeactivationReasons = registrySchema.table(
+  "deactivation_reasons",
+  {
+    /** CD_MOTIVO_DESAB. */
+    cnesId: text("cnes_id").primaryKey(),
+    name: text("name").notNull(),
+    /** → public.deactivation_reasons.id */
+    atlasmedId: bigint("atlasmed_id", { mode: "number" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("registry_deactivation_reasons_atlasmed_id_uidx")
+      .on(t.atlasmedId)
+      .where(sql`${t.atlasmedId} IS NOT NULL`),
   ]
 );
 
@@ -174,24 +274,53 @@ export const registryFacilities = registrySchema.table(
     neighborhood: text("neighborhood"),
     postalCode: text("postal_code"),
     /**
-     * Source `CO_MUNICIPIO_GESTOR` — the município that *manages* the unit.
-     * `tbEstabelecimento` carries no plain `CO_MUNICIPIO`, so this is the only
-     * municipality the export offers.
+     * The establishment's **own** município — the six-digit prefix of
+     * `CO_UNIDADE`, not `CO_MUNICIPIO_GESTOR` (which now has its own column).
      *
-     * For everything this table holds the two are the same thing: the loader
-     * only upserts clinics we operate, and the gestor matched our own
-     * `facilities.municipality_id` on 1423 of 1423, with no divergence and no
-     * blanks (202605). **If the scope ever widens** to units we do not operate —
-     * state- or federally-managed hospitals — the gestor can differ from where
-     * the establishment actually is, and this column would quietly stop meaning
-     * what its name says.
+     * `tbEstabelecimento` carries no plain `CO_MUNICIPIO`, which once made the
+     * gestor look like the only municipality on offer. It is not: `CO_UNIDADE` is
+     * município(6) + `CO_CNES`(7) on 184 301 of 184 351 rows (202607), and where
+     * the prefix disagrees with the gestor — 218 rows, 0.12 % — it is usually the
+     * *gestor* that is malformed, holding a two-digit state code where a six-digit
+     * município belongs.
+     *
+     * The old scope hid this: while the loader only mirrored clinics we operate,
+     * the two agreed on 1 423 of 1 423. That was a property of the scope, not of
+     * the data, and spec 0015 removes the scope.
      */
     municipalityCnesId: text("municipality_cnes_id"),
+    /**
+     * `CO_MUNICIPIO_GESTOR` verbatim — the município that *manages* the unit,
+     * which for state- and federally-managed hospitals is genuinely not where the
+     * establishment is. Kept separate from `municipality_cnes_id` (which now holds
+     * the establishment's own, from the `CO_UNIDADE` prefix) so the two facts stay
+     * separable rather than one quietly standing in for the other. Neither is
+     * authoritative for an import: one is suggested, the user confirms (§4.4).
+     */
+    managingMunicipalityCnesId: text("managing_municipality_cnes_id"),
     phoneNumber: text("phone_number"),
     email: text("email"),
     unitTypeCode: text("unit_type_code"),
-    unitTypeName: text("unit_type_name"),
-    unitSubtypeName: text("unit_subtype_name"),
+    /** `rlEstabSubTipo` — exactly one subtype per establishment in the export. */
+    unitSubtypeCode: text("unit_subtype_code"),
+    /** `NU_LATITUDE` / `NU_LONGITUDE`. Absent on 272 of 494 273 active units. */
+    latitude: numeric("latitude"),
+    longitude: numeric("longitude"),
+    /**
+     * `TP_PFPJ` — `1` = pessoa física, `3` = pessoa jurídica. Written straight
+     * through, because `public.facilities.legal_document_type` must come from what
+     * CNES declares rather than from a guess about which document column happened
+     * to be filled.
+     */
+    legalPersonType: text("legal_person_type"),
+    /**
+     * `NU_CNPJ_MANTENEDORA`. 119 415 establishments (18.9 %) are pessoa jurídica
+     * with no CNPJ of their own — ~99 % public administration, mostly UBS and
+     * postos operating under a prefeitura's CNPJ. For them this is the only
+     * document that exists, and `tax_id_cnpj` being null is the accurate record
+     * rather than a gap to fill (§4.6).
+     */
+    maintainerTaxId: text("maintainer_tax_id"),
     deactivationReasonCode: text("deactivation_reason_code"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -212,6 +341,14 @@ export const registryFacilities = registrySchema.table(
       .on(t.atlasmedId)
       .where(sql`${t.atlasmedId} IS NOT NULL`),
     index("registry_facilities_municipality_cnes_id_idx").on(t.municipalityCnesId),
+    /**
+     * The candidates sweep (§6.1.1) reads "active establishments of an
+     * allowlisted type" out of 631 973 rows. Without this it is a full scan every
+     * time the index is rebuilt.
+     */
+    index("registry_facilities_offerable_idx")
+      .on(t.unitTypeCode)
+      .where(sql`${t.deactivationReasonCode} IS NULL`),
   ]
 );
 

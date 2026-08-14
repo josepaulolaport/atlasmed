@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { cnesRuns } from "@atlasmed/database";
 import { db } from "../infrastructure/db";
 import { logger } from "../logger";
@@ -127,7 +127,12 @@ export async function failAbandonedCnesRuns(input: {
       and(
         eq(cnesRuns.status, "RUNNING"),
         isNull(cnesRuns.finishedAt),
-        sql`${cnesRuns.startedAt} < ${cutoff}`,
+        // lt(), not sql`... < ${cutoff}`: a raw template binds the Date straight
+        // to the driver, skipping the column's codec, and the driver rejects it
+        // with `The "string" argument must be of type string ... Received an
+        // instance of Date`. That threw on every run, in the first activity, so
+        // no CNES competence could ever load.
+        lt(cnesRuns.startedAt, cutoff),
         sql`${cnesRuns.temporalWorkflowId} is distinct from ${input.exceptWorkflowId}`
       )
     )

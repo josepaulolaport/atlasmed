@@ -15,3 +15,4 @@ export * from "./facility-potential";
 export * from "./calendar";
 export * from "./orders";
 export * from "./visits";
+export * from "./bookmarks";

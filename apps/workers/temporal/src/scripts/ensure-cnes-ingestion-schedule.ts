@@ -9,8 +9,8 @@ import { loadWorkerConfig } from "../config";
 import { logger } from "../logger";
 
 export const CNES_INGESTION_SCHEDULE = {
-  scheduleId: "cnes-ingestion-daily",
-  workflowId: "cnes-ingestion-daily",
+  scheduleId: "cnes-ingestion-weekly",
+  workflowId: "cnes-ingestion-weekly",
 } as const;
 
 function scheduleOptions(input: { taskQueue: string }) {
@@ -18,15 +18,21 @@ function scheduleOptions(input: { taskQueue: string }) {
     scheduleId: CNES_INGESTION_SCHEDULE.scheduleId,
     spec: {
       /**
-       * Daily, for a monthly export.
+       * Weekly, for a monthly export — Sunday 04:00.
        *
        * DATASUS publishes on no fixed day, so a monthly trigger would either
        * fire before the new competence exists or wait weeks after it appears.
-       * A daily check discovers the newest competence and returns SKIPPED when
-       * it is already loaded, which is what most days are. Cost of a skip is one
-       * FTP listing.
+       * A periodic check discovers the newest competence and returns SKIPPED
+       * when it is already loaded, which is what most ticks are.
+       *
+       * Weekly rather than daily: a skip is cheap but not free — it is an FTP
+       * listing against DATASUS — and the export appears once a month, so a
+       * daily tick spends about thirty checks to find one new competence. A
+       * week is still four chances to catch a publication within days of it
+       * landing, and `POST /cnes/ingestion` exists for when somebody wants it
+       * now rather than on Sunday.
        */
-      cronExpressions: ["0 4 * * *"],
+      cronExpressions: ["0 4 * * 0"],
     },
     policies: {
       /**

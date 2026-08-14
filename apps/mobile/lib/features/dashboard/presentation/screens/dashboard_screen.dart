@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/cpf_warning_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_territory_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/purchase_status_donut_card.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
@@ -109,6 +110,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   }
                   return Column(
                     children: [
+                      // Above the donut: it is the only card here asking the
+                      // rep to do something, and it renders nothing when there
+                      // is nothing to do.
+                      CpfWarningCard(
+                        issues: summary.cpfIssues,
+                        onTapStatus: (cpfStatus) {
+                          CpfIssueFacilitiesRoute(
+                            cpfStatus: cpfStatus,
+                            // Passed explicitly so the list matches the number
+                            // that opened it: the list would otherwise fall
+                            // back to the active-vertical header, which this
+                            // count does not read.
+                            verticalId: ref.read(
+                              dashboardSelectedVerticalIdProvider,
+                            ),
+                          ).push(context);
+                        },
+                      ),
+                      if (!summary.cpfIssues.isClear)
+                        const SizedBox(height: 12),
                       PurchaseStatusDonutCard(
                         data: summary.purchaseStatus,
                         onBucketTap: (bucket) {
