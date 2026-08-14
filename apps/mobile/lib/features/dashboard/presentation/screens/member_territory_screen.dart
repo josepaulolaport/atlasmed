@@ -74,7 +74,9 @@ class MemberTerritoryScreen extends ConsumerWidget {
                 map: map,
                 isRep: isRep,
                 verticalId: verticalId,
-                onChanged: () => ref.invalidate(memberTerritoryProvider(args)),
+                // Spec 0015 R13: a boundary change moves clinics between
+                // people, so it is not only the map that went stale.
+                onChanged: () => invalidateAssignmentDerivedData(ref),
               ),
             ],
           );

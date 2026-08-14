@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_met
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/member_territory_map.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TeamArgs {
@@ -122,3 +123,30 @@ final memberTerritoryProvider = Provider.autoDispose
       ref.onDispose(repository.dispose);
       return repository;
     });
+
+/// Everything that derives from an assignment or a boundary (spec 0015 R13).
+///
+/// A clinic changing hands, or a polygon moving, changes the roster row, the
+/// member profile's counts, the map, every clinic list and every Desempenho
+/// card at once — they are all readings of the same two tables. Refreshing only
+/// the screen you happen to be looking at leaves the others stating figures
+/// that were true a moment ago, which is the failure mode spec 0014 §8.4
+/// already recorded once with a cached scope.
+///
+/// Invalidating a family invalidates all of its instances, which is what makes
+/// this correct rather than a list of the keys someone remembered: a rep's
+/// profile, their manager's roster row and the admin's drill-down are three
+/// different keys onto the same fact.
+void invalidateAssignmentDerivedData(WidgetRef ref) {
+  ref.invalidate(teamProvider);
+  ref.invalidate(teamMemberProvider);
+  ref.invalidate(memberTerritoryProvider);
+  ref.invalidate(repsWithoutPatchProvider);
+  ref.invalidate(metricClinicsProvider);
+  ref.invalidate(assignedClinicsMetricProvider);
+  ref.invalidate(unassignedClinicsMetricProvider);
+  ref.invalidate(coverageMetricProvider);
+  ref.invalidate(cadastroCompletionMetricProvider);
+  ref.invalidate(purchaseBucketsMetricProvider);
+  ref.invalidate(dashboardTerritoryProvider);
+}

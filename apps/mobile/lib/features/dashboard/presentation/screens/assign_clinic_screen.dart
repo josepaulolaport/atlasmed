@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_assignment_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -217,9 +218,12 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
         overrideReason: decision.reason,
       );
       if (!mounted) return;
+      // Spec 0015 R13: the roster row, the profile count and the map all read
+      // this assignment.
+      invalidateAssignmentDerivedData(ref);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('${clinic.name} associada.')));
+      ).showSnackBar(SnackBar(content: Text("${clinic.name} associada.")));
       await _load();
     } on ClinicAssignmentException catch (error) {
       if (!mounted) return;

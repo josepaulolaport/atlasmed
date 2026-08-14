@@ -126,7 +126,7 @@ class _MemberTerritoryViewState extends State<MemberTerritoryView> {
 
     try {
       // 1. Everything outside the enclosing zone, dimmed.
-      final mask = _maskOutside(_geometries(widget.map.context));
+      final mask = maskOutside(_geometries(widget.map.context));
       if (mask != null) {
         await mapboxMap.style.addSource(
           GeoJsonSource(id: _maskSource, data: jsonEncode(mask)),
@@ -231,11 +231,16 @@ class _MemberTerritoryViewState extends State<MemberTerritoryView> {
 
 /// The world with the given territories punched out of it.
 ///
+/// Visible for test: this is pure geometry with no Mapbox in it, and a mask
+/// whose winding or ring choice is wrong fails silently — it simply dims the
+/// wrong half of the map.
+///
 /// Mapbox has no "dim everything except" primitive, so the mask is one polygon
 /// whose outer ring is the whole world and whose holes are the zone's exterior
 /// rings. Interior rings of the zone are ignored on purpose: a hole inside the
 /// zone is ground the zone does not cover, and it should stay dimmed.
-Map<String, Object?>? _maskOutside(List<TerritoryGeometry> geometries) {
+@visibleForTesting
+Map<String, Object?>? maskOutside(List<TerritoryGeometry> geometries) {
   final holes = <List<List<double>>>[];
   for (final geometry in geometries) {
     for (final polygon in geometry.coordinates) {

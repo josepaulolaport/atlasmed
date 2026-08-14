@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_met
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_assignment_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -77,9 +78,10 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
         reason: reason,
       );
       if (!mounted) return;
-      // Spec 0015 R13: the count on the profile and the roster row derive from
-      // this same assignment, so the list alone is not enough to refresh.
-      ref.invalidate(metricClinicsProvider(args));
+      // Spec 0015 R13: the profile count, the roster row and every Desempenho
+      // card read the same assignment, so refreshing this list alone would
+      // leave the rest of the app stating a figure that is no longer true.
+      invalidateAssignmentDerivedData(ref);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('${row.name} desassociada.')));
