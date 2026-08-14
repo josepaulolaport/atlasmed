@@ -532,11 +532,26 @@ wizard prefills from the registry and requires confirmation of what the model de
 
 ### 6.3 Vertical profiles
 
-Every one of our 1 443 facilities has at least one profile, and a facility without one is
-invisible to everybody. So the import always creates one.
+Every one of our facilities has at least one profile, and a facility without one is invisible to
+everybody. So the import always creates one (invariant 2).
 
-- the rep holds **one** vertical → the profile is created for it, no question asked
-- the rep holds **several** → the rep chooses which, and may choose more than one
+- the importer holds **one** vertical → the profile is created for it, no question asked
+- the importer holds **several** → they choose which, and may choose more than one
+- the importer holds **none** → they choose from **all** verticals
+
+That third case is not hypothetical, and it is the common one. §6.0 restricts the CNES list to
+managers and admins, and **both ADMIN users hold zero verticals** — MANAGER exists as a role but
+nobody holds it today. Deriving the profile's vertical solely from the importer's own would make
+the flow impossible to complete for the only people allowed to run it.
+
+Defaulting to "the only vertical that exists" was rejected. It works while ORTOPEDIA is the only
+one and silently picks wrong the day a second is added — a landmine with a delayed fuse. An admin
+choosing a vertical on someone's behalf is what an admin is for, and it stays correct at two
+verticals.
+
+**Import creates no rep assignment.** `assignFacilityById` runs on creation and sets the
+*manager zone* geometrically (spec 0009); who covers the clinic is a manager's decision afterwards,
+not a side effect of importing it.
 
 ### 6.4 Duplicate prevention
 
@@ -739,6 +754,10 @@ SQL removes it: the accumulation moves into Postgres, which is built for it.
 9. **Staging is derived, never authoritative.** `ingestion.*` can be dropped and rebuilt from the
    archive without losing a fact. Nothing may write to it except the loader, and nothing may read
    it as if it carried our decisions — the bridge and the roster live in `registry.*`.
+10. **`facilities.location` is written once, by a person's action, and never by the loader.** It is
+    set at import — from CNES's coordinates or from the pin the importer placed — and changed only
+    by someone editing the clinic. No ingestion, backfill or reconciliation may touch it, however
+    much better a later export's coordinates look.
 
 ## 8. Consequences worth stating
 
@@ -766,25 +785,49 @@ SQL removes it: the accumulation moves into Postgres, which is built for it.
 
 ## 9. Open questions
 
+Decided 2026-08-14 unless marked otherwise. What is left is build-time judgement, not product
+direction.
+
 1. ~~**Search shape.**~~ **Resolved** (§6.0, §6.1.1) — its own surface behind a deliberate action in
-   Explorar, served by a Meili index over the registry, with geosearch. Still to settle in build:
-   ranking between name relevance and distance.
-2. **Reactivation.** A CNES establishment that gains a `CO_MOTIVO_DESAB` after we imported it —
-   does the facility deactivate, or does it only stop being offered? Today nothing reads
-   `deactivation_reason_code`.
+   Explorar, served by a Meili index over the registry, with geosearch. Ranking between name
+   relevance and distance is a build-time call: relevance first, distance as tiebreak, revisit on
+   real usage.
+2. ~~**Reactivation.**~~ **Left as is.** A CNES establishment that gains a `CO_MOTIVO_DESAB` after
+   we imported it changes nothing: nothing reads `deactivation_reason_code`, and our facility stays
+   exactly as it is. Deactivating a clinic that has orders and a rep because a monthly export
+   changed a code would be destructive on evidence we have not examined. Revisit only if CNES
+   deactivations turn out to track real closures.
 3. ~~**The nine divergences.**~~ **Resolved** — migration `0107` realigned the seven where CNES
-   supplies a resolvable code and kept the two where it does not (§3.1). What remains open is who
-   *keeps* them aligned: `0107` is a one-shot repair and the loader must own the rule from here.
-4. **`NU_CNPJ_MANTENEDORA`** — the maintaining organisation's CNPJ, unexamined here. It may be the
-   right answer for clinic chains, which the model has no concept of yet.
-5. **Can a rep import outside their patch?** **Deferred, with an interim answer** (2026-08-14): the
-   list is **not** bounded by territory — too much of the geometry is wrong today for that bound to
-   be a correctness gate rather than an obstacle — and it is **open to managers and admins only**
-   until the team has discussed it. What stays open is whether reps get it, and on what terms. §8
-   still holds: the geometry decides ownership, so an import can hand a clinic to another rep, or
-   to nobody the importer can see.
-6. **Provenance of a rep-placed point.** `facilities.location` records no source, so a pin the rep
-   dropped is indistinguishable from CNES's own. That matters if a later export supplies
-   coordinates for the same establishment: overwriting a rep's correction would be wrong,
-   and keeping a worse value would also be wrong. Deciding this needs no column today — nothing
-   backfills `location` — but it must be decided before anything does.
+   supplies a resolvable code and kept the two where it does not (§3.1). **The loader now owns the
+   rule**: it must keep `facilities.unit_type_id` aligned with CNES on every run, or the divergence
+   returns with the next import. `0107` was the repair; this is the maintenance, and it is in
+   scope for this spec's build.
+4. ~~**`NU_CNPJ_MANTENEDORA`.**~~ **Not now.** Stored, unexamined, and left that way. It is
+   probably the right handle for clinic chains, which the model has no concept of — a separate
+   piece of work, not a prerequisite for importing.
+5. **Can a rep import outside their patch?** **Deferred, with an interim answer**: the list is
+   **not** bounded by territory — too much of the geometry is wrong today for that bound to be a
+   correctness gate rather than an obstacle — and it is **open to managers and admins only** until
+   the team has discussed it. What stays open is whether reps get it, and on what terms. §8 still
+   holds: the geometry decides ownership, so an import can hand a clinic to another rep, or to
+   nobody the importer can see.
+6. ~~**Provenance of a rep-placed point.**~~ **Resolved, and permanently** — `facilities.location`
+   is never backfilled. It is written once at import and thereafter only by a person editing the
+   clinic (invariant 10). Provenance was only ever needed to decide what a later export may
+   overwrite; the answer is *nothing*, so no column is required and the question does not return.
+
+### Build-time, mine unless someone objects
+
+- **Staging churn** — partition `ingestion.*` per competência and drop, rather than delete and
+  reload. Makes the swap atomic (§6.7 rule 1) and avoids bloat.
+- **Search ranking** — as in question 1.
+
+### Operational, outside this spec
+
+- **Rebuild the facility search index when `0107` ships.** It corrected seven `unit_type_id`s in
+  SQL, and Meili is maintained only by application writes, so those documents answer the old filter
+  until a rebuild runs (§3.1).
+- **The worker has no concurrency limits.** `Worker.create` takes the defaults — 100 concurrent
+  activities, one task queue shared with the Emultec import that runs every ten minutes. Staging
+  removes the long pass this spec would have added, so nothing here is urgent; it stays worth
+  knowing before the next long-running activity lands on that queue.
