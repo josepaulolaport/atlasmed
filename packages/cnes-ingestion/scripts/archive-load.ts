@@ -18,6 +18,7 @@ import { eq, sql } from "drizzle-orm";
 import { loadRegistryFromCsv } from "../src/load/load-registry";
 import { openArchiveFromObjectStore, type RangeReadable } from "../src/archive/object-store-source";
 import { selectArchivesToPrune } from "../src/archive/prune-archives";
+import { pruneCnesStaging } from "../src/load/prune-staging";
 import { parseReference } from "../src/cnes-files";
 
 const [objectKey, referenceArg] = process.argv.slice(2);
@@ -142,26 +143,14 @@ try {
 await finish("COMPLETED", { stats: result });
 
 /*
- * Spec 0015 §6.7: keep one competência. Staging is ~316 MB per month and is a
- * derived projection — it can be rebuilt from the archive without losing a fact —
- * so retaining superseded months buys nothing and grows without bound. Pruned
- * only after this run is marked COMPLETED, so a reader is never left with no
- * competência at all.
+ * Spec 0015 §6.7: keep one competência. The same function the scheduled workflow
+ * calls — this used to be an inline copy here and nothing at all on the workflow
+ * side, which is how the two paths came to disagree in the first place.
  */
-const prunedCarga = await db.execute(
-  sql`delete from ingestion.carga_staging
-       where (reference_year, reference_month) <> (${reference.year}, ${reference.month})`
-);
-const prunedProfessionals = await db.execute(
-  sql`delete from ingestion.professional_staging
-       where (reference_year, reference_month) <> (${reference.year}, ${reference.month})`
-);
+const prunedStaging = await pruneCnesStaging({ db, reference });
 console.log(
   `[${elapsed()}s] staging pruned to ${reference.year}-${String(reference.month).padStart(2, "0")}`,
-  {
-    carga: (prunedCarga as unknown as { count?: number }).count ?? null,
-    professionals: (prunedProfessionals as unknown as { count?: number }).count ?? null,
-  }
+  prunedStaging
 );
 
 /*

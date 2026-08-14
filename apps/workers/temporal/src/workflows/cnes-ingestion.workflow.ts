@@ -162,6 +162,31 @@ export async function cnesIngestionWorkflow(
       );
     }
 
+    /**
+     * Superseded staging, dropped for the same reasons and on the same terms:
+     * after the promotion, and never fatal to a load that already succeeded.
+     *
+     * This step did not exist. Staging is ~316 MB a competência and nothing on
+     * this path ever deleted it, so the scheduled monthly run grew the database
+     * without bound while looking perfectly healthy — the failure mode the whole
+     * ledger exists to prevent.
+     */
+    try {
+      const pruned = await quick.pruneCnesStagingActivity({ reference });
+      if (pruned.carga > 0 || pruned.professionals > 0) {
+        log.info("cnes.staging.pruned", {
+          carga: pruned.carga,
+          professionals: pruned.professionals,
+        });
+      }
+    } catch (error) {
+      log.warn(
+        `cnes.staging.prune_failed — the load succeeded; staging will keep a superseded competência: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+
     return { status: "COMPLETED", runId, result };
   } catch (error) {
     // Recorded before rethrowing: a run left RUNNING would block its competence
