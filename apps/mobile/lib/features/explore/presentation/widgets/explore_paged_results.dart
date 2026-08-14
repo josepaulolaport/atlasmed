@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clin
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_import_entry_button.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
@@ -70,6 +71,16 @@ class ClinicsPagedResults extends ConsumerWidget {
                   child: EmptyState(
                     query: query.searchQuery ?? '',
                     kind: 'clinic',
+                    /*
+                     * Spec 0015 §6.0. Not finding a clinic is the exact moment
+                     * the import flow exists for, so the offer belongs here as
+                     * well as in the tab. It reads as "search CNES" rather than
+                     * "add clinic": hand-typing a clinic is gone, and a generic
+                     * "+" would promise an action that no longer exists.
+                     */
+                    footer: CnesImportEntryButton(
+                      initialQuery: query.searchQuery ?? '',
+                    ),
                   ),
                 ),
               ],
