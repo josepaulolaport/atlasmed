@@ -16,14 +16,14 @@ export type ResolvableFacility = {
 };
 
 export type FacilityResolveResult =
-  | { ok: true; facilityId: number; via: "id_cliente_emultec" | "cnpj" | "cpf" }
+  | { ok: true; facilityId: number; via: "link" | "cnpj" | "cpf" }
   | {
       ok: false;
       reason: "no_match" | "ambiguous" | "no_document";
     };
 
 /**
- * Pure facility resolve: stamp → PF→PJ CNPJ → own CNPJ-14 → own CPF-11.
+ * Pure facility resolve: link → PF→PJ CNPJ → own CNPJ-14 → own CPF-11.
  *
  * `candidates` must be active (`deactivated_at is null`). They used to also be
  * required to carry a `cnes_code`, which meant a facility matching the client's
@@ -47,9 +47,9 @@ export function resolveEmultecFacility(
   candidates: ResolvableFacility[],
   byIdCliente: Map<number, ResolvableFacility>
 ): FacilityResolveResult {
-  const stamped = byIdCliente.get(client.idCliente);
-  if (stamped) {
-    return { ok: true, facilityId: stamped.id, via: "id_cliente_emultec" };
+  const linked = byIdCliente.get(client.idCliente);
+  if (linked) {
+    return { ok: true, facilityId: linked.id, via: "link" };
   }
 
   const attempts: Array<{ digits: string; type: "CNPJ" | "CPF" }> = [];

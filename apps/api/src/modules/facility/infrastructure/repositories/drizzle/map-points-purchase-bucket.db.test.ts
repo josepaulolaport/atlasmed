@@ -35,12 +35,23 @@ const dbUp = await isDatabaseReachable();
  * `states.abbreviation` is `char(2)` and UNIQUE, and other suites commit
  * fixtures into this database instead of rolling back — the CNES loader's test
  * leaves a permanent `ZZ` behind. Derive rather than hardcode.
+ *
+ * Same contract as `uniqueAbbreviation` in the worker's harness, including the
+ * refusal to wrap: a modulo here would hand out a repeat on the 37th call and
+ * fail as a puzzling unique-violation somewhere unrelated. The worker's copy
+ * cannot be imported across apps, so the behaviour is matched by hand.
  */
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 let abbreviationCounter = 0;
 function uniqueAbbreviation(): string {
+  if (abbreviationCounter >= ALPHABET.length) {
+    throw new Error(
+      "uniqueAbbreviation exhausted — seed fewer states per test file",
+    );
+  }
   const head = ALPHABET[Math.floor(Math.random() * ALPHABET.length)]!;
-  const tail = ALPHABET[abbreviationCounter++ % ALPHABET.length]!;
+  const tail = ALPHABET[abbreviationCounter]!;
+  abbreviationCounter += 1;
   return `${head}${tail}`;
 }
 

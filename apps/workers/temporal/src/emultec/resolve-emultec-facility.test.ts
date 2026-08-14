@@ -14,9 +14,9 @@ const fac = (
 });
 
 describe("resolveEmultecFacility", () => {
-  test("prefers id_cliente_emultec stamp", () => {
-    const stamped = fac(10);
-    const byId = new Map([[55, stamped]]);
+  test("prefers an existing client link", () => {
+    const linked = fac(10);
+    const byId = new Map([[55, linked]]);
     const result = resolveEmultecFacility(
       {
         idCliente: 55,
@@ -25,13 +25,13 @@ describe("resolveEmultecFacility", () => {
         cpfDigits: null,
         pjCnpjDigits: null,
       },
-      [stamped, fac(99, { legalDocument: "12345678000199", legalDocumentType: "CNPJ" })],
+      [linked, fac(99, { legalDocument: "12345678000199", legalDocumentType: "CNPJ" })],
       byId
     );
     expect(result).toEqual({
       ok: true,
       facilityId: 10,
-      via: "id_cliente_emultec",
+      via: "link",
     });
   });
 
