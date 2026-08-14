@@ -358,11 +358,14 @@ jobs:
         working-directory: ${{ env.MOBILE_DIR }}
 
       - name: Shorebird release iOS
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ steps.ios_signing.outputs.export_options_plist_path }}
         run: |
           args=(
             release ios
             --no-confirm
             --flutter-version=${{ env.FLUTTER_VERSION }}
+            --export-options-plist="$EXPORT_OPTIONS_PLIST"
           )
           if [[ "$DRY_RUN" == "true" ]]; then
             args+=(--dry-run)
@@ -544,6 +547,7 @@ jobs:
       - name: Executar patches Shorebird
         env:
           SHOREBIRD_DRY_RUN: ${{ env.DRY_RUN }}
+          EXPORT_OPTIONS_PLIST: ${{ steps.ios_patch_signing.outputs.export_options_plist_path }}
         run: make patch-plan
         working-directory: ${{ env.MOBILE_DIR }}
 

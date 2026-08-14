@@ -8,7 +8,11 @@ import {
   states,
 } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
-import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
+import {
+  isDatabaseReachable,
+  uniqueAbbreviation,
+  withRollback,
+} from "../../../../../test-utils/db-harness";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./facility-purchase-recurrence.repository";
 
 /**
@@ -51,7 +55,7 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
         .values({
           name: `T-State-${suffix}`,
           ibgeId: `T${suffix}`.slice(0, 12),
-          abbreviation: suffix.slice(0, 2).toUpperCase(),
+          abbreviation: uniqueAbbreviation(),
         })
         .returning({ id: states.id });
       const [municipality] = await tx
@@ -66,6 +70,8 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
       const [facility] = await tx
         .insert(facilities)
         .values({
+          // Spec 0015: every facility carries the CNES establishment it came from.
+          cnesCode: crypto.randomUUID(),
           displayName: "CLINICA TESTE",
           legalDocumentType: "CNPJ",
           stateId: state!.id,

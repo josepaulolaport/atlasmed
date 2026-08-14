@@ -372,6 +372,13 @@ describe("search rebuild", () => {
       "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin",
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
     ]));
+    // Street types, both directions. The registry writes "Av." and a rep types
+    // "Avenida"; typo tolerance allows one edit at that length and this is
+    // five, so without the synonym the query matches nothing at all.
+    const synonyms = searchRebuild.FACILITY_SETTINGS.synonyms;
+    expect(synonyms.avenida).toContain("av");
+    expect(synonyms.av).toContain("avenida");
+    expect(synonyms.rua).toContain("r");
     expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
       // clinicalFacilityIds is what the associate-doctors exclusion filters on.
       // Missing here, Meili rejects the filter at runtime and the request falls
@@ -524,14 +531,21 @@ describe("search rebuild", () => {
       pages: [[{ id: "1", name: "A" }], [{ id: "2", name: "B" }]],
     });
 
+    /*
+     * Pages are enqueued together and awaited together, rather than one at a
+     * time. Waiting per page defeats Meilisearch's own batching — it merges
+     * consecutive queued document tasks into one indexing pass only if several
+     * are queued — and that is what made a 373 435-document rebuild take
+     * nineteen minutes.
+     */
     expect(events).toEqual([
       "create:facilities__tmp",
       "wait:1",
       "settings:facilities__tmp",
       "wait:2",
       "documents:facilities__tmp:1",
-      "wait:3",
       "documents:facilities__tmp:1",
+      "wait:3",
       "wait:3",
       "get:facilities",
       "swap:facilities:facilities__tmp",
@@ -539,6 +553,16 @@ describe("search rebuild", () => {
       "delete:facilities__tmp",
       "wait:5",
     ]);
+
+    /*
+     * The invariant the interleaving above is only one expression of, asserted
+     * on its own so a future reordering cannot quietly swap a half-built index
+     * into place: every document task is awaited before the swap.
+     */
+    const swapAt = events.indexOf("swap:facilities:facilities__tmp");
+    const lastDocumentWaitAt = events.lastIndexOf("wait:3");
+    expect(lastDocumentWaitAt).toBeGreaterThan(-1);
+    expect(lastDocumentWaitAt).toBeLessThan(swapAt);
   });
 });
 

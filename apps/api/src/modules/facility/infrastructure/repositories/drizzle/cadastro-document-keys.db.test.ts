@@ -43,6 +43,8 @@ async function seedFacility(tx: Parameters<Parameters<typeof withRollback>[0]>[0
   const [facility] = await tx
     .insert(facilities)
     .values({
+      // Spec 0015: every facility carries the CNES establishment it came from.
+      cnesCode: crypto.randomUUID(),
       displayName: "CLINICA DOC KEYS",
       legalDocumentType: "CNPJ",
       stateId: state!.id,

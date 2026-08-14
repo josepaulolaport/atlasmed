@@ -33,7 +33,7 @@ function fakeSchedules(options: { exists: boolean }) {
 }
 
 describe("cnes ingestion schedule provisioning", () => {
-  test("creates a daily schedule that never overlaps and never catches up", async () => {
+  test("creates a weekly schedule that never overlaps and never catches up", async () => {
     const fake = fakeSchedules({ exists: false });
 
     await ensureCnesIngestionSchedule(fake.client, { taskQueue: "atlasmed-workflows" });
@@ -43,7 +43,9 @@ describe("cnes ingestion schedule provisioning", () => {
     expect(options.action.workflowType).toBe("cnesIngestionWorkflow");
     expect(options.action.taskQueue).toBe("atlasmed-workflows");
     // Daily, because DATASUS publishes the monthly export on no fixed day.
-    expect(options.spec.cronExpressions).toEqual(["0 4 * * *"]);
+    // Sunday 04:00. Weekly, not daily: the export is monthly, so a daily tick
+    // spends ~30 FTP listings to find one new competence.
+    expect(options.spec.cronExpressions).toEqual(["0 4 * * 0"]);
     /**
      * A load runs for many minutes against registry tables with no staging, so
      * two at once would race. BUFFER_ONE is what turned a stuck Emultec run into

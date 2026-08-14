@@ -7,7 +7,11 @@ import {
   states,
 } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
-import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
+import {
+  isDatabaseReachable,
+  uniqueAbbreviation,
+  withRollback,
+} from "../../../../../test-utils/db-harness";
 import {
   funnelStageToPurchaseBucket,
   type FacilityPurchaseFunnelStage,
@@ -30,30 +34,6 @@ import { buildMapPurchaseBucketSql } from "./drizzle-facility.repository";
  * Verified to fail against the hand-written CASE.
  */
 const dbUp = await isDatabaseReachable();
-
-/**
- * `states.abbreviation` is `char(2)` and UNIQUE, and other suites commit
- * fixtures into this database instead of rolling back — the CNES loader's test
- * leaves a permanent `ZZ` behind. Derive rather than hardcode.
- *
- * Same contract as `uniqueAbbreviation` in the worker's harness, including the
- * refusal to wrap: a modulo here would hand out a repeat on the 37th call and
- * fail as a puzzling unique-violation somewhere unrelated. The worker's copy
- * cannot be imported across apps, so the behaviour is matched by hand.
- */
-const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-let abbreviationCounter = 0;
-function uniqueAbbreviation(): string {
-  if (abbreviationCounter >= ALPHABET.length) {
-    throw new Error(
-      "uniqueAbbreviation exhausted — seed fewer states per test file",
-    );
-  }
-  const head = ALPHABET[Math.floor(Math.random() * ALPHABET.length)]!;
-  const tail = ALPHABET[abbreviationCounter]!;
-  abbreviationCounter += 1;
-  return `${head}${tail}`;
-}
 
 const STAGES: FacilityPurchaseFunnelStage[] = [
   "NEVER_PURCHASED",
@@ -95,6 +75,9 @@ describe.skipIf(!dbUp)("map pin bucket matches the funnel grouping", () => {
           .values({
             displayName: `MAPA ${stage}`,
             legalDocumentType: "CNPJ",
+            // Spec 0015: every facility names a CNES establishment. Unique per
+            // row — one facility is created for each funnel stage.
+            cnesCode: crypto.randomUUID(),
             stateId: state!.id,
             municipalityId: municipality!.id,
             // Spec 0009 R5: every clinic has a position.

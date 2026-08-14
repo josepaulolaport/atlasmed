@@ -81,6 +81,9 @@ async function seedFacility(tx: Tx, opts: { deactivated?: boolean } = {}): Promi
   const [facility] = await tx
     .insert(facilities)
     .values({
+      // Spec 0015: every facility carries the CNES establishment it came from,
+      // and `cnes_code` is UNIQUE — so it must differ per seeded row.
+      cnesCode: crypto.randomUUID(),
       displayName: `T-Facility-${suffix}`,
       legalDocumentType: "CNPJ",
       stateId: state!.id,

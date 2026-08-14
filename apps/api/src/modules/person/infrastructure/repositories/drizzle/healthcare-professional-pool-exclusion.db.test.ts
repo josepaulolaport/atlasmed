@@ -105,8 +105,8 @@ async function makePerson(firstName: string): Promise<number> {
 
 async function makeFacility(name: string): Promise<number> {
   await db.execute(sql`
-    insert into facilities (name, location, legal_document_type, state_id, municipality_id)
-      select ${name}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id
+    insert into facilities (name, location, legal_document_type, state_id, municipality_id, cnes_code)
+      select ${name}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id, gen_random_uuid()::text
         from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE};
   `);
   const [facility] = (await db.execute(sql`

@@ -16,6 +16,7 @@ import {
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
 import {
+  buildAddressSearchSynonyms,
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
   type FacilityProfileFunnelData,
@@ -27,8 +28,12 @@ import {
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
+import {
+  FACILITY_CANDIDATE_SETTINGS,
+  facilityCandidatePages,
+} from "./facility-candidates";
 
-export type SearchSyncTarget = "facilities" | "persons";
+export type SearchSyncTarget = "facilities" | "persons" | "facility_candidates";
 
 /** Re-export shared Meili facility document helpers (SoT: @atlasmed/facility-insights). */
 export {
@@ -175,12 +180,30 @@ export async function rebuildSearchIndex(input: {
     (await input.search.updateSettings(input.temporaryIndex, input.settings)).taskUid
   );
 
+  /*
+   * Enqueue every page, then wait once.
+   *
+   * Waiting per page serialises the whole rebuild *and* defeats Meilisearch's
+   * own batching: it merges consecutive queued documentAdditionOrUpdate tasks
+   * into one indexing pass, but only if several are sitting in the queue. Waiting
+   * guaranteed one task per batch — measured on 1.48.3 as `totalNbTasks: 1` on
+   * every batch and 4.8-7.1 s each, which is where a nineteen-minute rebuild of
+   * 373 435 narrow documents went.
+   *
+   * The tasks are still all awaited before the swap below, so a failure is still
+   * fatal to the rebuild — it just surfaces at the end. That costs nothing: this
+   * writes into a temporary index that only becomes live on success.
+   */
+  const pending: number[] = [];
   for await (const page of input.pages) {
     if (page.length > 0) {
-      await input.search.waitForTask(
+      pending.push(
         (await input.search.addDocuments(input.temporaryIndex, page, { primaryKey: "id" })).taskUid
       );
     }
+  }
+  for (const taskUid of pending) {
+    await input.search.waitForTask(taskUid);
   }
 
   const hasStableIndex = await indexExists(input.search, input.target);
@@ -282,6 +305,11 @@ export const FACILITY_SETTINGS = {
   ],
   sortableAttributes: ["_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin", "hasLastValidPurchase", "lastValidPurchaseSortAt", "id"],
   rankingRules: ["sort", "words", "typo", "proximity", "attribute", "exactness"],
+  // Street types, so "Avenida das Americas" reaches the 436 addresses stored
+  // as "Av.". Typo tolerance cannot bridge that on its own: it allows one edit
+  // at seven characters and "Av."→"Avenida" is five. Like every other setting
+  // here, this only takes effect on a full rebuild.
+  synonyms: buildAddressSearchSynonyms(),
 };
 
 type ActiveFacilityProfiles = {
@@ -704,6 +732,18 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
   }
 }
 
+function settingsFor(target: SearchSyncTarget): Record<string, unknown> {
+  if (target === "facilities") return FACILITY_SETTINGS;
+  if (target === "persons") return PERSON_SETTINGS;
+  return FACILITY_CANDIDATE_SETTINGS;
+}
+
+function pagesFor(target: SearchSyncTarget) {
+  if (target === "facilities") return facilityPages();
+  if (target === "persons") return personPages();
+  return facilityCandidatePages();
+}
+
 export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<void> {
   const temporaryIndex = `${target}__rebuild_${crypto.randomUUID().replaceAll("-", "")}`;
 
@@ -711,7 +751,7 @@ export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<
     target,
     temporaryIndex,
     search: createSearchClient(),
-    settings: target === "facilities" ? FACILITY_SETTINGS : PERSON_SETTINGS,
-    pages: target === "facilities" ? facilityPages() : personPages(),
+    settings: settingsFor(target),
+    pages: pagesFor(target),
   });
 }

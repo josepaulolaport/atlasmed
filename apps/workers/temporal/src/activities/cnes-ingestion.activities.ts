@@ -2,7 +2,11 @@ import { Context } from "@temporalio/activity";
 import { eq, and } from "drizzle-orm";
 import { environment } from "@atlasmed/config";
 import { cnesRuns } from "@atlasmed/database";
-import { listCnesReferences, type CnesReference } from "@atlasmed/cnes-ingestion";
+import {
+  listCnesReferences,
+  pruneCnesStaging,
+  type CnesReference,
+} from "@atlasmed/cnes-ingestion";
 import { db } from "../infrastructure/db";
 import { ensureArchive, pruneArchives } from "../cnes/archive-object-store";
 import {
@@ -125,6 +129,24 @@ export async function pruneCnesArchivesActivity(input: {
 }): Promise<{ deleted: string[]; kept: string[] }> {
   const result = await pruneArchives({ protectedReference: input.reference });
   return { deleted: result.deleted, kept: result.kept };
+}
+
+/**
+ * Drop staged competências the promotion superseded.
+ *
+ * Its own activity for the same reason the archive prune is: a storage or
+ * database problem while tidying up must be reported as that, and must not turn
+ * a good load into a failed one.
+ *
+ * The scheduled path had no equivalent at all until now — staging grew by ~316 MB
+ * every month with nothing ever deleting it. `archive-load.ts` gained a prune
+ * first, which left the two entry points disagreeing; both now call the same
+ * function in `@atlasmed/cnes-ingestion`.
+ */
+export async function pruneCnesStagingActivity(input: {
+  reference: CnesReference;
+}): Promise<{ carga: number; professionals: number }> {
+  return pruneCnesStaging({ db, reference: input.reference });
 }
 
 export async function finishCnesRunActivity(input: {

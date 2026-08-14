@@ -89,9 +89,9 @@ async function seedAssignedClinic(tx: Tx, typeSlug: "manager_zone" | "patch") {
   );
   const facility = await one<{ id: number }>(
     tx.execute(sql`
-      INSERT INTO facilities (name, legal_document_type, state_id, municipality_id, location)
+      INSERT INTO facilities (name, legal_document_type, state_id, municipality_id, location, cnes_code)
       VALUES ('Clinica Impactada', 'CNPJ', ${state.id}, ${municipality.id},
-              ST_SetSRID(ST_MakePoint(${CLINIC_LNG}, ${CLINIC_LAT}), 4326))
+              ST_SetSRID(ST_MakePoint(${CLINIC_LNG}, ${CLINIC_LAT}), 4326), gen_random_uuid()::text)
       RETURNING id
     `)
   );

@@ -58,6 +58,9 @@ async function seedProfile(tx: Tx): Promise<number> {
     .insert(facilities)
     .values({
       displayName: `T-Facility-${suffix}`,
+      // Required since 0108: a facility exists because a CNES establishment was
+      // imported, so every row carries the code it came from.
+      cnesCode: crypto.randomUUID(),
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,

@@ -7,10 +7,20 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explor
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  /*
+   * The clinics empty state now carries the CNES import entry (spec 0015 §6.0),
+   * which is role-gated and therefore reads the current user. That subscription
+   * starts a repository fetch whose auto-refresh timer outlives the widget tree
+   * and trips `!timersPending`. Background refresh is not what any test in this
+   * file is about.
+   */
+  BaseRepository.autoRefreshEnabled = false;
+
   const clinicsQuery = ClinicsQuery(limit: 20);
   const doctorsQuery = DoctorsQuery(limit: 20);
   const clinicDto = FacilityDTO(

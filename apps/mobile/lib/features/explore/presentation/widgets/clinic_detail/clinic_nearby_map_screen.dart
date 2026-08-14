@@ -166,13 +166,30 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// in theory fire again later (e.g. a style reload).
   bool _initialFocusHandled = false;
 
-  NearbyEstablishment get _originEstablishment => NearbyEstablishment(
-    id: widget.facilityId,
-    name: widget.facilityName,
-    latitude: widget.center.latitude,
-    longitude: widget.center.longitude,
-    distanceKm: 0,
-  );
+  NearbyEstablishment get _originEstablishment {
+    /// The current clinic's own bucket, when the nearby list carries it.
+    ///
+    /// This pin is built here rather than taken from the list, so it used to
+    /// have no `purchaseBucket` at all and its callout showed no status —
+    /// alone among the pins on the map. The list usually contains the clinic
+    /// itself (see the `e.id == widget.facilityId` branch when placing
+    /// features), so its bucket is normally in hand.
+    ///
+    /// Left null when it genuinely is not: silence is right where the alternative
+    /// is defaulting to "Nunca comprou" on a clinic that may well have bought.
+    final self = widget.allNearby
+        .where((e) => e.id == widget.facilityId)
+        .firstOrNull;
+
+    return NearbyEstablishment(
+      id: widget.facilityId,
+      name: widget.facilityName,
+      latitude: widget.center.latitude,
+      longitude: widget.center.longitude,
+      distanceKm: 0,
+      purchaseBucket: self?.purchaseBucket,
+    );
+  }
 
   Set<int> _sharedFor(List<int> userVerticalIds) => sharedNearbyVerticalIds(
     clinicVerticalIds: widget.clinicVerticalIds,
@@ -1975,17 +1992,25 @@ class _NearbyEstablishmentCard extends StatelessWidget {
             ],
             if (establishment.shortAddress != null) ...[
               const SizedBox(height: 3),
-              Text(
-                establishment.shortAddress!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  color: AppColors.gray400,
+              // Takes the room the Spacer used to hold empty.
+              //
+              // The address was capped at one line above a Spacer, so
+              // "Av. Paes de Barros, 2128 …" was clipped mid-street while the
+              // card sat half blank beneath it. Expanded lets it use whatever
+              // the card has left and ellipsize only at the real bottom, and it
+              // keeps the distance row pinned exactly where the Spacer put it.
+              Expanded(
+                child: Text(
+                  establishment.shortAddress!,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.gray400,
+                  ),
                 ),
               ),
-            ],
-            const Spacer(),
+            ] else
+              const Spacer(),
             Row(
               children: [
                 const Icon(

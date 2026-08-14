@@ -10,7 +10,7 @@ export type SearchFallbackReason =
 
 /** Meili is an accelerator — Postgres remains authority when search degrades. */
 export function reportSearchMeiliFallback(
-  index: "facilities" | "persons",
+  index: "facilities" | "persons" | "facility_candidates",
   reason: SearchFallbackReason,
   detail?: Record<string, string | number | boolean>
 ): void {

@@ -81,6 +81,10 @@ async function seed(tx: Tx): Promise<Seeded> {
       .values({
         displayName: "CLINICA TESTE",
         legalDocumentType: "CNPJ",
+        // Spec 0015: every facility names a CNES establishment. Unique per row
+        // because the index is now total — it no longer skips deactivated ones,
+        // and this helper creates both.
+        cnesCode: crypto.randomUUID(),
         stateId: state!.id,
         municipalityId: municipality!.id,
         // Spec 0009 R5: every clinic has a position.

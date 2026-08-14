@@ -19,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/expl
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_import_entry_button.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
@@ -230,6 +231,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onTap: () => _showSortSheet(state, notifier),
             ),
           ),
+          /*
+           * Spec 0015 §6.0. The persistent way into the CNES list, beside the
+           * clinics the user already works. It hides itself for roles that may
+           * not import, and the API enforces the same rule independently.
+           */
+          if (isClinic)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: CnesImportEntryButton(initialQuery: state.query),
+              ),
+            ),
           if (filterChips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
