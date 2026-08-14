@@ -11,10 +11,21 @@ class ClinicOrdersSection extends StatefulWidget {
     super.key,
     required this.orders,
     required this.facilityId,
+    this.hasMore = false,
+    this.loadingMore = false,
+    this.onLoadMore,
   });
 
+  /// The pages fetched so far, not the clinic's whole history.
   final List<FacilityOrderSummary> orders;
   final int facilityId;
+  final bool hasMore;
+  final bool loadingMore;
+
+  /// Called as the rep nears the end of what has been loaded. Null leaves the
+  /// carousel at whatever it was given — which is what it always did, on a
+  /// clinic that can have eighty orders behind the five it showed.
+  final VoidCallback? onLoadMore;
 
   @override
   State<ClinicOrdersSection> createState() => _ClinicOrdersSectionState();
@@ -24,9 +35,25 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
   final PageController _controller = PageController(viewportFraction: 0.86);
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onSwipe);
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_onSwipe);
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Fetches one card early, so the next page is usually there by the time the
+  /// swipe lands on it.
+  void _onSwipe() {
+    if (!widget.hasMore || widget.onLoadMore == null) return;
+    final page = _controller.page;
+    if (page == null) return;
+    if (page >= widget.orders.length - 2) widget.onLoadMore!();
   }
 
   @override
@@ -41,18 +68,39 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
       );
     }
 
+    // A trailing spinner card while the next page is in flight, so the
+    // carousel does not simply stop dead at the last loaded order.
+    final showSpinner = widget.loadingMore;
+    final itemCount = orders.length + (showSpinner ? 1 : 0);
+
     return SizedBox(
       height: 239,
       child: PageView.builder(
         controller: _controller,
-        itemCount: orders.length,
-        itemBuilder: (_, i) => Padding(
-          padding: EdgeInsets.only(
+        itemCount: itemCount,
+        itemBuilder: (_, i) {
+          final last = i == itemCount - 1;
+          final padding = EdgeInsets.only(
             left: i == 0 ? 20 : 6,
-            right: i == orders.length - 1 ? 20 : 6,
-          ),
-          child: _OrderCard(order: orders[i], facilityId: widget.facilityId),
-        ),
+            right: last ? 20 : 6,
+          );
+          if (showSpinner && i == orders.length) {
+            return Padding(
+              padding: padding,
+              child: const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+          return Padding(
+            padding: padding,
+            child: _OrderCard(order: orders[i], facilityId: widget.facilityId),
+          );
+        },
       ),
     );
   }
