@@ -18,6 +18,7 @@ import {
   personFacilityClassifications,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
+import { expandAddressAbbreviations } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError, ValidationError } from "../../../../../shared/errors";
 import {
@@ -545,6 +546,8 @@ export function buildFacilityListConditions(params: {
   unitTypeIds?: number[];
   /** CNPJ or CPF. Single value — the enum has only these two. */
   legalDocumentType?: "CNPJ" | "CPF";
+  /** CPF clinics whose document is absent, or present but not a valid CPF. */
+  cpfStatus?: "missing" | "invalid";
   candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
@@ -553,12 +556,33 @@ export function buildFacilityListConditions(params: {
   if (params.candidateIds) conditions.push(inArray(facilities.id, params.candidateIds));
   if (params.search) {
     const pattern = `%${params.search}%`;
+    /**
+     * Street-type rewrites of the typed term, matched against the address
+     * fields only.
+     *
+     * The registry stores "Av." and almost never "Avenida", so the term as
+     * typed misses 436 of 1443 addresses in the sample. [expandAddressAbbreviations]
+     * always returns the typed term first, and it is already covered by the
+     * clauses below, so only the rewrites are added here.
+     *
+     * Address fields only, deliberately. A street type does not appear in a
+     * CNPJ, a CNES code, a city or a state, and adding the rewrites to the
+     * municipality and state subqueries would multiply two correlated
+     * subqueries for matches that cannot exist. `neighborhood` is in because
+     * it genuinely carries them — Praça Seca is a district of Rio, and the
+     * cedilla nobody types on a phone is one of the rewrites.
+     */
+    const addressVariants = expandAddressAbbreviations(params.search).slice(1);
     conditions.push(or(
       ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
       ilike(facilities.tradeName, pattern), ilike(facilities.legalDocument, pattern),
       ilike(facilities.cnesCode, pattern),
       ilike(facilities.streetAddress, pattern),
       ilike(facilities.neighborhood, pattern),
+      ...addressVariants.flatMap((variant) => [
+        ilike(facilities.streetAddress, `%${variant}%`),
+        ilike(facilities.neighborhood, `%${variant}%`),
+      ]),
       inArray(
         facilities.municipalityId,
         db
@@ -627,6 +651,33 @@ export function buildFacilityListConditions(params: {
   if (params.legalDocumentType) {
     conditions.push(
       eq(facilities.legalDocumentType, params.legalDocumentType),
+    );
+  }
+  if (params.cpfStatus) {
+    /**
+     * Both branches require `legal_document_type = 'CPF'`: a CNPJ clinic with
+     * no CNPJ is a real problem too, but it is not the one this warning counts,
+     * and folding it in would make the Desempenho number disagree with the list
+     * it opens.
+     *
+     * "Missing" is NULL *or* blank — `displayTaxIdentifier` in the app already
+     * renders a blank as absent, so a rep looking at an imported empty string
+     * sees "—" and would not understand its absence from a list of clinics
+     * without a CPF.
+     *
+     * The two sets are disjoint by construction: `invalid` requires a non-blank
+     * value, so no clinic is reported under both counts.
+     */
+    const isCpfClinic = eq(facilities.legalDocumentType, "CPF");
+    const blank = sql`(${facilities.legalDocument} is null or btrim(${facilities.legalDocument}) = '')`;
+    conditions.push(
+      params.cpfStatus === "missing"
+        ? and(isCpfClinic, blank)!
+        : and(
+            isCpfClinic,
+            sql`not ${blank}`,
+            sql`not is_valid_cpf(${facilities.legalDocument})`,
+          )!,
     );
   }
   if (params.clinicalFocusIds?.length) {

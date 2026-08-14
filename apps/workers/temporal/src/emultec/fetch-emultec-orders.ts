@@ -33,12 +33,19 @@ export type EmultecOrderBundle = {
   lines: EmultecOrderLine[];
 };
 
-/** Page-level modes (HYBRID / DLQ replay orchestrated above this). */
+/**
+ * Page-level modes (HYBRID orchestrated above this).
+ *
+ * `DLQ_REPLAY` and `SKIP_RECHECK` do not page Emultec by id at all — they draw
+ * their ids from our own tables and then fetch those rows by id, so neither
+ * reaches `buildEmultecOrderIdPageSql`.
+ */
 export type EmultecOrderPageMode =
   | "BACKFILL"
   | "INCREMENTAL"
   | "RECONCILE"
-  | "DLQ_REPLAY";
+  | "DLQ_REPLAY"
+  | "SKIP_RECHECK";
 
 export type FetchEmultecOrdersPageInput = {
   mode: EmultecOrderPageMode;
@@ -65,7 +72,7 @@ function assertSinceDate(sinceDate: string | undefined): string {
 
 /** Build id-page SQL (exported for unit tests). */
 export function buildEmultecOrderIdPageSql(input: {
-  mode: Exclude<EmultecOrderPageMode, "DLQ_REPLAY">;
+  mode: Exclude<EmultecOrderPageMode, "DLQ_REPLAY" | "SKIP_RECHECK">;
   afterId: number;
   limit: number;
   sinceDate?: string;
@@ -210,8 +217,8 @@ async function loadBundlesForIds(
 export async function fetchEmultecOrdersPage(
   input: FetchEmultecOrdersPageInput
 ): Promise<EmultecOrderBundle[]> {
-  if (input.mode === "DLQ_REPLAY") {
-    throw new Error("DLQ_REPLAY uses listOpenEmultecDeadLetterIds + fetchEmultecOrdersByIds");
+  if (input.mode === "DLQ_REPLAY" || input.mode === "SKIP_RECHECK") {
+    throw new Error(`${input.mode} draws ids locally, then fetchEmultecOrdersByIds`);
   }
 
   const cfg = requireEmultecMysqlConfig();

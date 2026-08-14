@@ -1,6 +1,6 @@
 {
-  "id": "6967edf2-f32f-466a-8154-aec7142a6e81",
-  "prevId": "ac74afb7-d93a-4402-b0b8-ebe1e0cf1159",
+  "id": "814d176c-2ee4-4fac-83cc-1020d57ccd1b",
+  "prevId": "3a7a6fdf-091e-435e-9a9e-a94e8c9c7614",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12240,6 +12240,122 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "ops.emultec_order_import_pending": {
+      "name": "emultec_order_import_pending",
+      "schema": "ops",
+      "columns": {
+        "id_avulsa_emultec": {
+          "name": "id_avulsa_emultec",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blocker": {
+          "name": "blocker",
+          "type": "emultec_skip_blocker",
+          "typeSchema": "ops",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id_cliente_emultec": {
+          "name": "id_cliente_emultec",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocker_documents": {
+          "name": "blocker_documents",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_vendedor_emultec": {
+          "name": "id_vendedor_emultec",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocker_product_ids": {
+          "name": "blocker_product_ids",
+          "type": "bigint[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_skipped_at": {
+          "name": "first_skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_skipped_at": {
+          "name": "last_skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "skip_count": {
+          "name": "skip_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "emultec_order_import_pending_open_blocker_idx": {
+          "name": "emultec_order_import_pending_open_blocker_idx",
+          "columns": [
+            {
+              "expression": "blocker",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"ops\".\"emultec_order_import_pending\".\"resolved_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "emultec_order_import_pending_vendedor_idx": {
+          "name": "emultec_order_import_pending_vendedor_idx",
+          "columns": [
+            {
+              "expression": "id_vendedor_emultec",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"ops\".\"emultec_order_import_pending\".\"resolved_at\" IS NULL AND \"ops\".\"emultec_order_import_pending\".\"id_vendedor_emultec\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "ops.emultec_order_import_runs": {
       "name": "emultec_order_import_runs",
       "schema": "ops",
@@ -12479,6 +12595,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "unit_type_name": {
+          "name": "unit_type_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unit_subtype_name": {
+          "name": "unit_subtype_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "deactivation_reason_code": {
           "name": "deactivation_reason_code",
           "type": "text",
@@ -12498,42 +12626,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "managing_municipality_cnes_id": {
-          "name": "managing_municipality_cnes_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unit_subtype_code": {
-          "name": "unit_subtype_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "latitude": {
-          "name": "latitude",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "longitude": {
-          "name": "longitude",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "legal_person_type": {
-          "name": "legal_person_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "maintainer_tax_id": {
-          "name": "maintainer_tax_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -12580,22 +12672,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "registry_facilities_offerable_idx": {
-          "name": "registry_facilities_offerable_idx",
-          "columns": [
-            {
-              "expression": "unit_type_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"registry\".\"facilities\".\"deactivation_reason_code\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -13612,401 +13688,6 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "registry.unit_types": {
-      "name": "unit_types",
-      "schema": "registry",
-      "columns": {
-        "cnes_id": {
-          "name": "cnes_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "atlasmed_id": {
-          "name": "atlasmed_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "registry_unit_types_atlasmed_id_uidx": {
-          "name": "registry_unit_types_atlasmed_id_uidx",
-          "columns": [
-            {
-              "expression": "atlasmed_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"registry\".\"unit_types\".\"atlasmed_id\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "registry.unit_subtypes": {
-      "name": "unit_subtypes",
-      "schema": "registry",
-      "columns": {
-        "unit_type_cnes_id": {
-          "name": "unit_type_cnes_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cnes_id": {
-          "name": "cnes_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "atlasmed_id": {
-          "name": "atlasmed_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "registry_unit_subtypes_atlasmed_id_uidx": {
-          "name": "registry_unit_subtypes_atlasmed_id_uidx",
-          "columns": [
-            {
-              "expression": "atlasmed_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"registry\".\"unit_subtypes\".\"atlasmed_id\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "registry_unit_subtypes_unit_type_cnes_id_fk": {
-          "name": "registry_unit_subtypes_unit_type_cnes_id_fk",
-          "tableFrom": "unit_subtypes",
-          "tableTo": "unit_types",
-          "schemaTo": "registry",
-          "columnsFrom": [
-            "unit_type_cnes_id"
-          ],
-          "columnsTo": [
-            "cnes_id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {
-        "registry_unit_subtypes_pkey": {
-          "name": "registry_unit_subtypes_pkey",
-          "columns": [
-            "unit_type_cnes_id",
-            "cnes_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "registry.deactivation_reasons": {
-      "name": "deactivation_reasons",
-      "schema": "registry",
-      "columns": {
-        "cnes_id": {
-          "name": "cnes_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "atlasmed_id": {
-          "name": "atlasmed_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "registry_deactivation_reasons_atlasmed_id_uidx": {
-          "name": "registry_deactivation_reasons_atlasmed_id_uidx",
-          "columns": [
-            {
-              "expression": "atlasmed_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"registry\".\"deactivation_reasons\".\"atlasmed_id\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "ingestion.carga_staging": {
-      "name": "carga_staging",
-      "schema": "ingestion",
-      "columns": {
-        "reference_year": {
-          "name": "reference_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reference_month": {
-          "name": "reference_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unit_code": {
-          "name": "unit_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "professional_sus_id": {
-          "name": "professional_sus_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "council_code": {
-          "name": "council_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "registration_uf": {
-          "name": "registration_uf",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "registration_number": {
-          "name": "registration_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "occupation_code": {
-          "name": "occupation_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "cnes_carga_staging_reference_unit_idx": {
-          "name": "cnes_carga_staging_reference_unit_idx",
-          "columns": [
-            {
-              "expression": "reference_year",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "reference_month",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "unit_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cnes_carga_staging_reference_professional_idx": {
-          "name": "cnes_carga_staging_reference_professional_idx",
-          "columns": [
-            {
-              "expression": "reference_year",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "reference_month",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "professional_sus_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "ingestion.professional_staging": {
-      "name": "professional_staging",
-      "schema": "ingestion",
-      "columns": {
-        "reference_year": {
-          "name": "reference_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reference_month": {
-          "name": "reference_month",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "professional_sus_id": {
-          "name": "professional_sus_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cns": {
-          "name": "cns",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "social_name": {
-          "name": "social_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tax_id": {
-          "name": "tax_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "cnes_professional_staging_pkey": {
-          "name": "cnes_professional_staging_pkey",
-          "columns": [
-            "reference_year",
-            "reference_month",
-            "professional_sus_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -14324,6 +14005,16 @@
         "INFO",
         "WARNING",
         "CRITICAL"
+      ]
+    },
+    "ops.emultec_skip_blocker": {
+      "name": "emultec_skip_blocker",
+      "schema": "ops",
+      "values": [
+        "DOCUMENT",
+        "SELLER",
+        "PRODUCTS",
+        "NONE"
       ]
     },
     "ingestion.cnes_run_phase": {

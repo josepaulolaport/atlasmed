@@ -1,0 +1,106 @@
+{
+  "$comment": [
+    "Shared CPF checksum cases. Read by three test suites, one per implementation:",
+    "  packages/database  — is_valid_cpf(text), used by the count and the list filter",
+    "  apps/api           — isValidCpfDigits, the authority on submit",
+    "  apps/mobile        — the Dart twin, so a rep is told as they type",
+    "Left to themselves each suite would test whatever its author thought of, and a",
+    "fix applied to one implementation would pass everywhere while the others stay",
+    "wrong. Add a case here and all three must account for it.",
+    "",
+    "`digits` is what the API and Dart validators receive (already stripped).",
+    "`raw` is what the SQL function receives, which strips punctuation itself."
+  ],
+  "cases": [
+    {
+      "raw": "529.982.247-25",
+      "digits": "52998224725",
+      "valid": true,
+      "why": "a real, well-formed CPF"
+    },
+    {
+      "raw": "52998224725",
+      "digits": "52998224725",
+      "valid": true,
+      "why": "same number unpunctuated — formatting must not change the verdict"
+    },
+    {
+      "raw": "  529.982.247-25  ",
+      "digits": "52998224725",
+      "valid": true,
+      "why": "surrounding whitespace, as pasted from a document"
+    },
+    {
+      "raw": "168.995.350-09",
+      "digits": "16899535009",
+      "valid": true,
+      "why": "second valid number, so a test cannot pass by hardcoding the first"
+    },
+    {
+      "raw": "529.982.247-24",
+      "digits": "52998224724",
+      "valid": false,
+      "why": "last check digit off by one"
+    },
+    {
+      "raw": "529.982.247-15",
+      "digits": "52998224715",
+      "valid": false,
+      "why": "first check digit wrong, second right — catches an implementation that only checks the last digit"
+    },
+    {
+      "raw": "111.111.111-11",
+      "digits": "11111111111",
+      "valid": false,
+      "why": "all same digit: satisfies the arithmetic but is not a real CPF, and is what gets typed to get past a required field"
+    },
+    {
+      "raw": "000.000.000-00",
+      "digits": "00000000000",
+      "valid": false,
+      "why": "all zeros — the same trap, and the one a blank form most easily produces"
+    },
+    {
+      "raw": "5299822472",
+      "digits": "5299822472",
+      "valid": false,
+      "why": "ten digits — one short"
+    },
+    {
+      "raw": "529982247251",
+      "digits": "529982247251",
+      "valid": false,
+      "why": "twelve digits — one long"
+    },
+    {
+      "raw": "12345678000195",
+      "digits": "12345678000195",
+      "valid": false,
+      "why": "a CNPJ: right shape for the other document type, never a CPF"
+    },
+    {
+      "raw": "",
+      "digits": "",
+      "valid": false,
+      "why": "empty — the blank-string case the warning counts as missing, never as valid"
+    },
+    {
+      "raw": "   ",
+      "digits": "",
+      "valid": false,
+      "why": "whitespace only, which trims to nothing"
+    },
+    {
+      "raw": "abcdefghijk",
+      "digits": "",
+      "valid": false,
+      "why": "letters strip to nothing rather than throwing"
+    },
+    {
+      "raw": "529.982.247-2X",
+      "digits": "5299822472",
+      "valid": false,
+      "why": "a stray letter mid-number leaves ten digits"
+    }
+  ]
+}

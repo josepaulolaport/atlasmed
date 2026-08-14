@@ -1,4 +1,10 @@
 export { createDatabase, type Database, type AnyDatabase, type DatabaseTransaction } from "./client";
+export {
+  countQueries,
+  summarizeQueries,
+  withQueryCount,
+  type QueryRecord,
+} from "./query-counter";
 
 export * from "./schema/public/index";
 export * from "./schema/audit/index";

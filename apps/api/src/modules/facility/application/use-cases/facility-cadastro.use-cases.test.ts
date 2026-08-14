@@ -60,6 +60,102 @@ function requirement(
 }
 
 describe("GetFacilityCadastroChecklistUseCase", () => {
+  it("reuses the profiles findById already loaded", async () => {
+    /**
+     * `findById` loads the clinic's vertical profiles to build its record, and
+     * this use case used to ask the repository for them again a few lines
+     * later — the same helper, the same query, twice per request. Both calls
+     * were locally reasonable, the response was byte-identical either way, and
+     * no assertion on the payload could see it. Only counting calls can.
+     *
+     * Measured against a real database: 9 round trips before, 8 after.
+     */
+    const findVerticalProfilesByFacilityIds = mock(async () => new Map());
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => ({
+          ...facility({ legalDocumentType: "CPF" }),
+          verticalProfiles: [
+            { id: 1, verticalId: 7, isActive: true },
+            // Inactive, and deliberately present: the repository returns
+            // profiles unfiltered, so the `isActive` test has to stay in this
+            // use case. Handing it a pre-filtered list would change which
+            // linhas count.
+            { id: 2, verticalId: 9, isActive: false },
+          ],
+        }),
+        findVerticalProfilesByFacilityIds,
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    expect(findVerticalProfilesByFacilityIds).not.toHaveBeenCalled();
+  });
+
+  it("still counts only the active linhas when reusing them", async () => {
+    // The saving must not change which requirements a rep sees.
+    const findActiveRequirements = mock(async () => []);
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => ({
+          ...facility({ legalDocumentType: "CPF" }),
+          verticalProfiles: [
+            { id: 1, verticalId: 7, isActive: true },
+            { id: 2, verticalId: 9, isActive: false },
+          ],
+        }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements,
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    // Vertical 7 only — never 9.
+    expect(findActiveRequirements).toHaveBeenCalledWith({
+      legalDocumentType: "CPF",
+      verticalId: 7,
+    });
+    expect(findActiveRequirements).not.toHaveBeenCalledWith({
+      legalDocumentType: "CPF",
+      verticalId: 9,
+    });
+  });
+
+  it("still queries when the record carries no profiles", async () => {
+    // A repository that does not populate the field must behave as before,
+    // rather than silently treating the clinic as having no linhas.
+    const findVerticalProfilesByFacilityIds = mock(async () => new Map());
+
+    await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds,
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    expect(findVerticalProfilesByFacilityIds).toHaveBeenCalled();
+  });
+
   it("filters requirements by CPF legal document type", async () => {
     const findActiveRequirements = mock(async () => [
       requirement(1, "identidade", "CPF"),

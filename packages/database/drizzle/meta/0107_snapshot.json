@@ -1,6 +1,6 @@
 {
-  "id": "69053fdc-d040-46c2-86ce-6fe27f1794ea",
-  "prevId": "c80be8c2-ebac-4022-a6b4-4f5d6b59559c",
+  "id": "c217a8b4-9307-4793-be21-c56519234f0c",
+  "prevId": "3fb8eebc-6078-4750-80f5-b71411c52f0f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4004,7 +4004,7 @@
           "name": "cnes_code",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "id_cliente_emultec": {
           "name": "id_cliente_emultec",
@@ -4178,6 +4178,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"facilities\".\"cnes_code\" IS NOT NULL AND \"facilities\".\"deactivated_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -12240,6 +12241,122 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "ops.emultec_order_import_pending": {
+      "name": "emultec_order_import_pending",
+      "schema": "ops",
+      "columns": {
+        "id_avulsa_emultec": {
+          "name": "id_avulsa_emultec",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blocker": {
+          "name": "blocker",
+          "type": "emultec_skip_blocker",
+          "typeSchema": "ops",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id_cliente_emultec": {
+          "name": "id_cliente_emultec",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocker_documents": {
+          "name": "blocker_documents",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_vendedor_emultec": {
+          "name": "id_vendedor_emultec",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocker_product_ids": {
+          "name": "blocker_product_ids",
+          "type": "bigint[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_skipped_at": {
+          "name": "first_skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_skipped_at": {
+          "name": "last_skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "skip_count": {
+          "name": "skip_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "emultec_order_import_pending_open_blocker_idx": {
+          "name": "emultec_order_import_pending_open_blocker_idx",
+          "columns": [
+            {
+              "expression": "blocker",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"ops\".\"emultec_order_import_pending\".\"resolved_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "emultec_order_import_pending_vendedor_idx": {
+          "name": "emultec_order_import_pending_vendedor_idx",
+          "columns": [
+            {
+              "expression": "id_vendedor_emultec",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"ops\".\"emultec_order_import_pending\".\"resolved_at\" IS NULL AND \"ops\".\"emultec_order_import_pending\".\"id_vendedor_emultec\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "ops.emultec_order_import_runs": {
       "name": "emultec_order_import_runs",
       "schema": "ops",
@@ -13889,6 +14006,16 @@
         "INFO",
         "WARNING",
         "CRITICAL"
+      ]
+    },
+    "ops.emultec_skip_blocker": {
+      "name": "emultec_skip_blocker",
+      "schema": "ops",
+      "values": [
+        "DOCUMENT",
+        "SELLER",
+        "PRODUCTS",
+        "NONE"
       ]
     },
     "ingestion.cnes_run_phase": {

@@ -52,12 +52,55 @@ void main() {
     );
   });
 
-  test('the two name directions are distinct labels, not one', () {
-    // They differ by a single character in the key; a copy-paste that mapped
-    // both to "Nome A–Z" would leave the chip lying about the current sort.
+  test('a pair shares its label and differs by direction', () {
+    // The two directions used to be distinct strings — "Nome A–Z" against
+    // "Nome Z–A", and "Status de compras" against "Status de compras —
+    // inverso". The suffix made the chip long enough to overlap the tabs, so
+    // the distinction moved to an arrow. The pair must still be
+    // distinguishable, just not by the words.
+    for (final pair in [
+      ('name-asc', 'name-desc'),
+      ('purchase-funnel-asc', 'purchase-funnel-desc'),
+      ('purchase-interval-asc', 'purchase-interval-desc'),
+      ('last-purchase-asc', 'last-purchase-desc'),
+    ]) {
+      expect(SortRow.labelFor(pair.$1), SortRow.labelFor(pair.$2));
+      expect(
+        SortRow.directionFor(pair.$1),
+        isNot(equals(SortRow.directionFor(pair.$2))),
+        reason: '${pair.$1} and ${pair.$2} would look identical in the chip',
+      );
+    }
+  });
+
+  test('every label is short enough for a chip beside the tabs', () {
+    // Two words at most. "Status de compras — inverso" is what pushed the chip
+    // over the Clínicas/Médicos tabs.
+    for (final kind in kinds) {
+      for (final key in SortSheet.optionKeysFor(
+        kind: kind,
+        hasLocation: true,
+      )) {
+        final label = SortRow.labelFor(key);
+        expect(
+          label.split(' ').length,
+          lessThanOrEqualTo(2),
+          reason: '"$label" ($key) is longer than two words',
+        );
+        expect(label, isNot(contains('—')));
+      }
+    }
+  });
+
+  test('ascending is the default, descending only where the key says so', () {
+    // A key ending in -desc that reported ascending would point the arrow the
+    // wrong way while the list was right, which is worse than no arrow.
+    expect(SortRow.directionFor('name-asc'), SortChipDirection.ascending);
+    expect(SortRow.directionFor('name-desc'), SortChipDirection.descending);
+    expect(SortRow.directionFor('distance'), SortChipDirection.ascending);
     expect(
-      SortRow.labelFor('name-asc'),
-      isNot(equals(SortRow.labelFor('name-desc'))),
+      SortRow.directionFor('last-purchase-desc'),
+      SortChipDirection.descending,
     );
   });
 }

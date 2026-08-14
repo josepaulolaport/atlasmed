@@ -372,6 +372,13 @@ describe("search rebuild", () => {
       "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin",
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
     ]));
+    // Street types, both directions. The registry writes "Av." and a rep types
+    // "Avenida"; typo tolerance allows one edit at that length and this is
+    // five, so without the synonym the query matches nothing at all.
+    const synonyms = searchRebuild.FACILITY_SETTINGS.synonyms;
+    expect(synonyms.avenida).toContain("av");
+    expect(synonyms.av).toContain("avenida");
+    expect(synonyms.rua).toContain("r");
     expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
       // clinicalFacilityIds is what the associate-doctors exclusion filters on.
       // Missing here, Meili rejects the filter at runtime and the request falls

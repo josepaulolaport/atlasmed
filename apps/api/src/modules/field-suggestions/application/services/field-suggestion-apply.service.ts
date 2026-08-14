@@ -106,8 +106,39 @@ export class FieldSuggestionApplyService {
       case "websiteUrl":
       case "responsibleName":
       case "openingHours":
-      case "legalDocument":
         return asNonEmptyString(proposedValue, "proposedValue");
+      case "legalDocument": {
+        const value = asNonEmptyString(proposedValue, "proposedValue");
+
+        /**
+         * Checked here and not only on apply.
+         *
+         * `applyFieldChange` has always run the full módulo-11 check, but this
+         * did not: any non-empty string was accepted. So `123` could be filed
+         * as a CPF, sit in the review queue looking like work to do, and throw
+         * in the *reviewer's* face at approval — the one person who cannot fix
+         * it, and long after the rep who typed it has moved on.
+         *
+         * The type is inferred from digit length rather than read from the
+         * facility, which keeps this synchronous and costs no extra query per
+         * submission. It catches every malformed value. A well-formed CNPJ
+         * proposed for a CPF clinic still passes here and is refused on apply,
+         * where the facility's own type is known — a far rarer mistake than a
+         * number that is not a document at all.
+         */
+        const result = validateLegalDocument({
+          legalDocument: value,
+          documentField: "proposedValue",
+          typeField: "proposedValue",
+        });
+        if (!result.ok) {
+          throw new ValidationError(result.issues);
+        }
+
+        // The rep's formatting is kept for the reviewer to read; `applyFieldChange`
+        // normalizes to digits before it writes.
+        return value;
+      }
       case "legalDocumentType": {
         const value = asNonEmptyString(proposedValue, "proposedValue");
         if (value !== "CNPJ" && value !== "CPF") {

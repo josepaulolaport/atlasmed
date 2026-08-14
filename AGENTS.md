@@ -16,6 +16,7 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
 | `packages/ui` | — | Shared UI primitives for future cross-client reuse |
+| `packages/test-support` | — | Database-backed test harness (`createDbHarness`, `withRollback`, `uniqueAbbreviation`). Each app binds its own `db` in `test-utils/db-harness.ts` |
 
 ## Task lifecycle (mandatory)
 
@@ -173,6 +174,19 @@ Three, all confirmed on 2026-08-10:
   cannot create a user, because `roles` is never inserted anywhere. Nothing
   fails until someone tries to stand up an environment.
 
+A fourth, confirmed 2026-08-14:
+
+- **Database-backed tests skip themselves when there is no database.** Both
+  harnesses probe the connection and `describe.if(dbUp)` the suite, so a machine
+  without `apps/api/.env.test` runs *zero* of them and still prints `0 fail`.
+  `apps/api/src/test-env-loader.ts` deletes any ambient `DATABASE_URL` (a good
+  guard — it stops `bun test` reaching a real database) and falls back to port
+  5432, while local Postgres here runs on **5434**. CI supplies its own database,
+  so CI is green and every local run is quietly hollow. Copy
+  `apps/api/.env.test.example`; for `apps/workers/temporal`, pass `DATABASE_URL`
+  explicitly. **Check the file count**, not the pass count: a suite that "ran"
+  fewer files than it has is the tell.
+
 The lesson is not "be careful". It is that **a guard which converts failure into
 silence is worse than no guard**, because it also removes the evidence.
 
@@ -274,6 +288,7 @@ detail: {
 - Integration-test routes via Elysia app (`<module>-http.integration.test.ts`).
 - Cover: happy path, unauthenticated, unauthorized, scope-denied, validation error.
 - Route security is machine-audited by `apps/api/src/test-utils/route-security.manifest.ts` and scope enforcement by `scope-enforcement.manifest.ts`. Add new routes/use-cases to those manifests.
+- `*.db.test.ts` needs `apps/api/.env.test` — copy `.env.test.example`. Without it they **skip silently** and a green run proves nothing (see "Never let a failure become silence").
 
 ### Observability
 

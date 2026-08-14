@@ -1,0 +1,21 @@
+{
+  "name": "@atlasmed/test-support",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@atlasmed/database": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "^5"
+  }
+}

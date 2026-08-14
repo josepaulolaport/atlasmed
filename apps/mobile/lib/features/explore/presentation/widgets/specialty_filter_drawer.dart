@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinical_focuses_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_unit_types_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_unit_types_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/specialties_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -15,8 +17,13 @@ class SpecialtyOption {
   final String label;
 }
 
-/// Standalone specialty picker — search + multi-select list.
-/// Clinic: clinical focus ids. Doctor: specialty name strings.
+/// Standalone picker — search + multi-select list.
+///
+/// Serves every long catalogue on the clinic filter sheet. `clinic` picks
+/// clinical focus ids, `doctor` specialty names, `unit-type` CNES unit type
+/// ids. They differ only in where the options come from and what the chrome is
+/// called; the search, selection and apply behaviour is the same question every
+/// time, so it is asked in one place.
 class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
   const SpecialtyFilterDrawer({
     super.key,
@@ -24,7 +31,7 @@ class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
     required this.initialSelected,
   });
 
-  /// `clinic` | `doctor`
+  /// `clinic` | `doctor` | `unit-type`
   final String kind;
   final Set<String> initialSelected;
 
@@ -43,6 +50,24 @@ class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
           SpecialtyFilterDrawer(kind: kind, initialSelected: selected),
     );
   }
+
+  /// Heading, and the noun the search field and empty states use.
+  static ({String title, String hint, String empty, String notFound}) copyFor(
+    String kind,
+  ) => switch (kind) {
+    'unit-type' => (
+      title: 'Tipo de unidade',
+      hint: 'Buscar tipo de unidade…',
+      empty: 'Nenhum tipo de unidade disponível no seu escopo.',
+      notFound: 'Nenhum tipo de unidade encontrado.',
+    ),
+    _ => (
+      title: 'Especialidade',
+      hint: 'Buscar especialidade…',
+      empty: 'Nenhuma especialidade disponível no seu escopo.',
+      notFound: 'Nenhuma especialidade encontrada.',
+    ),
+  };
 
   @override
   ConsumerState<SpecialtyFilterDrawer> createState() =>
@@ -78,6 +103,7 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = SpecialtyFilterDrawer.copyFor(widget.kind);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
@@ -108,10 +134,10 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
                   padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Especialidade',
-                          style: TextStyle(
+                          copy.title,
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: AppColors.gray900,
@@ -132,7 +158,7 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: _SearchField(
                     controller: _queryController,
-                    hintText: 'Buscar especialidade…',
+                    hintText: copy.hint,
                     onChanged: (value) => setState(() => _query = value),
                   ),
                 ),
@@ -152,7 +178,14 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
                     ),
                   ),
                 Expanded(
-                  child: widget.kind == 'clinic'
+                  child: widget.kind == 'unit-type'
+                      ? _UnitTypeList(
+                          scrollController: scrollController,
+                          query: _query,
+                          selected: _selected,
+                          onToggle: _toggle,
+                        )
+                      : widget.kind == 'clinic'
                       ? _ClinicSpecialtyList(
                           scrollController: scrollController,
                           query: _query,
@@ -366,6 +399,69 @@ class _DoctorSpecialtyList extends ConsumerWidget {
   }
 }
 
+/// CNES unit types, from the same catalogue the chips used to render.
+///
+/// A drawer rather than chips because the names are long — "Unidade De Apoio
+/// Diagnose E Terapia (sadt Isolado)" — and twelve of them wrap into a wall
+/// that pushes the rest of the sheet off screen. Same reason Especialidade is
+/// a drawer.
+class _UnitTypeList extends ConsumerWidget {
+  const _UnitTypeList({
+    required this.scrollController,
+    required this.query,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final ScrollController scrollController;
+  final String query;
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final copy = SpecialtyFilterDrawer.copyFor('unit-type');
+    final repository = ref.watch(facilityUnitTypesRepositoryProvider);
+    return RepositoryBuilder<
+      FacilityUnitTypesRepository,
+      List<FacilityUnitTypeOption>
+    >(
+      repository: repository,
+      builder: (context, snapshot, _) {
+        if (snapshot == null) {
+          return const Center(
+            child: Text(
+              'Carregando tipos de unidade…',
+              style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          );
+        }
+
+        final byId = {for (final o in snapshot) o.id.toString(): o};
+        // Selected ids the catalogue no longer offers still render, so a rep
+        // can see and clear a filter they already applied.
+        final ids = <String>{...byId.keys, ...selected}.toList()
+          ..sort(
+            (a, b) => (byId[a]?.label ?? a).compareTo(byId[b]?.label ?? b),
+          );
+
+        return _OptionsList(
+          scrollController: scrollController,
+          options: [
+            for (final id in ids)
+              SpecialtyOption(value: id, label: byId[id]?.label ?? id),
+          ],
+          query: query,
+          selected: selected,
+          onToggle: onToggle,
+          emptyLabel: copy.empty,
+          notFoundLabel: copy.notFound,
+        );
+      },
+    );
+  }
+}
+
 class _OptionsList extends StatelessWidget {
   const _OptionsList({
     required this.scrollController,
@@ -373,6 +469,8 @@ class _OptionsList extends StatelessWidget {
     required this.query,
     required this.selected,
     required this.onToggle,
+    this.emptyLabel = 'Nenhuma especialidade disponível no seu escopo.',
+    this.notFoundLabel = 'Nenhuma especialidade encontrada.',
   });
 
   final ScrollController scrollController;
@@ -380,6 +478,8 @@ class _OptionsList extends StatelessWidget {
   final String query;
   final Set<String> selected;
   final ValueChanged<String> onToggle;
+  final String emptyLabel;
+  final String notFoundLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -391,19 +491,19 @@ class _OptionsList extends StatelessWidget {
               .toList(growable: false);
 
     if (options.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'Nenhuma especialidade disponível no seu escopo.',
-          style: TextStyle(fontSize: 13, color: AppColors.gray500),
+          emptyLabel,
+          style: const TextStyle(fontSize: 13, color: AppColors.gray500),
         ),
       );
     }
 
     if (filtered.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'Nenhuma especialidade encontrada.',
-          style: TextStyle(fontSize: 13, color: AppColors.gray500),
+          notFoundLabel,
+          style: const TextStyle(fontSize: 13, color: AppColors.gray500),
         ),
       );
     }

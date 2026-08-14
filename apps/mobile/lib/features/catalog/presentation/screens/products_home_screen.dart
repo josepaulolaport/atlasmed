@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_data.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/products_product_card.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
-/// Revamped Produtos list (`/produtos`) — one card per family. Concentrations
-/// are chosen on the detail screen.
+/// Produtos (`/products`) — one card per family returned by the catalog API.
+/// Presentations are selected on the detail screen.
 class ProductsHomeScreen extends ConsumerStatefulWidget {
   const ProductsHomeScreen({super.key});
 
@@ -27,24 +29,24 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
     super.dispose();
   }
 
-  List<MockProductFamily> get _filtered {
+  List<CatalogFamily> _filtered(List<CatalogFamily> families) {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return mockProductFamilies;
-    return mockProductFamilies.where((family) {
+    if (query.isEmpty) return families;
+    return families.where((family) {
       return family.name.toLowerCase().contains(query) ||
           family.manufacturer.toLowerCase().contains(query) ||
-          family.tagline.toLowerCase().contains(query) ||
-          family.sector.toLowerCase().contains(query);
+          family.countryOfOrigin.toLowerCase().contains(query);
     }).toList();
   }
 
-  void _openFamily(MockProductFamily family) {
+  void _openFamily(CatalogFamily family) {
     ProductDetailRoute(familyId: family.id).push(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final families = _filtered;
+    final familiesAsync = ref.watch(catalogFamiliesProvider);
+    final filteredFamilies = _filtered(familiesAsync.valueOrNull ?? const []);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -83,7 +85,24 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                  if (families.isEmpty)
+                  if (familiesAsync.isLoading)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: ProductListSkeleton(),
+                      ),
+                    )
+                  else if (familiesAsync.hasError)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: CatalogErrorState(
+                        onRetry: () => ref.invalidate(catalogFamiliesProvider),
+                      ),
+                    ),
+                  if (!familiesAsync.isLoading &&
+                      !familiesAsync.hasError &&
+                      filteredFamilies.isEmpty)
                     const SliverFillRemaining(
                       hasScrollBody: false,
                       child: Center(
@@ -96,14 +115,14 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                         ),
                       ),
                     )
-                  else
+                  else if (!familiesAsync.isLoading && !familiesAsync.hasError)
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                       sliver: SliverList.separated(
-                        itemCount: families.length,
+                        itemCount: filteredFamilies.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
-                          final family = families[index];
+                          final family = filteredFamilies[index];
                           return ProductsProductCard(
                             family: family,
                             onTap: () => _openFamily(family),
