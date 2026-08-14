@@ -230,9 +230,14 @@ export interface FacilityRepository {
     legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
+    /** Required: `facilities.cnes_code` is NOT NULL (spec 0015). */
+    cnesCode: string;
     /** Vertical the created facility gets its first profile in. */
     verticalId: number;
   }): Promise<FacilityRecord>;
+
+  /** True when the CNES registry holds this establishment. */
+  registryHasEstablishment(cnesCode: string): Promise<boolean>;
 
   update(
     id: number,

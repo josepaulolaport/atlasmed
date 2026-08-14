@@ -118,12 +118,22 @@ export function createDbHarness(db: Database): DbHarness {
  * the CNES loader's test leaves a permanent `ZZ` behind. A literal here makes a
  * test's outcome depend on what else has ever run against the database.
  *
- * The counter guarantees uniqueness within a run; the random first character
- * spreads separate runs and parallel files apart. It throws rather than
- * colliding silently once a run exhausts its 36 slots.
+ * Two independent hazards, and both have bitten:
+ *
+ *   1. Other fixtures. The counter guarantees uniqueness within a run; the
+ *      random first character spreads separate runs and parallel files apart.
+ *      It throws rather than colliding silently once a run exhausts its slots.
+ *   2. The 27 real UFs, which exist on a production clone and not on an empty
+ *      database — so a fixture that collides with one passes locally on
+ *      `atlasmed_test_empty` and fails on the clone. Drawing the first
+ *      character from the full alphabet produced exactly that: a run that
+ *      happened to emit `MS` or `SP` collided with a real state. The head is
+ *      therefore a **digit**: every real UF is two letters, so this cannot
+ *      collide with one at all, rather than merely being unlikely to.
  *
  * Takes no database, so it lives outside `createDbHarness`.
  */
+const DIGITS = "0123456789";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 let abbreviationCounter = 0;
 
@@ -133,7 +143,7 @@ export function uniqueAbbreviation(): string {
       "uniqueAbbreviation exhausted — seed fewer states per test run"
     );
   }
-  const head = ALPHABET[Math.floor(Math.random() * ALPHABET.length)]!;
+  const head = DIGITS[Math.floor(Math.random() * DIGITS.length)]!;
   const tail = ALPHABET[abbreviationCounter]!;
   abbreviationCounter += 1;
   return `${head}${tail}`;

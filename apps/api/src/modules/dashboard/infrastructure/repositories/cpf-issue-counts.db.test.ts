@@ -79,8 +79,9 @@ async function makeFacility(input: {
   const row = await scalar<{ id: number | string }>(
     db.execute(sql`
       insert into facilities
-        (name, location, legal_document_type, legal_document, state_id, municipality_id, deactivated_at)
-        select ${input.name}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326),
+        (name, cnes_code, location, legal_document_type, legal_document, state_id, municipality_id, deactivated_at)
+        select ${input.name}, ${crypto.randomUUID()},
+               ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326),
                'CPF'::facility_legal_document_type, ${input.document},
                m.state_id, m.id, ${input.deactivated ? sql`now()` : sql`null`}
           from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE}

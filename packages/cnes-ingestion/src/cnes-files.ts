@@ -39,6 +39,10 @@ export const CNES_SOURCE_STEMS = {
   occupations: "tbAtividadeProfissional",
   states: "tbEstado",
   municipalities: "tbMunicipio",
+  unitTypes: "tbTipoUnidade",
+  unitSubtypes: "tbSubTipo",
+  deactivationReasons: "tbMotivoDesativacao",
+  establishmentSubtypes: "rlEstabSubTipo",
 } as const;
 
 export type CnesSourceName = keyof typeof CNES_SOURCE_STEMS;
@@ -62,14 +66,37 @@ export const REQUIRED_COLUMNS: Record<CnesSourceName, readonly string[]> = {
     "NO_FANTASIA",
     "TP_UNIDADE",
     /**
-     * The *managing* município — `tbEstabelecimento` carries no plain
-     * `CO_MUNICIPIO`. For every clinic we operate the two coincide: measured
-     * 1423 of 1423 against our own `facilities.municipality_id`, zero
-     * divergences, zero blanks (202605). See the note on
-     * `registry.facilities.municipality_cnes_id`.
+     * The *managing* município. `tbEstabelecimento` carries no plain
+     * `CO_MUNICIPIO`, which once made this look like the only municipality on
+     * offer — but the establishment's own is the six-digit prefix of
+     * `CO_UNIDADE` (município + CO_CNES, on 184 301 of 184 351 rows in 202607).
+     * Both are stored and neither is authoritative for an import; see spec 0015
+     * §4.4 and `registry.facilities.municipality_cnes_id`.
      */
     "CO_MUNICIPIO_GESTOR",
+    /** Spec 0015 §4.6 — `1` = pessoa física, `3` = pessoa jurídica. */
+    "TP_PFPJ",
+    /**
+     * The mantenedora's CNPJ. For 119 415 establishments (18.9 %) — almost all
+     * public units under a prefeitura — this is the only document that exists.
+     */
+    "NU_CNPJ_MANTENEDORA",
+    "NU_LATITUDE",
+    "NU_LONGITUDE",
+    /** Present = deactivated. Never offered for import, still mirrored. */
+    "CO_MOTIVO_DESAB",
   ],
+  /** `CO_TIPO_UNIDADE` here is the catalogue key that `TP_UNIDADE` joins to. */
+  unitTypes: ["CO_TIPO_UNIDADE", "DS_TIPO_UNIDADE"],
+  /** Scoped by unit type: subtype codes are not globally unique. */
+  unitSubtypes: ["CO_TIPO_UNIDADE", "CO_SUB_TIPO", "DS_SUB_TIPO"],
+  deactivationReasons: ["CD_MOTIVO_DESAB", "DS_MOTIVO_DESAB"],
+  /**
+   * Note `CO_SUB_TIPO_UNIDADE` — this file names the same concept differently
+   * from `tbSubTipo.CO_SUB_TIPO`. Joining on the wrong one silently finds
+   * nothing.
+   */
+  establishmentSubtypes: ["CO_UNIDADE", "CO_TIPO_UNIDADE", "CO_SUB_TIPO_UNIDADE"],
   workload: [
     "CO_UNIDADE",
     "CO_PROFISSIONAL_SUS",
@@ -102,4 +129,15 @@ export const REQUIRED_COLUMNS: Record<CnesSourceName, readonly string[]> = {
  * ```
  *
  * On the 202605 dump `71` accounts for 99.56 % of rows carrying a CBO `225*`.
+ *
+ * **Do not turn this into a seed migration.** It has been proposed and declined:
+ * CNES enters the wrong codes, so which codes are trustworthy is a standing
+ * judgement that gets revisited as the dumps change, not a fact to freeze into
+ * the schema. A migration would make the current answer look settled and would
+ * have to be superseded by another migration every time it moved.
+ *
+ * The cost is real and accepted: a fresh environment cannot load CNES until
+ * somebody runs the statement above. The loader refuses loudly rather than
+ * importing nobody while reporting success, which is the behaviour that makes
+ * the manual step safe.
  */

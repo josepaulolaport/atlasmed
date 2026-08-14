@@ -53,8 +53,9 @@ async function makeFacility(input: {
   neighborhood?: string | null;
 }): Promise<number> {
   await db.execute(sql`
-    insert into facilities (name, location, street_address, neighborhood, legal_document_type, state_id, municipality_id)
-      select ${input.name}, ST_SetSRID(ST_MakePoint(-43.3, -23.0), 4326),
+    insert into facilities (name, cnes_code, location, street_address, neighborhood, legal_document_type, state_id, municipality_id)
+      select ${input.name}, ${crypto.randomUUID()},
+             ST_SetSRID(ST_MakePoint(-43.3, -23.0), 4326),
              ${input.streetAddress}, ${input.neighborhood ?? null},
              'CNPJ'::facility_legal_document_type, m.state_id, m.id
         from municipalities m where m.ibge_id = ${MUNICIPALITY_IBGE};

@@ -251,10 +251,12 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
         if (!didPop) _quit();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.surfaceTertiary,
         appBar: AppBar(
           backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
+          foregroundColor: AppColors.gray900,
+          elevation: 0,
+          scrolledUnderElevation: 0.5,
           leading: IconButton(
             key: const Key('wizard-back'),
             icon: const Icon(Icons.arrow_back),
@@ -267,9 +269,8 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
                 _draft.suggestion.displayName,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
                 ),
               ),
               Text(
@@ -352,39 +353,73 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
 
   Widget _buildFooter() {
     final isLast = _step == 2;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _saving ? null : _back,
-                child: Text(_step == 0 ? 'Cancelar' : 'Voltar'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: FilledButton(
-                key: const Key('wizard-next'),
-                onPressed: _canAdvance ? _next : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navyBright,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _saving ? null : _back,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.gray700,
+                      side: const BorderSide(color: AppColors.gray300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      _step == 0 ? 'Cancelar' : 'Voltar',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-                child: _saving
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(isLast ? 'Importar' : 'Continuar'),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    key: const Key('wizard-next'),
+                    onPressed: _canAdvance ? _next : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.navyBright,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            isLast ? 'Importar' : 'Continuar',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1021,14 +1056,34 @@ Widget _field({
   String? errorText,
 }) {
   return Padding(
-    padding: const EdgeInsets.only(bottom: 4),
+    padding: const EdgeInsets.only(bottom: 10),
     child: TextFormField(
       key: key,
       initialValue: initial,
+      style: const TextStyle(fontSize: 14, color: AppColors.gray900),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(fontSize: 13, color: AppColors.gray500),
         counterText: '',
         errorText: errorText,
+        filled: true,
+        fillColor: AppColors.cardBg,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.surfaceSecondary),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.surfaceSecondary),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.navyBright),
+        ),
       ),
       keyboardType: keyboardType,
       inputFormatters: formatters,

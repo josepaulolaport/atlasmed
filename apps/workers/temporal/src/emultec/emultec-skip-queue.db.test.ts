@@ -80,6 +80,9 @@ async function seedFacility(
     .insert(facilities)
     .values({
       displayName: `T-Facility-${document}`,
+      // Required since 0108: a facility exists because a CNES establishment was
+      // imported, so every row carries the code it came from.
+      cnesCode: crypto.randomUUID(),
       legalDocument: document,
       legalDocumentType: document.length === 14 ? "CNPJ" : "CPF",
       stateId: geo.stateId,

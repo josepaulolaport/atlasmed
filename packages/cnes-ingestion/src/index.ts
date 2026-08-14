@@ -6,3 +6,4 @@ export * from "./archive/https-source";
 export * from "./archive/object-store-source";
 export * from "./archive/prune-archives";
 export * from "./load/load-registry";
+export * from "./load/prune-staging";

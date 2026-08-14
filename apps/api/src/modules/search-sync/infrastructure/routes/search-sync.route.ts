@@ -23,9 +23,24 @@ export const searchSyncRoutes = new Elysia()
         entity: t.Union([
           t.Literal("facilities"),
           t.Literal("persons"),
+          t.Literal("facility_candidates"),
           t.Literal("orders"),
           t.Literal("emultec-orders"),
+          t.Literal("cnes"),
         ]),
+        /*
+         * CNES only. Omit both to load whatever competência DATASUS has
+         * published that we have not already completed — which is what the
+         * weekly schedule does. Supply `reference` to reload a specific one, and
+         * `force` when the ledger already marks it COMPLETED.
+         */
+        reference: t.Optional(
+          t.Object({
+            year: t.Integer({ minimum: 2000, maximum: 2100 }),
+            month: t.Integer({ minimum: 1, maximum: 12 }),
+          })
+        ),
+        force: t.Optional(t.Boolean()),
       }),
     }
   )

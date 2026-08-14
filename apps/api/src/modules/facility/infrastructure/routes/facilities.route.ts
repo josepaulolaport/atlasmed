@@ -6,6 +6,7 @@ import { ordersUseCases } from "../../../orders/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroDocumentsRoute } from "./cadastro-documents.route";
+import { createCnesFacilityImportRoutes } from "./cnes-facility-import.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 
@@ -128,7 +129,7 @@ const createFacilityRoute = new Elysia()
     {
       detail: {
         summary:
-          "Create clinic (always creates the vertical profile; verticalId required unless the caller has a single vertical)",
+          "Create clinic from a CNES establishment (always creates the vertical profile; verticalId required unless the caller has a single vertical)",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -142,6 +143,13 @@ const createFacilityRoute = new Elysia()
         // so it cannot be created. `facilities.location` is NOT NULL.
         lat: t.Number(),
         lng: t.Number(),
+        /*
+         * Spec 0015: the establishment this clinic is. Optional in the schema so
+         * a missing one is a domain error naming the field rather than a 422 the
+         * client renders as "invalid request"; the use case requires it and
+         * checks it against the registry.
+         */
+        cnesCode: t.Optional(t.String({ minLength: 1 })),
         verticalId: t.Optional(t.Integer({ minimum: 1 })),
       }),
     }
@@ -949,6 +957,8 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  // Same reason: `cnes-candidates` must not be captured as a facility id.
+  .use(createCnesFacilityImportRoutes())
   .use(listFacilityUnitTypesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
