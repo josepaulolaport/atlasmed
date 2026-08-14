@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Importing a clinic from CNES (spec 0015 §6).
 ///
@@ -112,8 +113,19 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
       ),
     );
     if (imported == true && mounted) {
-      // It is no longer a candidate. Re-running the search is how the list
-      // agrees with the server rather than with what it remembers.
+      /*
+       * Dropped locally first. Meilisearch indexes an update asynchronously, so
+       * a search fired the instant the import returns still sees the old
+       * document — and the clinic the user just imported sits at the top of the
+       * list as though nothing happened. Re-running the search afterwards is
+       * what makes the list agree with the server rather than with what it
+       * remembers.
+       */
+      setState(() {
+        _results = _results
+            .where((c) => c.cnesCode != candidate.cnesCode)
+            .toList(growable: false);
+      });
       await _search(_controller.text);
     }
   }
@@ -121,7 +133,19 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buscar no CNES')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: const Text(
+          'Buscar no CNES',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.gray900,
+          ),
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -132,10 +156,38 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
               autofocus: widget.initialQuery.trim().isEmpty,
               textInputAction: TextInputAction.search,
               onSubmitted: _search,
-              decoration: const InputDecoration(
-                labelText: 'Nome, CNPJ ou código CNES',
+              style: const TextStyle(fontSize: 14, color: AppColors.gray900),
+              decoration: InputDecoration(
+                hintText: 'Nome, CNPJ ou código CNES',
+                hintStyle: const TextStyle(color: AppColors.gray400),
                 helperText: 'Clínicas registradas no CNES em todo o Brasil',
-                prefixIcon: Icon(Icons.search),
+                helperStyle: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.gray500,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 20,
+                  color: AppColors.gray400,
+                ),
+                filled: true,
+                fillColor: AppColors.cardBg,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.gray200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.gray200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppColors.navyBright),
+                ),
               ),
             ),
           ),
@@ -165,28 +217,80 @@ class _CnesFacilityImportScreenState extends State<CnesFacilityImportScreen> {
       );
     }
     return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final candidate = _results[index];
-        return ListTile(
-          key: ValueKey('cnes-candidate-${candidate.cnesCode}'),
-          title: Text(candidate.name),
-          subtitle: Text(
-            [
-              if (candidate.whereLabel.isNotEmpty) candidate.whereLabel,
-              'CNES ${candidate.cnesCode}',
-            ].join(' · '),
+        return Material(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            key: ValueKey('cnes-candidate-${candidate.cnesCode}'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _open(candidate),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          candidate.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          [
+                            if (candidate.whereLabel.isNotEmpty)
+                              candidate.whereLabel,
+                            'CNES ${candidate.cnesCode}',
+                          ].join(' · '),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                        /*
+                         * The one thing the row must say: importing this adds a
+                         * vertical profile to a clinic we already hold, rather
+                         * than creating one. The outcome differs, so the row does.
+                         */
+                        if (candidate.imported) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.gray100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Já cadastrada · adiciona à sua vertical',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.gray700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: AppColors.gray400),
+                ],
+              ),
+            ),
           ),
-          /*
-           * The one thing the row must say: importing this adds a vertical
-           * profile to a clinic we already hold, rather than creating one. The
-           * outcome differs, so the label does.
-           */
-          trailing: candidate.imported
-              ? const Chip(label: Text('Já cadastrada'))
-              : const Icon(Icons.chevron_right),
-          onTap: () => _open(candidate),
         );
       },
     );
@@ -207,9 +311,25 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40),
-            const SizedBox(height: 12),
-            Text(text, textAlign: TextAlign.center),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: AppColors.gray100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 28, color: AppColors.gray400),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.gray500,
+                height: 1.5,
+              ),
+            ),
           ],
         ),
       ),
@@ -286,8 +406,8 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
         _postalCode.text = preview.postalCode ?? '';
         _phone.text = preview.phoneNumber ?? '';
         _email.text = preview.email ?? '';
-        _lat.text = preview.latitude?.toString() ?? '';
-        _lng.text = preview.longitude?.toString() ?? '';
+        _lat.text = _coordinate(preview.latitude);
+        _lng.text = _coordinate(preview.longitude);
       });
     } on CnesFacilityImportException catch (e) {
       if (!mounted) return;
@@ -347,6 +467,11 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     }
   }
 
+  /// Six decimals is roughly 11 cm. CNES ships up to fourteen, which overflows
+  /// a half-width field and reads as truncated data rather than a long number.
+  String _coordinate(double? value) =>
+      value == null ? '' : value.toStringAsFixed(6);
+
   String? _nullIfBlank(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
@@ -357,7 +482,33 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     final preview = _preview;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.candidate.name)),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.candidate.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.gray900,
+              ),
+            ),
+            Text(
+              preview == null
+                  ? 'CNES ${widget.candidate.cnesCode}'
+                  : preview.alreadyImported
+                  ? 'Já cadastrada · adicionar à sua vertical'
+                  : 'Confira os dados antes de importar',
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+            ),
+          ],
+        ),
+      ),
       body: preview == null
           ? (_error != null
                 ? _Message(icon: Icons.error_outline, text: _error!)
@@ -382,15 +533,40 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
        */
       bottomNavigationBar: preview == null
           ? null
-          : SafeArea(
-              minimum: const EdgeInsets.all(16),
-              child: FilledButton(
-                key: const ValueKey('cnes-import-submit'),
-                onPressed: _submitting ? null : _submit,
-                child: Text(
-                  preview.alreadyImported
-                      ? 'Adicionar à minha vertical'
-                      : 'Importar clínica',
+          : Container(
+              color: AppColors.cardBg,
+              child: SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    key: const ValueKey('cnes-import-submit'),
+                    onPressed: _submitting ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.navyBright,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            preview.alreadyImported
+                                ? 'Adicionar à minha vertical'
+                                : 'Importar clínica',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -401,14 +577,18 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
   /// already ours and is not this user's to rewrite.
   List<Widget> _alreadyOursBody(CnesFacilityPreview preview) {
     return [
-      const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Esta clínica já está cadastrada na AtlasMed, mas não aparece para a '
-            'sua vertical. Adicioná-la não altera o cadastro existente — apenas '
-            'passa a exibi-la para você.',
-          ),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gray200),
+        ),
+        child: const Text(
+          'Esta clínica já está cadastrada na AtlasMed, mas não aparece para a '
+          'sua vertical. Adicioná-la não altera o cadastro existente — apenas '
+          'passa a exibi-la para você.',
+          style: TextStyle(fontSize: 13, color: AppColors.gray700, height: 1.5),
         ),
       ),
       const SizedBox(height: 16),
@@ -423,65 +603,97 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     ];
   }
 
+  /// One shape for every editable field, so the form reads as one form.
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    bool numeric = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: controller,
+        keyboardType: numeric
+            ? const TextInputType.numberWithOptions(decimal: true, signed: true)
+            : null,
+        style: const TextStyle(fontSize: 14, color: AppColors.gray900),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 13, color: AppColors.gray500),
+          filled: true,
+          fillColor: AppColors.cardBg,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.gray200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.gray200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.navyBright),
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _wizardBody(CnesFacilityPreview preview) {
     return [
       const Text(
         'Confira os dados do CNES antes de importar. Tudo pode ser corrigido, '
         'exceto o CNPJ.',
+        style: TextStyle(fontSize: 13, color: AppColors.gray500, height: 1.5),
       ),
-      const SizedBox(height: 16),
-      _ReadOnlyRow(label: 'CNES', value: preview.cnesCode),
-      /*
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gray200),
+        ),
+        child: Column(
+          children: [
+            _ReadOnlyRow(label: 'CNES', value: preview.cnesCode),
+            /*
        * Read-only when CNES supplied it: it is the legal identity of the
        * establishment, and a retyped CNPJ is how two clinics collide. When CNES
        * has none — 18.9 % of establishments, almost all public units under a
        * prefeitura — nothing is asked, because the field is empty for a reason.
        */
-      if ((preview.legalDocument ?? '').isNotEmpty)
-        _ReadOnlyRow(
-          label: preview.legalDocumentType ?? 'Documento',
-          value: preview.legalDocument!,
-        )
-      else if ((preview.maintainerTaxId ?? '').isNotEmpty)
-        _ReadOnlyRow(
-          label: 'CNPJ da mantenedora',
-          value: preview.maintainerTaxId!,
+            if ((preview.legalDocument ?? '').isNotEmpty)
+              _ReadOnlyRow(
+                label: preview.legalDocumentType ?? 'Documento',
+                value: preview.legalDocument!,
+              )
+            else if ((preview.maintainerTaxId ?? '').isNotEmpty)
+              _ReadOnlyRow(
+                label: 'CNPJ da mantenedora',
+                value: preview.maintainerTaxId!,
+              ),
+            if ((preview.municipalityName ?? '').isNotEmpty)
+              _ReadOnlyRow(
+                label: 'Município (sugerido pelo CNES)',
+                value:
+                    '${preview.municipalityName} / ${preview.stateAbbreviation ?? ''}',
+              ),
+          ],
         ),
-      if ((preview.municipalityName ?? '').isNotEmpty)
-        _ReadOnlyRow(
-          label: 'Município (sugerido pelo CNES)',
-          value:
-              '${preview.municipalityName} / ${preview.stateAbbreviation ?? ''}',
-        ),
-      const SizedBox(height: 8),
-      TextField(
-        controller: _name,
-        decoration: const InputDecoration(labelText: 'Nome'),
       ),
-      TextField(
-        controller: _street,
-        decoration: const InputDecoration(labelText: 'Logradouro'),
-      ),
-      TextField(
-        controller: _number,
-        decoration: const InputDecoration(labelText: 'Número'),
-      ),
-      TextField(
-        controller: _neighborhood,
-        decoration: const InputDecoration(labelText: 'Bairro'),
-      ),
-      TextField(
-        controller: _postalCode,
-        decoration: const InputDecoration(labelText: 'CEP'),
-      ),
-      TextField(
-        controller: _phone,
-        decoration: const InputDecoration(labelText: 'Telefone'),
-      ),
-      TextField(
-        controller: _email,
-        decoration: const InputDecoration(labelText: 'E-mail'),
-      ),
+      const SizedBox(height: 16),
+      _field(_name, 'Nome'),
+      _field(_street, 'Logradouro'),
+      _field(_number, 'Número'),
+      _field(_neighborhood, 'Bairro'),
+      _field(_postalCode, 'CEP'),
+      _field(_phone, 'Telefone'),
+      _field(_email, 'E-mail'),
       const SizedBox(height: 16),
       /*
        * The point is load-bearing and the user should be told so: territory
@@ -495,31 +707,18 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
                   'coordenadas — elas definem o território responsável.'
             : 'Localização informada pelo CNES. Corrija se estiver errada: ela '
                   'define o território responsável.',
-        style: Theme.of(context).textTheme.bodySmall,
+        style: const TextStyle(
+          fontSize: 12,
+          color: AppColors.gray500,
+          height: 1.4,
+        ),
       ),
+      const SizedBox(height: 10),
       Row(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _lat,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              decoration: const InputDecoration(labelText: 'Latitude'),
-            ),
-          ),
+          Expanded(child: _field(_lat, 'Latitude', numeric: true)),
           const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: _lng,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              decoration: const InputDecoration(labelText: 'Longitude'),
-            ),
-          ),
+          Expanded(child: _field(_lng, 'Longitude', numeric: true)),
         ],
       ),
     ];
@@ -535,15 +734,27 @@ class _ReadOnlyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
-            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+            width: 132,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+            ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -557,16 +768,29 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(
-          message,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onErrorContainer,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.red.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, size: 18, color: AppColors.red),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.red,
+                height: 1.4,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

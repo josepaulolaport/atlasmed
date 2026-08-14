@@ -162,8 +162,9 @@ void main() {
     expect(find.text('CLINICA NOVA'), findsOneWidget);
     expect(find.text('CLINICA NOSSA'), findsOneWidget);
     // The row has to say which case it is: importing one creates a clinic and
-    // importing the other only adds a profile.
-    expect(find.text('Já cadastrada'), findsOneWidget);
+    // importing the other only adds a profile to one we already hold.
+    expect(find.textContaining('Já cadastrada'), findsOneWidget);
+    expect(find.textContaining('adiciona à sua vertical'), findsOneWidget);
   });
 
   testWidgets('a clinic we already hold gets a confirmation, not a form', (

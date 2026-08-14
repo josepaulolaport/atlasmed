@@ -123,7 +123,7 @@ export interface CandidateRow {
   municipality_cnes_id: string | null;
   state_abbrev: string | null;
   state_atlasmed_id: number | null;
-  vertical_ids: number[] | null;
+  vertical_ids: (number | string)[] | null;
 }
 
 /**
@@ -181,8 +181,17 @@ export function buildFacilityCandidateDocument(
     unitTypeName: row.unit_type_name,
     unitSubtypeCode: row.unit_subtype_code,
     imported: row.atlasmed_id !== null,
-    atlasmedId: row.atlasmed_id,
-    verticalIds: row.vertical_ids ?? [],
+    atlasmedId: row.atlasmed_id === null ? null : Number(row.atlasmed_id),
+    /*
+     * Coerced, and this one is load-bearing. `facility_vertical_profiles.
+     * vertical_id` is bigint, which the driver can hand back as a string — and a
+     * document holding `["1"]` fails `verticalIds NOT IN [1]`, so a clinic the
+     * user's own vertical already covers is offered to them for ever. The full
+     * rebuild happened to produce numbers and the single-document upsert
+     * produced strings, which is exactly the kind of divergence that survives
+     * every test and shows up in the app.
+     */
+    verticalIds: (row.vertical_ids ?? []).map(Number).filter(Number.isFinite),
     ...(lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng)
       ? { _geo: { lat, lng } }
       : {}),

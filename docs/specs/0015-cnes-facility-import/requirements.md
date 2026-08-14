@@ -44,14 +44,14 @@ workload and professional files** (§6.7).
 **Out:** the *semantic* professional tables' scope. `registry.facility_professionals`,
 `registry.professionals` and their occupations stay derived and scoped to
 `atlasmed_id IS NOT NULL` — they carry the bridge to `public.people` and the roster semantics, and
-mirroring those nationally would mean maintaining 4.2 M bridged rows for clinics nobody has
+mirroring those nationally would mean maintaining millions of bridged rows for clinics nobody has
 imported.
 
 **This revises the earlier framing** that the professional data must stay out entirely "because
 mirroring 380 000 establishments must not drag 7.7 M workload rows in behind them". The number was
 right and the conclusion was too broad: it conflated *storing the rows* with *bridging them*.
-Storing the raw rows in staging costs ~700 MB and no semantics; bridging them is what would have
-been expensive. Staging is national and dumb, `registry.*` stays scoped and meaningful.
+Storing the raw rows in staging costs **316 MB** measured and no semantics; bridging them is what
+would have been expensive. Staging is national and dumb, `registry.*` stays scoped and meaningful.
 
 **Data scope changes** from spec 0012 §2 ("only facilities we already operate. Not the national
 CNES set") — this spec supersedes that sentence for `registry.facilities` and its catalogues only.
@@ -688,7 +688,18 @@ load time** (ADR 0009 §5: the registration is the gate, not the CBO). That drop
 free; what it discards describes people we could never act on, so storing them buys nothing.
 
 **Import then becomes a query**, scoped to one `CO_UNIDADE`, inside the same transaction that
-creates the facility and its bridge. The clinic has its doctors the moment it is bridged.
+creates the facility and its bridge. The clinic has its doctors the moment it is bridged —
+verified end to end on real data: CNES 9436758 arrived with nine doctors and their CRMs.
+
+It runs steps 4-6 of the loader against that one establishment, and holds to the same rules for the
+same reasons: professionals are never deleted and never lose their `atlasmed_id`; registrations keep
+first on the `(council, UF, number)` identity conflict, because a violation means a *different*
+person already claims that CRM; the roster is replaced as a snapshot so a departed doctor does not
+linger; and an unmapped CBO is dropped rather than invented.
+
+The competência it reads is the one the run ledger marks COMPLETED, falling back to the newest
+staged — the fallback for fresh environments and manual loads, the preference so an import never
+reads a half-finished reload (rule 1 below).
 
 ### Why this is not what §2 rejected
 

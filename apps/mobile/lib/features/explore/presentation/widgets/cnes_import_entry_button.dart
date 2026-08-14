@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/cnes_facility_import_screen.dart';
 
 /// The way into the CNES import (spec 0015 §6.0).
@@ -28,10 +29,26 @@ class CnesImportEntryButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return OutlinedButton.icon(
+    return TextButton.icon(
       key: const ValueKey('cnes-import-entry'),
-      icon: const Icon(Icons.travel_explore, size: 18),
-      label: const Text('Buscar no CNES'),
+      icon: const Icon(
+        Icons.travel_explore,
+        size: 16,
+        color: AppColors.navyBright,
+      ),
+      label: const Text(
+        'Buscar no CNES',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AppColors.navyBright,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => CnesFacilityImportScreen(initialQuery: initialQuery),
