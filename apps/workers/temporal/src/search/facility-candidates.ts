@@ -11,8 +11,21 @@ import { db } from "../infrastructure/db";
 
 export { FACILITY_CANDIDATE_SETTINGS } from "@atlasmed/facility-insights";
 
-/** Page size. Candidates are far narrower documents than facilities. */
-const PAGE_SIZE = 2_000;
+/**
+ * Documents per Meili request.
+ *
+ * Sized for this index, not copied from the facilities one — that uses 500,
+ * which is irrelevant at 1 442 rows and ruinous at 373 435. `rebuildSearchIndex`
+ * waits for each batch to finish indexing before sending the next, so every
+ * batch pays Meili's fixed per-task cost: measured at **4.8–7.1 s for 2 000
+ * documents**, which is ~330 docs/s and a nineteen-minute rebuild spent almost
+ * entirely on overhead paid 187 times.
+ *
+ * Candidate documents average 581 bytes, so 20 000 of them is ~12 MB per
+ * request — inside the range Meili is happiest with, and 19 batches instead of
+ * 187.
+ */
+const PAGE_SIZE = 20_000;
 
 const COLUMNS = sql.raw(FACILITY_CANDIDATE_COLUMNS);
 const JOINS = sql.raw(FACILITY_CANDIDATE_JOINS);

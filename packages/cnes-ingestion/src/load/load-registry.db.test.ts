@@ -523,7 +523,7 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
       });
     });
 
-    it("prunes staged people no vínculo refers to", async () => {
+    it("stages only people a vínculo refers to", async () => {
       await rolledBack(async (tx) => {
         const result = await loadRegistryFromCsv({
           db: tx, csvDir: join(dir, "national"), reference: REFERENCE,
@@ -539,8 +539,10 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
 
         // The doctor and the stranger are referenced; the nurse lost their row
         // to the registration gate, and nobody ever referred to UNREFERENCED.
+        // These are never written, rather than written and deleted again.
         expect(kept.map((k) => k.professional_sus_id)).toEqual([DOCTOR_SUS, STRANGER_SUS]);
-        expect(result.professionalsStagedPruned).toBeGreaterThanOrEqual(2);
+        expect(result.professionalsReferenced).toBe(2);
+        expect(result.professionalsStaged).toBe(2);
       });
     });
 

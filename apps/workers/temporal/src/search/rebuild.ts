@@ -179,12 +179,30 @@ export async function rebuildSearchIndex(input: {
     (await input.search.updateSettings(input.temporaryIndex, input.settings)).taskUid
   );
 
+  /*
+   * Enqueue every page, then wait once.
+   *
+   * Waiting per page serialises the whole rebuild *and* defeats Meilisearch's
+   * own batching: it merges consecutive queued documentAdditionOrUpdate tasks
+   * into one indexing pass, but only if several are sitting in the queue. Waiting
+   * guaranteed one task per batch — measured on 1.48.3 as `totalNbTasks: 1` on
+   * every batch and 4.8-7.1 s each, which is where a nineteen-minute rebuild of
+   * 373 435 narrow documents went.
+   *
+   * The tasks are still all awaited before the swap below, so a failure is still
+   * fatal to the rebuild — it just surfaces at the end. That costs nothing: this
+   * writes into a temporary index that only becomes live on success.
+   */
+  const pending: number[] = [];
   for await (const page of input.pages) {
     if (page.length > 0) {
-      await input.search.waitForTask(
+      pending.push(
         (await input.search.addDocuments(input.temporaryIndex, page, { primaryKey: "id" })).taskUid
       );
     }
+  }
+  for (const taskUid of pending) {
+    await input.search.waitForTask(taskUid);
   }
 
   const hasStableIndex = await indexExists(input.search, input.target);

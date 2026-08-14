@@ -104,8 +104,8 @@ export interface LoadRegistryResult {
   cargaStaged: number;
   /** Rows kept in `ingestion.professional_staging` after pruning. */
   professionalsStaged: number;
-  /** Staged people no staged vínculo refers to, removed again. */
-  professionalsStagedPruned: number;
+  /** Distinct people the staged vínculos refer to. */
+  professionalsReferenced: number;
   /** `rlEstabSubTipo` rows linked onto an establishment. */
   establishmentSubtypes: number;
   auxUnitSubtypes: number;
@@ -266,7 +266,7 @@ export async function loadRegistryFromCsv(
     auxUnitTypes: 0,
     cargaStaged: 0,
     professionalsStaged: 0,
-    professionalsStagedPruned: 0,
+    professionalsReferenced: 0,
     establishmentSubtypes: 0,
     auxUnitSubtypes: 0,
     auxDeactivationReasons: 0,
@@ -731,6 +731,19 @@ export async function loadRegistryFromCsv(
       )
     );
 
+  /*
+   * The SUS ids some staged vínculo refers to, collected while carga streams.
+   *
+   * An earlier version staged every professional nationally and deleted the
+   * unreferenced ones in SQL, to keep the loader's memory flat. Measured, that
+   * traded ~35 MB of Set for 7 274 165 inserts that were immediately deleted —
+   * about fifteen of the run's twenty minutes, and 1.4 GB of dead tuples that
+   * made the staging tables look 5× their real size until a VACUUM FULL.
+   *
+   * The set is bounded by what carga references (575 573 on 202607), not by the
+   * 7.8 M rows the professional file carries, so it does not grow with the file.
+   */
+  const stagedSusIds = new Set<string>();
   const cargaBuffer: (typeof cnesCargaStaging.$inferInsert)[] = [];
   async function flushCarga() {
     if (cargaBuffer.length === 0) return;
@@ -763,6 +776,7 @@ export async function loadRegistryFromCsv(
       continue;
     }
 
+    stagedSusIds.add(sus);
     cargaBuffer.push({
       referenceYear,
       referenceMonth,
@@ -792,6 +806,9 @@ export async function loadRegistryFromCsv(
     const sus = clean(r.CO_PROFISSIONAL_SUS);
     const name = clean(r.NO_PROFISSIONAL);
     if (!sus || !name) continue;
+    // Only people a staged vínculo refers to. Staging the rest and deleting
+    // them again is the same result for five times the work.
+    if (!stagedSusIds.has(sus)) continue;
     stagedProfessionalBuffer.push({
       referenceYear,
       referenceMonth,
@@ -806,35 +823,13 @@ export async function loadRegistryFromCsv(
   }
   await flushStagedProfessionals();
 
-  /*
-   * Keep only the people some staged vínculo refers to.
-   *
-   * Done in SQL rather than by holding 2.5 M SUS ids in a Set while the file
-   * streams — the point of staging is that the load stops growing with the data.
-   * The intermediate rows are transient; what remains is the 2 502 725 the spec
-   * budgets for.
-   */
-  const pruned = await db.execute(sql`
-    delete from ingestion.professional_staging p
-     where p.reference_year = ${referenceYear}
-       and p.reference_month = ${referenceMonth}
-       and not exists (
-         select 1 from ingestion.carga_staging c
-          where c.reference_year = p.reference_year
-            and c.reference_month = p.reference_month
-            and c.professional_sus_id = p.professional_sus_id
-       )
-  `);
-  result.professionalsStagedPruned =
-    (pruned as unknown as { count?: number }).count ?? 0;
-  result.professionalsStaged -= result.professionalsStagedPruned;
-
   log("workload staged", {
     competence: `${referenceYear}-${String(referenceMonth).padStart(2, "0")}`,
     carga: result.cargaStaged,
     professionals: result.professionalsStaged,
-    prunedProfessionals: result.professionalsStagedPruned,
+    referencedSusIds: stagedSusIds.size,
   });
+  result.professionalsReferenced = stagedSusIds.size;
 
   // ── Step 3 — Build the scoped roster from staging ─────────────────────────
   //

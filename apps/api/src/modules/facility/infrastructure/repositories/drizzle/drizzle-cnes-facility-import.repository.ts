@@ -183,8 +183,11 @@ export class DrizzleCnesFacilityImportRepository {
   async listActiveVerticalIds(): Promise<number[]> {
     const rows = (await db.execute(sql`
       select id from business_verticals order by id
-    `)) as unknown as { id: number }[];
-    return rows.map((r) => r.id);
+    `)) as unknown as { id: number | string }[];
+    // Coerced: `business_verticals.id` is bigint, which the driver returns as a
+    // string, and the caller checks membership with `includes` against numbers —
+    // so uncoerced this rejects every vertical that exists.
+    return rows.map((r) => Number(r.id));
   }
 
   /**
@@ -314,6 +317,8 @@ export class DrizzleCnesFacilityImportRepository {
          where cnes_id = ${input.cnesCode}
       `);
 
+      await deriveRosterFromStaging(tx, input.cnesCode);
+
       return { facilityId };
     });
   }
@@ -345,4 +350,138 @@ export class DrizzleCnesFacilityImportRepository {
     });
     return { added };
   }
+}
+
+/**
+ * Build this establishment's roster from staging, in the import's transaction.
+ *
+ * This is what the national staging tables are *for* (spec 0015 §6.7). The
+ * professional pipeline is scoped at ingestion time, so a clinic bridged
+ * afterwards has no vínculos at all — and without this a clinic imported the day
+ * after an ingestion shows an empty doctor list for up to a month, on exactly
+ * the clinics somebody just went to the trouble of adding.
+ *
+ * It is steps 4-6 of the loader, scoped to one `CO_UNIDADE`: roughly ten rows,
+ * so a query rather than a background job re-reading 1.8 GB of archive.
+ *
+ * The same semantics the loader holds to, for the same reasons:
+ *
+ * - **professionals are never deleted** and their attributes are refreshed;
+ *   `atlasmed_id` is untouched, because that bridge is user-authored.
+ * - **registrations keep first on the identity conflict.** `(council, UF,
+ *   number)` is a global guard: a violation means a *different* person already
+ *   claims that CRM, and overwriting would attach a clinic's roster to the wrong
+ *   doctor. `ON CONFLICT DO NOTHING` covers both targets here — unlike the
+ *   loader, which needs the row refreshed and so must name one.
+ * - **the council must be one we curated.** A registration filed under an
+ *   invented council reads as authoritative (ADR 0009 §6).
+ */
+async function deriveRosterFromStaging(tx: Tx, cnesCode: string): Promise<void> {
+  /*
+   * The competência the run ledger marks COMPLETED, falling back to the newest
+   * staged one. The fallback matters on a fresh environment and for manual
+   * loads, where staging exists before any run row does; the preference matters
+   * because §6.7 rule 1 says an import must never read a half-loaded reload.
+   */
+  const competence = (await tx.execute(sql`
+    select coalesce(run.reference_year, staged.reference_year) as reference_year,
+           coalesce(run.reference_month, staged.reference_month) as reference_month
+      from (select 1) one
+      left join lateral (
+        select reference_year, reference_month
+          from ingestion.cnes_runs
+         where status = 'COMPLETED' and promoted_at is not null
+           and reference_year is not null and reference_month is not null
+         order by promoted_at desc limit 1
+      ) run on true
+      left join lateral (
+        select reference_year, reference_month
+          from ingestion.carga_staging
+         order by reference_year desc, reference_month desc limit 1
+      ) staged on true
+  `)) as unknown as { reference_year: number | null; reference_month: number | null }[];
+
+  const year = competence[0]?.reference_year ?? null;
+  const month = competence[0]?.reference_month ?? null;
+  // No competência loaded yet is a legitimate state, not a failure: the clinic
+  // is created and its roster arrives with the first ingestion.
+  if (year === null || month === null) return;
+
+  const scope = sql`
+    from ingestion.carga_staging c
+    join registry.facilities rf on rf.cnes_unit_code = c.unit_code
+    join registry.professional_councils pc
+      on pc.cnes_id = c.council_code and pc.is_active
+   where c.reference_year = ${year}
+     and c.reference_month = ${month}
+     and rf.cnes_id = ${cnesCode}
+  `;
+
+  await tx.execute(sql`
+    insert into registry.professionals
+      (cnes_id, full_name, social_name, tax_id, health_card_number, source_last_seen_at)
+    select distinct on (p.professional_sus_id)
+           p.professional_sus_id, coalesce(nullif(p.name, ''), p.professional_sus_id),
+           p.social_name, p.tax_id, p.cns, now()
+      from ingestion.professional_staging p
+     where p.reference_year = ${year}
+       and p.reference_month = ${month}
+       and p.professional_sus_id in (select c.professional_sus_id ${scope})
+    on conflict (cnes_id) do update
+       set full_name = excluded.full_name,
+           social_name = excluded.social_name,
+           tax_id = excluded.tax_id,
+           health_card_number = excluded.health_card_number,
+           source_last_seen_at = now(),
+           updated_at = now()
+  `);
+
+  await tx.execute(sql`
+    insert into registry.professional_registrations
+      (professional_cnes_id, council_cnes_id, state_code, registration_number)
+    select distinct c.professional_sus_id, c.council_code, c.registration_uf,
+           c.registration_number
+      ${scope}
+       and exists (
+         select 1 from registry.professionals rp where rp.cnes_id = c.professional_sus_id
+       )
+    on conflict do nothing
+  `);
+
+  /*
+   * The roster is a snapshot, so it is replaced rather than added to — a doctor
+   * who left must not linger. Scoped to this one establishment; the monthly load
+   * owns every other clinic's.
+   */
+  await tx.execute(sql`
+    delete from registry.facility_professional_occupations where facility_cnes_id = ${cnesCode}
+  `);
+  await tx.execute(sql`
+    delete from registry.facility_professionals where facility_cnes_id = ${cnesCode}
+  `);
+  await tx.execute(sql`
+    insert into registry.facility_professionals (facility_cnes_id, professional_cnes_id)
+    select distinct ${cnesCode}, c.professional_sus_id
+      ${scope}
+       and exists (
+         select 1 from registry.professionals rp where rp.cnes_id = c.professional_sus_id
+       )
+  `);
+  await tx.execute(sql`
+    insert into registry.facility_professional_occupations
+      (facility_cnes_id, professional_cnes_id, occupation_cnes_id)
+    select distinct ${cnesCode}, c.professional_sus_id, c.occupation_code
+      ${scope}
+       and c.occupation_code is not null
+       and exists (
+         select 1 from registry.facility_professionals fp
+          where fp.facility_cnes_id = ${cnesCode}
+            and fp.professional_cnes_id = c.professional_sus_id
+       )
+       -- An unmapped CBO is dropped, never invented (loader parity).
+       and exists (
+         select 1 from registry.occupations o where o.cnes_id = c.occupation_code
+       )
+    on conflict do nothing
+  `);
 }

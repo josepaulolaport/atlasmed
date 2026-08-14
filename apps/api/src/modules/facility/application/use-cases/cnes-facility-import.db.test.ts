@@ -33,9 +33,10 @@ const CNPJ_CLASH_CNES = "T9990103";
 const DEACTIVATED_CNES = "T9990104";
 const NOT_IMPORTABLE_CNES = "T9990105";
 const NO_POINT_CNES = "T9990106";
+const ROSTER_CNES = "T9990107";
 const ALL_CNES = [
   NEW_CNES, OURS_CNES, CNPJ_CLASH_CNES, DEACTIVATED_CNES,
-  NOT_IMPORTABLE_CNES, NO_POINT_CNES,
+  NOT_IMPORTABLE_CNES, NO_POINT_CNES, ROSTER_CNES,
 ];
 
 const STATE_IBGE = "9971";
@@ -53,6 +54,10 @@ const REGISTRY_STATE_CNES = "T7";
 const IMPORTABLE_TYPE = "T1";
 const EXCLUDED_TYPE = "T2";
 const MARK = "T-CNES-IMPORT";
+const STAGED_SUS = "T99000001";
+const STAGED_COUNCIL = "71";
+const STAGED_CBO = "225125";
+
 
 let stateId = 0;
 let municipalityId = 0;
@@ -73,6 +78,20 @@ async function purge() {
      where facility_id in (select id from facilities where name like ${MARK + "%"});
   `);
   await db.execute(sql`delete from facilities where name like ${MARK + "%"};`);
+  /*
+   * Roster first: `registry.facility_professionals` RESTRICTs the facility it
+   * points at, so deleting the establishment before its staff fails.
+   */
+  await db.execute(sql`
+    delete from registry.facility_professional_occupations
+     where facility_cnes_id = any(string_to_array(${ALL_CNES.join(",")}, ','));
+  `);
+  await db.execute(sql`
+    delete from registry.facility_professionals
+     where facility_cnes_id = any(string_to_array(${ALL_CNES.join(",")}, ','));
+  `);
+  await db.execute(sql`delete from registry.professional_registrations where professional_cnes_id = ${STAGED_SUS};`);
+  await db.execute(sql`delete from registry.professionals where cnes_id = ${STAGED_SUS};`);
   // Drizzle's sql template flattens an array into one placeholder per element,
   // so `any(${arr})` binds a scalar. Split a delimited string server-side.
   await db.execute(sql`
@@ -91,6 +110,8 @@ async function purge() {
   await db.execute(sql`delete from states where ibge_id = ${STATE_IBGE};`);
   await db.execute(sql`delete from unit_types where cnes_id in (${IMPORTABLE_TYPE}, ${EXCLUDED_TYPE});`);
   await db.execute(sql`delete from business_verticals where code like ${MARK + "%"};`);
+  await db.execute(sql`delete from ingestion.carga_staging where professional_sus_id = ${STAGED_SUS};`);
+  await db.execute(sql`delete from ingestion.professional_staging where professional_sus_id = ${STAGED_SUS};`);
 }
 
 describe.if(dbUp)("importing a CNES establishment (database)", () => {
@@ -176,6 +197,7 @@ describe.if(dbUp)("importing a CNES establishment (database)", () => {
       [CNPJ_CLASH_CNES, IMPORTABLE_TYPE, null, "99000000000272", MUN_CNES, null],
       [DEACTIVATED_CNES, IMPORTABLE_TYPE, "01", "99000000000434", MUN_CNES, null],
       [NOT_IMPORTABLE_CNES, EXCLUDED_TYPE, null, "99000000000515", MUN_CNES, null],
+      [ROSTER_CNES, IMPORTABLE_TYPE, null, "99000000000696", MUN_CNES, null],
     ];
     for (const [cnes, type, deactivated, cnpj, mun, atlas] of rows) {
       await db.execute(sql`
@@ -200,6 +222,78 @@ describe.if(dbUp)("importing a CNES establishment (database)", () => {
 
   afterAll(async () => {
     if (dbUp) await purge();
+  });
+
+  /**
+   * Spec 0015 §6.7 — the reason the staging tables exist.
+   *
+   * The professional pipeline is scoped at *ingestion* time, so a clinic bridged
+   * afterwards has no vínculos at all. Without deriving here, a clinic imported
+   * the day after an ingestion shows an empty doctor list for up to a month, on
+   * exactly the clinics somebody just went to the trouble of adding — and every
+   * signal `CnesSuggestionContext` reads would say the data was loaded.
+   */
+  it("gives the new clinic its CNES doctors in the same transaction", async () => {
+    /*
+     * Staged under whichever competência the import will actually read — the run
+     * ledger's COMPLETED one, falling back to the newest staged. Inventing a
+     * competência here would stage rows the resolver correctly ignores, and the
+     * test would fail for a reason that has nothing to do with the behaviour.
+     */
+    const [competence] = (await db.execute(sql`
+      select coalesce(run.reference_year, staged.reference_year, 2999) as reference_year,
+             coalesce(run.reference_month, staged.reference_month, 1) as reference_month
+        from (select 1) one
+        left join lateral (
+          select reference_year, reference_month from ingestion.cnes_runs
+           where status = 'COMPLETED' and promoted_at is not null
+             and reference_year is not null and reference_month is not null
+           order by promoted_at desc limit 1
+        ) run on true
+        left join lateral (
+          select reference_year, reference_month from ingestion.carga_staging
+           order by reference_year desc, reference_month desc limit 1
+        ) staged on true
+    `)) as unknown as { reference_year: number; reference_month: number }[];
+
+    const year = Number(competence!.reference_year);
+    const month = Number(competence!.reference_month);
+
+    await db.execute(sql`
+      insert into ingestion.professional_staging
+        (reference_year, reference_month, professional_sus_id, name, cns)
+      values (${year}, ${month}, ${STAGED_SUS}, ${MARK + " DOCTOR"}, null)
+      on conflict do nothing
+    `);
+    await db.execute(sql`
+      insert into ingestion.carga_staging
+        (reference_year, reference_month, unit_code, professional_sus_id,
+         council_code, registration_uf, registration_number, occupation_code)
+      values (${year}, ${month}, ${"U" + ROSTER_CNES}, ${STAGED_SUS},
+              ${STAGED_COUNCIL}, 'SP', ${"T9911223"}, ${STAGED_CBO})
+    `);
+
+    const result = await useCase().execute({
+      cnesCode: ROSTER_CNES,
+      role: "MANAGER",
+      assignedVerticalIds: [verticalId],
+    });
+    expect(result.outcome).toBe("CREATED");
+
+    const [row] = (await db.execute(sql`
+      select
+        (select count(*)::int from registry.facility_professionals
+          where facility_cnes_id = ${ROSTER_CNES}) as roster,
+        (select count(*)::int from registry.professionals
+          where cnes_id = ${STAGED_SUS}) as professional,
+        (select count(*)::int from registry.professional_registrations
+          where professional_cnes_id = ${STAGED_SUS}) as registrations
+    `)) as unknown as Record<string, number>[];
+
+    expect(row!.roster).toBe(1);
+    expect(row!.professional).toBe(1);
+    // The registration is the identity the bridge to public.people is made on.
+    expect(row!.registrations).toBe(1);
   });
 
   it("creates the facility, its profile and the bridge together", async () => {
