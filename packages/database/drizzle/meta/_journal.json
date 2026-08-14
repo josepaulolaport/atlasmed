@@ -750,6 +750,13 @@
       "when": 1786657935605,
       "tag": "0106_facilities_require_a_cnes_code",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1786657935606,
+      "tag": "0107_realign_facility_unit_types_with_cnes",
+      "breakpoints": true
     }
   ]
 }

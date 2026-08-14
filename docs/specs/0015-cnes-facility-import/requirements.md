@@ -92,9 +92,36 @@ No catalogue needs rebuilding — they are already exact:
 | `unit_subtypes` | 91 | `tbSubTipo` | 91 |
 | `deactivation_reasons` | 14 | `tbMotivoDesativacao` | 14 |
 
-And `facilities.unit_type_id` already agrees with CNES on **1 414 of 1 423** bridged facilities.
-The nine that diverge are somebody's deliberate correction and **must not be overwritten** by any
-backfill this spec introduces.
+`facilities.unit_type_id` agreed with CNES on **1 414 of 1 423** bridged facilities. An earlier
+draft of this spec recorded the nine divergences as deliberate corrections that must not be
+overwritten. **That was wrong.** All 1 442 facilities were created in a single seed on 2026-08-09 —
+nine hand-corrections is not what one seed on one day produces — and in most cases our value was
+the worse of the two:
+
+| id | facility | ours | CNES |
+|---|---|---|---|
+| 516 | Acceb **Clínica Popular** | 77 Home Care | 36 Clínica |
+| 547 | URSA | 60 Cooperativa | 36 Clínica |
+| 1070 | Ares **Hospital Dia** LTDA | 05 Hospital Geral | 62 Hospital/Dia |
+| 433 | Hospital Real | 05 Hospital Geral | 62 Hospital/Dia |
+| 394 | Ortoclin | 22 Consultório | 36 Clínica |
+| 536 | Unigastro Pará | 36 Clínica | 62 Hospital/Dia |
+| 1052 | Paranamed | 36 Clínica | 62 Hospital/Dia |
+
+**Migration `0107` realigned all seven.** The rule it applies, and the one any later backfill must
+follow: **CNES is authoritative for unit type wherever CNES supplies a resolvable code.** Where it
+does not, ours is kept — `722 Itor` and `906 IOB` carry CNES code `16`, which is defined in no
+catalogue (§4.3), and our `36` beats no type at all. 906 is our highest-order divergent facility
+with 14 orders, so keeping it mattered.
+
+Two consequences fall out of this:
+
+- **`unit_type_id` is descriptive plus a search facet, nothing more.** Nothing commercial reads it
+  — not potential, not the funnel, not territory. It is a Meili filter field, so a correction is
+  invisible to Explorar's filters until the search index is rebuilt.
+- **Nothing keeps it aligned going forward.** `0107` is a one-shot repair; the loader this spec
+  introduces is what must maintain the rule, or the divergence returns with the next seed or
+  import.
 
 ## 3.2 Which establishments we import at all
 
@@ -510,8 +537,9 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
 2. **Reactivation.** A CNES establishment that gains a `CO_MOTIVO_DESAB` after we imported it —
    does the facility deactivate, or does it only stop being offered? Today nothing reads
    `deactivation_reason_code`.
-3. **The nine divergences.** Facilities whose `unit_type_id` disagrees with CNES. This spec leaves
-   them alone; a later reconciliation surface could ask.
+3. ~~**The nine divergences.**~~ **Resolved** — migration `0107` realigned the seven where CNES
+   supplies a resolvable code and kept the two where it does not (§3.1). What remains open is who
+   *keeps* them aligned: `0107` is a one-shot repair and the loader must own the rule from here.
 4. **`NU_CNPJ_MANTENEDORA`** — the maintaining organisation's CNPJ, unexamined here. It may be the
    right answer for clinic chains, which the model has no concept of yet.
 5. **Can a rep import outside their patch?** §8 — the geometry decides ownership, so an import may
