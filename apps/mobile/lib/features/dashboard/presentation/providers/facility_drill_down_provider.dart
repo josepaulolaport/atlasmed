@@ -10,24 +10,48 @@ import 'package:atlasmed_mobile_app/features/location/data/location_service.dart
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PurchaseBucketFacilitiesArgs {
-  const PurchaseBucketFacilitiesArgs({required this.bucket, this.verticalId});
+/// Which slice of the clinic list a Desempenho card opens.
+///
+/// One provider serves every drill-down rather than one per card. The fetching
+/// here — paging, debounced search, GPS revalidation, generation guards against
+/// a stale response overwriting a newer one — is 150 lines that were already
+/// right; a second copy for CPF would have been a second place for them to go
+/// wrong, and only one of the two would get the next fix.
+///
+/// Exactly one of [bucket] and [cpfStatus] is set. They are separate fields
+/// rather than one tagged string because they mean different things to the API
+/// and are sent as different parameters.
+class FacilityDrillDownArgs {
+  const FacilityDrillDownArgs({this.bucket, this.cpfStatus, this.verticalId})
+    : assert(
+        (bucket == null) != (cpfStatus == null),
+        'a drill-down is one slice: pass a bucket or a cpfStatus, never both',
+      );
 
-  final String bucket;
+  /// Desempenho purchase bucket: `active` | `inactive` | `neverBought`.
+  final String? bucket;
+
+  /// CPF problem: `missing` | `invalid`.
+  final String? cpfStatus;
+
   final int? verticalId;
 
   @override
   bool operator ==(Object other) =>
-      other is PurchaseBucketFacilitiesArgs &&
+      other is FacilityDrillDownArgs &&
       other.bucket == bucket &&
+      other.cpfStatus == cpfStatus &&
       other.verticalId == verticalId;
 
+  // This is a Riverpod family key. A field missing here would make two
+  // different drill-downs share one cached list — the same failure that made
+  // the clinic name sort silently do nothing.
   @override
-  int get hashCode => Object.hash(bucket, verticalId);
+  int get hashCode => Object.hash(bucket, cpfStatus, verticalId);
 }
 
-class PurchaseBucketFacilitiesState {
-  const PurchaseBucketFacilitiesState({
+class FacilityDrillDownState {
+  const FacilityDrillDownState({
     this.clinics = const [],
     this.total = 0,
     this.loading = true,
@@ -53,7 +77,7 @@ class PurchaseBucketFacilitiesState {
   final DeviceLocation? origin;
   final double? radiusKm;
 
-  PurchaseBucketFacilitiesState copyWith({
+  FacilityDrillDownState copyWith({
     List<FacilityEntry>? clinics,
     int? total,
     bool? loading,
@@ -68,7 +92,7 @@ class PurchaseBucketFacilitiesState {
     bool clearRadiusKm = false,
     bool resetVisible = false,
   }) {
-    return PurchaseBucketFacilitiesState(
+    return FacilityDrillDownState(
       clinics: clinics ?? this.clinics,
       total: total ?? this.total,
       loading: loading ?? this.loading,
@@ -90,25 +114,25 @@ class PurchaseBucketFacilitiesState {
       visibleCount < clinics.length || (hasMore && !loadingMore);
 }
 
-final purchaseBucketFacilitiesProvider = StateNotifierProvider.autoDispose
+final facilityDrillDownProvider = StateNotifierProvider.autoDispose
     .family<
-      PurchaseBucketFacilitiesNotifier,
-      PurchaseBucketFacilitiesState,
-      PurchaseBucketFacilitiesArgs
+      FacilityDrillDownNotifier,
+      FacilityDrillDownState,
+      FacilityDrillDownArgs
     >((ref, args) {
-      final notifier = PurchaseBucketFacilitiesNotifier(ref, args);
+      final notifier = FacilityDrillDownNotifier(ref, args);
       unawaited(notifier.refreshGpsAndList());
       return notifier;
     });
 
-class PurchaseBucketFacilitiesNotifier
-    extends StateNotifier<PurchaseBucketFacilitiesState>
-    with DisposeSafeStateWrites<PurchaseBucketFacilitiesState> {
-  PurchaseBucketFacilitiesNotifier(this._ref, this.args)
-    : super(const PurchaseBucketFacilitiesState());
+class FacilityDrillDownNotifier
+    extends StateNotifier<FacilityDrillDownState>
+    with DisposeSafeStateWrites<FacilityDrillDownState> {
+  FacilityDrillDownNotifier(this._ref, this.args)
+    : super(const FacilityDrillDownState());
 
   final Ref _ref;
-  final PurchaseBucketFacilitiesArgs args;
+  final FacilityDrillDownArgs args;
 
   static const _pageSize = 20;
   static const _searchDebounceDuration = Duration(milliseconds: 350);
@@ -211,6 +235,7 @@ class PurchaseBucketFacilitiesNotifier
         longitude: origin?.longitude,
         radiusKm: state.radiusKm,
         purchaseBucket: args.bucket,
+        cpfStatus: args.cpfStatus,
         purchaseProfile: _purchaseProfile,
         purchaseIntervalMinDays: _purchaseIntervalBound(
           'purchaseIntervalMinDays',
