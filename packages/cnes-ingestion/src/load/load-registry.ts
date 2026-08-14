@@ -223,12 +223,29 @@ function parseCoordinate(value: string, limit: number): string | null {
  * targets and must never see, and treating that as expected would hide a broken
  * conflict target behind a plausible-looking counter.
  */
-function isRegistrationIdentityConflict(error: unknown): boolean {
-  const e = error as { code?: unknown; constraint_name?: unknown } | null;
-  return (
-    e?.code === "23505" &&
-    e?.constraint_name === "registry_professional_registrations_council_state_number_key"
-  );
+export function isRegistrationIdentityConflict(error: unknown): boolean {
+  /*
+   * Walk `cause`, because the driver error arrives wrapped.
+   *
+   * Drizzle raises `DrizzleQueryError: Failed query: insert into ...` and hangs
+   * the `PostgresError` carrying `code` and `constraint_name` off its `cause`.
+   * Reading those from the outer error yields `undefined`, so this returned
+   * false for the one violation it exists to absorb, the insert rethrew, and
+   * the load died on a duplicate CRM the loader is designed to skip —
+   * `registrationsConflicted` counting zero the whole time it was happening.
+   */
+  let current: unknown = error;
+  for (let depth = 0; current != null && depth < 5; depth += 1) {
+    const e = current as { code?: unknown; constraint_name?: unknown; cause?: unknown };
+    if (
+      e.code === "23505" &&
+      e.constraint_name === "registry_professional_registrations_council_state_number_key"
+    ) {
+      return true;
+    }
+    current = e.cause;
+  }
+  return false;
 }
 
 const KEY_SEPARATOR = " ";
