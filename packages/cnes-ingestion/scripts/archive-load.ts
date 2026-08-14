@@ -17,6 +17,7 @@ import { createDatabase, cnesRuns } from "@atlasmed/database";
 import { eq, sql } from "drizzle-orm";
 import { loadRegistryFromCsv } from "../src/load/load-registry";
 import { openArchiveFromObjectStore, type RangeReadable } from "../src/archive/object-store-source";
+import { selectArchivesToPrune } from "../src/archive/prune-archives";
 import { parseReference } from "../src/cnes-files";
 
 const [objectKey, referenceArg] = process.argv.slice(2);
@@ -162,6 +163,45 @@ console.log(
     professionals: (prunedProfessionals as unknown as { count?: number }).count ?? null,
   }
 );
+
+/*
+ * Prune superseded archives, keeping two.
+ *
+ * The workflow has `pruneCnesArchivesActivity` for this; this script had nothing,
+ * so on the path that actually runs every monthly ZIP accumulated — 735 MB each.
+ * Same omission as the run ledger and the staging prune above, and the same fix:
+ * whatever the workflow does after a promotion, this has to do too.
+ *
+ * Two, not one: the previous competência is what you compare against when a load
+ * looks wrong, and re-downloading it is 735 MB. The one just loaded is protected
+ * explicitly so an unusual `keep` can never delete the archive this run read.
+ *
+ * After the promotion, never before — a failed load must not delete anything.
+ * Keys under `cnes/` that are not archives are reported and left alone; the
+ * bucket also holds cadastro documents and avatars.
+ */
+const listed = await client.list({ prefix: "cnes/" });
+const decision = selectArchivesToPrune({
+  keys: (listed.contents ?? [])
+    .map((object) => object.key)
+    .filter((key): key is string => typeof key === "string"),
+  keep: 2,
+  protectedReference: reference,
+});
+
+for (const archive of decision.prune) {
+  await client.delete(archive.key);
+}
+if (decision.ignored.length > 0) {
+  console.warn(
+    `[${elapsed()}s] prune walked past ${decision.ignored.length} non-archive key(s) under cnes/`,
+    decision.ignored.slice(0, 5)
+  );
+}
+console.log(`[${elapsed()}s] archives pruned`, {
+  deleted: decision.prune.map((a) => a.key),
+  kept: decision.keep.map((a) => a.key),
+});
 
 console.log(JSON.stringify(result, null, 2));
 console.log(`\npeak rss: ${(process.memoryUsage().rss / 1e6).toFixed(0)} MB`);
