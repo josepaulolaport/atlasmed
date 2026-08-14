@@ -11,6 +11,19 @@ export interface OrderScopeFilter {
   facilityIds?: number[];
 }
 
+/**
+ * How many orders sit in each status across the whole scoped set.
+ *
+ * Deliberately NOT narrowed by the caller's status filter. The Pedidos summary
+ * strip is what reads this, and it counted the loaded page before — so it read
+ * "2 pendentes" on a data set holding 1131 orders, and the number moved as the
+ * rep scrolled. A count that changes when you scroll is worse than no count.
+ *
+ * Every status is present with an explicit zero rather than omitted, so a
+ * client can render the full set without deciding what a missing key means.
+ */
+export type OrderStatusCounts = Record<OrderStatus, number>;
+
 export interface OrderIdentity {
   id: number;
   name: string;
@@ -57,6 +70,8 @@ export interface OrderDetailRecord {
   orderedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /** The visit this order was booked against, when it came from one. */
+  interactionId: number | null;
   surgeryType: string | null;
   surgerySubtype: string | null;
   notes: string | null;
@@ -65,13 +80,25 @@ export interface OrderDetailRecord {
   netWeight: number;
   currency: string;
   usdExchangeRate: number | null;
+  /**
+   * Who acted, not just when.
+   *
+   * The four `*ById` columns were already serialized as bare user ids, which a
+   * client can do nothing with — "Rejeitado por 7" names nobody. The resolved
+   * identity sits alongside so the detail screen can show the person, and stays
+   * null when the id is null or the user row is gone.
+   */
+  finalizedBy: OrderIdentity | null;
   finalizedById: number | null;
   finalizedAt: Date | null;
+  rejectedBy: OrderIdentity | null;
   rejectedById: number | null;
   rejectionReason: string | null;
+  noBillingBy: OrderIdentity | null;
   noBillingById: number | null;
   noBillingAt: Date | null;
   noBillingNotes: string | null;
+  expenseAuthorizedBy: OrderIdentity | null;
   expenseAuthorizedById: number | null;
   expenseAuthorizedAt: Date | null;
   items: Array<{
@@ -121,7 +148,11 @@ export interface OrderRepository {
     /** Include up to 2 line-item previews per order. */
     includeItemPreviews?: boolean;
     scope: OrderScopeFilter;
-  }): Promise<{ orders: OrderListRecord[]; total: number }>;
+  }): Promise<{
+    orders: OrderListRecord[];
+    total: number;
+    statusCounts: OrderStatusCounts;
+  }>;
   findById(id: number): Promise<OrderDetailRecord | null>;
   create(input: CreateOrderInput): Promise<OrderDetailRecord>;
   hasActiveFacilityVerticalProfile(

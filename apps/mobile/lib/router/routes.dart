@@ -37,7 +37,6 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/scre
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidades_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/my_orders_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_detail_screen.dart';
-import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_tracking_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
@@ -871,10 +870,14 @@ class InteractionDetailRoute extends GoRouteData with $InteractionDetailRoute {
  * Reading orders is unaffected — see OrdersRoute and OrderDetailRoute below.
  */
 
-@TypedGoRoute<OrderDetailRoute>(
-  path: '/orders/:id',
-  routes: [TypedGoRoute<OrderTrackingRoute>(path: 'tracking')],
-)
+/// No `tracking` child route.
+///
+/// It rendered a courier, a delivery timeline and an ETA, none of which exist:
+/// there is no shipping, carrier or tracking table anywhere in the schema, and
+/// the screen read the order detail and invented the rest. Removed with its
+/// screen and models rather than left reachable — a rep who opened it was being
+/// shown a delivery that nothing in the system knows about.
+@TypedGoRoute<OrderDetailRoute>(path: '/orders/:id')
 class OrderDetailRoute extends GoRouteData with $OrderDetailRoute {
   const OrderDetailRoute({required this.id});
 
@@ -885,19 +888,6 @@ class OrderDetailRoute extends GoRouteData with $OrderDetailRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return OrderDetailScreen(orderId: id);
-  }
-}
-
-class OrderTrackingRoute extends GoRouteData with $OrderTrackingRoute {
-  const OrderTrackingRoute({required this.id});
-
-  final int id;
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return OrderTrackingScreen(orderId: id);
   }
 }
 

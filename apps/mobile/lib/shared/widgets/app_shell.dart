@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
@@ -803,13 +804,14 @@ class AtlasDrawerNavigation extends StatelessWidget {
   }
 }
 
-class _DrawerFooter extends StatelessWidget {
+class _DrawerFooter extends ConsumerWidget {
   final VoidCallback onLogout;
 
   const _DrawerFooter({required this.onLogout});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final version = ref.watch(appVersionProvider).valueOrNull ?? '';
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
       decoration: const BoxDecoration(
@@ -850,9 +852,9 @@ class _DrawerFooter extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Atlasmed · v0.1.0',
-            style: TextStyle(
+          Text(
+            'Atlasmed · $version',
+            style: const TextStyle(
               fontSize: 10.5,
               color: AppColors.gray400,
               fontWeight: FontWeight.w500,

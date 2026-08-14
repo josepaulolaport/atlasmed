@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
 
 /// Footer with terms link and app version.
-class TermsFooter extends StatelessWidget {
-  final String version;
-
-  const TermsFooter({super.key, this.version = 'v0.1.0'});
+class TermsFooter extends ConsumerWidget {
+  const TermsFooter({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final version = ref.watch(appVersionProvider).valueOrNull ?? '';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(

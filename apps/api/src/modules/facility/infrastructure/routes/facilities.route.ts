@@ -724,7 +724,10 @@ const listFacilityOrdersRoute = new Elysia()
       },
       query: t.Object({
         page: t.Optional(t.Number({ minimum: 1 })),
-        limit: t.Optional(t.Number({ minimum: 1 })),        verticalId: t.Optional(t.Number({ minimum: 1 })),
+        // Ceilinged, like /orders. The list joins order_items and groups, so an
+        // unbounded limit is a whole-table aggregate a client can ask for.
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );

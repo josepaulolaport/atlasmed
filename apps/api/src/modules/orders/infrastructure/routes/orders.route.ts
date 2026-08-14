@@ -61,7 +61,10 @@ const listOrdersRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) =
       },
       query: t.Object({
         page: t.Optional(t.Number({ minimum: 1 })),
-        limit: t.Optional(t.Number({ minimum: 1 })),
+        // Ceilinged, unlike before. The list joins order_items and groups, so an
+        // unbounded limit is a whole-table aggregate a client can ask for by
+        // typing a number in a URL.
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         facilityId: t.Optional(t.Number({ minimum: 1 })),
         verticalId: t.Optional(t.Number({ minimum: 1 })),
         includeItemPreviews: t.Optional(t.String({

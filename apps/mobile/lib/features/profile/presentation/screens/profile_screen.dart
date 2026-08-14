@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
@@ -816,11 +817,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Footer ──────────────────────────────────────────────────
   Widget _buildFooter(String since) {
+    final version = ref.watch(appVersionProvider).valueOrNull ?? '';
     return Padding(
       padding: const EdgeInsets.only(top: 18),
       child: Center(
         child: Text(
-          since.isEmpty ? 'Atlasmed · v0.1.0' : 'Atlasmed · v0.1.0 · $since',
+          since.isEmpty ? 'Atlasmed · $version' : 'Atlasmed · $version · $since',
           style: const TextStyle(
             fontSize: 10.5,
             color: AppColors.gray300,

@@ -1332,14 +1332,6 @@ RouteBase get $orderDetailRoute => GoRouteData.$route(
   hasOverriddenOnExit: false,
   parentNavigatorKey: OrderDetailRoute.$parentNavigatorKey,
   factory: $OrderDetailRoute._fromState,
-  routes: [
-    GoRouteData.$route(
-      path: 'tracking',
-      hasOverriddenOnExit: false,
-      parentNavigatorKey: OrderTrackingRoute.$parentNavigatorKey,
-      factory: $OrderTrackingRoute._fromState,
-    ),
-  ],
 );
 
 mixin $OrderDetailRoute on GoRouteData {
@@ -1351,31 +1343,6 @@ mixin $OrderDetailRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/orders/${Uri.encodeComponent(_self.id.toString())}',
-  );
-
-  @override
-  void go(BuildContext context) => context.go(location);
-
-  @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
-
-  @override
-  void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
-
-  @override
-  void replace(BuildContext context) => context.replace(location);
-}
-
-mixin $OrderTrackingRoute on GoRouteData {
-  static OrderTrackingRoute _fromState(GoRouterState state) =>
-      OrderTrackingRoute(id: int.parse(state.pathParameters['id']!));
-
-  OrderTrackingRoute get _self => this as OrderTrackingRoute;
-
-  @override
-  String get location => GoRouteData.$location(
-    '/orders/${Uri.encodeComponent(_self.id.toString())}/tracking',
   );
 
   @override
