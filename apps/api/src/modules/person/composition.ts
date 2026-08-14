@@ -3,6 +3,12 @@ import { searchService } from "../../infrastructure/search/search.service";
 import { DrizzleHealthcareProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-professional.repository";
 import { DrizzlePersonFacilityProjectionRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-projection.repository";
 import { DrizzlePersonFacilityRoleCatalogRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-role-catalog.repository";
+import { DrizzlePersonBookmarkRepository } from "./infrastructure/repositories/drizzle/drizzle-person-bookmark.repository";
+import {
+  AddPersonBookmarkUseCase,
+  ListPersonBookmarksUseCase,
+  RemovePersonBookmarkUseCase,
+} from "./application/use-cases/person-bookmark.use-cases";
 import { DrizzlePersonNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-person-note.repository";
 import { DrizzlePersonProfessionalRegistrationCouncilRepository } from "./infrastructure/repositories/drizzle/drizzle-person-professional-registration-council.repository";
 import { DrizzlePersonProfessionalRegistrationRepository } from "./infrastructure/repositories/drizzle/drizzle-person-professional-registration.repository";
@@ -57,6 +63,13 @@ const userPersonRelationshipRepository =
 const healthcareProfessionalRepository =
   new DrizzleHealthcareProfessionalRepository();
 
+const personBookmarkRepository = new DrizzlePersonBookmarkRepository();
+
+const personBookmarkDeps = {
+  personBookmarkRepository,
+  healthcareProfessionalRepository,
+};
+
 const registrationDeps = {
   registrationRepository,
   councilRepository: registrationCouncilRepository,
@@ -64,6 +77,9 @@ const registrationDeps = {
 };
 
 export const personUseCases = {
+  addPersonBookmark: () => new AddPersonBookmarkUseCase(personBookmarkDeps),
+  removePersonBookmark: () => new RemovePersonBookmarkUseCase(personBookmarkDeps),
+  listPersonBookmarks: () => new ListPersonBookmarksUseCase(personBookmarkDeps),
   listFacilityProjections: () =>
     new ListPersonFacilityProjectionsUseCase({ repository: projectionRepository }),
   getFacilityProjection: () =>
