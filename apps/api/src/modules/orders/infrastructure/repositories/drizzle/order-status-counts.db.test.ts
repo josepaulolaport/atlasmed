@@ -21,6 +21,7 @@ const MARK = "T-ORDER-COUNTS";
 const STATE_IBGE = "9995";
 const MUNICIPALITY_IBGE = "99950001";
 const VERTICAL_CODE = "T_ORD_CNT";
+const ROLE_NAME = "T-ORDER-COUNTS ROLE";
 const repository = new DrizzleOrderRepository();
 
 interface Fixture {
@@ -55,6 +56,7 @@ async function purge() {
   await db.execute(sql`delete from facilities where name like ${`${MARK}%`};`);
   await db.execute(sql`delete from business_verticals where code = ${VERTICAL_CODE};`);
   await db.execute(sql`delete from users where email = ${`${MARK}@example.test`};`);
+  await db.execute(sql`delete from roles where name = ${ROLE_NAME};`);
   await db.execute(sql`
     delete from municipalities
      where ibge_id = ${MUNICIPALITY_IBGE}
@@ -98,10 +100,23 @@ async function seed(): Promise<Fixture> {
     insert into facility_vertical_profiles (facility_id, vertical_id, is_active)
       values (${facilityId}, ${verticalId}, true) returning id;
   `);
+  /**
+   * Brings its own role rather than borrowing one.
+   *
+   * `users.role_id` is NOT NULL, and selecting a role out of the table made the
+   * fixture depend on the database already having been seeded. That holds on a
+   * clone of production and not on CI, where the schema is migrations-only —
+   * the insert then selected nothing, created no user, and the failure surfaced
+   * as an unnamed `beforeAll` error rather than as "roles is empty".
+   */
+  const roleId = await scalar(sql`
+    insert into roles (name, description)
+      values (${ROLE_NAME}, 'Fixture role for order status count tests')
+      returning id;
+  `);
   const actorId = await scalar(sql`
     insert into users (email, username, password_hash, first_name, last_name, role_id)
-      select ${`${MARK}@example.test`}, ${`${MARK}-user`}, 'x', 'Marina', 'Duarte', r.id
-        from roles r order by r.id limit 1
+      values (${`${MARK}@example.test`}, ${`${MARK}-user`}, 'x', 'Marina', 'Duarte', ${roleId})
       returning id;
   `);
 
