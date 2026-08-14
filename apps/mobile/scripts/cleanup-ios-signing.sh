@@ -5,6 +5,10 @@ set -euo pipefail
 : "${RUNNER_TEMP:?RUNNER_TEMP is required}"
 : "${HOME:?HOME is required}"
 
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+project_dir="$(cd "$script_dir/.." && pwd)"
+rm -f "$project_dir/ios/Flutter/CodeSigning.xcconfig"
+
 if [[ -n "${PROFILE_UUID:-}" ]]; then
   rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
   rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
