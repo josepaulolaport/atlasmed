@@ -299,6 +299,49 @@ describe.skipIf(!dbUp)("team member metrics (database)", () => {
     expect(metrics.size).toBe(0);
   });
 
+  test("the profile agrees with the row that opens it (0015 §4)", async () => {
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+
+    for (const rep of reps) {
+      const profile = await team.findMember({
+        userId: rep.userId,
+        verticalId: 1,
+        withinZoneIds: zones,
+      });
+
+      // Same predicate on both sides, so this cannot drift — which is the
+      // point of computing it the same way rather than similarly.
+      expect(profile!.assignedClinicCount).toBe(rep.assignedClinicCount);
+      expect(profile!.email).toBe(rep.email);
+      expect(profile!.outOfTerritoryCount).toBeGreaterThanOrEqual(0);
+      expect(profile!.outOfTerritoryCount).toBeLessThanOrEqual(
+        profile!.assignedClinicCount,
+      );
+      // Excluded on purpose (0015 §4.1) — a profile is not a personnel file.
+      expect(profile).not.toHaveProperty("birthDate");
+      expect(Number.isNaN(Date.parse(profile!.memberSince))).toBe(false);
+    }
+  });
+
+  test("a profile names no territory the reader cannot reach", async () => {
+    const zones = await directory.findManagerZoneIds({ userId: 541, verticalId: 1 });
+    const reps = await team.listRepsUnderZones({ verticalId: 1, zoneIds: zones });
+    if (reps.length === 0) return;
+
+    const foreign = await team.findMember({
+      userId: reps[0]!.userId,
+      verticalId: 1,
+      // Ground this rep does not work. Their patches must not be listed, and
+      // their clinics must not be counted.
+      withinZoneIds: [-1],
+    });
+
+    expect(foreign!.territories).toEqual([]);
+    expect(foreign!.assignedClinicCount).toBe(0);
+  });
+
   test("a manager is measured on their zones, not on assignments", async () => {
     const managers = await team.listManagers(1);
     if (managers.length === 0) return;

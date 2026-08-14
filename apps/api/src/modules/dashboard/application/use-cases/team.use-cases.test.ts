@@ -8,6 +8,7 @@ import { ForbiddenError } from "../../../../shared/errors";
 import type { DashboardDirectoryPort } from "../dashboard-query";
 import type { TeamMemberRow } from "../../infrastructure/repositories/drizzle-team.repository";
 import {
+  GetTeamMemberUseCase,
   ListRepsWithoutPatchUseCase,
   ListTeamUseCase,
   type ListTeamRequest,
@@ -117,6 +118,102 @@ function request(role: string, overrides: Partial<ListTeamRequest> = {}): ListTe
     ...overrides,
   };
 }
+
+describe("member profile (spec 0015 §4)", () => {
+  function profileDeps(overrides: {
+    zoneIds?: number[];
+    member?: Record<string, unknown> | null;
+  }) {
+    const seen: Array<{
+      userId: number;
+      verticalId: number;
+      withinZoneIds: number[] | null;
+    }> = [];
+    return {
+      seen,
+      deps: {
+        teamRepository: {
+          findMember: async (input: {
+            userId: number;
+            verticalId: number;
+            withinZoneIds: number[] | null;
+          }) => {
+            seen.push(input);
+            return overrides.member === undefined
+              ? { userId: input.userId }
+              : overrides.member;
+          },
+        },
+        directory: {
+          findUser: async () => null,
+          findManagerZoneIds: async () => overrides.zoneIds ?? [11],
+          findManagedUserIds: async () => [],
+        } satisfies DashboardDirectoryPort,
+      } as unknown as ConstructorParameters<typeof GetTeamMemberUseCase>[0],
+    };
+  }
+
+  function profileRequest(role: string, subjectUserId: number, viewerId = 2) {
+    return {
+      viewerId,
+      viewerRole: role,
+      scope: withTerritoryScopeAliases({
+        ...createEmptyScopeContext(),
+        assignedVerticalIds: [1],
+        managedUserIds: [5],
+        isOperationallyActive: true,
+      }),
+      subjectUserId,
+      verticalId: 1,
+    };
+  }
+
+  it("refuses a REP — Equipe shows them no one, including themselves", async () => {
+    const { deps } = profileDeps({});
+    await expect(
+      new GetTeamMemberUseCase(deps).execute(profileRequest(Role.REP, 5, 5)),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("refuses a manager someone their zones do not contain", async () => {
+    // The roster's rule, not a second one: a profile reachable by someone the
+    // roster would never list is a hole in the same fence.
+    const { deps } = profileDeps({});
+    await expect(
+      new GetTeamMemberUseCase(deps).execute(profileRequest(Role.MANAGER, 99)),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("narrows a manager's reading to their own zones (0015 R1)", async () => {
+    const { deps, seen } = profileDeps({ zoneIds: [11, 12] });
+    await new GetTeamMemberUseCase(deps).execute(
+      profileRequest(Role.MANAGER, 5),
+    );
+
+    expect(seen[0]).toEqual({ userId: 5, verticalId: 1, withinZoneIds: [11, 12] });
+  });
+
+  it("gives an admin the whole person", async () => {
+    const { deps, seen } = profileDeps({});
+    await new GetTeamMemberUseCase(deps).execute(profileRequest(Role.ADMIN, 5, 1));
+
+    expect(seen[0]).toEqual({ userId: 5, verticalId: 1, withinZoneIds: null });
+  });
+
+  it("lets a manager open their own profile", async () => {
+    const { deps } = profileDeps({});
+    await expect(
+      new GetTeamMemberUseCase(deps).execute(profileRequest(Role.MANAGER, 2)),
+    ).resolves.toBeDefined();
+  });
+
+  it("refuses rather than rendering an empty profile", async () => {
+    const { deps } = profileDeps({ member: null });
+    await expect(
+      new GetTeamMemberUseCase(deps).execute(profileRequest(Role.MANAGER, 5)),
+    ).rejects.toThrow(ForbiddenError);
+  });
+});
 
 describe("Equipe roster (spec 0014 §6)", () => {
   it("shows a manager their own reps", async () => {

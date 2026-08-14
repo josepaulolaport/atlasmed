@@ -10,6 +10,7 @@ import { resolveVerticalIds } from "../../../access/application/services/vertica
 import type {
   DrizzleTeamRepository,
   TeamMemberMetrics,
+  TeamMemberProfile,
   TeamMemberRow,
 } from "../../infrastructure/repositories/drizzle-team.repository";
 import type { DashboardDirectoryPort } from "../dashboard-query";
@@ -321,6 +322,83 @@ function sortMembers(
     if (b.metricValue === null) return -1;
     return direction * (a.metricValue - b.metricValue);
   });
+}
+
+/**
+ * One member's profile (spec 0015 §4).
+ *
+ * Equipe answers *who*; this is that answer in full. It carries no metric the
+ * Desempenho screen owns — the cards link there instead — and nothing here is
+ * editable: identity belongs to `Usuários`, territory to the map.
+ *
+ * Authorisation is the roster's rule, not a second one: a REP has no team, a
+ * MANAGER may only open someone their zones already contain, and ADMIN/OPS may
+ * open anyone. Reusing `managedUserIds` is what keeps the two from drifting —
+ * a profile reachable by someone the roster would never list is a hole.
+ */
+export class GetTeamMemberUseCase {
+  constructor(
+    private readonly deps: Pick<Dependencies, "teamRepository" | "directory">,
+  ) {}
+
+  async execute(request: {
+    viewerId: number;
+    viewerRole: string;
+    scope: ScopeContext;
+    subjectUserId: number;
+    verticalId?: number | null;
+  }): Promise<TeamMemberProfile> {
+    const accessibleVerticalIds = resolveVerticalIds({
+      role: request.viewerRole,
+      assignedVerticalIds: request.scope.assignedVerticalIds ?? [],
+      queryVerticalId: request.verticalId ?? null,
+    });
+    const verticalId = resolveSingleVerticalId({
+      requestedVerticalId: request.verticalId ?? null,
+      accessibleVerticalIds,
+    });
+
+    if (request.viewerRole === Role.REP) {
+      throw new ForbiddenError();
+    }
+    if (
+      request.viewerRole === Role.MANAGER &&
+      request.subjectUserId !== request.viewerId &&
+      !(request.scope.managedUserIds ?? []).includes(request.subjectUserId)
+    ) {
+      throw new ForbiddenError();
+    }
+    if (
+      request.viewerRole !== Role.MANAGER &&
+      request.viewerRole !== Role.ADMIN &&
+      request.viewerRole !== Role.OPS
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Spec 0015 R1 again: a manager reads their share of the person, and it is
+    // derived from who is asking rather than accepted from them.
+    const withinZoneIds =
+      request.viewerRole === Role.MANAGER
+        ? await this.deps.directory.findManagerZoneIds({
+            userId: request.viewerId,
+            verticalId,
+          })
+        : null;
+
+    const member = await this.deps.teamRepository.findMember({
+      userId: request.subjectUserId,
+      verticalId,
+      withinZoneIds,
+    });
+
+    // A member the reader may reach but who has nothing in their ground is not
+    // a 404 of identity — but there is no profile to show under this scope, and
+    // saying so beats rendering an empty one.
+    if (!member) throw new ForbiddenError();
+
+    return member;
+  }
 }
 
 /**

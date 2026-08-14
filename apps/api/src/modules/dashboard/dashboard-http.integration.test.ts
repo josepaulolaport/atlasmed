@@ -274,12 +274,45 @@ describe("team HTTP routes", () => {
   function teamUseCases(
     listTeamExecute = mock(async () => ({ data: [] })),
     repsExecute = mock(async () => ({ data: [] })),
+    memberExecute = mock(async () => ({ userId: 5 })),
   ): TeamHttpUseCases {
     return {
       listTeam: () => ({ execute: listTeamExecute }),
+      getTeamMember: () => ({ execute: memberExecute }),
       listRepsWithoutPatch: () => ({ execute: repsExecute }),
     } as TeamHttpUseCases;
   }
+
+  it("reads one member by id, in a linha", async () => {
+    const member = mock(async () => ({ userId: 5 }));
+    const response = await teamApp(
+      teamUseCases(undefined, undefined, member),
+    ).handle(new Request("http://localhost/team/members/5?verticalId=1"));
+
+    expect(response.status).toBe(200);
+    expect(member).toHaveBeenCalledWith(
+      expect.objectContaining({
+        viewerId: 2,
+        viewerRole: "MANAGER",
+        subjectUserId: 5,
+        verticalId: 1,
+      }),
+    );
+  });
+
+  it("does not let the member route shadow reps-without-patch", async () => {
+    // `/members/:userId` and `/reps-without-patch` are both literal-first
+    // segments under `/team`. Declared in the wrong order, one silently eats
+    // the other and the defect list becomes a 400 about a non-numeric id.
+    const reps = mock(async () => ({ data: [] }));
+    const response = await teamApp(
+      teamUseCases(undefined, reps),
+      "ADMIN",
+    ).handle(new Request("http://localhost/team/reps-without-patch"));
+
+    expect(response.status).toBe(200);
+    expect(reps).toHaveBeenCalled();
+  });
 
   it("passes the sort key and direction that turn the roster into a leaderboard", async () => {
     const execute = mock(async () => ({ data: [] }));

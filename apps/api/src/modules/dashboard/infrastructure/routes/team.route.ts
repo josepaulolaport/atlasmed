@@ -29,6 +29,7 @@ type Executable = { execute(input: never): Promise<unknown> };
 
 export interface TeamHttpUseCases {
   listTeam(): Executable;
+  getTeamMember(): Executable;
   listRepsWithoutPatch(): Executable;
 }
 
@@ -53,6 +54,33 @@ const teamRoutes = (useCases: TeamHttpUseCases, authPlugin: typeof auth) =>
           tags: ["Dashboard"],
           security: [{ bearerAuth: [] }],
         },
+      },
+    )
+    // Also before `""`, for the same reason.
+    .get(
+      "/members/:userId",
+      async ({ params, query, getScope, getUser }) => {
+        const actor = await getUser();
+        const scope = await getScope();
+        return useCases.getTeamMember().execute({
+          viewerId: actor.id,
+          viewerRole: actor.role.name,
+          scope,
+          subjectUserId: params.userId,
+          verticalId: query.verticalId ?? null,
+        } as never);
+      },
+      {
+        detail: {
+          summary:
+            "One team member — identity, territories and clinic counts in the reader's scope",
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: t.Object({ userId: t.Number({ minimum: 1 }) }),
+        query: t.Object({
+          verticalId: t.Optional(t.Number({ minimum: 1 })),
+        }),
       },
     )
     .get(
