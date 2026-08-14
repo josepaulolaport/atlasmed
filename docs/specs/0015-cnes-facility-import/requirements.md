@@ -602,6 +602,87 @@ wearing the wrong hat — today's evidence says it is not common.
 Excluding cooperativas is safe because a skip is not permanent: skipped orders recover through the
 re-check queue, so a genuinely missing clinic can be imported later and its orders linked then.
 
+## 6.7 Professional suggestions for a newly imported clinic
+
+**The problem.** Spec 0012's whole point is that a clinic's CNES doctors can be suggested to the
+rep. A clinic imported the day after an ingestion has **none of them**, and will have none until
+the next monthly run — up to a month of an empty feature on exactly the clinics someone just went
+to the trouble of adding.
+
+The cause is that the professional pipeline is scoped at *ingestion* time. Step 0 builds
+`atlasIdByCnes` from the facilities that exist then; step 2 turns it into `cnesIdByUnitCode`; and
+steps 3–7 keep only workload rows whose `CO_UNIDADE` is in that map:
+
+```ts
+// load-registry.ts:466 — step 3
+const facilityCnesId = cnesIdByUnitCode.get(clean(r.CO_UNIDADE));
+if (facilityCnesId === undefined) continue;
+```
+
+A facility imported afterwards is bridged, mirrored and complete in every other respect, and has no
+vínculo rows at all.
+
+### The silent part, which is worse
+
+`CnesSuggestionContext` deliberately separates three meanings of an empty list — no CNES code, the
+registry was never loaded, or CNES genuinely knows nobody here — because "collapsing them into *no
+results* is what makes a working feature look broken". **This spec introduces a fourth state that
+the existing three cannot express, and it degrades to the most misleading one.**
+
+For a freshly imported clinic: `facilityHasCnesCode` is true, `facilityInRegistry` is true
+(`rf.atlasmed_id = f.id` now matches), `registryHasData` is true. Every signal says the data is
+loaded, so an empty list reads as *CNES knows nobody at this clinic* — when the truth is *we have
+not looked yet*.
+
+**So a fourth signal is required, not optional:** whether this facility's staff have been loaded
+since it was bridged. Until they have, the surface says pending, never "nobody here".
+
+### The mechanism: a debounced batch backfill, never per-import
+
+Measured against the 202607 archive, the two files a backfill must stream:
+
+| file | compressed | raw |
+|---|---|---|
+| `tbCargaHorariaSus` | 148.9 MB | 874.7 MB |
+| `tbDadosProfissionalSus` | 342.3 MB | 962.0 MB |
+
+`tbEstabelecimento` (90.2 MB / 298.7 MB) takes well under a minute, so a pass over these two is
+minutes, not seconds. **Per-import scanning is therefore out**: twenty imports in a session would
+mean twenty passes over 1.8 GB to collect twenty clinics' rows. One pass serves any number of
+pending facilities, so the backfill is a batch keyed on *"bridged since the last load"*, not on a
+single import.
+
+The establishment file does **not** need re-reading. `registry.facilities.cnes_unit_code` is
+populated on 1 423 of 1 423 rows, so `cnesIdByUnitCode` is built from the registry directly.
+
+**It reuses the loader rather than reimplementing it.** Steps 3–7 are already parameterised by the
+scope map; the only change is where that scope comes from — all active facilities for the monthly
+run, the pending set for a backfill. Step 6 replaces the staff snapshot *per scoped facility*, so a
+narrow scope touches only those clinics, and steps 4, 5 and 7 are insert-new-only or keep-first and
+are safe to re-run.
+
+Rules it must hold to:
+
+1. **The import never fails because the backfill did.** The facility, its profile and its bridge
+   are the deliverable; staff arrive after. But a failure is recorded and visible — a clinic stuck
+   pending is a bug someone must see, not a permanently empty list.
+2. **Which archive, recorded.** The last `COMPLETED` run's archive, and the competência is stored
+   so the surface can say *staff as of 2026-07*. If no archive is retained, the backfill is
+   skipped, the facility stays pending, and the next monthly run resolves it — degraded, stated,
+   not silent.
+3. **Serialised against the monthly run.** Both write `registry.facility_professionals`, and step 6
+   deletes before it inserts. A backfill overlapping an ingestion could delete a roster the
+   ingestion is mid-way through writing. They must not run concurrently.
+4. **Idempotent.** Re-running for the same facility replaces its snapshot with the same rows.
+
+### The alternative, and when to take it
+
+Mirroring **every** vínculo would delete this entire mechanism: an import would have its doctors the
+moment it is bridged, with no backfill, no pending state and no serialisation. §2 rejected that to
+keep the monthly load bounded, and that reason still holds — but it is a trade, not a law. If
+imports become routine rather than occasional, the machinery here costs more than the 7.7 M rows it
+avoids, and this decision is worth reopening rather than defending.
+
 ## 7. Invariants
 
 1. A CNES establishment maps to **at most one** `public.facilities` row, enforced by
@@ -616,6 +697,9 @@ re-check queue, so a genuinely missing clinic can be imported later and its orde
    lacks — a point, a resolvable unit type, a município we do not hold — the flow collects it from
    the rep or creates it. What the model requires is that the value *exists*, not that CNES
    provided it.
+8. **An empty suggestion list always says which emptiness it is.** A clinic bridged but not yet
+   staff-loaded reports *pending*, never *nobody here* (§6.7). Every state added to the import flow
+   that can produce an empty list must extend `CnesSuggestionContext` rather than fall through it.
 
 ## 8. Consequences worth stating
 
