@@ -19,6 +19,8 @@ profile_plist="$RUNNER_TEMP/atlasmed-app-store.plist"
 api_key_path="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
 keychain_path="$RUNNER_TEMP/atlasmed-signing.keychain-db"
 
+echo "keychain_path=$keychain_path" >> "$GITHUB_OUTPUT"
+
 echo "$CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
 echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
 echo "$ASC_KEY_BASE64" | base64 --decode > "$api_key_path"
@@ -53,6 +55,7 @@ profile_uuid=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$profile_plist")
 profile_name=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$profile_plist")
 profile_team=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$profile_plist")
 application_identifier=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$profile_plist")
+echo "profile_uuid=$profile_uuid" >> "$GITHUB_OUTPUT"
 
 if [[ "$profile_team" != "$APPLE_TEAM_ID" ]]; then
   echo "Provisioning profile pertence ao time $profile_team, esperado $APPLE_TEAM_ID" >&2
@@ -70,6 +73,4 @@ cp "$profile_path" "$profiles_dir/$profile_uuid.mobileprovision"
 cp "$profile_path" "$xcode_profiles_dir/$profile_uuid.mobileprovision"
 
 echo "Profile instalado: $profile_name ($profile_uuid)"
-echo "keychain_path=$keychain_path" >> "$GITHUB_OUTPUT"
-echo "profile_uuid=$profile_uuid" >> "$GITHUB_OUTPUT"
 echo "api_key_path=$api_key_path" >> "$GITHUB_OUTPUT"
