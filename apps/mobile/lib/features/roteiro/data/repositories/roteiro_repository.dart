@@ -12,7 +12,9 @@ class RoteiroRepository extends Repository<String>
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
       _client = client,
       super(
-        endpoint: Uri.parse('${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/roteiros'),
+        endpoint: Uri.parse(
+          '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/roteiros',
+        ),
         name: 'RoteiroRepository',
         resolveOnCreate: false,
       );

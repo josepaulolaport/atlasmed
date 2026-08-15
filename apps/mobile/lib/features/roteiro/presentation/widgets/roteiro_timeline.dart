@@ -122,9 +122,7 @@ class _Row extends StatelessWidget {
                 ),
               ),
               if (!isLast)
-                Expanded(
-                  child: Container(width: 2, color: AppColors.gray200),
-                ),
+                Expanded(child: Container(width: 2, color: AppColors.gray200)),
             ],
           ),
           Expanded(
@@ -138,7 +136,10 @@ class _Row extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 3),
                       child: Text(
                         '${(entry.travelSeconds! / 60).round()} min de deslocamento',
-                        style: const TextStyle(fontSize: 11, color: AppColors.gray500),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.gray500,
+                        ),
                       ),
                     ),
                   Text(
@@ -156,8 +157,11 @@ class _Row extends StatelessWidget {
                         booked
                             ? 'Já agendada · ${_hhmm(entry.startsAt)}–${_hhmm(entry.endsAt)}'
                             : '${_hhmm(entry.startsAt)}–${_hhmm(entry.endsAt)}'
-                                '${entry.subtitle != null ? " · ${entry.subtitle}" : ""}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.gray500),
+                                  '${entry.subtitle != null ? " · ${entry.subtitle}" : ""}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.gray500,
+                        ),
                       ),
                     ],
                   ),
@@ -197,14 +201,14 @@ class _MiniChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+    ),
+  );
 }

@@ -27,23 +27,29 @@ void main() {
         },
       }, coverage: false);
 
-      expect(reasons, contains('24 ortopedistas registrados aqui — 96% do corpo clínico'));
+      expect(
+        reasons,
+        contains('24 ortopedistas registrados aqui — 96% do corpo clínico'),
+      );
     });
 
-    test('omits the share when orthopaedists are a small part of a big staff', () {
-      final reasons = buildReasons({
-        'c': {
-          'raw': 0.5,
-          'weighted': 0.13,
-          'orthopaedists': 3,
-          'totalProfessionals': 120,
-          'orthopaedistShare': 0.025,
-        },
-      }, coverage: false);
+    test(
+      'omits the share when orthopaedists are a small part of a big staff',
+      () {
+        final reasons = buildReasons({
+          'c': {
+            'raw': 0.5,
+            'weighted': 0.13,
+            'orthopaedists': 3,
+            'totalProfessionals': 120,
+            'orthopaedistShare': 0.025,
+          },
+        }, coverage: false);
 
-      expect(reasons, contains('3 ortopedistas registrados aqui'));
-      expect(reasons.any((r) => r.contains('corpo clínico')), isFalse);
-    });
+        expect(reasons, contains('3 ortopedistas registrados aqui'));
+        expect(reasons.any((r) => r.contains('corpo clínico')), isFalse);
+      },
+    );
 
     test('says "1 ortopedista" rather than "1 ortopedistas"', () {
       final reasons = buildReasons({
@@ -77,32 +83,43 @@ void main() {
       expect(reasons, contains('Entra na janela de compra em 3 dias'));
     });
 
-    test('says how long a clinic has been overdue once the window has passed', () {
-      final reasons = buildReasons({
-        't': {
-          'raw': 1.0,
-          'weighted': 0.16,
-          'stage': 'PURCHASE_WINDOW',
-          'daysSinceLastPurchase': 40,
-          'intervalDays': 30,
-        },
-      }, coverage: false);
+    test(
+      'says how long a clinic has been overdue once the window has passed',
+      () {
+        final reasons = buildReasons({
+          't': {
+            'raw': 1.0,
+            'weighted': 0.16,
+            'stage': 'PURCHASE_WINDOW',
+            'daysSinceLastPurchase': 40,
+            'intervalDays': 30,
+          },
+        }, coverage: false);
 
-      expect(reasons, contains('Na janela de compra há 10 dias'));
-    });
+        expect(reasons, contains('Na janela de compra há 10 dias'));
+      },
+    );
 
-    test('marks an unsurveyed clinic as unmeasured, never as zero potential', () {
-      // Scoring the unknown as worthless would stop the engine ever sending a
-      // rep to the clinics it knows least about — exactly backwards.
-      final reasons = buildReasons({
-        'h': {'raw': 0.4, 'weighted': 0.04, 'theirsQty': null, 'surveyed': false},
-      }, coverage: false);
+    test(
+      'marks an unsurveyed clinic as unmeasured, never as zero potential',
+      () {
+        // Scoring the unknown as worthless would stop the engine ever sending a
+        // rep to the clinics it knows least about — exactly backwards.
+        final reasons = buildReasons({
+          'h': {
+            'raw': 0.4,
+            'weighted': 0.04,
+            'theirsQty': null,
+            'surveyed': false,
+          },
+        }, coverage: false);
 
-      expect(
-        reasons,
-        contains('Potencial não medido — vale levantar a concorrência'),
-      );
-    });
+        expect(
+          reasons,
+          contains('Potencial não medido — vale levantar a concorrência'),
+        );
+      },
+    );
 
     test('quotes the competitor volume when it has been surveyed', () {
       final reasons = buildReasons({
@@ -112,31 +129,40 @@ void main() {
       expect(reasons, contains('Concorrente com 80/mês aqui'));
     });
 
-    test('says "ainda não visitada" for a coverage stop with no visit history', () {
-      final reasons = buildReasons({
-        'n': {'raw': 1.0, 'weighted': 0.12, 'daysSinceLastInteraction': null},
-      }, coverage: true);
+    test(
+      'says "ainda não visitada" for a coverage stop with no visit history',
+      () {
+        final reasons = buildReasons({
+          'n': {'raw': 1.0, 'weighted': 0.12, 'daysSinceLastInteraction': null},
+        }, coverage: true);
 
-      expect(reasons, contains('Ainda não visitada'));
-    });
+        expect(reasons, contains('Ainda não visitada'));
+      },
+    );
 
-    test('never returns an empty list — a stop without a reason cannot be shown', () {
-      expect(buildReasons(const {}, coverage: false), isNotEmpty);
-    });
+    test(
+      'never returns an empty list — a stop without a reason cannot be shown',
+      () {
+        expect(buildReasons(const {}, coverage: false), isNotEmpty);
+      },
+    );
 
-    test('leads with capacity and timing, the components that rank this book', () {
-      final reasons = buildReasons({
-        'c': {'raw': 0.9, 'weighted': 0.24, 'orthopaedists': 24},
-        't': {'raw': 0.5, 'weighted': 0.08, 'stage': 'NEVER_PURCHASED'},
-        'h': {'raw': 0.4, 'weighted': 0.04, 'surveyed': false},
-        'n': {'raw': 1.0, 'weighted': 0.12, 'daysSinceLastInteraction': 90},
-      }, coverage: false);
+    test(
+      'leads with capacity and timing, the components that rank this book',
+      () {
+        final reasons = buildReasons({
+          'c': {'raw': 0.9, 'weighted': 0.24, 'orthopaedists': 24},
+          't': {'raw': 0.5, 'weighted': 0.08, 'stage': 'NEVER_PURCHASED'},
+          'h': {'raw': 0.4, 'weighted': 0.04, 'surveyed': false},
+          'n': {'raw': 1.0, 'weighted': 0.12, 'daysSinceLastInteraction': 90},
+        }, coverage: false);
 
-      // A card renders only the first three, so ordering decides what a rep
-      // actually reads.
-      expect(reasons.first, '24 ortopedistas registrados aqui');
-      expect(reasons[1], 'Nunca comprou');
-    });
+        // A card renders only the first three, so ordering decides what a rep
+        // actually reads.
+        expect(reasons.first, '24 ortopedistas registrados aqui');
+        expect(reasons[1], 'Nunca comprou');
+      },
+    );
   });
 
   group('Roteiro.fromJson', () {
@@ -205,7 +231,10 @@ void main() {
         'id': 12,
         'status': 'DRAFT',
         'stops': [
-          {'position': 0, 'candidate': {'facilityName': 'X'}},
+          {
+            'position': 0,
+            'candidate': {'facilityName': 'X'},
+          },
         ],
       });
 
@@ -218,7 +247,10 @@ void main() {
         'id': null,
         'status': null,
         'stops': [
-          {'position': 0, 'candidate': {'facilityName': 'X'}},
+          {
+            'position': 0,
+            'candidate': {'facilityName': 'X'},
+          },
         ],
       });
 
@@ -226,7 +258,11 @@ void main() {
     });
 
     test('an empty slate cannot be confirmed', () {
-      final roteiro = Roteiro.fromJson({'id': 12, 'status': 'DRAFT', 'stops': const []});
+      final roteiro = Roteiro.fromJson({
+        'id': 12,
+        'status': 'DRAFT',
+        'stops': const [],
+      });
 
       expect(roteiro.canConfirm, isFalse);
     });
@@ -236,7 +272,10 @@ void main() {
         'id': 12,
         'status': 'CONFIRMED',
         'stops': [
-          {'position': 0, 'candidate': {'facilityName': 'X'}},
+          {
+            'position': 0,
+            'candidate': {'facilityName': 'X'},
+          },
         ],
       });
 

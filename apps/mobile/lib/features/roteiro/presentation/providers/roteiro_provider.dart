@@ -11,7 +11,12 @@ final roteiroRepositoryProvider = Provider<RoteiroRepository>((ref) {
 
 /// Why a generation could not start. Distinct from a failed request: the rep
 /// can fix these, and the screen tells them how.
-enum RoteiroBlocker { locationDenied, locationDeniedForever, locationOff, noVertical }
+enum RoteiroBlocker {
+  locationDenied,
+  locationDeniedForever,
+  locationOff,
+  noVertical,
+}
 
 class RoteiroState {
   const RoteiroState({
@@ -49,7 +54,8 @@ class RoteiroState {
 
 class RoteiroNotifier extends StateNotifier<RoteiroState>
     with DisposeSafeStateWrites<RoteiroState> {
-  RoteiroNotifier(this._repository, this._location) : super(const RoteiroState());
+  RoteiroNotifier(this._repository, this._location)
+    : super(const RoteiroState());
 
   final RoteiroRepository _repository;
   final LocationService _location;
@@ -113,7 +119,9 @@ class RoteiroNotifier extends StateNotifier<RoteiroState>
   }
 }
 
-final roteiroProvider = StateNotifierProvider<RoteiroNotifier, RoteiroState>((ref) {
+final roteiroProvider = StateNotifierProvider<RoteiroNotifier, RoteiroState>((
+  ref,
+) {
   return RoteiroNotifier(
     ref.watch(roteiroRepositoryProvider),
     ref.watch(locationServiceProvider),

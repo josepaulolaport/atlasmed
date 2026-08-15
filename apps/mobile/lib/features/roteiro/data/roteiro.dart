@@ -27,10 +27,10 @@ RoteiroBucket bucketFromApi(Object? value) => switch (value) {
 enum RoteiroModality { inPerson, remote }
 
 extension RoteiroModalityX on RoteiroModality {
-  String get label =>
-      this == RoteiroModality.remote ? 'Remoto' : 'Presencial';
-  IconData get icon =>
-      this == RoteiroModality.remote ? Icons.phone_outlined : Icons.directions_car_outlined;
+  String get label => this == RoteiroModality.remote ? 'Remoto' : 'Presencial';
+  IconData get icon => this == RoteiroModality.remote
+      ? Icons.phone_outlined
+      : Icons.directions_car_outlined;
 }
 
 /// Everything the generation could not do — spec 0016 §4.8.
@@ -95,14 +95,21 @@ class RoteiroStop {
       travelSecondsFromPrev: (json['travelSecondsFromPrev'] as num?)?.toInt(),
       straightLineKm: (candidate['straightLineKm'] as num?)?.toDouble(),
       plannedStartsAt:
-          DateTime.tryParse(json['plannedStartsAt'] as String? ?? '')?.toLocal() ??
-              DateTime.now(),
+          DateTime.tryParse(
+            json['plannedStartsAt'] as String? ?? '',
+          )?.toLocal() ??
+          DateTime.now(),
       plannedEndsAt:
-          DateTime.tryParse(json['plannedEndsAt'] as String? ?? '')?.toLocal() ??
-              DateTime.now(),
+          DateTime.tryParse(
+            json['plannedEndsAt'] as String? ?? '',
+          )?.toLocal() ??
+          DateTime.now(),
       isCoverageSlot: json['isCoverageSlot'] as bool? ?? false,
       isAnchor: json['isAnchor'] as bool? ?? false,
-      reasons: buildReasons(components, coverage: json['isCoverageSlot'] as bool? ?? false),
+      reasons: buildReasons(
+        components,
+        coverage: json['isCoverageSlot'] as bool? ?? false,
+      ),
     );
   }
 
@@ -192,15 +199,14 @@ List<String> buildReasons(
   final surveyed = headroom?['surveyed'] as bool? ?? false;
   final theirs = (headroom?['theirsQty'] as num?)?.toDouble();
   if (surveyed && theirs != null && theirs > 0) {
-    reasons.add(
-      'Concorrente com ${theirs.toStringAsFixed(0)}/mês aqui',
-    );
+    reasons.add('Concorrente com ${theirs.toStringAsFixed(0)}/mês aqui');
   } else if (!surveyed) {
     reasons.add('Potencial não medido — vale levantar a concorrência');
   }
 
   final neglect = part('n');
-  final daysSinceVisit = (neglect?['daysSinceLastInteraction'] as num?)?.toInt();
+  final daysSinceVisit = (neglect?['daysSinceLastInteraction'] as num?)
+      ?.toInt();
   if (coverage && daysSinceVisit == null) {
     reasons.add('Ainda não visitada');
   } else if (daysSinceVisit != null && daysSinceVisit >= 30) {
@@ -233,15 +239,19 @@ class RoteiroFixedPoint {
     this.lng,
   });
 
-  factory RoteiroFixedPoint.fromJson(Map<String, dynamic> json) => RoteiroFixedPoint(
-    facilityId: (json['facilityId'] as num?)?.toInt() ?? 0,
-    facilityName: json['facilityName'] as String? ?? 'Compromisso',
-    lat: (json['lat'] as num?)?.toDouble(),
-    lng: (json['lng'] as num?)?.toDouble(),
-    startsAt:
-        DateTime.tryParse(json['startsAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
-    endsAt: DateTime.tryParse(json['endsAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
-  );
+  factory RoteiroFixedPoint.fromJson(Map<String, dynamic> json) =>
+      RoteiroFixedPoint(
+        facilityId: (json['facilityId'] as num?)?.toInt() ?? 0,
+        facilityName: json['facilityName'] as String? ?? 'Compromisso',
+        lat: (json['lat'] as num?)?.toDouble(),
+        lng: (json['lng'] as num?)?.toDouble(),
+        startsAt:
+            DateTime.tryParse(json['startsAt'] as String? ?? '')?.toLocal() ??
+            DateTime.now(),
+        endsAt:
+            DateTime.tryParse(json['endsAt'] as String? ?? '')?.toLocal() ??
+            DateTime.now(),
+      );
 
   final int facilityId;
   final String facilityName;
@@ -268,7 +278,8 @@ class Roteiro {
   });
 
   factory Roteiro.fromJson(Map<String, dynamic> json) {
-    final totals = (json['totals'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final totals =
+        (json['totals'] as Map?)?.cast<String, dynamic>() ?? const {};
     return Roteiro(
       id: (json['id'] as num?)?.toInt(),
       status: json['status'] as String?,

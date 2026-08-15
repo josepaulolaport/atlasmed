@@ -48,14 +48,19 @@ class RoteiroStopCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
                     children: [
-                      const Icon(Icons.directions_car_outlined,
-                          size: 14, color: AppColors.gray500),
+                      const Icon(
+                        Icons.directions_car_outlined,
+                        size: 14,
+                        color: AppColors.gray500,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${(travel / 60).round()} min de deslocamento'
                         '${estimatedTravel ? ' (estimado)' : ''}',
                         style: const TextStyle(
-                            fontSize: 12, color: AppColors.gray500),
+                          fontSize: 12,
+                          color: AppColors.gray500,
+                        ),
                       ),
                     ],
                   ),
@@ -91,7 +96,9 @@ class RoteiroStopCard extends StatelessWidget {
                               '${stop.straightLineKm!.toStringAsFixed(1)} km',
                           ].join(' · '),
                           style: const TextStyle(
-                              fontSize: 12, color: AppColors.gray500),
+                            fontSize: 12,
+                            color: AppColors.gray500,
+                          ),
                         ),
                       ],
                     ),
@@ -118,7 +125,9 @@ class RoteiroStopCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              ...stop.reasons.take(3).map(
+              ...stop.reasons
+                  .take(3)
+                  .map(
                     (reason) => Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Row(
@@ -126,14 +135,19 @@ class RoteiroStopCard extends StatelessWidget {
                         children: [
                           const Padding(
                             padding: EdgeInsets.only(top: 5, right: 8),
-                            child: Icon(Icons.circle,
-                                size: 5, color: AppColors.gray400),
+                            child: Icon(
+                              Icons.circle,
+                              size: 5,
+                              color: AppColors.gray400,
+                            ),
                           ),
                           Expanded(
                             child: Text(
                               reason,
                               style: const TextStyle(
-                                  fontSize: 13, color: AppColors.gray700),
+                                fontSize: 13,
+                                color: AppColors.gray700,
+                              ),
                             ),
                           ),
                         ],
@@ -155,22 +169,22 @@ class _PositionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 28,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: AppColors.navyBright,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          '$position',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
+    width: 28,
+    height: 28,
+    alignment: Alignment.center,
+    decoration: const BoxDecoration(
+      color: AppColors.navyBright,
+      shape: BoxShape.circle,
+    ),
+    child: Text(
+      '$position',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _Chip extends StatelessWidget {
@@ -182,24 +196,27 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(6),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 12, color: color),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }

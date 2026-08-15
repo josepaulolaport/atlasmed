@@ -34,11 +34,17 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(roteiroProvider);
-    final verticalId = ref.watch(currentUserVerticalIdsProvider).valueOrNull?.firstOrNull;
+    final verticalId = ref
+        .watch(currentUserVerticalIdsProvider)
+        .valueOrNull
+        ?.firstOrNull;
 
     // A rep's linha comes from their session; there is nothing to choose while
     // only one vertical is live.
-    if (!_requested && verticalId != null && !state.loading && state.roteiro == null) {
+    if (!_requested &&
+        verticalId != null &&
+        !state.loading &&
+        state.roteiro == null) {
       _requested = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(roteiroProvider.notifier).generate(verticalId: verticalId);
@@ -52,7 +58,9 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           if (verticalId == null) return;
-          await ref.read(roteiroProvider.notifier).generate(verticalId: verticalId);
+          await ref
+              .read(roteiroProvider.notifier)
+              .generate(verticalId: verticalId);
         },
         child: _body(context, state, verticalId),
       ),
@@ -106,8 +114,9 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
         title: 'Não foi possível gerar o roteiro',
         body: state.error.toString(),
         action: FilledButton(
-          onPressed: () =>
-              ref.read(roteiroProvider.notifier).generate(verticalId: verticalId),
+          onPressed: () => ref
+              .read(roteiroProvider.notifier)
+              .generate(verticalId: verticalId),
           child: const Text('Tentar novamente'),
         ),
       );
@@ -204,7 +213,10 @@ class _ConfirmBar extends StatelessWidget {
                   if (ends != null)
                     Text(
                       'termina ${ends.hour.toString().padLeft(2, '0')}:${ends.minute.toString().padLeft(2, '0')}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.gray500,
+                      ),
                     ),
                 ],
               ),
@@ -345,27 +357,30 @@ class _BlockerView extends StatelessWidget {
     // planning a day from a position the rep is not at.
     final (title, body) = switch (blocker) {
       RoteiroBlocker.locationOff => (
-          'Localização desligada',
-          'Ligue a localização do aparelho para o roteiro saber de onde você parte.',
-        ),
+        'Localização desligada',
+        'Ligue a localização do aparelho para o roteiro saber de onde você parte.',
+      ),
       RoteiroBlocker.locationDeniedForever => (
-          'Permissão de localização negada',
-          'Autorize a localização nas configurações do aparelho para gerar o roteiro.',
-        ),
+        'Permissão de localização negada',
+        'Autorize a localização nas configurações do aparelho para gerar o roteiro.',
+      ),
       RoteiroBlocker.locationDenied => (
-          'Precisamos da sua localização',
-          'O roteiro parte de onde você está agora. Sem isso não há como sugerir o que dá para fazer hoje.',
-        ),
+        'Precisamos da sua localização',
+        'O roteiro parte de onde você está agora. Sem isso não há como sugerir o que dá para fazer hoje.',
+      ),
       RoteiroBlocker.noVertical => (
-          'Nenhuma linha ativa',
-          'Selecione uma linha comercial para gerar o roteiro.',
-        ),
+        'Nenhuma linha ativa',
+        'Selecione uma linha comercial para gerar o roteiro.',
+      ),
     };
     return _Message(
       icon: Icons.my_location_outlined,
       title: title,
       body: body,
-      action: FilledButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+      action: FilledButton(
+        onPressed: onRetry,
+        child: const Text('Tentar novamente'),
+      ),
     );
   }
 }
@@ -385,29 +400,29 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
-        children: [
-          Icon(icon, size: 44, color: AppColors.gray400),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.gray600),
-          ),
-          if (action != null) ...[
-            const SizedBox(height: 18),
-            Center(child: action!),
-          ],
-        ],
-      );
+    padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
+    children: [
+      Icon(icon, size: 44, color: AppColors.gray400),
+      const SizedBox(height: 14),
+      Text(
+        title,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.gray900,
+        ),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        body,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 13, color: AppColors.gray600),
+      ),
+      if (action != null) ...[
+        const SizedBox(height: 18),
+        Center(child: action!),
+      ],
+    ],
+  );
 }
