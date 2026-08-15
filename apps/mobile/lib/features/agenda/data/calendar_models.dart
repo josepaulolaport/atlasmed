@@ -871,38 +871,6 @@ class CalendarConflict extends Equatable {
   List<Object?> get props => [candidate, existing];
 }
 
-class AgendaDayGroup extends Equatable {
-  const AgendaDayGroup({required this.date, required this.items});
-
-  final DateTime date;
-  final List<CalendarOccurrence> items;
-
-  @override
-  List<Object?> get props => [date, items];
-}
-
-List<AgendaDayGroup> groupCalendarOccurrences(
-  Iterable<CalendarOccurrence> occurrences,
-) {
-  final sorted = occurrences.toList()
-    ..sort((left, right) {
-      final byDate = left.localDate.compareTo(right.localDate);
-      if (byDate != 0) return byDate;
-      final byTime = left.localStartsAt.compareTo(right.localStartsAt);
-      if (byTime != 0) return byTime;
-      return left.occurrenceId.compareTo(right.occurrenceId);
-    });
-  final grouped = <DateTime, List<CalendarOccurrence>>{};
-  for (final occurrence in sorted) {
-    grouped
-        .putIfAbsent(_dateOnly(occurrence.localDate), () => [])
-        .add(occurrence);
-  }
-  return grouped.entries
-      .map((entry) => AgendaDayGroup(date: entry.key, items: entry.value))
-      .toList(growable: false);
-}
-
 String formatAgendaDay(DateTime date) {
   const weekdays = [
     'segunda-feira',
