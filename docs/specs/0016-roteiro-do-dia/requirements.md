@@ -1667,9 +1667,32 @@ who works until 20:00 would correctly stop believing anything the warning says.
 Until working hours are per rep, the copy names the bound rather than
 attributing it — *"depois das 18:00, o limite usado para montar o roteiro"*.
 
-**Deferred, not designed away.** Reps do not all work the same hours, and a rep
-who starts at 06:00 is being planned two hours short of their day, every day.
-Per-rep hours belong on the user, not on the linha.
+**Now fixed.** Working hours are the rep's, stored in the preferences they
+already have (`users.metadata -> preferences`), and merged over the linha
+defaults at generation:
+
+| field | source |
+|---|---|
+| `workdayStart` / `workdayEnd` | the rep's, else the linha's |
+| `lunchStart` / `lunchMinutes` | the rep's, else the linha's |
+
+**Each field falls back on its own**, and `null` means *not set* rather than
+*08:00*. A rep may care that they finish at 16:00 without having an opinion
+about lunch, and their silence has to keep following the linha when the linha
+moves — freezing today's default as though they had chosen it is the same
+absent-versus-zero mistake as §15.5.3.
+
+No migration: preferences are already a validated JSONB blob behind a working
+`GET`/`PATCH`, so this is a schema extension and a merge, not a new table.
+
+The rep sets them under **Perfil → Horário de trabalho**, which shows the linha
+value where they have none — *"Padrão da linha · 08:00–18:00"* — so "unset" is
+never a blank they have to interpret. Clearing a field back to the linha is
+itself an edit, so the patch sends those nulls explicitly; the usual
+omit-when-null rule would make a reset unsayable.
+
+Malformed stored values are treated as unset. A bad string must not be able to
+make the engine plan a day that does not exist.
 
 ---
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ConfirmRoteiroUseCase, type CalendarEventCreator } from "./confirm-roteiro.use-case";
 import type {
+  RepWorkingHours,
   RoteiroRejectionReason,
   RoteiroRepository,
   StoredRoteiro,
@@ -51,6 +52,17 @@ function roteiro(overrides: Partial<StoredRoteiro> = {}): StoredRoteiro {
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.5.5 — unset by default, so tests exercise the linha fallback. */
+  workingHours: RepWorkingHours = {
+    workdayStart: null,
+    workdayEnd: null,
+    lunchStart: null,
+    lunchMinutes: null,
+  };
+  async findWorkingHours(): Promise<RepWorkingHours> {
+    return this.workingHours;
+  }
+
   /** §15.5.2 — what the rep has thrown away, in the order they threw it. */
   rejections: {
     id: number;

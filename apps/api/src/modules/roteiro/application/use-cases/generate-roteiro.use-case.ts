@@ -651,7 +651,7 @@ export class GenerateRoteiroUseCase {
     this.assertMayPlanFor(input, subjectUserId);
 
     const stored = await this.deps.repository.findParams(input.verticalId);
-    const params: RoteiroParams = stored ?? {
+    const linhaParams: RoteiroParams = stored ?? {
       verticalId: input.verticalId,
       ...DEFAULT_ROTEIRO_PARAMS,
     };
@@ -664,6 +664,27 @@ export class GenerateRoteiroUseCase {
      * the screen where someone is planning their morning.
      */
     const usingDefaultParams = !stored;
+
+    /**
+     * §15.5.5 — the rep's day, not the linha's.
+     *
+     * `roteiro_params` is keyed by linha, so without this every rep in a
+     * territory is planned against one set of hours. A rep who starts at 06:00
+     * loses two hours of their day, every day, and one who stops at 16:00 gets
+     * suggestions they were never going to make.
+     *
+     * Each field falls back on its own: a rep may care that they finish early
+     * without having an opinion about lunch, and a null there has to keep
+     * following the linha rather than freezing today's default.
+     */
+    const hours = await this.deps.repository.findWorkingHours(subjectUserId);
+    const params: RoteiroParams = {
+      ...linhaParams,
+      workdayStart: hours.workdayStart ?? linhaParams.workdayStart,
+      workdayEnd: hours.workdayEnd ?? linhaParams.workdayEnd,
+      lunchStart: hours.lunchStart ?? linhaParams.lunchStart,
+      lunchMinutes: hours.lunchMinutes ?? linhaParams.lunchMinutes,
+    };
 
     const limit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
     if (limit < 1) {

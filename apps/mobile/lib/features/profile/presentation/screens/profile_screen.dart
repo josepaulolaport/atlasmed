@@ -9,7 +9,9 @@ import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/widgets/working_hours_sheet.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
@@ -149,7 +151,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         prefsAsync.when(
                           loading: () => _buildSectionSkeleton(height: 250),
                           error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildPreferences(items),
+                          data: (items) => _buildPreferences(
+                            items,
+                            onEditHours: () => _editWorkingHours(ref),
+                          ),
                         ),
                         const SizedBox(height: 20),
 
@@ -596,7 +601,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   // ── Preferências ────────────────────────────────────────────
-  Widget _buildPreferences(List<PreferenceItem> items) {
+  /// Lets the rep say when they actually work — spec 0016 §15.5.5.
+  ///
+  /// Until this, every rep in a linha was planned against one set of hours, so
+  /// a rep who starts at 06:00 lost two hours of their day, every day.
+  Future<void> _editWorkingHours(WidgetRef ref) async {
+    final repo = ref.read(userPreferencesProvider);
+    final current = await repo.currentValueOrResolve();
+    if (current == null || !mounted) return;
+
+    final payload = await showModalBottomSheet<UpdateUserPreferencesPayload>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => WorkingHoursSheet(current: current),
+    );
+    if (payload == null) return;
+
+    await repo.patch(payload);
+    ref.invalidate(preferencesProvider);
+  }
+
+  Widget _buildPreferences(
+    List<PreferenceItem> items, {
+    required Future<void> Function() onEditHours,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -614,6 +646,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 icon: _prefIcon(item.label),
                 label: item.label,
                 sub: item.sub,
+                onTap: item.label == 'Horário de trabalho'
+                    ? onEditHours
+                    : (item.onTap == null ? null : () => item.onTap!()),
                 trailing: item.kind == 'toggle'
                     ? _ProfileToggle(
                         value: item.value,
@@ -1290,6 +1325,7 @@ class _PrefRow extends StatelessWidget {
   final String sub;
   final Widget trailing;
   final bool showTopBorder;
+  final VoidCallback? onTap;
 
   const _PrefRow({
     required this.icon,
@@ -1297,10 +1333,22 @@ class _PrefRow extends StatelessWidget {
     required this.sub,
     required this.trailing,
     this.showTopBorder = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final row = _content();
+    return onTap == null
+        ? row
+        : InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: row,
+          );
+  }
+
+  Widget _content() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

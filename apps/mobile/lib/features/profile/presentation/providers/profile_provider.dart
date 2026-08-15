@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_preferences_repository.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/visits/presentation/providers/visit_summary_provider.dart';
@@ -132,6 +133,26 @@ final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((
   ];
 });
 
+/// Reads back the rep's own hours, naming the linha default where they have
+/// none — spec 0016 §15.5.5. "Padrão" rather than a blank, so a rep can tell
+/// "nobody asked me" from "somebody set this to eight".
+String workingHoursSummary(UserPreferences prefs) {
+  final start = prefs.workdayStart;
+  final end = prefs.workdayEnd;
+  if (start == null && end == null) return 'Padrão da linha · 08:00–18:00';
+  return '${start ?? "08:00"}–${end ?? "18:00"}'
+      '${start == null || end == null ? " (parcial)" : ""}';
+}
+
+/// The rep's stored preferences, so the screen can build rows that need them.
+final userPreferencesValueProvider = FutureProvider<UserPreferences?>((
+  ref,
+) async {
+  final repo = UserPreferencesRepository();
+  ref.onDispose(repo.dispose);
+  return repo.currentValueOrResolve();
+});
+
 final preferencesProvider = FutureProvider<List<PreferenceItem>>((ref) async {
   final repo = UserPreferencesRepository();
   ref.onDispose(repo.dispose);
@@ -140,6 +161,12 @@ final preferencesProvider = FutureProvider<List<PreferenceItem>>((ref) async {
   if (prefs == null) return [];
 
   return [
+    PreferenceItem(
+      label: 'Horário de trabalho',
+      sub: workingHoursSummary(prefs),
+      // onTap is attached by the screen, which has the BuildContext the
+      // time picker needs.
+    ),
     PreferenceItem(
       label: 'Notificações push',
       sub: prefs.pushNotificationsEnabled ? 'Ativado' : 'Desativado',

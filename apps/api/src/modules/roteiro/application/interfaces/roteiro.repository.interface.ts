@@ -160,6 +160,13 @@ export interface FixedPoint {
   endsAt: Date;
 }
 
+export interface RepWorkingHours {
+  workdayStart: string | null;
+  workdayEnd: string | null;
+  lunchStart: string | null;
+  lunchMinutes: number | null;
+}
+
 export interface ScoreCandidatesInput {
   userId: number;
   verticalId: number;
@@ -264,6 +271,15 @@ export interface RoteiroRepository {
   scoreCandidates(input: ScoreCandidatesInput): Promise<RoteiroCandidate[]>;
   /** Whether the subject has an active assignment in this linha at all. */
   countAssignedProfiles(input: { userId: number; verticalId: number }): Promise<number>;
+
+  /**
+   * The rep's own working hours — spec 0016 §15.5.5.
+   *
+   * Every field is independently nullable and null means *not set*, so the
+   * linha default applies. A rep who has never been asked is not the same as
+   * one who chose 08:00: only the first should follow the linha when it moves.
+   */
+  findWorkingHours(userId: number): Promise<RepWorkingHours>;
   /** Live GPS is required, so a rep with no assigned clinics is a real error. */
   /**
    * Persists a DRAFT, superseding any live one for the same (user, day).

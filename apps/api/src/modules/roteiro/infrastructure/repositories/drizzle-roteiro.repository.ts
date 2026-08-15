@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/database/db";
 import type {
+  RepWorkingHours,
   RoteiroRejectionReason,
   CreateRoteiroInput,
   RoteiroCandidate,
@@ -194,6 +195,37 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       where p.is_active and p.vertical_id = ${input.verticalId} and a.user_id = ${input.userId}
     `);
     return Number(rows[0]?.n ?? 0);
+  }
+
+  /**
+   * §15.5.5 — the rep's own hours, from the preferences they already have.
+   *
+   * Read straight from `users.metadata->preferences` rather than through the
+   * access module: this is one column and a null-safe cast, and routing it
+   * through a use case would couple planning to account management for no gain.
+   * Anything malformed is treated as unset — a bad string must not be able to
+   * make the engine plan a day that does not exist.
+   */
+  async findWorkingHours(userId: number): Promise<RepWorkingHours> {
+    const rows = await db.execute<Record<string, unknown>>(sql`
+      select
+        metadata -> 'preferences' ->> 'workdayStart' as workday_start,
+        metadata -> 'preferences' ->> 'workdayEnd'   as workday_end,
+        metadata -> 'preferences' ->> 'lunchStart'   as lunch_start,
+        metadata -> 'preferences' ->> 'lunchMinutes' as lunch_minutes
+      from users where id = ${userId}
+    `);
+    const row = rows[0];
+    const time = (v: unknown): string | null =>
+      typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null;
+    const minutes = Number(row?.lunch_minutes);
+    return {
+      workdayStart: time(row?.workday_start),
+      workdayEnd: time(row?.workday_end),
+      lunchStart: time(row?.lunch_start),
+      lunchMinutes:
+        Number.isFinite(minutes) && minutes >= 0 && minutes <= 240 ? minutes : null,
+    };
   }
 
   async createDraft(input: CreateRoteiroInput): Promise<StoredRoteiro> {

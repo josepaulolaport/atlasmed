@@ -10,6 +10,7 @@ import type {
   RoteiroBucket,
   RoteiroCandidate,
   RoteiroParams,
+  RepWorkingHours,
   RoteiroRejectionReason,
   RoteiroRepository,
   ScoreCandidatesInput,
@@ -51,6 +52,17 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.5.5 — unset by default, so tests exercise the linha fallback. */
+  workingHours: RepWorkingHours = {
+    workdayStart: null,
+    workdayEnd: null,
+    lunchStart: null,
+    lunchMinutes: null,
+  };
+  async findWorkingHours(): Promise<RepWorkingHours> {
+    return this.workingHours;
+  }
+
   /** §15.5.2 — what the rep has thrown away, in the order they threw it. */
   rejections: {
     id: number;
@@ -656,6 +668,57 @@ describe("GenerateRoteiroUseCase", () => {
     // A rep planning their morning cannot act on a registry load, and a notice
     // they cannot act on pushes the ones they can off the screen.
     expect(result.notices.some((n) => n.code === "REGISTRY_COVERAGE_LOW")).toBe(false);
+  });
+
+  it("plans against the rep's own hours, not the linha's", async () => {
+    // roteiro_params is keyed by linha, so without this a rep who stops at
+    // 14:00 gets suggestions they were never going to make (§15.5.5).
+    const repository = new FakeRepository(
+      Array.from({ length: 6 }, (_, i) => candidate({ id: i + 1, meritScore: 0.9 })),
+    );
+    repository.workingHours = {
+      workdayStart: null,
+      workdayEnd: "14:00",
+      lunchStart: null,
+      lunchMinutes: null,
+    };
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 5 }));
+    const closing = new Date("2026-08-17T14:00:00-03:00").getTime();
+
+    expect(result.stops.length).toBeGreaterThan(0);
+    for (const stop of result.stops) {
+      expect(stop.plannedEndsAt.getTime()).toBeLessThanOrEqual(closing);
+    }
+  });
+
+  it("follows the linha for the hours the rep has not set", async () => {
+    // A rep may care that they finish early without having an opinion about
+    // lunch, and a null has to keep following the linha rather than freezing
+    // today's default.
+    const repository = new FakeRepository(
+      Array.from({ length: 6 }, (_, i) => candidate({ id: i + 1, meritScore: 0.9 })),
+    );
+    repository.workingHours = {
+      workdayStart: null,
+      workdayEnd: "20:00",
+      lunchStart: null,
+      lunchMinutes: null,
+    };
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 5 }));
+
+    // The linha's 12:00 lunch still applies: nothing may be scheduled inside it.
+    const lunchStart = new Date("2026-08-17T12:00:00-03:00").getTime();
+    const lunchEnd = lunchStart + 60 * 60_000;
+    for (const stop of result.stops) {
+      const clashes =
+        stop.plannedStartsAt.getTime() < lunchEnd &&
+        lunchStart < stop.plannedEndsAt.getTime();
+      expect(clashes).toBe(false);
+    }
   });
 
   it("refuses to plan another rep's day", async () => {
