@@ -18,7 +18,10 @@ void main() {
       expect(explore.isActiveForBranch(1), isFalse);
     });
 
-    test('Agenda has its own branch and correct role visibility', () {
+    test('Agenda is a rep-only branch', () {
+      // A manager or admin has no agenda of their own to plan; they look at a
+      // rep's, which is a question about that person and lives on their page in
+      // Equipe rather than on a tab that would open empty.
       final agenda = appNavigationItems.singleWhere(
         (item) => item.route == '/agenda',
       );
@@ -26,8 +29,8 @@ void main() {
       expect(agenda.label, 'Agenda');
       expect(agenda.branchIndex, 3);
       expect(agenda.visibleFor!(UserRoleName.rep), isTrue);
-      expect(agenda.visibleFor!(UserRoleName.manager), isTrue);
-      expect(agenda.visibleFor!(UserRoleName.admin), isTrue);
+      expect(agenda.visibleFor!(UserRoleName.manager), isFalse);
+      expect(agenda.visibleFor!(UserRoleName.admin), isFalse);
       expect(agenda.visibleFor!(UserRoleName.ops), isFalse);
       expect(
         appNavigationItems

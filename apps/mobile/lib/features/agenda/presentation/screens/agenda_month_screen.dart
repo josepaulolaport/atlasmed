@@ -16,7 +16,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// month is empty, which is exactly what a rep needs to know before asking for
 /// suggestions.
 class AgendaMonthScreen extends ConsumerStatefulWidget {
-  const AgendaMonthScreen({super.key});
+  const AgendaMonthScreen({super.key, this.ownerUserId, this.ownerName});
+
+  /// Whose agenda. Null means the caller's own — a manager viewing a rep's
+  /// passes theirs, and the backend refuses an owner outside scope.
+  final int? ownerUserId;
+  final String? ownerName;
 
   @override
   ConsumerState<AgendaMonthScreen> createState() => _AgendaMonthScreenState();
@@ -40,11 +45,41 @@ class _AgendaMonthScreenState extends ConsumerState<AgendaMonthScreen> {
       ),
     );
     final role = ref.watch(currentUserProvider).valueOrNull?.role.name;
-    final canCreate = role == UserRoleName.admin || role == UserRoleName.rep;
+    // Looking at someone else's agenda is read-only: creating an event or a
+    // roteiro writes to their calendar, which is theirs alone (§7.3).
+    final canCreate =
+        widget.ownerUserId == null &&
+        (role == UserRoleName.admin || role == UserRoleName.rep);
 
     return Scaffold(
       backgroundColor: AppColors.cardBg,
-      appBar: const AtlasAppBar(page: 'Agenda'),
+      appBar: widget.ownerUserId == null
+          ? const AtlasAppBar(page: 'Agenda')
+          : AppBar(
+              backgroundColor: AppColors.cardBg,
+              elevation: 0,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Agenda',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  if (widget.ownerName != null)
+                    Text(
+                      widget.ownerName!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.gray500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
       body: Column(
         children: [
           AgendaMonthStrip(
@@ -72,6 +107,8 @@ class _AgendaMonthScreenState extends ConsumerState<AgendaMonthScreen> {
                 occurrences: occurrences,
                 onDayTap: (day) => AgendaDayRoute(
                   day.toIso8601String().substring(0, 10),
+                  ownerUserId: widget.ownerUserId,
+                  ownerName: widget.ownerName,
                 ).push(context),
               ),
             ),

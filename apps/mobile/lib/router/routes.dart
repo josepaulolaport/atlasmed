@@ -376,16 +376,25 @@ class AgendaRoute extends GoRouteData with $AgendaRoute {
 
 /// One day as an hour grid, reached by tapping a day in the month view.
 class AgendaDayRoute extends GoRouteData with $AgendaDayRoute {
-  const AgendaDayRoute(this.day);
+  const AgendaDayRoute(this.day, {this.ownerUserId, this.ownerName});
 
   /// `YYYY-MM-DD`. A string rather than a DateTime so the URL is readable and
   /// a deep link to a specific day is shareable.
   final String day;
 
+  /// Set when a manager is looking at a rep's day, opened from Equipe. The
+  /// backend refuses an owner outside the caller's scope either way.
+  final int? ownerUserId;
+  final String? ownerName;
+
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       NoTransitionPage(
-        child: AgendaDayScreen(day: DateTime.tryParse(day) ?? DateTime.now()),
+        child: AgendaDayScreen(
+          day: DateTime.tryParse(day) ?? DateTime.now(),
+          ownerUserId: ownerUserId,
+          ownerName: ownerName,
+        ),
       );
 }
 

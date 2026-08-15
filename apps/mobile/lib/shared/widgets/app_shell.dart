@@ -469,7 +469,7 @@ const appNavigationItems = <AppNavigationItem>[
     label: 'Agenda',
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
-    visibleFor: canReadAgenda,
+    visibleFor: canReadOwnAgenda,
   ),
   AppNavigationItem(
     branchIndex: 4,

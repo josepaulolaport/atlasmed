@@ -471,14 +471,27 @@ mixin $AgendaRoute on GoRouteData {
 }
 
 mixin $AgendaDayRoute on GoRouteData {
-  static AgendaDayRoute _fromState(GoRouterState state) =>
-      AgendaDayRoute(state.pathParameters['day']!);
+  static AgendaDayRoute _fromState(GoRouterState state) => AgendaDayRoute(
+    state.pathParameters['day']!,
+    ownerUserId: _$convertMapValue(
+      'owner-user-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    ownerName: state.uri.queryParameters['owner-name'],
+  );
 
   AgendaDayRoute get _self => this as AgendaDayRoute;
 
   @override
-  String get location =>
-      GoRouteData.$location('/agenda/day/${Uri.encodeComponent(_self.day)}');
+  String get location => GoRouteData.$location(
+    '/agenda/day/${Uri.encodeComponent(_self.day)}',
+    queryParams: {
+      if (_self.ownerUserId != null)
+        'owner-user-id': _self.ownerUserId!.toString(),
+      if (_self.ownerName != null) 'owner-name': _self.ownerName,
+    },
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -682,6 +695,15 @@ mixin $TeamRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
 RouteBase get $agendaNewRoute => GoRouteData.$route(
   path: '/agenda/new',
   hasOverriddenOnExit: false,
@@ -833,15 +855,6 @@ mixin $SubjectDashboardRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 RouteBase get $assignClinicRoute => GoRouteData.$route(

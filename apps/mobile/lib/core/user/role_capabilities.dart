@@ -91,10 +91,20 @@ bool canReadCatalog(UserRoleName role) =>
     role == UserRoleName.manager ||
     role == UserRoleName.rep;
 
-bool canReadAgenda(UserRoleName role) =>
-    role == UserRoleName.admin ||
-    role == UserRoleName.manager ||
-    role == UserRoleName.rep;
+/// Whether the agenda belongs in this role's sidebar.
+///
+/// Reps only. A manager or admin has no agenda of their own to plan — they look
+/// at a *rep's*, which is a question about that person and belongs on their
+/// page in Equipe, not on a top-level tab that would open empty.
+bool canReadOwnAgenda(UserRoleName role) => role == UserRoleName.rep;
+
+/// Whether this role may look at somebody else's agenda.
+///
+/// The backend is the authority: `ListCalendarUseCase` already refuses an owner
+/// outside the caller's scope and masks personal-block titles for a manager
+/// view. This only decides whether to offer the link.
+bool canReadTeamAgenda(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.manager;
 
 bool canMutateAgenda(UserRoleName role) =>
     role == UserRoleName.admin || role == UserRoleName.rep;

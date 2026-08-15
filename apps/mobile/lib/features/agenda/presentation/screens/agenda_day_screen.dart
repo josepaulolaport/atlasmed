@@ -31,9 +31,18 @@ const _monthNames = [
 /// needs the rep to have an opinion about, which is why the "+" reaches it from
 /// here.
 class AgendaDayScreen extends ConsumerWidget {
-  const AgendaDayScreen({super.key, required this.day});
+  const AgendaDayScreen({
+    super.key,
+    required this.day,
+    this.ownerUserId,
+    this.ownerName,
+  });
 
   final DateTime day;
+
+  /// Whose agenda. Null means the caller's own.
+  final int? ownerUserId;
+  final String? ownerName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,20 +53,34 @@ class AgendaDayScreen extends ConsumerWidget {
       ),
     );
     final role = ref.watch(currentUserProvider).valueOrNull?.role.name;
-    final canCreate = role == UserRoleName.admin || role == UserRoleName.rep;
+    // Read-only when looking at someone else's day: planning it would write to
+    // their calendar, which is theirs alone.
+    final canCreate =
+        ownerUserId == null &&
+        (role == UserRoleName.admin || role == UserRoleName.rep);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.cardBg,
         elevation: 0,
-        title: Text(
-          '${_monthNames[start.month - 1]} ${start.year}',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.gray900,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_monthNames[start.month - 1]} ${start.year}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
+            ),
+            if (ownerName != null)
+              Text(
+                ownerName!,
+                style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+              ),
+          ],
         ),
       ),
       body: Column(
