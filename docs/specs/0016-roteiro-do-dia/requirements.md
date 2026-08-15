@@ -1834,6 +1834,22 @@ failed-visit case, and it belongs on the same list rather than on a list of its
 own. Every question asked at the end of a visit is friction on the one loop that
 has never yet run, so a question that can be folded into another has to be.
 
+**Implemented.** `POST /interactions/:id/outcome` records both answers on any
+`COMPLETED` visit, and the sheet appears the moment a rep closes one by hand. It
+also appears as *"Como foi a visita?"* on any visit that was closed **for** them
+— by an arrival or by the workday-end job — because those are the majority and
+would otherwise carry no answers at all.
+
+No `expectedVersion`: answering is not a state transition, and a visit the job
+closed has already moved past whatever version the rep's screen was holding.
+Re-answering is allowed, because a mis-tap on a moving bus should be
+correctable. Dismissing is allowed too — unanswered is a state the model
+carries, and the visit is already recorded.
+
+Recording an outcome deliberately does **not** touch the duration or its source.
+The answers describe what happened; they are not evidence about how long it took
+(§15.6.6-3).
+
 **The second is the load-bearing one.** Everything else in coverage is
 inference; this is the rep saying it outright, and a rep answering *30 dias* is
 scheduling their own next visit.
