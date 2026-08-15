@@ -5,6 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Repository implements CalendarRepositoryContract {
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
+
   _Repository({required this.detail, this.startError});
 
   InteractionDetail detail;

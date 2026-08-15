@@ -38,6 +38,13 @@ abstract interface class CalendarRepositoryContract {
     required String idempotencyKey,
     String? correctionReason,
   });
+
+  /// Records how the visit went and when to return — spec 0016 §15.6.4.
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  });
 }
 
 abstract interface class CalendarMutationRepositoryContract {
@@ -283,6 +290,27 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
           if (correctionReason != null && correctionReason.trim().isNotEmpty)
             'correctionReason': correctionReason.trim(),
         },
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  /// Records how the visit went and when to return — spec 0016 §15.6.4.
+  ///
+  /// No `expectedVersion`: answering is not a state transition, and a visit
+  /// closed for the rep by an arrival or by the workday-end job will already
+  /// have moved past whatever version their screen was holding.
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id/outcome'),
+        method: RepositoryHttpMethod.post,
+        body: {'outcome': outcome.wire, 'followUp': followUp.wire},
       ),
     );
     return _interactionFromResponse(response);

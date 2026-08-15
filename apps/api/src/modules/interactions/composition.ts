@@ -2,6 +2,7 @@ import {
   CompleteInteractionUseCase,
   GetInteractionUseCase,
   CloseStaleVisitsUseCase,
+  RecordInteractionOutcomeUseCase,
   MarkOverdueInteractionsUseCase,
   StartInteractionUseCase,
 } from "./application/use-cases/interaction.use-cases";
@@ -14,4 +15,5 @@ export const interactionUseCases = {
   complete: () => new CompleteInteractionUseCase({ repository: interactionRepositories.interaction }),
   markOverdue: () => new MarkOverdueInteractionsUseCase({ repository: interactionRepositories.interaction }),
   closeStaleVisits: () => new CloseStaleVisitsUseCase({ repository: interactionRepositories.interaction }),
+  recordOutcome: () => new RecordInteractionOutcomeUseCase({ repository: interactionRepositories.interaction }),
 };

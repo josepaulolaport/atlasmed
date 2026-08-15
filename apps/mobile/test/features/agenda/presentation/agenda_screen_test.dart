@@ -46,6 +46,13 @@ CalendarOccurrence _occurrence({
 Widget _app(Widget child) => MaterialApp(theme: AppTheme.light, home: child);
 
 class _QueryRecordingRepository implements CalendarRepositoryContract {
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
+
   final List<AgendaQuery> queries = [];
 
   @override

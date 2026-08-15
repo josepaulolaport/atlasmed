@@ -5,6 +5,8 @@ import type {
   InteractionDetailRecord,
   InteractionRepository,
   InteractionStatus,
+  InteractionFollowUp,
+  InteractionOutcome,
 } from "../interfaces/interaction.repository.interface";
 
 export interface InteractionActor {
@@ -81,6 +83,12 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Da
     status,
     actualStartedAt: record.actualStartedAt?.toISOString() ?? null,
     actualEndedAt: record.actualEndedAt?.toISOString() ?? null,
+    outcome: record.outcome,
+    followUp: record.followUp,
+    outcomeAnsweredAt: record.outcomeAnsweredAt?.toISOString() ?? null,
+    // The client needs to know *whether to ask*, and "completed with no answer"
+    // is the only state where the questions are worth putting on screen.
+    needsOutcome: status === "COMPLETED" && record.outcome === null,
     correctedAt: record.correctedAt?.toISOString() ?? null,
     correctedByUserId: record.correctedByUserId,
     correctionReason: record.correctionReason,
@@ -184,6 +192,38 @@ export class CloseStaleVisitsUseCase {
   async execute(input: { now?: Date; limit?: number } = {}) {
     const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
     return this.deps.repository.closeStaleVisits({ now: input.now ?? this.deps.now?.() ?? new Date(), limit, actorUserId: this.deps.systemActorUserId ?? null });
+  }
+}
+
+/**
+ * Records the two questions asked on the way out — spec 0016 §15.6.4.
+ *
+ * Its own use case rather than an argument to `complete`, because most visits
+ * are not closed by the rep at all: an arrival closes one, the workday-end job
+ * closes another, and the answers arrive after the fact either way.
+ */
+export class RecordInteractionOutcomeUseCase {
+  constructor(private readonly deps: Dependencies) {}
+  async execute(input: {
+    id: number;
+    actor: InteractionActor;
+    scope: ScopeContext;
+    outcome: InteractionOutcome;
+    followUp: InteractionFollowUp;
+  }) {
+    const now = this.deps.now?.() ?? new Date();
+    const record = await this.deps.repository.findById(input.id);
+    if (!record) throw new ResourceNotFoundError("Interaction", input.id);
+    assertOwner(record, input.actor, input.scope);
+    const updated = await this.deps.repository.recordOutcome({
+      id: input.id,
+      actorUserId: input.actor.userId,
+      outcome: input.outcome,
+      followUp: input.followUp,
+      answeredAt: now,
+    });
+    if (!updated) throw new InteractionTransitionError(effectiveStatus(record, effectiveOccurrence(record), now), "COMPLETED");
+    return toDto(updated, input.actor, now);
   }
 }
 

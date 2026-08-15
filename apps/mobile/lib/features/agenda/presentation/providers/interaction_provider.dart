@@ -56,6 +56,29 @@ class InteractionNotifier extends StateNotifier<InteractionState>
     }
   }
 
+  /// Records the two questions — spec 0016 §15.6.4.
+  ///
+  /// Deliberately not part of the complete command: most visits are closed by
+  /// the next arrival or by the workday-end job, so the answers arrive when the
+  /// visit is already COMPLETED and there is no command to carry them.
+  Future<bool> recordOutcome({
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async {
+    try {
+      final updated = await _repository.recordInteractionOutcome(
+        interactionId,
+        outcome: outcome,
+        followUp: followUp,
+      );
+      state = state.copyWith(detail: AsyncData(updated), clearError: true);
+      return true;
+    } catch (error) {
+      state = state.copyWith(commandError: interactionErrorMessage(error));
+      return false;
+    }
+  }
+
   Future<bool> start() => _runCommand('start');
 
   Future<bool> complete({String? correctionReason}) =>

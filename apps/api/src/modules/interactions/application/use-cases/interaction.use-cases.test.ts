@@ -42,6 +42,9 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
     modality: "IN_PERSON",
     status: "SCHEDULED",
     actualStartedAt: null,
+  outcome: null,
+  followUp: null,
+  outcomeAnsweredAt: null,
     actualEndedAt: null,
     correctedAt: null,
     correctedByUserId: null,
@@ -128,6 +131,9 @@ class FakeInteractionRepository implements InteractionRepository {
 
   async closeStaleVisits(): Promise<number> {
     return 0;
+  }
+  async recordOutcome(): Promise<null> {
+    return null;
   }
   async markOverdue(input: { now: Date; limit: number }) {
     if (!this.record || this.record.status !== "SCHEDULED" || this.overdueCount >= input.limit) return 0;

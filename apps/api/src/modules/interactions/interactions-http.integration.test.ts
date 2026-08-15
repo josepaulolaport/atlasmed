@@ -18,7 +18,8 @@ function actorPlugin(roleName: Role = "REP", userId = 1) {
 function useCases(overrides: Partial<InteractionHttpUseCases> = {}): InteractionHttpUseCases {
   const read = { execute: mock(async () => ({ id: 10, status: "SCHEDULED", canMutate: true })) };
   const mutate = { execute: mock(async () => ({ id: 10, status: "IN_PROGRESS", version: 2 })) };
-  return { get: () => read, start: () => mutate, complete: () => mutate, ...overrides };
+  return { get: () => read, start: () => mutate, complete: () => mutate,
+    recordOutcome: () => mutate, ...overrides };
 }
 
 function app(deps: InteractionHttpUseCases, role: Role = "REP") {

@@ -5,6 +5,16 @@ export type InteractionStatus =
   | "NOT_COMPLETED"
   | "CANCELLED";
 
+/** §15.6.4 — how the visit went, in the rep's own terms. */
+export type InteractionOutcome =
+  | "PEDIDO"
+  | "VAI_AVALIAR"
+  | "RELACIONAMENTO"
+  | "NAO_FALEI_COM_NINGUEM";
+
+/** §15.6.4 — when to come back. Governs the §4.3.1 coverage rotation. */
+export type InteractionFollowUp = "NENHUM" | "DIAS_15" | "DIAS_30" | "DIAS_90";
+
 export interface InteractionDetailRecord {
   id: number;
   calendarId: number;
@@ -14,6 +24,9 @@ export interface InteractionDetailRecord {
   modality: "IN_PERSON" | "REMOTE";
   status: InteractionStatus;
   actualStartedAt: Date | null;
+  outcome: InteractionOutcome | null;
+  followUp: InteractionFollowUp | null;
+  outcomeAnsweredAt: Date | null;
   actualEndedAt: Date | null;
   correctedAt: Date | null;
   correctedByUserId: number | null;
@@ -91,6 +104,22 @@ export interface InteractionRepository {
    * `INFERRED`, always: nobody witnessed the ending, so it must never train the
    * duration model (§15.6.2).
    */
+  /**
+   * Records the two questions asked on the way out — spec 0016 §15.6.4.
+   *
+   * Separate from `complete` because the visit is often already closed by the
+   * time anyone answers: an arrival closed it, or the workday-end job did, and
+   * the rep is answering afterwards. Returns null when the interaction is not
+   * in a state that can carry an outcome.
+   */
+  recordOutcome(input: {
+    id: number;
+    actorUserId: number;
+    outcome: InteractionOutcome;
+    followUp: InteractionFollowUp;
+    answeredAt: Date;
+  }): Promise<InteractionDetailRecord | null>;
+
   closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 
   markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;

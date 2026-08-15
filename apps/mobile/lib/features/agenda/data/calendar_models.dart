@@ -405,6 +405,53 @@ class InteractionLinkedOrder extends Equatable {
   List<Object?> get props => [id, status, type, orderedAt];
 }
 
+/// How a visit went — spec 0016 §15.6.4.
+///
+/// ⚠️ [naoFalouComNinguem] is deliberately **not** the rejection vocabulary's
+/// `SEM_INTERESSE`. That describes a judgement about a clinic made before
+/// going and carries a decaying merit penalty; this describes a visit that
+/// already happened and touches merit not at all. A rep who could not get past
+/// reception has learned nothing about whether the clinic wants the product.
+enum InteractionOutcome {
+  pedido('PEDIDO', 'Fechei pedido'),
+  vaiAvaliar('VAI_AVALIAR', 'Vai avaliar'),
+  relacionamento('RELACIONAMENTO', 'Só relacionamento'),
+  naoFalouComNinguem('NAO_FALEI_COM_NINGUEM', 'Não falei com ninguém');
+
+  const InteractionOutcome(this.wire, this.label);
+  final String wire;
+  final String label;
+}
+
+/// When to come back. The load-bearing answer: it governs the coverage
+/// rotation, so a rep answering it is scheduling their own next visit.
+enum InteractionFollowUp {
+  nenhum('NENHUM', 'Não precisa'),
+  dias15('DIAS_15', 'Em 15 dias'),
+  dias30('DIAS_30', 'Em 30 dias'),
+  dias90('DIAS_90', 'Em 90 dias');
+
+  const InteractionFollowUp(this.wire, this.label);
+  final String wire;
+  final String label;
+}
+
+InteractionOutcome? _outcomeFromApi(Object? value) {
+  if (value is! String) return null;
+  for (final option in InteractionOutcome.values) {
+    if (option.wire == value) return option;
+  }
+  return null;
+}
+
+InteractionFollowUp? _followUpFromApi(Object? value) {
+  if (value is! String) return null;
+  for (final option in InteractionFollowUp.values) {
+    if (option.wire == value) return option;
+  }
+  return null;
+}
+
 class InteractionDetail extends Equatable {
   const InteractionDetail({
     required this.id,
@@ -429,6 +476,9 @@ class InteractionDetail extends Equatable {
     this.actualStartedAt,
     this.actualEndedAt,
     this.correctionReason,
+    this.outcome,
+    this.followUp,
+    this.needsOutcome = false,
   });
 
   final int id;
@@ -453,6 +503,14 @@ class InteractionDetail extends Equatable {
   final DateTime? actualStartedAt;
   final DateTime? actualEndedAt;
   final String? correctionReason;
+
+  /// The two questions (§15.6.4). Null means unanswered, which is common and
+  /// legitimate — they are asked, never enforced.
+  final InteractionOutcome? outcome;
+  final InteractionFollowUp? followUp;
+
+  /// Completed with nothing answered — the only state where asking is useful.
+  final bool needsOutcome;
 
   factory InteractionDetail.fromJson(Map<String, dynamic> json) {
     final occurrence = json['occurrence'] as Map<String, dynamic>;
@@ -506,6 +564,9 @@ class InteractionDetail extends Equatable {
           ? null
           : DateTime.parse(json['actualEndedAt'] as String).toUtc(),
       correctionReason: json['correctionReason'] as String?,
+      outcome: _outcomeFromApi(json['outcome']),
+      followUp: _followUpFromApi(json['followUp']),
+      needsOutcome: json['needsOutcome'] as bool? ?? false,
     );
   }
 
@@ -533,6 +594,9 @@ class InteractionDetail extends Equatable {
     actualStartedAt,
     actualEndedAt,
     correctionReason,
+    outcome,
+    followUp,
+    needsOutcome,
   ];
 }
 

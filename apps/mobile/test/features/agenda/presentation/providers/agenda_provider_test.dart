@@ -5,6 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeCalendarRepository implements CalendarRepositoryContract {
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
+
   int calls = 0;
   AgendaQuery? lastQuery;
 

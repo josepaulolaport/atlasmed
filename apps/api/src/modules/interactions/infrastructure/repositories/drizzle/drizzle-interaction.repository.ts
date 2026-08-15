@@ -16,6 +16,8 @@ import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
 import { calendarOccurrenceFromRecurrenceKey } from "../../../../calendar/application/services/recurrence.service";
 import type {
+  InteractionFollowUp,
+  InteractionOutcome,
   InteractionDetailRecord,
   InteractionMutationResult,
   InteractionRepository,
@@ -340,6 +342,46 @@ export class DrizzleInteractionRepository implements InteractionRepository {
    * planned end and calling it measured would teach the engine that visits take
    * exactly as long as it guessed.
    */
+  /**
+   * Records the two questions — spec 0016 §15.6.4.
+   *
+   * Allowed on any `COMPLETED` visit, not only one the rep closed by hand: most
+   * will have been closed by the next arrival or the workday-end job, and the
+   * answers arrive afterwards. Re-answering is allowed too, because a rep who
+   * mis-taps on a moving bus should be able to say so.
+   *
+   * Does **not** touch the duration or its source. The answers describe what
+   * happened; they are not evidence about how long it took (§15.6.6-3).
+   */
+  async recordOutcome(input: {
+    id: number;
+    actorUserId: number;
+    outcome: InteractionOutcome;
+    followUp: InteractionFollowUp;
+    answeredAt: Date;
+  }): Promise<InteractionDetailRecord | null> {
+    return this.inTransaction(async (repository, tx) => {
+      const [updated] = await tx.update(interactions).set({
+        outcome: input.outcome,
+        followUp: input.followUp,
+        outcomeAnsweredAt: input.answeredAt,
+        updatedAt: input.answeredAt,
+        version: sql`${interactions.version} + 1`,
+      }).where(and(eq(interactions.id, input.id), eq(interactions.status, "COMPLETED"))).returning();
+      if (!updated) return null;
+
+      await tx.insert(interactionEvents).values({
+        interactionId: input.id,
+        actorUserId: input.actorUserId,
+        source: "USER",
+        previousStatus: "COMPLETED",
+        newStatus: "COMPLETED",
+        metadata: { source: "outcome-answered", outcome: input.outcome, followUp: input.followUp },
+      });
+      return repository.findById(input.id);
+    });
+  }
+
   async closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number> {
     return this.inTransaction(async (_repository, tx) => {
       const candidates = await tx.execute<{
