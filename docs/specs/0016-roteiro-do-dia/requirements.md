@@ -264,13 +264,39 @@ gaps, contracted hours per surgeon, and credit blocks from Emultec. Each would a
 sum below. They are catalogued, ranked by value ÷ effort and sequenced in
 [`data-sources.md`](./data-sources.md).
 
-**f) Capacity — `c`.** The number of orthopaedic surgeons CNES records at the facility, from
+**f) Capacity — `c`.** How much orthopaedic capacity the facility has, from
 `registry.facility_professional_occupations` where `occupation_cnes_id = '225270'`
-(*MEDICO ORTOPEDISTA E TRAUMATOLOGISTA*), percentile-ranked within the candidate set.
+(*MEDICO ORTOPEDISTA E TRAUMATOLOGISTA*).
 
-This is not an enrichment. **It is the only component that discriminates for 94 % of the book**
-(§4.9), and it is measurably predictive: clinics with ≥5 orthopaedists convert at 21–26 %, those
-with ≤4 at 3.6–4.8 %. It is already in the database and read by nothing.
+**Two numbers, not one** (added 2026-08-15 — see [`design-review-2026-08-15.md`](./design-review-2026-08-15.md) §1):
+
+```
+count = distinct orthopaedists at the facility
+ratio = count ÷ distinct professionals of any occupation there
+
+c = 0.6 · percentile_rank(count) + 0.4 · percentile_rank(ratio)
+```
+
+This is not an enrichment. **It is the component that discriminates for 94 % of the book** (§4.9),
+and both halves are measurably predictive. Count: clinics with ≥5 orthopaedists convert at 21–26 %,
+those with ≤4 at 3.6–4.8 %. Ratio, measured **inside the ≥5 band the count alone treats as equal**:
+
+| orthopaedists as a share of all staff | clinics | buyers | % |
+|---|---|---|---|
+| ≥40 % | 99 | 32 | **32.3** |
+| <40 % | 70 | 8 | **11.4** |
+
+Nearly 3× separation the count cannot see. A hospital with 120 physicians of whom 3 are
+orthopaedists is not the prospect a clinic with 14 of whom 12 are is, and ranking on headcount puts
+the hospital first.
+
+Ratio is also the **general** form of a defect patched narrowly by §4.2g: ITO AM, a staffing
+cooperative with 131 registered surgeons, topped the raw-count ranking and had to be demoted by
+unit type. Ratio catches that whole class of facility without enumerating it.
+
+Both halves are percentile-ranked within the candidate set, which also removes any need for the
+logarithmic damping an absolute count would require — rank does not care that one facility has 131
+surgeons and the next has 24.
 
 **g) Fit — `q`.** How well the facility's CNES **unit type** matches who actually buys from us.
 Measured conversion by type (§4.9):
@@ -291,7 +317,7 @@ holds one row per CNES unit type, editable by ADMIN/OPS without a deploy:
   "Policlinica":                    {"fit": 0.55, "eligible": true,  "forceRemote": false},
   "Consultorio Isolado":            {"fit": 0.35, "eligible": true,  "forceRemote": false},
   "Hospital Especializado":         {"fit": 0.35, "eligible": true,  "forceRemote": false},
-  "Hospital Geral":                 {"fit": 0.20, "eligible": true,  "forceRemote": false},
+  "Hospital Geral":                 {"fit": 0.15, "eligible": true,  "forceRemote": false},
   "*":                              {"fit": 0.05, "eligible": true,  "forceRemote": false} }
 ```
 
@@ -308,6 +334,25 @@ Three independent levers per type, because the three questions are genuinely dif
 Defaults ship as above — every type eligible, none forced remote — so behaviour is the measured
 ranking until someone deliberately changes it. `"*"` is the fallback for any type not listed,
 which is what catches staffing cooperatives and administrative units without enumerating them.
+
+> **Hospitals sit deliberately below what conversion alone would justify** (user decision,
+> 2026-08-15: *"I don't want to recommend hospitals as much as I recommend clinics"*). Measured,
+> Hospital Geral converts at 3.5 % against a specialist clinic's 9.6 % — 2.7× — while `fit`
+> penalises it by over 6×.
+>
+> The gap is a commercial judgement and is recorded as one rather than left looking like a
+> mis-calibration: a hospital visit costs more of a rep's day in access, waiting and gatekeeping,
+> and purchasing is centralised and slower, so an equal-probability hospital visit is still worth
+> less than an equal-probability clinic visit. The §4.2f ratio now penalises general hospitals a
+> second time and independently, because their orthopaedists are a small share of a large staff.
+>
+> `Hospital Especializado` deliberately does **not** follow it down — an orthopaedic specialty
+> hospital is a different proposition, and the sample is far too small to say more (2 clinics at
+> ≥5 orthopaedists, 1 of them a buyer).
+>
+> If ranking them down proves insufficient, two stronger levers need no deploy: `eligible: false`
+> removes the type from suggestions **and from the cobertura denominator**, and `forceRemote: true`
+> keeps it reachable as a phone contact costing no drive time.
 
 ⚠️ Unit-type names come from `registry.unit_types.name` and are **CNES's strings, not ours**. A
 reload that renames one silently drops it to the `"*"` default. The params editor must therefore
@@ -406,8 +451,20 @@ roteiro_stops adds nothing; facility_vertical_profiles gains:
 - **One slot per slate is drawn from that pool**, highest merit first, taken from the
   `PROSPECTAR` allocation. It is the coverage slot and the card says so: *"Ainda não visitada"* or
   *"Sem visita há 8 meses"*.
-- The pool is ordered by `last_suggested_at` ascending, so the book is walked, not sampled. A rep
-  cannot end a year having never been offered a clinic they own.
+- The pool is ordered by `last_suggested_at` ascending **then by assignment age descending**, so
+  the book is walked, not sampled. A rep cannot end a year having never been offered a clinic they
+  own.
+
+**Assignment age breaks the tie among the never-covered** (added 2026-08-15,
+[`design-review-2026-08-15.md`](./design-review-2026-08-15.md) §2). Every clinic a rep has never
+been committed to has `last_suggested_at = NULL`, which is one enormous tie — and today that is the
+*entire book*. A clinic handed to a rep 180 days ago and still unvisited is more overdue than one
+handed over last week, and `facility_vertical_rep_assignments.started_at` already records the
+difference. It is a sort key, not a migration.
+
+⚠️ **It carries no signal yet**: all 1 442 assignments were written in a single bulk operation on
+2026-08-09, so every assignment age is identical. Build it regardless — it starts discriminating
+the first time a book changes hands, and an ordering nobody recorded cannot be reconstructed later.
 
 **Why `last_suggested_at` is set on confirm, not on generation.** A clinic that appears in a draft
 the rep discards has not been covered, and marking it covered would let the book quietly rot behind
@@ -726,6 +783,38 @@ visits                                            -- currently id/user/facility/
 would be judged by needs the outcome. It is added here rather than deferred because a suggestion
 engine that cannot be scored is a suggestion engine nobody will trust in three months.
 
+### 5.4 Validated potential and confidence — P5
+
+Adopted from the external review ([`design-review-2026-08-15.md`](./design-review-2026-08-15.md)
+§3), and the one structural idea this spec did not have.
+
+Everything the engine currently knows about an unvisited clinic is **inferred** from CNES — unit
+type, orthopaedist count and ratio. `headroom_unknown = 0.40` is a single constant standing in for
+*"nobody has ever looked"*, applied identically to a clinic we know nothing about and one a rep
+walked into last week.
+
+Split the two, per facility × vertical:
+
+```
+estimated_potential   derived from CNES; always available, never certain
+potential_confidence  how much of it has been confirmed in the field
+validated_potential   what a rep actually found, once they have been
+validated_at / validated_by_user_id
+```
+
+The rep supplies the validated half in the **10–20 seconds after concluding a visit**, alongside
+the §5.3 outcome — commercial relevance, whether the clinic uses the category at all, which
+competitor holds it, rough opportunity size. Not a thirty-field form; a form that long gets
+abandoned and then the data is worse than none.
+
+Two things follow. The UI can say *"potencial alto, confiança 31 %"* instead of a bare number,
+which is honest about an estimate built from a staff list. And **every first visit converts a CNES
+inference into proprietary knowledge** — the one kind of data CNES and CFM cannot supply, and the
+reason coverage is worth reserving a slot for at all.
+
+Per vertical, never per facility: the same hospital is a different prospect in ortopedia and in
+estética, which is the whole reason `facility_vertical_profiles` exists.
+
 ---
 
 ## 6. Configuration
@@ -1000,7 +1089,7 @@ never be the source of a number.**
 | **P2** | Matrix integration, real drive times, ordering + 2-opt, map view, timeline, confirm → calendar | yes |
 | **P3** | Substitution, alternatives, rejection reasons, modality override | yes |
 | **P4** | Anchor mode ("já vou visitar X — o que mais?") | yes |
-| **P5** | Outcome capture on `visits`, manager metrics, aderência/conversão | yes |
+| **P5** | Outcome capture on `visits`, **validated potential + confidence** (§5.4), manager metrics, aderência/conversão | yes |
 | **P6** | Offline cache for confirmed roteiros | yes |
 | **P7** | AI phase 2 (form filler), then phase 3 (briefing) | separate spec |
 
@@ -1094,6 +1183,26 @@ Change any of these by saying so — none is load-bearing, all live in `roteiro_
 | Cooldown trigger | only a **`COMPLETED`** interaction resets it | A confirmed-but-unexecuted stop must not suppress the clinic — otherwise a rep who never goes stops being told to go. |
 | Manager DRAFT | appears in-app, **no push** in v1 | Push exists (Firebase) but an unsolicited plan arriving on a rep's phone is a workflow decision, not a technical one. Revisit with reps. |
 | Weekly cadence | **rolling 7 days**, regenerated on demand | More useful than a frozen Monday plan. Costs more Matrix calls; the §7.4 cache absorbs it. |
+
+### 15.1c Decided 2026-08-15 — external design review
+
+Full assessment in [`design-review-2026-08-15.md`](./design-review-2026-08-15.md).
+
+**Adopted:** the professional *ratio* alongside the count (§4.2f, measured 32 % vs 11 % inside the
+band the count treats as equal); assignment age as the coverage tie-break (§4.3.1); validated
+potential and confidence at P5 (§5.4); "maintenance vs exploration by território maturity" as the
+vocabulary for tuning the §4.3 quotas.
+
+**Declined:** sales-trend and open-opportunity weights — 35 % of the reviewed formula, and neither
+computable (74 profiles have enough order history; there is no opportunity entity at all).
+Facility-type priors by estimate, since measurement contradicts them — the two types it separates
+by 2× convert at 3.5 % and 3.4 %. A flat never-visited bonus, which is outbiddable where a reserved
+slot is not, and a no-op today besides. Multiplicative modifiers on an additive score, which reach
+×2.27 and leave the clamp doing the ranking. A 0–100 score on screen, which implies precision five
+constant components cannot support.
+
+**Hospitals rank below clinics by commercial decision**, beyond what conversion alone justifies
+(§4.2g).
 
 ### 15.3 Still open
 
