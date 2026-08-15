@@ -87,6 +87,8 @@ interface CandidateRow extends Record<string, unknown> {
   ortho_n: number;
   ortho_total: number;
   ortho_ratio: string;
+  /** False means CNES has no staff row at all — not that the facility has none. */
+  registry_known: boolean;
   assignment_started_at: string | Date | null;
   theirs_qty: string | null;
   ours_qty: string | null;
@@ -126,6 +128,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       tauSeconds: Number(row.tau_seconds),
       remoteThresholdSeconds: Number(row.remote_threshold_seconds),
       headroomUnknown: Number(row.headroom_unknown),
+      capacityUnknown: Number(row.capacity_unknown),
       workdayStart: String(row.workday_start),
       workdayEnd: String(row.workday_end),
       lunchStart: String(row.lunch_start),
@@ -484,6 +487,10 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           coalesce(o.total, 0)                                    as ortho_total,
           case when coalesce(o.total, 0) = 0 then 0::numeric
                else o.n::numeric / o.total end                    as ortho_ratio,
+          -- Absent is not zero (§15.5.3). No staff row means CNES has not told
+          -- us anything about this facility, which is a different claim from
+          -- "it employs no orthopaedists" — and the one a failed load produces.
+          (o.facility_cnes_id is not null)                         as registry_known,
           m.theirs_qty, m.ours_qty,
           (${input.today}::date - c.last_purchase)                as days_since_purchase,
           (${input.today}::date - ld.ended_at::date)              as days_since_interaction,
@@ -535,9 +542,14 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           -- >=5 band the count alone treats as equal, a high share converts at
           -- 32.3% against 11.4%. A hospital with 120 physicians of whom 3 are
           -- orthopaedists is not the prospect a clinic with 14 of whom 12 are.
-          (${CAPACITY_COUNT_WEIGHT} * percent_rank() over (order by r.ortho_n)
-           + ${CAPACITY_RATIO_WEIGHT} * percent_rank() over (order by r.ortho_ratio)
-          )::numeric                                                              as c_raw,
+          -- A facility CNES knows nothing about sits at the neutral mid-band
+          -- rather than at the bottom. Ranking the unknown last would mean a
+          -- partial registry load silently buries whole stretches of the book,
+          -- and it would bury them hardest where a visit is most warranted.
+          case when not r.registry_known then ${params.capacityUnknown}::numeric
+               else (${CAPACITY_COUNT_WEIGHT} * percent_rank() over (order by r.ortho_n)
+                     + ${CAPACITY_RATIO_WEIGHT} * percent_rank() over (order by r.ortho_ratio))::numeric
+          end                                                                     as c_raw,
           case when r.theirs_qty is null then ${params.headroomUnknown}::numeric
                else percent_rank() over (order by coalesce(r.theirs_qty, 0))::numeric
           end                                                                     as h_raw,
@@ -577,7 +589,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       select
         w.profile_id, w.facility_id, w.facility_name, w.cnes_code, w.unit_type,
         w.municipality, w.neighborhood, w.funnel_stage, w.bucket, w.lat, w.lng, w.straight_line_km,
-        w.ortho_n, w.ortho_total, w.ortho_ratio, w.assignment_started_at,
+        w.ortho_n, w.ortho_total, w.ortho_ratio, w.registry_known, w.assignment_started_at,
         w.theirs_qty, w.ours_qty, w.days_since_interaction,
         w.days_since_purchase, w.purchase_interval_days, w.last_suggested_at,
         w.coverage_overdue,
@@ -639,6 +651,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       lat: Number(row.lat),
       lng: Number(row.lng),
       straightLineKm: Number(row.straight_line_km),
+      registryKnown: row.registry_known === true,
       orthopaedistCount: Number(row.ortho_n),
       totalProfessionalCount: Number(row.ortho_total),
       orthopaedistShare: Number(row.ortho_ratio),
@@ -673,6 +686,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         }),
         k: component(row.k_raw, w.k, { stage: row.funnel_stage }),
         c: component(row.c_raw, w.c, {
+          registryKnown: row.registry_known === true,
           orthopaedists: Number(row.ortho_n),
           totalProfessionals: Number(row.ortho_total),
           orthopaedistShare: Number(Number(row.ortho_ratio).toFixed(3)),

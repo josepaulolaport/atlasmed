@@ -51,6 +51,17 @@ export interface RoteiroParams {
   tauSeconds: number;
   remoteThresholdSeconds: number;
   headroomUnknown: number;
+  /**
+   * What capacity scores when CNES has no staff row for the facility at all.
+   *
+   * **Absent is not zero.** 216 of 1442 profiles in the book — 15 % — have no
+   * row, and scoring them 0 makes a facility we know nothing about look
+   * identical to one we know has no orthopaedists. Those are different claims,
+   * and a load that half-failed does not announce itself: it just quietly makes
+   * clinics look worthless. Same argument as `headroomUnknown` (§4.2b), same
+   * neutral mid-band.
+   */
+  capacityUnknown: number;
   workdayStart: string;
   workdayEnd: string;
   lunchStart: string;
@@ -89,6 +100,14 @@ export interface RoteiroCandidate {
   totalProfessionalCount: number;
   /** `orthopaedistCount / totalProfessionalCount`, 0 when the facility has none. */
   orthopaedistShare: number;
+  /**
+   * Whether CNES has any staff row for this facility.
+   *
+   * False means *we do not know*, never *there is nobody*. The card has to say
+   * so rather than print a zero we did not measure, and the score has to sit at
+   * `capacityUnknown` rather than at the bottom.
+   */
+  registryKnown: boolean;
   /**
    * When this rep was given the clinic. Breaks the tie among the never-covered,
    * who all share a null `lastSuggestedAt` — a book handed over 180 days ago is

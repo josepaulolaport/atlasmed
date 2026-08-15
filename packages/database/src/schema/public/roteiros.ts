@@ -432,6 +432,18 @@ export const roteiroParams = pgTable(
     headroomUnknown: numeric("headroom_unknown", { precision: 4, scale: 3 })
       .notNull()
       .default("0.400"),
+    /**
+     * What capacity scores when CNES has no staff row for the facility at all.
+     *
+     * Absent is not zero. 15% of the book has no row, and a registry load that
+     * half-fails does not announce itself — it just makes clinics look
+     * worthless. CNES may only ever raise confidence in a clinic, never lower
+     * it: its absence means we have not looked, and not having looked is a
+     * reason to visit.
+     */
+    capacityUnknown: numeric("capacity_unknown", { precision: 4, scale: 3 })
+      .notNull()
+      .default("0.400"),
     workdayStart: time("workday_start").notNull().default("08:00"),
     workdayEnd: time("workday_end").notNull().default("18:00"),
     lunchStart: time("lunch_start").notNull().default("12:00"),
@@ -461,6 +473,10 @@ export const roteiroParams = pgTable(
     check(
       "roteiro_params_headroom_unknown_range_check",
       sql`${t.headroomUnknown} >= 0 and ${t.headroomUnknown} <= 1`,
+    ),
+    check(
+      "roteiro_params_capacity_unknown_range_check",
+      sql`${t.capacityUnknown} >= 0 and ${t.capacityUnknown} <= 1`,
     ),
     check("roteiro_params_lunch_minutes_non_negative_check", sql`${t.lunchMinutes} >= 0`),
     check("roteiro_params_workday_order_check", sql`${t.workdayEnd} > ${t.workdayStart}`),

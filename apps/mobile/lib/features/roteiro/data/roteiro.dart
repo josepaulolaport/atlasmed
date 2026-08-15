@@ -169,7 +169,17 @@ List<String> buildReasons(
   final capacity = part('c');
   final orthopaedists = (capacity?['orthopaedists'] as num?)?.toInt() ?? 0;
   final share = (capacity?['orthopaedistShare'] as num?)?.toDouble();
-  if (orthopaedists > 0) {
+  final registryKnown = capacity?['registryKnown'] as bool? ?? true;
+  if (!registryKnown) {
+    // Said out loud rather than left blank. A silent card is read as "no
+    // orthopaedists here", and that is a claim we never made: CNES has no
+    // staff row for this facility at all, which is 15% of the book and is
+    // exactly what a failed registry load looks like (§15.5.3). Not knowing is
+    // a reason to go and see, not a reason to rank the clinic last.
+    reasons.add(
+      'Quadro clínico não informado no CNES — vale confirmar na visita',
+    );
+  } else if (orthopaedists > 0) {
     final head = orthopaedists == 1
         ? '1 ortopedista registrado aqui'
         : '$orthopaedists ortopedistas registrados aqui';

@@ -827,6 +827,13 @@
       "when": 1786764369319,
       "tag": "0117_roteiro_do_dia",
       "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1786812492819,
+      "tag": "0118_roteiro_capacity_unknown",
+      "breakpoints": true
     }
   ]
 }

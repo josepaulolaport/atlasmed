@@ -60,6 +60,11 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
   tauSeconds: 900,
   remoteThresholdSeconds: 2700,
   headroomUnknown: 0.4,
+  // Same mid-band as headroom, for the same reason: not knowing is not a
+  // reason to rank a clinic last. CNES may only ever raise confidence in a
+  // clinic, never lower it — its absence means we have not looked, and not
+  // having looked is a reason to visit.
+  capacityUnknown: 0.4,
   workdayStart: "08:00",
   workdayEnd: "18:00",
   lunchStart: "12:00",
@@ -148,6 +153,17 @@ function toCalendarSlot(minutes: number): number {
     Math.ceil(minutes / CALENDAR_SLOT_MINUTES) * CALENDAR_SLOT_MINUTES,
   );
 }
+
+/**
+ * §15.5.3 — how much of a rep's shortlist must carry CNES staff data before we
+ * trust capacity to be discriminating at all.
+ *
+ * Below this the registry is not merely thin, it has probably failed: the
+ * capacity component still ranks (the unknown sit at a neutral mid-band rather
+ * than at the bottom, so nothing is buried), but ops needs to know that a
+ * quarter of the engine's weight is resting on data that did not arrive.
+ */
+const MIN_REGISTRY_COVERAGE = 0.6;
 
 /** §4.1 — how far the bound may widen before we give up, and in what steps. */
 const REACH_EXPANSION_STEPS = [1, 2, 4, 8] as const;
@@ -726,6 +742,20 @@ export class GenerateRoteiroUseCase {
     }
 
     /**
+     * §15.5.3 — CNES is an extra, and a missing extra has to be visible.
+     *
+     * A registry load that half-failed does not announce itself. Capacity
+     * already degrades gracefully (an unknown facility scores the neutral
+     * mid-band, not zero), so this notice is not protecting the ranking — it is
+     * telling whoever reads it that the ranking is running on less than it
+     * looks like it is.
+     */
+    const registryCoverage =
+      candidates.length === 0
+        ? null
+        : Number((candidates.filter((c) => c.registryKnown).length / candidates.length).toFixed(3));
+
+    /**
      * Clinics the rep pinned to a time, promoted to commitments.
      *
      * Done here rather than inside selection because a pinned stop is not a
@@ -943,6 +973,12 @@ export class GenerateRoteiroUseCase {
       slotCount: limit,
       params,
       usingDefaultParams,
+      // §15.5.3 — what share of the shortlist CNES actually knows anything
+      // about. Below MIN_REGISTRY_COVERAGE the registry has probably failed
+      // rather than merely being thin.
+      registryCoverage,
+      registryCoverageLow:
+        registryCoverage !== null && registryCoverage < MIN_REGISTRY_COVERAGE,
       notices,
       stops,
       totals: {

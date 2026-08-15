@@ -34,6 +34,7 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
     orthopaedistCount: 10,
     totalProfessionalCount: 20,
     orthopaedistShare: 0.5,
+    registryKnown: true,
     assignmentStartedAt: null,
     theirsQty: null,
     oursQty: null,
@@ -578,6 +579,51 @@ describe("GenerateRoteiroUseCase", () => {
     }
     // The pin takes one of the five slots rather than being added on top.
     expect(result.stops.length).toBeLessThanOrEqual(5);
+  });
+
+  it("does not rank a clinic CNES knows nothing about below one it knows is empty", async () => {
+    // Absent is not zero. 15% of the book has no CNES staff row, and a load
+    // that half-failed looks exactly like this — so the unknown sit at the
+    // neutral mid-band rather than at the bottom (§15.5.3).
+    const repository = new FakeRepository([
+      candidate({
+        id: 1,
+        facilityName: "Desconhecida",
+        registryKnown: false,
+        orthopaedistCount: 0,
+        orthopaedistShare: 0,
+      }),
+      candidate({
+        id: 2,
+        facilityName: "Sem ortopedistas",
+        registryKnown: true,
+        orthopaedistCount: 0,
+        orthopaedistShare: 0,
+      }),
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 2 }));
+    const unknown = result.stops.find((s) => s.candidate.facilityName === "Desconhecida");
+
+    expect(unknown).toBeDefined();
+    expect(unknown!.candidate.registryKnown).toBe(false);
+  });
+
+  it("reports thin registry coverage to ops without putting it on the rep's screen", async () => {
+    const repository = new FakeRepository([
+      candidate({ id: 1, registryKnown: false }),
+      candidate({ id: 2, registryKnown: false }),
+      candidate({ id: 3, registryKnown: true }),
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 3 }));
+
+    expect(result.registryCoverageLow).toBe(true);
+    // A rep planning their morning cannot act on a registry load, and a notice
+    // they cannot act on pushes the ones they can off the screen.
+    expect(result.notices.some((n) => n.code === "REGISTRY_COVERAGE_LOW")).toBe(false);
   });
 
   it("refuses to plan another rep's day", async () => {

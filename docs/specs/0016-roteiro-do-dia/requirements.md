@@ -1558,6 +1558,18 @@ zero orthopaedists. Those are completely different claims and the engine cannot 
 This is the exact shape of the risk: a failed or partial load does not announce itself, it just
 quietly makes clinics look worthless. Three defences, none of which require trusting the load:
 
+**Measured on rep 4's book (447 clinics), 2026-08-15.** The damage was not that
+unknown clinics ranked low — it is that they were **cut from the shortlist
+before selection ever saw them**:
+
+| | unknown clinics surviving a 400-deep shortlist | e.g. Clinica Pleine Vie |
+|---|---|---|
+| capacity 0 when absent (old) | 6 | rank 388 / 400 |
+| capacity `capacityUnknown` = 0.40 | 35 | rank 127 / 400 |
+
+Among the ones that were being buried: *Clinica de Ortopedia Bom Samaritano*,
+*Clinica Ossea Mandaguari*, *Orto X*. Named for the specialty we sell into.
+
 **1. Absent is not zero.** No staff row → capacity is *unknown*, scored at a neutral mid-band like
 `headroom_unknown`, and the card says *"capacidade não conhecida"* rather than implying we checked.
 A clinic we know nothing about must stay reachable — the same argument that keeps unsurveyed
