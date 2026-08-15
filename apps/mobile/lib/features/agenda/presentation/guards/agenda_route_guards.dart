@@ -1,6 +1,6 @@
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
-import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_month_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +22,7 @@ class AgendaRouteGuard extends ConsumerWidget {
           );
         }
 
-        return const AgendaScreen();
+        return const AgendaMonthScreen();
       },
     );
   }

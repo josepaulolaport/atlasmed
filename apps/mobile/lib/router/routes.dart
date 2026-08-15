@@ -42,6 +42,7 @@ import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profil
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_day_screen.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_assignments_screen.dart';
@@ -227,6 +228,7 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
     TypedStatefulShellBranch<AgendaBranch>(
       routes: <TypedRoute<RouteData>>[
         TypedGoRoute<AgendaRoute>(path: '/agenda'),
+        TypedGoRoute<AgendaDayRoute>(path: '/agenda/day/:day'),
         TypedGoRoute<RoteiroRoute>(path: '/roteiro'),
       ],
     ),
@@ -370,6 +372,21 @@ class AgendaRoute extends GoRouteData with $AgendaRoute {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       const NoTransitionPage(child: AgendaRouteGuard());
+}
+
+/// One day as an hour grid, reached by tapping a day in the month view.
+class AgendaDayRoute extends GoRouteData with $AgendaDayRoute {
+  const AgendaDayRoute(this.day);
+
+  /// `YYYY-MM-DD`. A string rather than a DateTime so the URL is readable and
+  /// a deep link to a specific day is shareable.
+  final String day;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      NoTransitionPage(
+        child: AgendaDayScreen(day: DateTime.tryParse(day) ?? DateTime.now()),
+      );
 }
 
 /// Roteiro do dia — spec 0016. Sits in the Agenda branch: it is how a rep
