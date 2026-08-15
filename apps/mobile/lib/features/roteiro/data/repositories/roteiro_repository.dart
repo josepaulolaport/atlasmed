@@ -30,26 +30,37 @@ class RoteiroRepository extends Repository<String>
   /// `latitude`/`longitude` are required and have no fallback: the server
   /// refuses a guessed origin (spec 0016 §4.1), because drive times computed
   /// from an averaged position look exactly as confident as real ones.
+  /// Generates without persisting — the workspace's draft.
+  ///
+  /// `/preview` rather than `/roteiros`: a rep regenerating while they shape the
+  /// day should not be writing a row each time, and nothing is real until they
+  /// save. Persisting on every keystroke would also make `last_suggested_at`
+  /// meaningless, since a discarded draft would mark clinics as covered.
   Future<Roteiro> generate({
     required int verticalId,
-    required double latitude,
-    required double longitude,
+    String? scopeDate,
+    double? latitude,
+    double? longitude,
     int? limit,
-    int? anchorProfileId,
     int? subjectUserId,
+    List<int> excludeProfileIds = const [],
+    List<int> includeProfileIds = const [],
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        // Persists a DRAFT. /preview is the non-persisting variant, kept for
-        // anchor exploration that must not disturb the rep's live plan.
-        url: Uri.parse('$_baseUrl/api/v1/roteiros'),
+        url: Uri.parse('$_baseUrl/api/v1/roteiros/preview'),
         method: RepositoryHttpMethod.post,
         body: {
           'verticalId': verticalId,
-          'origin': {'lat': latitude, 'lng': longitude},
+          'scopeDate': ?scopeDate,
+          if (latitude != null && longitude != null)
+            'origin': {'lat': latitude, 'lng': longitude},
           'limit': ?limit,
-          'anchorProfileId': ?anchorProfileId,
           'subjectUserId': ?subjectUserId,
+          if (excludeProfileIds.isNotEmpty)
+            'excludeProfileIds': excludeProfileIds,
+          if (includeProfileIds.isNotEmpty)
+            'includeProfileIds': includeProfileIds,
         },
       ),
     );
@@ -60,6 +71,49 @@ class RoteiroRepository extends Repository<String>
       }
     }
     return Roteiro.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  /// Persists the shaped slate, then writes it into the agenda.
+  ///
+  /// Two calls rather than one because persisting and confirming are separate
+  /// concerns server-side — and because a 409 on confirm has to be
+  /// distinguishable from a failure to save at all.
+  Future<Roteiro> save({
+    required int verticalId,
+    String? scopeDate,
+    double? latitude,
+    double? longitude,
+    int? limit,
+    List<int> excludeProfileIds = const [],
+    List<int> includeProfileIds = const [],
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_baseUrl/api/v1/roteiros'),
+        method: RepositoryHttpMethod.post,
+        body: {
+          'verticalId': verticalId,
+          'scopeDate': ?scopeDate,
+          if (latitude != null && longitude != null)
+            'origin': {'lat': latitude, 'lng': longitude},
+          'limit': ?limit,
+          if (excludeProfileIds.isNotEmpty)
+            'excludeProfileIds': excludeProfileIds,
+          if (includeProfileIds.isNotEmpty)
+            'includeProfileIds': includeProfileIds,
+        },
+      ),
+    );
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) throw StateError('Não foi possível salvar o roteiro.');
+    }
+    final draft = Roteiro.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    final id = draft.id;
+    if (id == null) throw StateError('Não foi possível salvar o roteiro.');
+    return confirm(id);
   }
 
   /// Writes the roteiro into the agent's agenda.

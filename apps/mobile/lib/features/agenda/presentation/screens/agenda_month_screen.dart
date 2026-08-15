@@ -93,11 +93,19 @@ class _AgendaMonthScreenState extends ConsumerState<AgendaMonthScreen> {
                 ),
                 // Filled, and last so it sits nearest the thumb: it is the one
                 // action that plans a whole day rather than adding a row to it.
+                // From the month, the roteiro plans today — a rep who wants
+                // another day opens that day first, which is where its own
+                // context lives.
                 AgendaAction(
                   label: 'Roteiro do dia',
                   icon: Icons.route_outlined,
                   emphasis: true,
-                  onTap: () => const RoteiroRoute().push(context),
+                  onTap: () {
+                    final now = DateTime.now();
+                    RoteiroRoute(
+                      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+                    ).push(context);
+                  },
                 ),
               ],
             )

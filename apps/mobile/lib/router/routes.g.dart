@@ -304,7 +304,7 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           factory: $AgendaDayRoute._fromState,
         ),
         GoRouteData.$route(
-          path: '/roteiro',
+          path: '/agenda/day/:day/roteiro',
           hasOverriddenOnExit: false,
           factory: $RoteiroRoute._fromState,
         ),
@@ -495,10 +495,15 @@ mixin $AgendaDayRoute on GoRouteData {
 }
 
 mixin $RoteiroRoute on GoRouteData {
-  static RoteiroRoute _fromState(GoRouterState state) => const RoteiroRoute();
+  static RoteiroRoute _fromState(GoRouterState state) =>
+      RoteiroRoute(state.pathParameters['day']!);
+
+  RoteiroRoute get _self => this as RoteiroRoute;
 
   @override
-  String get location => GoRouteData.$location('/roteiro');
+  String get location => GoRouteData.$location(
+    '/agenda/day/${Uri.encodeComponent(_self.day)}/roteiro',
+  );
 
   @override
   void go(BuildContext context) => context.go(location);

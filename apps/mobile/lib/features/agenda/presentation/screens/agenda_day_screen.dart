@@ -113,7 +113,9 @@ class AgendaDayScreen extends ConsumerWidget {
         label: 'Roteiro do dia',
         icon: Icons.route_outlined,
         emphasis: true,
-        onTap: () => const RoteiroRoute().push(context),
+        onTap: () => RoteiroRoute(
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+        ).push(context),
       ),
     ],
   );

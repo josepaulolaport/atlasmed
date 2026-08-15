@@ -43,7 +43,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory_t
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_day_screen.dart';
-import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_screen.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_workspace_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_assignments_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_profile_screen.dart';
@@ -229,7 +229,7 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
       routes: <TypedRoute<RouteData>>[
         TypedGoRoute<AgendaRoute>(path: '/agenda'),
         TypedGoRoute<AgendaDayRoute>(path: '/agenda/day/:day'),
-        TypedGoRoute<RoteiroRoute>(path: '/roteiro'),
+        TypedGoRoute<RoteiroRoute>(path: '/agenda/day/:day/roteiro'),
       ],
     ),
     TypedStatefulShellBranch<TerritoriesBranch>(
@@ -389,14 +389,24 @@ class AgendaDayRoute extends GoRouteData with $AgendaDayRoute {
       );
 }
 
-/// Roteiro do dia — spec 0016. Sits in the Agenda branch: it is how a rep
-/// decides the day the agenda then holds.
+/// Where a rep plans a day — spec 0016 §15.4.1.
+///
+/// Scoped to a day rather than to "today", and reached from that day in the
+/// agenda: a rep plans a day, often tomorrow, and planning is a loop rather
+/// than a single answer.
 class RoteiroRoute extends GoRouteData with $RoteiroRoute {
-  const RoteiroRoute();
+  const RoteiroRoute(this.day);
+
+  /// `YYYY-MM-DD`.
+  final String day;
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      const NoTransitionPage(child: RoteiroScreen());
+      NoTransitionPage(
+        child: RoteiroWorkspaceScreen(
+          day: DateTime.tryParse(day) ?? DateTime.now(),
+        ),
+      );
 }
 
 class TerritoriesRoute extends GoRouteData with $TerritoriesRoute {
