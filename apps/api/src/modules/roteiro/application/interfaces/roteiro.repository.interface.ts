@@ -85,13 +85,38 @@ export interface RoteiroCandidate {
   components: Record<string, { raw: number; weighted: number; [detail: string]: unknown }>;
 }
 
+/**
+ * A visit the agent has already booked for the day, with somewhere to be.
+ *
+ * These are **derived from the calendar, never declared by the rep** — the app
+ * already knows the schedule, so asking them to name it is asking for data we
+ * hold. They are fixed points: the engine plans into the gaps between them and
+ * routes around their locations.
+ */
+export interface FixedPoint {
+  facilityVerticalProfileId: number | null;
+  facilityId: number;
+  facilityName: string;
+  lat: number;
+  lng: number;
+  startsAt: Date;
+  endsAt: Date;
+}
+
 export interface ScoreCandidatesInput {
   userId: number;
   verticalId: number;
   origin: RoteiroPoint;
   reachMode: RoteiroReachMode;
-  /** Present only in `ANCORA` mode — the visit the rep has already agreed. */
-  anchor: RoteiroPoint | null;
+  /**
+   * The day's fixed points, in time order — the agent's booked visits.
+   *
+   * Empty means a free day and a plain circle around the rep. Otherwise the
+   * reachable set is the union of "on the way" ellipses between consecutive
+   * fixed points, so a clinic counts when it is near any leg the rep is already
+   * committed to driving.
+   */
+  fixedPoints: FixedPoint[];
   /** Radius (LIVRE) or detour budget (ANCORA), kilometres. */
   reachBoundKm: number;
   params: RoteiroParams;
@@ -195,9 +220,20 @@ export interface RoteiroRepository {
    * rep who regenerates ten times a morning.
    */
   markConfirmed(input: { roteiroId: number; confirmedAt: Date }): Promise<void>;
-  findAnchorProfile(input: {
-    facilityVerticalProfileId: number;
-    userId: number;
+  /**
+   * Locations for facilities the agent is already booked into today, so those
+   * visits can act as fixed points rather than merely blocked time.
+   */
+  locateFacilities(input: {
+    facilityIds: number[];
     verticalId: number;
-  }): Promise<{ facilityId: number; facilityName: string; lat: number; lng: number } | null>;
+  }): Promise<
+    Array<{
+      facilityId: number;
+      facilityVerticalProfileId: number | null;
+      facilityName: string;
+      lat: number;
+      lng: number;
+    }>
+  >;
 }

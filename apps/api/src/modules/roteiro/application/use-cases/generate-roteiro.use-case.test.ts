@@ -55,9 +55,15 @@ class FakeRepository implements RoteiroRepository {
     private readonly options: {
       params?: RoteiroParams | null;
       assigned?: number;
-      anchor?: { facilityId: number; facilityName: string; lat: number; lng: number } | null;
       /** Return nothing until the bound reaches this value — exercises expansion. */
       minBoundKm?: number;
+      located?: Array<{
+        facilityId: number;
+        facilityVerticalProfileId: number | null;
+        facilityName: string;
+        lat: number;
+        lng: number;
+      }>;
     } = {},
   ) {}
 
@@ -67,8 +73,8 @@ class FakeRepository implements RoteiroRepository {
   async countAssignedProfiles() {
     return this.options.assigned ?? 100;
   }
-  async findAnchorProfile() {
-    return this.options.anchor ?? null;
+  async locateFacilities() {
+    return this.options.located ?? [];
   }
   // Persistence is exercised by the confirm tests and the HTTP integration
   // suite; generation itself never writes.
@@ -249,38 +255,77 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.notices.map((n) => n.code)).toContain("REACH_EXPANDED");
   });
 
-  it("plans in LIVRE mode with no anchor", async () => {
+  it("plans a clear day as a plain circle around the rep", async () => {
     const repository = new FakeRepository([candidate({ id: 1 })]);
-    const useCase = new GenerateRoteiroUseCase({ repository });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: { execute: async () => [] },
+    });
 
     const result = await useCase.execute(baseInput());
 
     expect(result.reachMode).toBe("LIVRE");
-    expect(result.anchorProfileId).toBeNull();
-    expect(repository.calls[0]?.anchor).toBeNull();
+    expect(repository.calls[0]?.fixedPoints).toEqual([]);
   });
 
-  it("puts an agreed visit first and plans the rest around it", async () => {
-    const anchorCandidate = candidate({ id: 42, facilityName: "Ja combinada", meritScore: 0.01 });
-    const repository = new FakeRepository(
-      [anchorCandidate, ...Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 }))],
-      { anchor: { facilityId: 42, facilityName: "Ja combinada", lat: -23.6, lng: -46.7 } },
-    );
-    const useCase = new GenerateRoteiroUseCase({ repository });
+  it("derives the day's fixed points from booked visits, without being told", async () => {
+    // The rep does not declare where they are going; the app booked those
+    // visits and can read them back.
+    const repository = new FakeRepository([candidate({ id: 1 })], {
+      located: [
+        {
+          facilityId: 55,
+          facilityVerticalProfileId: 77,
+          facilityName: "Ja agendada",
+          lat: -23.6,
+          lng: -46.7,
+        },
+      ],
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: "2026-08-17T13:00:00.000Z",
+            endsAt: "2026-08-17T14:00:00.000Z",
+            interaction: { facilityId: 55 },
+          },
+        ],
+      },
+    });
 
-    const result = await useCase.execute(baseInput({ anchorProfileId: 42 }));
+    const result = await useCase.execute(baseInput());
 
     expect(result.reachMode).toBe("ANCORA");
-    expect(result.stops[0]?.candidate.facilityName).toBe("Ja combinada");
-    expect(result.stops[0]?.isAnchor).toBe(true);
-    expect(repository.calls[0]?.anchor).toEqual({ lat: -23.6, lng: -46.7 });
+    expect(result.fixedPoints).toHaveLength(1);
+    expect(result.fixedPoints[0]?.facilityName).toBe("Ja agendada");
+    // The scorer is asked for clinics on the way to it.
+    expect(repository.calls[0]?.fixedPoints).toHaveLength(1);
   });
 
-  it("rejects an anchor that is not the subject's clinic", async () => {
-    const repository = new FakeRepository([candidate({ id: 1 })], { anchor: null });
-    const useCase = new GenerateRoteiroUseCase({ repository });
+  it("treats a personal block as busy time, not as somewhere to be", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 })]);
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          { startsAt: "2026-08-17T13:00:00.000Z", endsAt: "2026-08-17T14:00:00.000Z" },
+        ],
+      },
+    });
 
-    await expect(useCase.execute(baseInput({ anchorProfileId: 999 }))).rejects.toThrow();
+    const result = await useCase.execute(baseInput());
+
+    expect(result.fixedPoints).toEqual([]);
+    expect(result.reachMode).toBe("LIVRE");
+    // It still blocks the clock.
+    for (const stop of result.stops) {
+      const overlaps =
+        stop.plannedStartsAt.getTime() < new Date("2026-08-17T14:00:00.000Z").getTime() &&
+        stop.plannedEndsAt.getTime() > new Date("2026-08-17T13:00:00.000Z").getTime();
+      expect(overlaps).toBe(false);
+    }
   });
 
   it("refuses to plan another rep's day", async () => {
@@ -360,6 +405,26 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.stops[0]?.modality).toBe("REMOTE");
     expect(result.stops[0]?.travelSecondsFromPrev).toBeNull();
     expect(result.totals.driveSeconds).toBe(0);
+  });
+
+  it("drops stops that run past the end of the workday, and says so", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    // Starting at 17:00 against an 18:00 close leaves room for one visit.
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T17:00:00-03:00") }),
+    );
+
+    expect(result.stops.length).toBeLessThan(5);
+    expect(result.notices.map((n) => n.code)).toContain("DAY_FULL");
+    for (const stop of result.stops) {
+      expect(stop.plannedEndsAt.getTime()).toBeLessThanOrEqual(
+        new Date("2026-08-17T18:00:00-03:00").getTime(),
+      );
+    }
   });
 
   it("reports a short slate instead of quietly returning fewer clinics", async () => {

@@ -87,8 +87,8 @@ class FakeRepository implements RoteiroRepository {
   async countAssignedProfiles() {
     return 0;
   }
-  async findAnchorProfile() {
-    return null;
+  async locateFacilities() {
+    return [];
   }
   async createDraft(): Promise<never> {
     throw new Error("not used");

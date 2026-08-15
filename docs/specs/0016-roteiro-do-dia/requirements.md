@@ -141,14 +141,23 @@ two questions the rep is asking (user decision, 2026-08-15).
 ST_DWithin(facility.location, gps, reach_radius_km)
 ```
 
-**Mode ÂNCORA — "I'm already going to clinic X."** The rep will make that drive regardless, so
-everything *along it* and *around the destination* is nearly free. One expression covers both:
+**Mode ÂNCORA — the rep already has visits booked.** *Derived from their calendar, never declared*
+(user decision, 2026-08-15): the app made those bookings, so asking the rep to name them is asking
+for data we hold. Each booked interaction becomes a **fixed point** — it pins the clock *and* the
+map, because the rep is already driving there.
+
+They will make those drives regardless, so everything *along* them and *around* each destination is
+nearly free. One expression covers both, applied to every leg
+`[gps → booking₁, booking₁ → booking₂, …, last → last]`:
 
 ```
 dist(gps, C) + dist(C, anchor)  ≤  dist(gps, anchor) + detour_budget_km
 ```
 
-That is an **ellipse with the rep and the anchor as its foci**. A clinic directly on the route adds
+That is an **ellipse with two consecutive fixed points as its foci**, and a clinic is reachable
+when it falls inside *any* leg's ellipse — which is exactly "on the way to something I am already
+doing". The final self-leg keeps the area around the day's last booking reachable, so a rep whose
+last visit is at 16:00 is still offered work near it. A clinic directly on the route adds
 almost nothing and is always included; one off to the side is included exactly while the detour it
 costs stays inside the budget. It needs no corridor buffers and no special case for "near the
 destination" — the region around the anchor is already inside the ellipse.
@@ -555,11 +564,18 @@ We use **Matrix** for the numbers and select ourselves.
    times, so every stop overlapping something already booked returns a 409. A slate that fails
    at the moment of acceptance is worse than a shorter one.
 
-   ⚠️ **Travel to and from existing commitments is not yet accounted for.** A visit already
-   booked in a distant bairro blocks its own hour but not the driving either side, so a stop
-   scheduled immediately before or after it can be optimistic. Fixing it properly means
-   treating booked visits as fixed points in the route rather than only in the clock — the
-   multi-anchor generalisation of §4.5, and P2 work.
+   **Travel to and from a booked visit is included**: its block is widened by the estimated
+   drive on each side, so a suggestion never lands in minutes the rep is actually on the road.
+   A stop scheduled right before a booking across town would otherwise look fine on the clock
+   and be impossible in the car.
+
+   **A personal block is busy time only** — there is nowhere to be, so it constrains the clock
+   and not the route.
+
+   Stops that would end after `workday_end` are **dropped from the tail and reported**
+   (`DAY_FULL`), never compressed. Shortening or overlapping visits produces a schedule the rep
+   cannot keep, and a slate that quietly returns two stops when five were asked for reads as a
+   thin territory rather than a full day.
 ```
 
 **τ, and what it means.** τ = 900s says: a clinic reachable with no detour is worth the same as one

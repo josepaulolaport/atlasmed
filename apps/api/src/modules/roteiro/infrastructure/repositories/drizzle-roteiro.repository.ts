@@ -3,6 +3,7 @@ import { db } from "../../../../infrastructure/database/db";
 import type {
   CreateRoteiroInput,
   RoteiroCandidate,
+  RoteiroPoint,
   RoteiroParams,
   RoteiroRepository,
   ScoreCandidatesInput,
@@ -43,6 +44,32 @@ const COVERAGE_SHORTLIST_DEPTH = 5;
  */
 const CAPACITY_COUNT_WEIGHT = 0.6;
 const CAPACITY_RATIO_WEIGHT = 0.4;
+
+/**
+ * The legs the agent is already committed to driving today.
+ *
+ * `[origin → first booking, booking → booking, …]`, plus a final leg from the
+ * last booking back to itself so the region *around* the day's last stop stays
+ * reachable — otherwise a rep whose last visit is at 16:00 gets nothing offered
+ * near it for the rest of the afternoon.
+ *
+ * A clinic is reachable when it sits inside the ellipse of **any** leg, which
+ * is exactly "on the way to something I am already doing".
+ */
+function buildLegs(
+  origin: RoteiroPoint,
+  fixedPoints: Array<{ lat: number; lng: number }>,
+): Array<{ from: RoteiroPoint; to: RoteiroPoint }> {
+  if (fixedPoints.length === 0) return [];
+  const points = [origin, ...fixedPoints.map((p) => ({ lat: p.lat, lng: p.lng }))];
+  const legs: Array<{ from: RoteiroPoint; to: RoteiroPoint }> = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    legs.push({ from: points[i]!, to: points[i + 1]! });
+  }
+  const last = points[points.length - 1]!;
+  legs.push({ from: last, to: last });
+  return legs;
+}
 
 interface CandidateRow extends Record<string, unknown> {
   profile_id: number;
@@ -276,38 +303,24 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     };
   }
 
-  async findAnchorProfile(input: {
-    facilityVerticalProfileId: number;
-    userId: number;
-    verticalId: number;
-  }) {
-    const rows = await db.execute<{
-      facility_id: number;
-      facility_name: string;
-      lat: number;
-      lng: number;
-    }>(sql`
+  async locateFacilities(input: { facilityIds: number[]; verticalId: number }) {
+    if (input.facilityIds.length === 0) return [];
+    const rows = (await db.execute(sql`
       select f.id as facility_id, f.name as facility_name,
-             st_y(f.location::geometry) as lat, st_x(f.location::geometry) as lng
-      from facility_vertical_profiles p
-      join facilities f on f.id = p.facility_id
-      join facility_vertical_rep_assignments a
-        on a.facility_vertical_profile_id = p.id and a.ended_at is null
-      where p.id = ${input.facilityVerticalProfileId}
-        and p.vertical_id = ${input.verticalId}
-        and a.user_id = ${input.userId}
-        and p.is_active
-        and f.location is not null
-    `);
-    const row = rows[0];
-    return row
-      ? {
-          facilityId: Number(row.facility_id),
-          facilityName: row.facility_name,
-          lat: Number(row.lat),
-          lng: Number(row.lng),
-        }
-      : null;
+             st_y(f.location::geometry) as lat, st_x(f.location::geometry) as lng,
+             p.id as profile_id
+      from facilities f
+      left join facility_vertical_profiles p
+        on p.facility_id = f.id and p.vertical_id = ${input.verticalId}
+      where f.id in ${input.facilityIds} and f.location is not null
+    `)) as unknown as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      facilityId: Number(row.facility_id),
+      facilityVerticalProfileId: row.profile_id === null ? null : Number(row.profile_id),
+      facilityName: String(row.facility_name),
+      lat: Number(row.lat),
+      lng: Number(row.lng),
+    }));
   }
 
   /**
@@ -324,7 +337,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
    * otherwise flatten every other clinic to near zero.
    */
   async scoreCandidates(input: ScoreCandidatesInput): Promise<RoteiroCandidate[]> {
-    const { params, origin, anchor, reachMode } = input;
+    const { params, origin } = input;
     const w = params.weights;
     const originGeog = sql`st_setsrid(st_makepoint(${origin.lng}, ${origin.lat}), 4326)::geography`;
     const boundM = input.reachBoundKm * M_PER_KM;
@@ -336,16 +349,21 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
      * budget. The region around the anchor is inside the ellipse already, so
      * "near the destination" needs no separate rule.
      */
+    const legs = buildLegs(origin, input.fixedPoints);
     const reachPredicate =
-      reachMode === "ANCORA" && anchor
-        ? sql`(
-            st_distance(f.location::geography, ${originGeog})
-            + st_distance(f.location::geography,
-                st_setsrid(st_makepoint(${anchor.lng}, ${anchor.lat}), 4326)::geography)
-          ) <= st_distance(${originGeog},
-                st_setsrid(st_makepoint(${anchor.lng}, ${anchor.lat}), 4326)::geography)
-              + ${boundM}`
-        : sql`st_dwithin(f.location::geography, ${originGeog}, ${boundM})`;
+      legs.length === 0
+        ? sql`st_dwithin(f.location::geography, ${originGeog}, ${boundM})`
+        : sql.join(
+            legs.map((leg) => {
+              const from = sql`st_setsrid(st_makepoint(${leg.from.lng}, ${leg.from.lat}), 4326)::geography`;
+              const to = sql`st_setsrid(st_makepoint(${leg.to.lng}, ${leg.to.lat}), 4326)::geography`;
+              return sql`(
+                st_distance(f.location::geography, ${from})
+                + st_distance(f.location::geography, ${to})
+              ) <= st_distance(${from}, ${to}) + ${boundM}`;
+            }),
+            sql` or `,
+          );
 
     const rows = await db.execute<CandidateRow>(sql`
       with cand as (

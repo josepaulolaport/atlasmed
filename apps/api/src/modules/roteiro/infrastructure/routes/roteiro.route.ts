@@ -48,7 +48,6 @@ export const roteiroRoute = (
           // fallback (§4.1). A centroid of a scattered book lands in empty
           // space, and two of five reps have nothing within 120 km of theirs.
           origin: { lat: body.origin.lat, lng: body.origin.lng },
-          anchorProfileId: body.anchorProfileId,
           limit: body.limit,
           today: localCivilDate(now, body.timeZone),
           now,
@@ -60,7 +59,8 @@ export const roteiroRoute = (
           summary: "Generate a roteiro do dia without persisting it",
           description:
             "Returns a ranked, explained slate of clinics reachable from the rep's current " +
-            "position. Pass anchorProfileId to plan around a visit already agreed.",
+            "position. Visits already booked for the day are read from the agent's calendar " +
+            "and planned around — there is nothing to declare.",
           tags: ["Roteiro"],
           security: [{ bearerAuth: [] }],
         },
@@ -72,8 +72,6 @@ export const roteiroRoute = (
           }),
           /** Whose day. Omitted means the caller's own. */
           subjectUserId: t.Optional(t.Number({ minimum: 1 })),
-          /** Present switches the reachable set from a circle to an ellipse. */
-          anchorProfileId: t.Optional(t.Number({ minimum: 1 })),
           limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
           timeZone: t.Optional(t.String({ minLength: 1 })),
         }),
@@ -94,7 +92,6 @@ export const roteiroRoute = (
           subjectUserId: body.subjectUserId,
           verticalId: body.verticalId,
           origin: { lat: body.origin.lat, lng: body.origin.lng },
-          anchorProfileId: body.anchorProfileId,
           limit: body.limit,
           persist: true,
           today: localCivilDate(now, body.timeZone),
@@ -118,7 +115,6 @@ export const roteiroRoute = (
             lng: t.Number({ minimum: -180, maximum: 180 }),
           }),
           subjectUserId: t.Optional(t.Number({ minimum: 1 })),
-          anchorProfileId: t.Optional(t.Number({ minimum: 1 })),
           limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
           timeZone: t.Optional(t.String({ minLength: 1 })),
         }),

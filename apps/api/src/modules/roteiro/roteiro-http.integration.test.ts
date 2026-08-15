@@ -106,24 +106,20 @@ describe("roteiro HTTP", () => {
     expect((captured.generate[0] as { persist?: boolean }).persist).toBe(true);
   });
 
-  it("carries the origin, linha, anchor and limit through to the use case", async () => {
+  it("carries the origin, linha and limit through to the use case", async () => {
     const { app, captured } = build();
 
-    await app.handle(
-      post("/roteiros", { ...body, limit: 3, anchorProfileId: 42, subjectUserId: 9 }),
-    );
+    await app.handle(post("/roteiros", { ...body, limit: 3, subjectUserId: 9 }));
 
     const input = captured.generate[0] as {
       origin: { lat: number; lng: number };
       verticalId: number;
       limit: number;
-      anchorProfileId: number;
       subjectUserId: number;
     };
     expect(input.origin).toEqual({ lat: -23.55, lng: -46.63 });
     expect(input.verticalId).toBe(1);
     expect(input.limit).toBe(3);
-    expect(input.anchorProfileId).toBe(42);
     expect(input.subjectUserId).toBe(9);
   });
 

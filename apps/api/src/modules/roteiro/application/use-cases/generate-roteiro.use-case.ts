@@ -1,6 +1,7 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type {
+  FixedPoint,
   RoteiroBucket,
   RoteiroCandidate,
   RoteiroParams,
@@ -102,14 +103,21 @@ const SHORTLIST_FACTOR = 4;
  * same way they do everywhere else — a weekly block occurring today is busy
  * today, and re-deriving that here would be a second expansion to keep in sync.
  */
-export interface BusyBlockReader {
+export interface ScheduleReader {
   execute(input: {
     actor: { userId: number; roleName: string };
     scope: ScopeContext;
     ownerUserId?: number;
     from: Date;
     to: Date;
-  }): Promise<Array<{ startsAt: string; endsAt: string }>>;
+  }): Promise<
+    Array<{
+      startsAt: string;
+      endsAt: string;
+      /** Present for an INTERACTION; absent for a personal block. */
+      interaction?: { facilityId: number };
+    }>
+  >;
 }
 
 interface BusyInterval {
@@ -130,8 +138,6 @@ export interface GenerateRoteiroInput {
   subjectUserId?: number;
   verticalId: number;
   origin: RoteiroPoint;
-  /** Present turns the generation into `ANCORA` mode. */
-  anchorProfileId?: number;
   limit?: number;
   /**
    * Persist the result as a DRAFT. `POST /roteiros` does; `/preview` does not,
@@ -240,7 +246,7 @@ export function bucketQuotas(limit: number, ratios: Record<RoteiroBucket, number
 
 export class GenerateRoteiroUseCase {
   constructor(
-    private readonly deps: { repository: RoteiroRepository; busy?: BusyBlockReader },
+    private readonly deps: { repository: RoteiroRepository; schedule?: ScheduleReader },
   ) {}
 
   async execute(input: GenerateRoteiroInput) {
@@ -274,14 +280,24 @@ export class GenerateRoteiroUseCase {
       throw new ResourceNotFoundError("Clínicas atribuídas nesta linha", subjectUserId);
     }
 
-    const { reachMode, anchor, anchorProfileId } = await this.resolveAnchor(input, subjectUserId);
+    const timeZone = input.timeZone ?? APP_TIME_ZONE;
+    const { fixedPoints, busy } = await this.loadSchedule(
+      input,
+      subjectUserId,
+      timeZone,
+      params,
+      notices,
+    );
+    // The mode is derived, never asked for: a day with bookings is planned
+    // around them, a clear day is a plain circle around the rep.
+    const reachMode: RoteiroReachMode = fixedPoints.length > 0 ? "ANCORA" : "LIVRE";
 
     const { candidates, reachBoundKm, expanded } = await this.reach({
       input,
       subjectUserId,
       params,
       reachMode,
-      anchor,
+      fixedPoints,
       limit,
     });
 
@@ -307,12 +323,9 @@ export class GenerateRoteiroUseCase {
       limit,
       params,
       notices,
-      anchorProfileId,
       origin: input.origin,
     });
-    const timeZone = input.timeZone ?? APP_TIME_ZONE;
-    const busy = await this.loadBusy(input, subjectUserId, timeZone, params, notices);
-    const stops = this.schedule({
+    const scheduled = this.schedule({
       selected,
       origin: input.origin,
       params,
@@ -320,7 +333,31 @@ export class GenerateRoteiroUseCase {
       scopeDate: input.today,
       timeZone,
       busy,
+      fixedPoints,
     });
+
+    /**
+     * §4.5 step 6 — the day has an end, and a stop past it is not a plan.
+     *
+     * Dropped from the tail rather than compressed: the alternative is
+     * shortening visits or overlapping them, which produces a schedule the rep
+     * cannot actually keep. Reported, because a slate that quietly returns three
+     * stops when five were asked for looks like a thin territory rather than a
+     * full day.
+     */
+    const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
+    const stops = scheduled.filter((stop) => stop.plannedEndsAt <= dayEnd);
+    if (stops.length < scheduled.length) {
+      notices.push({
+        code: "DAY_FULL",
+        requested: scheduled.length,
+        scheduled: stops.length,
+        message:
+          stops.length === 0
+            ? "Seu dia já está cheio — não há espaço para novas visitas hoje."
+            : `Couberam ${stops.length} de ${scheduled.length} sugestões antes do fim do expediente.`,
+      });
+    }
 
     const persisted = input.persist
       ? await this.deps.repository.createDraft({
@@ -330,7 +367,7 @@ export class GenerateRoteiroUseCase {
           scopeDate: input.today,
           origin: input.origin,
           reachMode,
-          anchorProfileId,
+          anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
           reachBoundKm,
           travelSource: "ESTIMATED",
           paramsSnapshot: params as unknown as Record<string, unknown>,
@@ -361,7 +398,13 @@ export class GenerateRoteiroUseCase {
       scopeDate: input.today,
       origin: input.origin,
       reachMode,
-      anchorProfileId,
+      anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
+      fixedPoints: fixedPoints.map((point) => ({
+        facilityId: point.facilityId,
+        facilityName: point.facilityName,
+        startsAt: point.startsAt,
+        endsAt: point.endsAt,
+      })),
       reachBoundKm,
       travelSource: "ESTIMATED" as const,
       params,
@@ -377,94 +420,113 @@ export class GenerateRoteiroUseCase {
   }
 
   /**
-   * The agent's day as it already stands, so the roteiro is planned into the
-   * gaps rather than over the top of it.
-   *
-   * Without this the engine produces a plan that looks fine and **cannot be
-   * confirmed**: confirm refuses to shift a rep's times (§7.3), so every stop
-   * overlapping an existing commitment comes back a 409. A plan that fails at
-   * the moment of acceptance is worse than a shorter one.
+   * A manager may draft for a rep they manage; nobody else may plan another
+   * person's day. Confirming is a separate, stricter gate (§7.3) — writing to
+   * someone's calendar stays theirs alone.
    */
-  private async loadBusy(
+  private assertMayPlanFor(input: GenerateRoteiroInput, subjectUserId: number): void {
+    if (subjectUserId === input.actor.userId) return;
+    if (input.actor.roleName === "ADMIN" && input.scope.isGlobal) return;
+    if (input.actor.roleName === "MANAGER" && input.scope.managedUserIds.includes(subjectUserId)) {
+      return;
+    }
+    throw new ForbiddenError("Roteiro is outside the current owner/team scope");
+  }
+
+  /**
+   * The agent's day as it already stands — **read, never asked for**.
+   *
+   * A rep who has four visits booked should not have to tell the app about
+   * them; it made those bookings. So the schedule is derived and split in two:
+   *
+   *   - booked **interactions** become `FixedPoint`s. They pin both the clock
+   *     and the map: the engine plans into the gaps between them and treats
+   *     their locations as places the rep is already driving to, which is what
+   *     makes "what else is on the way" answerable.
+   *   - personal blocks become plain busy time. There is nowhere to be.
+   *
+   * Skipping this produces a plan that **cannot be confirmed** — §7.3 refuses
+   * to shift a rep's times, so any stop overlapping something booked returns a
+   * 409. A slate that fails at acceptance is worse than a shorter one.
+   */
+  private async loadSchedule(
     input: GenerateRoteiroInput,
     subjectUserId: number,
     timeZone: string,
     params: RoteiroParams,
     notices: RoteiroNotice[],
-  ): Promise<BusyInterval[]> {
+  ): Promise<{ fixedPoints: FixedPoint[]; busy: BusyInterval[] }> {
     const dayStart = this.atLocalTime(input.today, params.workdayStart, timeZone);
     const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
-    const blocks: BusyInterval[] = [];
+    const busy: BusyInterval[] = [];
+    const fixedPoints: FixedPoint[] = [];
 
-    if (this.deps.busy) {
-      const existing = await this.deps.busy.execute({
+    if (this.deps.schedule) {
+      const occurrences = await this.deps.schedule.execute({
         actor: input.actor,
         scope: input.scope,
         ownerUserId: subjectUserId,
         from: dayStart,
         to: dayEnd,
       });
-      for (const block of existing) {
-        blocks.push({
-          startsAt: new Date(block.startsAt).getTime(),
-          endsAt: new Date(block.endsAt).getTime(),
-        });
+
+      const facilityIds = [
+        ...new Set(
+          occurrences
+            .map((o) => o.interaction?.facilityId)
+            .filter((id): id is number => typeof id === "number"),
+        ),
+      ];
+      const located = await this.deps.repository.locateFacilities({
+        facilityIds,
+        verticalId: input.verticalId,
+      });
+      const byFacility = new Map(located.map((row) => [row.facilityId, row]));
+
+      for (const occurrence of occurrences) {
+        const startsAt = new Date(occurrence.startsAt);
+        const endsAt = new Date(occurrence.endsAt);
+        busy.push({ startsAt: startsAt.getTime(), endsAt: endsAt.getTime() });
+
+        const facilityId = occurrence.interaction?.facilityId;
+        const place = facilityId === undefined ? undefined : byFacility.get(facilityId);
+        // A booked visit at a facility with no coordinates still blocks the
+        // clock; it just cannot anchor the route.
+        if (place) {
+          fixedPoints.push({
+            facilityVerticalProfileId: place.facilityVerticalProfileId,
+            facilityId: place.facilityId,
+            facilityName: place.facilityName,
+            lat: place.lat,
+            lng: place.lng,
+            startsAt,
+            endsAt,
+          });
+        }
       }
-      if (existing.length > 0) {
+
+      fixedPoints.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
+      if (occurrences.length > 0) {
         notices.push({
           code: "EXISTING_COMMITMENTS",
-          count: existing.length,
+          count: occurrences.length,
+          routed: fixedPoints.length,
           message:
-            existing.length === 1
-              ? "Você já tem 1 compromisso hoje — o roteiro foi planejado ao redor dele."
-              : `Você já tem ${existing.length} compromissos hoje — o roteiro foi planejado ao redor deles.`,
+            fixedPoints.length > 0
+              ? `Você já tem ${occurrences.length} ${occurrences.length === 1 ? "compromisso" : "compromissos"} hoje — as sugestões estão no caminho deles.`
+              : `Você já tem ${occurrences.length} ${occurrences.length === 1 ? "compromisso" : "compromissos"} hoje — o roteiro foi planejado ao redor deles.`,
         });
       }
     }
 
     const lunchStart = this.atLocalTime(input.today, params.lunchStart, timeZone);
-    blocks.push({
+    busy.push({
       startsAt: lunchStart.getTime(),
       endsAt: lunchStart.getTime() + params.lunchMinutes * 60_000,
     });
 
-    return blocks.sort((a, b) => a.startsAt - b.startsAt);
-  }
-
-  /**
-   * A manager may draft for a rep they manage; nobody else may plan another
-   * person's day. Confirming is a separate, stricter gate (spec 0016 §7.3) —
-   * writing to someone's calendar stays theirs alone.
-   */
-  private assertMayPlanFor(input: GenerateRoteiroInput, subjectUserId: number): void {
-    if (subjectUserId === input.actor.userId) return;
-    if (input.actor.roleName === "ADMIN" && input.scope.isGlobal) return;
-    if (
-      input.actor.roleName === "MANAGER" &&
-      input.scope.managedUserIds.includes(subjectUserId)
-    ) {
-      return;
-    }
-    throw new ForbiddenError("Roteiro is outside the current owner/team scope");
-  }
-
-  private async resolveAnchor(input: GenerateRoteiroInput, subjectUserId: number) {
-    if (input.anchorProfileId === undefined) {
-      return { reachMode: "LIVRE" as RoteiroReachMode, anchor: null, anchorProfileId: null };
-    }
-    const found = await this.deps.repository.findAnchorProfile({
-      facilityVerticalProfileId: input.anchorProfileId,
-      userId: subjectUserId,
-      verticalId: input.verticalId,
-    });
-    if (!found) {
-      throw new ResourceNotFoundError("Clínica âncora", input.anchorProfileId);
-    }
-    return {
-      reachMode: "ANCORA" as RoteiroReachMode,
-      anchor: { lat: found.lat, lng: found.lng },
-      anchorProfileId: input.anchorProfileId,
-    };
+    return { fixedPoints, busy: busy.sort((a, b) => a.startsAt - b.startsAt) };
   }
 
   /** §4.1 — widen the bound until the shortlist is deep enough, or give up. */
@@ -473,7 +535,7 @@ export class GenerateRoteiroUseCase {
     subjectUserId: number;
     params: RoteiroParams;
     reachMode: RoteiroReachMode;
-    anchor: RoteiroPoint | null;
+    fixedPoints: FixedPoint[];
     limit: number;
   }) {
     const base =
@@ -489,7 +551,7 @@ export class GenerateRoteiroUseCase {
         verticalId: args.input.verticalId,
         origin: args.input.origin,
         reachMode: args.reachMode,
-        anchor: args.anchor,
+        fixedPoints: args.fixedPoints,
         reachBoundKm,
         params: args.params,
         today: args.input.today,
@@ -514,25 +576,17 @@ export class GenerateRoteiroUseCase {
     limit: number;
     params: RoteiroParams;
     notices: RoteiroNotice[];
-    anchorProfileId: number | null;
     origin: RoteiroPoint;
   }) {
-    const { candidates, limit, params, notices, anchorProfileId, origin } = args;
+    const { candidates, limit, params, notices, origin } = args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
     const chosen: { candidate: RoteiroCandidate; isCoverageSlot: boolean; isAnchor: boolean }[] = [];
 
-    // The anchor is a fixed commitment, not a suggestion — it takes position 0
-    // and never competes for a quota slot.
-    if (anchorProfileId !== null) {
-      const anchorCandidate = candidates.find(
-        (c) => c.facilityVerticalProfileId === anchorProfileId,
-      );
-      if (anchorCandidate) {
-        taken.add(anchorCandidate.facilityVerticalProfileId);
-        chosen.push({ candidate: anchorCandidate, isCoverageSlot: false, isAnchor: true });
-      }
-    }
+    // Booked visits are deliberately **not** selected here. They are already in
+    // the rep's calendar; the engine plans around them rather than proposing
+    // them back. They shape the route through §4.1 reachability and the §4.5
+    // cost model, not through the slate.
 
     // §4.3.1 — one reserved slot for the clinic longest without a commitment.
     const coverage = candidates
@@ -648,15 +702,12 @@ export class GenerateRoteiroUseCase {
     scopeDate: string;
     timeZone: string;
     busy: BusyInterval[];
+    fixedPoints: FixedPoint[];
   }): PlannedStop[] {
     const { params } = args;
-    const anchored = args.selected.filter((s) => s.isAnchor);
-    const remaining = args.selected.filter((s) => !s.isAnchor);
-
-    // No re-ordering here. §4.5 selection appends each stop to the route as it
-    // chooses it, so the order is already the one the gain rule paid for —
-    // re-sorting by nearest-neighbour afterwards would discard that decision.
-    const ordered = [...anchored, ...remaining];
+    // No re-ordering. §4.5 selection appends each stop to the route as it picks
+    // it, so the order is already the one the gain rule paid for.
+    const ordered = [...args.selected];
 
     const dayStart = this.atLocalTime(args.scopeDate, params.workdayStart, args.timeZone);
     let clock = new Date(Math.max(args.now.getTime(), dayStart.getTime()));
@@ -673,10 +724,23 @@ export class GenerateRoteiroUseCase {
       );
 
       let startsAt = new Date(clock.getTime() + (travelSeconds ?? 0) * 1000);
-      // Lunch and anything already in the agent's calendar are the same kind of
-      // obstacle: a stop is pushed past whichever it overlaps, repeatedly,
-      // because clearing one block can land it inside the next.
-      startsAt = new Date(pushPastBusy(startsAt.getTime(), serviceMinutes * 60_000, args.busy));
+      // Lunch and anything already booked are the same kind of obstacle: push
+      // the stop past whichever it overlaps, repeatedly, since clearing one can
+      // land it inside the next.
+      //
+      // For a booked *visit* the block is widened by the drive to and from it,
+      // so a suggestion never lands in the minutes the rep is actually on the
+      // road. Without that, a stop scheduled right before a booking across town
+      // looks fine on the clock and is impossible in the car.
+      const guarded = args.busy.map((block) => {
+        const point = args.fixedPoints.find(
+          (p) => p.startsAt.getTime() === block.startsAt,
+        );
+        if (!point) return block;
+        const approach = estimatedTravelSeconds(here, { lat: point.lat, lng: point.lng }) * 1000;
+        return { startsAt: block.startsAt - approach, endsAt: block.endsAt + approach };
+      });
+      startsAt = new Date(pushPastBusy(startsAt.getTime(), serviceMinutes * 60_000, guarded));
       const endsAt = new Date(startsAt.getTime() + serviceMinutes * 60_000);
 
       clock = endsAt;

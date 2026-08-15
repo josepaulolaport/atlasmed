@@ -1,7 +1,7 @@
 import { DrizzleRoteiroRepository } from "./infrastructure/repositories/drizzle-roteiro.repository";
 import {
   GenerateRoteiroUseCase,
-  type BusyBlockReader,
+  type ScheduleReader,
 } from "./application/use-cases/generate-roteiro.use-case";
 import {
   ConfirmRoteiroUseCase,
@@ -15,9 +15,11 @@ export const roteiroUseCases = {
   generate: () =>
     new GenerateRoteiroUseCase({
       repository,
-      // The agent's existing commitments, expanded through the calendar's own
-      // recurrence rules rather than re-derived here.
-      busy: calendarUseCases.availability() as unknown as BusyBlockReader,
+      // The agent's own schedule, read rather than asked for. `list` rather
+      // than `availability` because the roteiro needs to know *where* a booked
+      // visit is, not only that the hour is taken — that is what lets it plan
+      // clinics on the way to something already committed.
+      schedule: calendarUseCases.list() as unknown as ScheduleReader,
     }),
   confirm: () =>
     new ConfirmRoteiroUseCase({
