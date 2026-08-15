@@ -36,6 +36,7 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
       });
     }
 
+    final roteiro = state.roteiro;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Roteiro do dia')),
@@ -45,6 +46,29 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
           await ref.read(roteiroProvider.notifier).generate(verticalId: verticalId);
         },
         child: _body(context, state, verticalId),
+      ),
+      bottomNavigationBar: roteiro == null || roteiro.stops.isEmpty
+          ? null
+          : _ConfirmBar(
+              roteiro: roteiro,
+              confirming: state.confirming,
+              onConfirm: () => _confirm(context),
+            ),
+    );
+  }
+
+  Future<void> _confirm(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await ref.read(roteiroProvider.notifier).confirm();
+    if (!context.mounted) return;
+    final error = ref.read(roteiroProvider).error;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Roteiro confirmado — sua agenda foi montada.'
+              : (error?.toString() ?? 'Não foi possível confirmar o roteiro.'),
+        ),
       ),
     );
   }
@@ -108,6 +132,88 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Sticky footer: the day's totals and the one action that matters.
+class _ConfirmBar extends StatelessWidget {
+  const _ConfirmBar({
+    required this.roteiro,
+    required this.confirming,
+    required this.onConfirm,
+  });
+
+  final Roteiro roteiro;
+  final bool confirming;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final drive = (roteiro.driveSeconds / 60).round();
+    final ends = roteiro.endsAt;
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        decoration: const BoxDecoration(
+          color: AppColors.cardBg,
+          border: Border(top: BorderSide(color: AppColors.gray200)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${roteiro.stops.length} '
+                    '${roteiro.stops.length == 1 ? "parada" : "paradas"} · $drive min',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  if (ends != null)
+                    Text(
+                      'termina ${ends.hour.toString().padLeft(2, '0')}:${ends.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (roteiro.isConfirmed)
+              const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, size: 18, color: AppColors.green),
+                  SizedBox(width: 6),
+                  Text(
+                    'Na agenda',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.green,
+                    ),
+                  ),
+                ],
+              )
+            else
+              FilledButton(
+                onPressed: confirming || !roteiro.canConfirm ? null : onConfirm,
+                child: confirming
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Confirmar roteiro'),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

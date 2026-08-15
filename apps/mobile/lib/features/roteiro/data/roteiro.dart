@@ -220,6 +220,8 @@ List<String> buildReasons(
 
 class Roteiro {
   const Roteiro({
+    this.id,
+    this.status,
     required this.scopeDate,
     required this.reachMode,
     required this.reachBoundKm,
@@ -234,6 +236,8 @@ class Roteiro {
   factory Roteiro.fromJson(Map<String, dynamic> json) {
     final totals = (json['totals'] as Map?)?.cast<String, dynamic>() ?? const {};
     return Roteiro(
+      id: (json['id'] as num?)?.toInt(),
+      status: json['status'] as String?,
       scopeDate: json['scopeDate'] as String? ?? '',
       reachMode: json['reachMode'] as String? ?? 'LIVRE',
       reachBoundKm: (json['reachBoundKm'] as num?)?.toInt() ?? 0,
@@ -252,6 +256,9 @@ class Roteiro {
     );
   }
 
+  /// Null for a preview, which is deliberately not persisted.
+  final int? id;
+  final String? status;
   final String scopeDate;
   final String reachMode;
   final int reachBoundKm;
@@ -267,4 +274,6 @@ class Roteiro {
 
   bool get isEstimated => travelSource == 'ESTIMATED';
   bool get isAnchored => reachMode == 'ANCORA';
+  bool get isConfirmed => status == 'CONFIRMED';
+  bool get canConfirm => id != null && status == 'DRAFT' && stops.isNotEmpty;
 }

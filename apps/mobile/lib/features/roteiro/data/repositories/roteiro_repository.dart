@@ -38,7 +38,9 @@ class RoteiroRepository extends Repository<String>
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse('$_baseUrl/api/v1/roteiros/preview'),
+        // Persists a DRAFT. /preview is the non-persisting variant, kept for
+        // anchor exploration that must not disturb the rep's live plan.
+        url: Uri.parse('$_baseUrl/api/v1/roteiros'),
         method: RepositoryHttpMethod.post,
         body: {
           'verticalId': verticalId,
@@ -57,4 +59,38 @@ class RoteiroRepository extends Repository<String>
     }
     return Roteiro.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
+
+  /// Writes the roteiro into the agent's agenda.
+  ///
+  /// Idempotent server-side, so a retry after a dropped connection cannot
+  /// double-book the day. A 409 means the calendar changed since the plan was
+  /// generated — the times are never silently shifted, so the rep regenerates.
+  Future<Roteiro> confirm(int roteiroId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_baseUrl/api/v1/roteiros/$roteiroId/confirm'),
+        method: RepositoryHttpMethod.post,
+        body: const {},
+      ),
+    );
+    if (response.statusCode == 409) {
+      throw const RoteiroConflictException();
+    }
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw StateError('Não foi possível confirmar o roteiro.');
+      }
+    }
+    return Roteiro.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+}
+
+/// The agenda changed since the roteiro was generated.
+class RoteiroConflictException implements Exception {
+  const RoteiroConflictException();
+
+  @override
+  String toString() =>
+      'Sua agenda mudou desde que o roteiro foi gerado. Gere novamente para ver os horários atuais.';
 }

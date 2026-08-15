@@ -200,6 +200,50 @@ void main() {
       expect(roteiro.stops, isEmpty);
     });
 
+    test('a persisted DRAFT with stops can be confirmed', () {
+      final roteiro = Roteiro.fromJson({
+        'id': 12,
+        'status': 'DRAFT',
+        'stops': [
+          {'position': 0, 'candidate': {'facilityName': 'X'}},
+        ],
+      });
+
+      expect(roteiro.canConfirm, isTrue);
+      expect(roteiro.isConfirmed, isFalse);
+    });
+
+    test('a preview cannot be confirmed — it was never persisted', () {
+      final roteiro = Roteiro.fromJson({
+        'id': null,
+        'status': null,
+        'stops': [
+          {'position': 0, 'candidate': {'facilityName': 'X'}},
+        ],
+      });
+
+      expect(roteiro.canConfirm, isFalse);
+    });
+
+    test('an empty slate cannot be confirmed', () {
+      final roteiro = Roteiro.fromJson({'id': 12, 'status': 'DRAFT', 'stops': const []});
+
+      expect(roteiro.canConfirm, isFalse);
+    });
+
+    test('a confirmed roteiro reports itself as on the agenda', () {
+      final roteiro = Roteiro.fromJson({
+        'id': 12,
+        'status': 'CONFIRMED',
+        'stops': [
+          {'position': 0, 'candidate': {'facilityName': 'X'}},
+        ],
+      });
+
+      expect(roteiro.isConfirmed, isTrue);
+      expect(roteiro.canConfirm, isFalse);
+    });
+
     test('survives a response missing every optional field', () {
       // Installed builds must not crash on a server that adds or drops keys.
       final roteiro = Roteiro.fromJson(const {});
