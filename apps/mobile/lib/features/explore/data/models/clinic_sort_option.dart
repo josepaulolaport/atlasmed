@@ -10,6 +10,25 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurr
 /// `distance` is here but only usable where the caller has an origin — Explorar
 /// hides the option through `SortSheet(hasLocation:)` rather than offering a
 /// sort that silently does nothing.
+/// The ordering the médicos list will actually be in, given a sheet key.
+///
+/// The two tabs share one `sort` value but not one vocabulary: the doctors
+/// endpoint accepts `name` and nothing else — `SORTS = ["name"]` — and rejects
+/// anything else outright. Choosing "Mais próximos" on Clínicas and switching
+/// to Médicos therefore left the list name-ordered under a chip that read
+/// "Distância", with neither option ticked in its own sort sheet.
+///
+/// Normalising here means the label, the sheet and the request all read the
+/// same key, instead of the request quietly dropping one the other two still
+/// show.
+String effectiveDoctorSortKey(String key) =>
+    key == 'name-desc' ? 'name-desc' : 'name-asc';
+
+({FacilitySort? sort, SortOrder? order}) doctorSortForKey(String key) =>
+    effectiveDoctorSortKey(key) == 'name-desc'
+    ? (sort: FacilitySort.name, order: SortOrder.desc)
+    : (sort: FacilitySort.name, order: SortOrder.asc);
+
 ({FacilitySort? sort, SortOrder? order}) clinicSortForKey(
   String? key, {
   bool hasLocation = false,
