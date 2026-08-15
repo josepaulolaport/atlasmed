@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/unassign_reason_dialog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -66,12 +67,10 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
   late final _assignments = ClinicAssignmentRepository();
 
   Future<void> _dissociate(FacilityEntry row) async {
-    final reason = await showDialog<UnassignReason>(
-      context: context,
-      builder: (context) => _DissociateDialog(
-        clinicName: row.name,
-        memberName: widget.manageForName,
-      ),
+    final reason = await UnassignReasonDialog.show(
+      context,
+      clinicName: row.name,
+      memberName: widget.manageForName,
     );
     if (reason == null || !mounted) return;
 
@@ -273,82 +272,6 @@ class _DissociateMenu extends StatelessWidget {
           child: Text(
             memberName == null ? 'Desassociar' : 'Desassociar de $memberName',
           ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The motivo, chosen from a fixed list (spec 0015 R7).
-///
-/// Free text was the alternative and the wrong one: `end_reason` is kept
-/// forever (I5) and is the only account of why a clinic left a rep, so churn
-/// that cannot be aggregated is churn that cannot be explained later.
-class _DissociateDialog extends StatefulWidget {
-  const _DissociateDialog({required this.clinicName, required this.memberName});
-
-  final String clinicName;
-  final String? memberName;
-
-  @override
-  State<_DissociateDialog> createState() => _DissociateDialogState();
-}
-
-class _DissociateDialogState extends State<_DissociateDialog> {
-  UnassignReason _reason = UnassignReason.repChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Desassociar clínica'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.memberName == null
-                ? '${widget.clinicName} deixará de ter representante.'
-                : '${widget.clinicName} deixará de estar com ${widget.memberName}.',
-            style: const TextStyle(fontSize: 13.5, height: 1.35),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Motivo',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray500,
-            ),
-          ),
-          RadioGroup<UnassignReason>(
-            groupValue: _reason,
-            onChanged: (value) => setState(() => _reason = value!),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final reason in UnassignReason.values)
-                  RadioListTile<UnassignReason>(
-                    value: reason,
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      reason.label,
-                      style: const TextStyle(fontSize: 13.5),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_reason),
-          child: const Text('Desassociar'),
         ),
       ],
     );

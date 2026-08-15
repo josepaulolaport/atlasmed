@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_vertical_rep_assignments_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_vertical_rep_assignments_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/unassign_reason_dialog.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
@@ -83,8 +84,15 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     with WidgetsBindingObserver, RouteAware {
   /// Avoid refetch storms when resume + didPopNext fire close together.
   static const _minRefreshGap = Duration(seconds: 15);
+
+  /// How far the hero has to scroll before the app bar takes over its name.
+  /// Roughly the height of the name and its chips, so the two never show at
+  /// once and the title is there by the time the hero is gone.
+  static const _heroFadeOffset = 120.0;
+
   DateTime? _lastVisibilityRefreshAt;
   var _seededEntryVertical = false;
+  var _showTitle = false;
 
   @override
   void initState() {
@@ -170,6 +178,27 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
+        // The clinic's name, once its own heading has scrolled away.
+        //
+        // The bar carried no title at all, and the name lives in the blue hero
+        // *inside* the scroll — so from the second screenful down this was a
+        // bare navy slab with a back arrow on it, and nothing anywhere said
+        // which clinic you were reading. Faded in rather than always on, so it
+        // never sits directly above the same name in the hero.
+        title: AnimatedOpacity(
+          opacity: _showTitle ? 1 : 0,
+          duration: const Duration(milliseconds: 150),
+          child: Text(
+            displayFallback?.name ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
         actions: [
           BookmarkIconButton(
             kind: BookmarkKind.clinic,
@@ -181,57 +210,68 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           const SizedBox(width: 6),
         ],
       ),
-      body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
-        repository: repo,
-        builder: (context, data, repository) {
-          final zipFacility = data?.facility;
-          if (zipFacility != null && zipFacility.id > 0) {
-            // Seed Favoritos state from the detail response itself, rather than
-            // from `clinicDetailDisplayFacilityProvider`: that one falls back
-            // to the navigation shell built from a list DTO, which never
-            // carries `isBookmarked` and would keep a saved clinic looking
-            // unsaved.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!context.mounted) return;
-              ref
-                  .read(bookmarkedIdsProvider.notifier)
-                  .set(
-                    BookmarkKind.clinic,
-                    clinicId,
-                    bookmarked: zipFacility.isBookmarked,
-                  );
-            });
-          }
-          if (zipFacility != null &&
-              zipFacility.id > 0 &&
-              _shouldUpdateLoadedFacility(
-                ref.read(clinicDetailLoadedFacilityProvider(clinicId)),
-                zipFacility,
-              )) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!context.mounted) return;
-              ref
-                      .read(
-                        clinicDetailLoadedFacilityProvider(clinicId).notifier,
-                      )
-                      .state =
-                  zipFacility;
-            });
-          }
-          // Prefer live zip; fall back to loaded/shell so Linha refetch and
-          // list→detail navigation do not flash a full-page skeleton.
-          final detail = (zipFacility != null && zipFacility.id > 0)
-              ? zipFacility
-              : displayFallback;
-          if (detail == null || detail.id <= 0) {
-            return _loadingSkeleton(context);
-          }
-          return _ClinicDetailBody(
-            detail: detail,
-            clinicId: clinicId,
-            repository: repository,
-          );
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (notification) {
+          // Depth 0 only: the payer chart and the nearby preview scroll
+          // horizontally inside this page, and their notifications would flip
+          // the title on a sideways swipe.
+          if (notification.depth != 0) return false;
+          final showTitle = notification.metrics.pixels > _heroFadeOffset;
+          if (showTitle != _showTitle) setState(() => _showTitle = showTitle);
+          return false;
         },
+        child: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
+          repository: repo,
+          builder: (context, data, repository) {
+            final zipFacility = data?.facility;
+            if (zipFacility != null && zipFacility.id > 0) {
+              // Seed Favoritos state from the detail response itself, rather than
+              // from `clinicDetailDisplayFacilityProvider`: that one falls back
+              // to the navigation shell built from a list DTO, which never
+              // carries `isBookmarked` and would keep a saved clinic looking
+              // unsaved.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                ref
+                    .read(bookmarkedIdsProvider.notifier)
+                    .set(
+                      BookmarkKind.clinic,
+                      clinicId,
+                      bookmarked: zipFacility.isBookmarked,
+                    );
+              });
+            }
+            if (zipFacility != null &&
+                zipFacility.id > 0 &&
+                _shouldUpdateLoadedFacility(
+                  ref.read(clinicDetailLoadedFacilityProvider(clinicId)),
+                  zipFacility,
+                )) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                ref
+                        .read(
+                          clinicDetailLoadedFacilityProvider(clinicId).notifier,
+                        )
+                        .state =
+                    zipFacility;
+              });
+            }
+            // Prefer live zip; fall back to loaded/shell so Linha refetch and
+            // list→detail navigation do not flash a full-page skeleton.
+            final detail = (zipFacility != null && zipFacility.id > 0)
+                ? zipFacility
+                : displayFallback;
+            if (detail == null || detail.id <= 0) {
+              return _loadingSkeleton(context);
+            }
+            return _ClinicDetailBody(
+              detail: detail,
+              clinicId: clinicId,
+              repository: repository,
+            );
+          },
+        ),
       ),
     );
   }
@@ -1057,6 +1097,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ref,
                             facilityId: clinicId,
                             verticalId: activeLinhaId,
+                            clinicName: detail.name,
                           )
                         : null,
                   ),
@@ -1326,37 +1367,30 @@ Future<void> _assignClinicConsultant(
   }
 }
 
+/// Takes the consultant off this clinic, on the record.
+///
+/// This used to be a bare "Remover consultor?" yes/no that sent no reason, so
+/// the server fell back to `manual_unassign` — the catch-all that means *reason
+/// unrecorded*. The same action reached from Desempenho asked for a motivo and
+/// wrote it down. One fact, two doors, and only one of them kept the account
+/// that spec 0015 R7 exists to keep. Now both ask, through the same dialog.
 Future<void> _unassignClinicConsultant(
   BuildContext context,
   WidgetRef ref, {
   required int facilityId,
   required int verticalId,
+  required String clinicName,
 }) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Remover consultor?'),
-      content: const Text(
-        'A clínica ficará sem consultor responsável até uma nova atribuição.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Remover'),
-        ),
-      ],
-    ),
+  final reason = await UnassignReasonDialog.show(
+    context,
+    clinicName: clinicName,
   );
-  if (confirmed != true || !context.mounted) return;
+  if (reason == null || !context.mounted) return;
 
   try {
     await ref
         .read(facilityVerticalRepAssignmentsRepositoryProvider(facilityId))
-        .unassign(verticalId: verticalId);
+        .unassign(verticalId: verticalId, reason: reason);
     ref.invalidate(clinicDetailRepositoryProvider(facilityId));
     ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
