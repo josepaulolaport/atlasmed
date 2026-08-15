@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
@@ -107,42 +110,157 @@ final dashboardTerritoryProvider = _metricFamily<DashboardTerritory>(
   territoryRepository,
 );
 
-class MetricClinicsArgs {
-  const MetricClinicsArgs({
+/// The pages of a breakdown loaded so far, as one list.
+///
+/// The screen used to hold a page number and swap 25 rows for 25 other rows
+/// behind "Anterior · Próxima". Nothing else in the app reads that way: Explorar
+/// and every clinic surface built on it keep the list and grow it, with skeleton
+/// rows where the next page is landing. Same list, so the same behaviour.
+class MetricClinicsListState {
+  const MetricClinicsListState({
+    this.clinics = const [],
+    this.total = 0,
+    this.page = 0,
+    this.loading = true,
+    this.loadingMore = false,
+  });
+
+  final List<FacilityEntry> clinics;
+  final int total;
+
+  /// Highest page fetched; 0 before the first has landed.
+  final int page;
+  final bool loading;
+  final bool loadingMore;
+
+  /// Against `total` rather than "the last page came back full", so the footer
+  /// skeleton never appears below the final row.
+  bool get hasMore => clinics.length < total;
+
+  MetricClinicsListState copyWith({
+    List<FacilityEntry>? clinics,
+    int? total,
+    int? page,
+    bool? loading,
+    bool? loadingMore,
+  }) {
+    return MetricClinicsListState(
+      clinics: clinics ?? this.clinics,
+      total: total ?? this.total,
+      page: page ?? this.page,
+      loading: loading ?? this.loading,
+      loadingMore: loadingMore ?? this.loadingMore,
+    );
+  }
+}
+
+typedef MetricClinicsFetch =
+    Future<DashboardClinicPage?> Function({
+      required String metric,
+      required DashboardScopeArgs scope,
+      required int page,
+      required int limit,
+    });
+
+Future<DashboardClinicPage?> _fetchMetricClinics({
+  required String metric,
+  required DashboardScopeArgs scope,
+  required int page,
+  required int limit,
+}) async {
+  final repository = metricClinicsRepository(
+    metric: metric,
+    args: scope,
+    page: page,
+    limit: limit,
+  );
+  try {
+    return await repository.currentValueOrResolve();
+  } finally {
+    repository.dispose();
+  }
+}
+
+class MetricClinicsListNotifier extends StateNotifier<MetricClinicsListState> {
+  /// [fetch] is injected so paging can be driven in a widget test without an
+  /// HTTP stack — the accumulate-and-append behaviour is the part worth
+  /// pinning, and it is invisible from outside a real network.
+  MetricClinicsListNotifier({
     required this.metric,
     required this.scope,
-    this.page = 1,
-    this.limit = 25,
-  });
+    MetricClinicsFetch fetch = _fetchMetricClinics,
+  }) : _fetch = fetch,
+       super(const MetricClinicsListState()) {
+    unawaited(_load(1));
+  }
 
   final String metric;
   final DashboardScopeArgs scope;
-  final int page;
-  final int limit;
+  final MetricClinicsFetch _fetch;
+
+  static const pageSize = 25;
+
+  Future<void> refresh() async {
+    state = const MetricClinicsListState();
+    await _load(1);
+  }
+
+  /// Guarded on [MetricClinicsListState.loadingMore]: the scroll listener fires
+  /// on every scroll-end near the bottom, and an unguarded call would append the
+  /// same page twice.
+  Future<void> loadMore() async {
+    if (state.loadingMore || state.loading || !state.hasMore) return;
+    state = state.copyWith(loadingMore: true);
+    await _load(state.page + 1);
+  }
+
+  Future<void> _load(int page) async {
+    final result = await _fetch(
+      metric: metric,
+      scope: scope,
+      page: page,
+      limit: pageSize,
+    );
+    if (!mounted) return;
+    if (result == null) {
+      state = state.copyWith(loading: false, loadingMore: false);
+      return;
+    }
+    state = state.copyWith(
+      clinics: page == 1 ? result.data : [...state.clinics, ...result.data],
+      total: result.total,
+      page: page,
+      loading: false,
+      loadingMore: false,
+    );
+  }
+}
+
+class MetricClinicsListArgs {
+  const MetricClinicsListArgs({required this.metric, required this.scope});
+
+  final String metric;
+  final DashboardScopeArgs scope;
 
   @override
   bool operator ==(Object other) =>
-      other is MetricClinicsArgs &&
+      other is MetricClinicsListArgs &&
       other.metric == metric &&
-      other.scope == scope &&
-      other.page == page &&
-      other.limit == limit;
+      other.scope == scope;
 
   @override
-  int get hashCode => Object.hash(metric, scope, page, limit);
+  int get hashCode => Object.hash(metric, scope);
 }
 
-final metricClinicsProvider = Provider.autoDispose
-    .family<Repository<DashboardClinicPage>, MetricClinicsArgs>((ref, args) {
-      final repository = metricClinicsRepository(
-        metric: args.metric,
-        args: args.scope,
-        page: args.page,
-        limit: args.limit,
-      );
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
+final metricClinicsListProvider = StateNotifierProvider.autoDispose
+    .family<
+      MetricClinicsListNotifier,
+      MetricClinicsListState,
+      MetricClinicsListArgs
+    >(
+      (ref, args) =>
+          MetricClinicsListNotifier(metric: args.metric, scope: args.scope),
+    );
 
 /// The options every drawer can offer, for the scope currently on screen.
 ///

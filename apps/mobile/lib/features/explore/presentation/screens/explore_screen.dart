@@ -52,6 +52,7 @@ class ExploreResultsList extends ConsumerWidget {
     required this.onLoadMore,
     required this.bottomInset,
     this.preferredVerticalId,
+    this.clinicTrailingBuilder,
     super.key,
   });
 
@@ -61,6 +62,13 @@ class ExploreResultsList extends ConsumerWidget {
   final VoidCallback onLoadMore;
   final double bottomInset;
   final int? preferredVerticalId;
+
+  /// Optional control at the end of a clinic row.
+  ///
+  /// Only Desempenho's breakdown of somebody's own caseload passes one — the
+  /// `⋯` that hands a clinic back. Every other surface passes nothing and gets
+  /// the row exactly as Explorar draws it.
+  final Widget? Function(FacilityEntry clinic)? clinicTrailingBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,6 +100,7 @@ class ExploreResultsList extends ConsumerWidget {
           return items[index].fold(
             (clinic) => ClinicRow(
               clinic: clinic,
+              trailing: clinicTrailingBuilder?.call(clinic),
               onTap: () {
                 seedClinicDetailShellFromEntry(ref, clinic);
                 final verticalId = preferredVerticalId;

@@ -1,13 +1,17 @@
-import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_assignment_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
-import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+// `Left` only — dartz also exports a `State` that collides with Flutter's.
+import 'package:dartz/dartz.dart' show Left;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,35 +59,12 @@ class MetricClinicsScreen extends ConsumerStatefulWidget {
 }
 
 class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
-  int _page = 1;
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  /// Turning a page starts it at the top.
-  ///
-  /// The list kept its offset across a page change, and the only control that
-  /// changes pages sits at the very bottom — so tapping "Próxima" left you
-  /// exactly where you already were, at the end of a list that had silently
-  /// become a different one. On a 25-row page that hid the first sixteen rows
-  /// of every page after the first, and the screen looked like it had simply
-  /// scrolled a little.
-  void _goToPage(int next) {
-    setState(() => _page = next);
-    if (!_scrollController.hasClients) return;
-    _scrollController.jumpTo(0);
-  }
-
   /// Built on first use. A read-only breakdown never mutates anything, and
   /// constructing the client eagerly starts an HTTP stack the screen may have
   /// no use for.
   late final _assignments = ClinicAssignmentRepository();
 
-  Future<void> _dissociate(FacilityEntry row, MetricClinicsArgs args) async {
+  Future<void> _dissociate(FacilityEntry row) async {
     final reason = await showDialog<UnassignReason>(
       context: context,
       builder: (context) => _DissociateDialog(
@@ -117,32 +98,35 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // One instance, used by both the watch and the refresh: two constructions
-    // could drift and leave pull-to-refresh invalidating a different page than
-    // the one on screen.
-    final args = MetricClinicsArgs(
+    final args = MetricClinicsListArgs(
       metric: widget.metric,
       scope: widget.scope,
-      page: _page,
     );
-    final repository = ref.watch(metricClinicsProvider(args));
+    final state = ref.watch(metricClinicsListProvider(args));
+    final notifier = ref.read(metricClinicsListProvider(args).notifier);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(_metricTitles[widget.metric] ?? 'Clínicas')),
+      appBar: AppBar(
+        title: Text(_metricTitles[widget.metric] ?? 'Clínicas'),
+        // The count the card promised, where Explorar's own lists put it.
+        bottom: state.loading
+            ? null
+            : _CountHeader(total: state.total, loaded: state.clinics.length),
+      ),
       body: RefreshIndicator(
         color: AppColors.navyBright,
         backgroundColor: Colors.white,
         strokeWidth: 2.6,
-        onRefresh: () async => ref.invalidate(metricClinicsProvider(args)),
-        child: RepositoryBuilder(
-          repository: repository,
-          builder: (context, page, repo) {
-            if (page == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (page.data.isEmpty) {
-              return ListView(
+        onRefresh: notifier.refresh,
+        child: state.loading
+            ? ListView.builder(
+                itemCount: 8,
+                itemBuilder: (_, _) => const SkeletonRow(),
+              )
+            : state.clinics.isEmpty
+            ? ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   Padding(
@@ -150,97 +134,105 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
                     child: Text(
                       'Nenhuma clínica neste recorte.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
+                      style: TextStyle(fontSize: 14, color: AppColors.gray500),
                     ),
                   ),
                 ],
-              );
-            }
+              )
+            : ExploreResultsList(
+                items: [
+                  for (final clinic in state.clinics)
+                    Left<FacilityEntry, ProfessionalEntry>(clinic),
+                ],
+                hasMore: state.hasMore,
+                isLoadingMore: state.loadingMore,
+                onLoadMore: () => unawaited(notifier.loadMore()),
+                bottomInset: bottomInset,
+                preferredVerticalId: widget.scope.verticalId,
+                clinicTrailingBuilder: widget.manageForUserId == null
+                    ? null
+                    : (clinic) => _DissociateMenu(
+                        memberName: widget.manageForName,
+                        onOpen: () => ClinicDetailRoute(
+                          id: clinic.id,
+                          verticalId: widget.scope.verticalId,
+                        ).push(context),
+                        onDissociate: () => _dissociate(clinic),
+                      ),
+              ),
+      ),
+    );
+  }
+}
 
-            return ListView.separated(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: page.data.length + 1,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                if (index == page.data.length) {
-                  return _Pager(page: page, onChanged: _goToPage);
-                }
-                final clinic = page.data[index];
-                return _BreakdownRow(
-                  clinic: clinic,
-                  verticalId: widget.scope.verticalId,
-                  manageForName: widget.manageForUserId == null
-                      ? null
-                      : widget.manageForName,
-                  onDissociate: widget.manageForUserId == null
-                      ? null
-                      : () => _dissociate(clinic, args),
-                );
-              },
-            );
-          },
+/// "1423 clínicas" under the title, and how many are loaded while more come.
+class _CountHeader extends StatelessWidget implements PreferredSizeWidget {
+  const _CountHeader({required this.total, required this.loaded});
+
+  final int total;
+  final int loaded;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(26);
+
+  @override
+  Widget build(BuildContext context) {
+    final label = loaded >= total
+        ? '$total clínica${total == 1 ? '' : 's'}'
+        : '$loaded de $total clínicas';
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.gray500,
+          ),
         ),
       ),
     );
   }
 }
 
-/// Explorar's clinic row, with the one control this screen adds to it.
+/// The one control this screen adds to Explorar's row.
 ///
-/// This used to be a private re-implementation of [ClinicRow] — same 44px tile,
-/// same 15/w600 title, and none of the médicos count, foco clínico chips or
-/// status chips that make Explorar's row what it is. Two rows for one thing,
-/// and the copy quietly fell behind. A clinic list reached from Desempenho is
-/// the same list reached from Explorar, so it is now literally the same widget.
-class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({
-    required this.clinic,
-    required this.verticalId,
-    this.manageForName,
-    this.onDissociate,
+/// An overflow menu rather than a swipe: discoverable, and it does not fight
+/// the list's own scrolling.
+class _DissociateMenu extends StatelessWidget {
+  const _DissociateMenu({
+    required this.memberName,
+    required this.onOpen,
+    required this.onDissociate,
   });
 
-  final FacilityEntry clinic;
-  final int verticalId;
-  final String? manageForName;
-  final VoidCallback? onDissociate;
+  final String? memberName;
+  final VoidCallback onOpen;
+  final VoidCallback onDissociate;
 
   @override
   Widget build(BuildContext context) {
-    void open() =>
-        ClinicDetailRoute(id: clinic.id, verticalId: verticalId).push(context);
-
-    return ClinicRow(
-      clinic: clinic,
-      onTap: open,
-      // An overflow menu rather than a swipe: discoverable, and it does not
-      // fight the list's own scrolling.
-      trailing: onDissociate == null
-          ? null
-          : PopupMenuButton<String>(
-              icon: const Icon(
-                Icons.more_horiz_rounded,
-                size: 20,
-                color: AppColors.gray500,
-              ),
-              onSelected: (value) {
-                if (value == 'open') open();
-                if (value == 'dissociate') onDissociate!();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'open', child: Text('Ver clínica')),
-                PopupMenuItem(
-                  value: 'dissociate',
-                  child: Text(
-                    manageForName == null
-                        ? 'Desassociar'
-                        : 'Desassociar de $manageForName',
-                  ),
-                ),
-              ],
-            ),
+    return PopupMenuButton<String>(
+      icon: const Icon(
+        Icons.more_horiz_rounded,
+        size: 20,
+        color: AppColors.gray500,
+      ),
+      onSelected: (value) {
+        if (value == 'open') onOpen();
+        if (value == 'dissociate') onDissociate();
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'open', child: Text('Ver clínica')),
+        PopupMenuItem(
+          value: 'dissociate',
+          child: Text(
+            memberName == null ? 'Desassociar' : 'Desassociar de $memberName',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -317,41 +309,6 @@ class _DissociateDialogState extends State<_DissociateDialog> {
           child: const Text('Desassociar'),
         ),
       ],
-    );
-  }
-}
-
-class _Pager extends StatelessWidget {
-  const _Pager({required this.page, required this.onChanged});
-
-  final DashboardClinicPage page;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton(
-            onPressed: page.page > 1 ? () => onChanged(page.page - 1) : null,
-            child: const Text('Anterior'),
-          ),
-          Text(
-            // The range, not the page size. It read "25 de 146" on page one and
-            // "25 de 146" on page two, so the one control that says where you
-            // are said the same thing everywhere — and on a 146-clinic list
-            // the only way to tell pages apart was to recognise the names.
-            '${page.firstRowNumber}–${page.lastRowNumber} de ${page.total}',
-            style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
-          ),
-          TextButton(
-            onPressed: page.hasMore ? () => onChanged(page.page + 1) : null,
-            child: const Text('Próxima'),
-          ),
-        ],
-      ),
     );
   }
 }

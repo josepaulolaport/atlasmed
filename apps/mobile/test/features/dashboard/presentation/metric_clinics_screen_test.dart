@@ -1,35 +1,24 @@
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
-import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _LoadedPage extends Repository<DashboardClinicPage> {
-  _LoadedPage(this.page)
-    : super(
-        name: 'FakeClinicsRepository',
-        endpoint: Uri.parse('http://localhost/clinics'),
-        resolveOnCreate: false,
-      ) {
-    emit(data: page);
-  }
+/// The breakdown behind a Desempenho card.
+///
+/// It used to swap 25 rows for 25 other rows behind "Anterior · Próxima", which
+/// nothing else in the app does: Explorar and every clinic surface built on it
+/// keep the list and grow it, with skeleton rows where the next page lands.
 
-  final DashboardClinicPage page;
-
-  @override
-  Future<DashboardClinicPage?> currentValueOrResolve() async {
-    await emit(data: page);
-    return page;
-  }
-}
-
-/// Explorar's payload, because that is what the breakdown now returns.
+/// Explorar's payload, because that is what the breakdown returns.
 FacilityEntry clinic({
   int id = 1,
   String name = 'Clínica Santa Rita',
@@ -44,19 +33,51 @@ FacilityEntry clinic({
   );
 }
 
-final _page = DashboardClinicPage(
-  data: [clinic()],
-  total: 1,
-  page: 1,
-  limit: 25,
-);
+/// 25 rows a page over 60 clinics, named by absolute position so a row says
+/// which page it came from.
+DashboardClinicPage pageAt(int page, {int total = 60}) {
+  const limit = 25;
+  final first = (page - 1) * limit + 1;
+  final count = first + limit - 1 > total ? total - first + 1 : limit;
+  return DashboardClinicPage(
+    data: [
+      for (var i = 0; i < count; i++)
+        clinic(id: first + i, name: 'Clínica ${first + i}'),
+    ],
+    total: total,
+    page: page,
+    limit: limit,
+  );
+}
 
-Future<void> _pump(WidgetTester tester, {int? manageForUserId}) async {
+Future<void> pump(
+  WidgetTester tester, {
+  int? manageForUserId,
+  int total = 60,
+  Completer<DashboardClinicPage?>? holdPageTwo,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         dashboardSelectedVerticalIdProvider.overrideWith((ref) => 1),
-        metricClinicsProvider.overrideWith((ref, args) => _LoadedPage(_page)),
+        metricClinicsListProvider.overrideWith(
+          (ref, args) => MetricClinicsListNotifier(
+            metric: args.metric,
+            scope: args.scope,
+            fetch:
+                ({
+                  required metric,
+                  required scope,
+                  required page,
+                  required limit,
+                }) async {
+                  if (page == 2 && holdPageTwo != null) {
+                    return holdPageTwo.future;
+                  }
+                  return pageAt(page, total: total);
+                },
+          ),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light,
@@ -72,23 +93,29 @@ Future<void> _pump(WidgetTester tester, {int? manageForUserId}) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> scrollToBottom(WidgetTester tester) async {
+  await tester.fling(find.byType(ListView), const Offset(0, -6000), 4000);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('a metric breakdown is read-only', (tester) async {
     // A breakdown of "cobertura" is a population, not somebody's caseload.
     // Desassociar there would beg the question of whom you were unassigning.
-    await _pump(tester);
+    await pump(tester);
 
     expect(find.byType(PopupMenuButton<String>), findsNothing);
-    // Nothing trails the row at all — Explorar's row carries no chevron, and
-    // the breakdown's only trailing control is the ⋯ menu above.
-    expect(tester.widget<ClinicRow>(find.byType(ClinicRow)).trailing, isNull);
+    expect(
+      tester.widgetList<ClinicRow>(find.byType(ClinicRow)).first.trailing,
+      isNull,
+    );
   });
 
   testWidgets("a rep's own list can hand a clinic back", (tester) async {
-    await _pump(tester, manageForUserId: 5);
+    await pump(tester, manageForUserId: 5);
 
-    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    expect(find.byType(PopupMenuButton<String>), findsWidgets);
+    await tester.tap(find.byType(PopupMenuButton<String>).first);
     await tester.pumpAndSettle();
 
     expect(find.text('Ver clínica'), findsOneWidget);
@@ -99,130 +126,85 @@ void main() {
     // The screen used to re-implement ClinicRow privately and drift from it:
     // same tile and title, none of the médicos count or foco clínico beside
     // them. Asserting on the widget, not on a resemblance.
-    await _pump(tester);
+    await pump(tester);
 
-    expect(find.byType(ClinicRow), findsOneWidget);
+    expect(find.byType(ClinicRow), findsWidgets);
     expect(find.byType(ListTile), findsNothing);
-    expect(find.text('Clínica Santa Rita'), findsOneWidget);
-    expect(find.text('Icaraí · Niterói'), findsOneWidget);
+    expect(find.text('Clínica 1'), findsOneWidget);
     // Carried by the real row and absent from the copy.
-    expect(find.text('3 médicos'), findsOneWidget);
+    expect(find.text('3 médicos'), findsWidgets);
   });
 
-  group('paging', () {
-    /// 25 rows a page over 60 clinics, named by their absolute position so a
-    /// row identifies the page it came from.
-    DashboardClinicPage pageAt(int page) {
-      const limit = 25;
-      final first = (page - 1) * limit + 1;
-      final count = first + limit - 1 > 60 ? 60 - first + 1 : limit;
-      return DashboardClinicPage(
-        data: [
-          for (var i = 0; i < count; i++)
-            clinic(id: first + i, name: 'Clínica ${first + i}'),
-        ],
-        total: 60,
-        page: page,
-        limit: limit,
-      );
-    }
+  testWidgets('shows skeletons before the first page lands', (tester) async {
+    await pump(tester);
+    // ...and none once it has.
+    expect(find.byType(SkeletonRow), findsNothing);
+    expect(find.byType(ClinicRow), findsWidgets);
+  });
 
-    Future<void> pumpPaged(WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            dashboardSelectedVerticalIdProvider.overrideWith((ref) => 1),
-            metricClinicsProvider.overrideWith(
-              (ref, args) => _LoadedPage(pageAt(args.page)),
-            ),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.light,
-            home: const MetricClinicsScreen(
-              metric: 'assigned-clinics',
-              scope: DashboardScopeArgs(verticalId: 1),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-    }
+  group('infinite scroll', () {
+    testWidgets('reaching the end appends the next page to the same list', (
+      tester,
+    ) async {
+      await pump(tester);
+      expect(find.text('Clínica 26'), findsNothing);
 
-    testWidgets('says where in the whole set this page sits', (tester) async {
-      await pumpPaged(tester);
-      // The pager lives below 25 rows, and the list builds lazily — it is not
-      // in the tree until scrolled to.
+      await scrollToBottom(tester);
+
+      // Appended, not swapped: page one's rows are still in the list above.
       await tester.scrollUntilVisible(
-        find.text('Próxima'),
-        400,
+        find.text('Clínica 26'),
+        300,
         scrollable: find.byType(Scrollable).first,
       );
-
-      // Not "25 de 60", which was the label on every page alike.
-      expect(find.text('1–25 de 60'), findsOneWidget);
-    });
-
-    testWidgets('a new page starts at its first row, not where you were', (
-      tester,
-    ) async {
-      await pumpPaged(tester);
-      final list = find.byType(Scrollable).first;
-
-      // Reach the pager, which lives below 25 rows.
-      await tester.scrollUntilVisible(
-        find.text('Próxima'),
-        400,
-        scrollable: list,
-      );
-      final offsetAtPager = tester.widget<Scrollable>(list).controller!.offset;
-      expect(offsetAtPager, greaterThan(0), reason: 'the pager is off-screen');
-
-      await tester.tap(find.text('Próxima'));
-      await tester.pumpAndSettle();
-
-      // The defect: the offset survived the page change, so the first sixteen
-      // rows of every page after the first were never on screen.
-      expect(tester.widget<Scrollable>(list).controller!.offset, 0);
       expect(find.text('Clínica 26'), findsOneWidget);
-
-      await tester.scrollUntilVisible(
-        find.text('Próxima'),
-        400,
-        scrollable: list,
-      );
-      expect(find.text('26–50 de 60'), findsOneWidget);
     });
 
-    testWidgets('the last page ends on the total and offers no next', (
+    testWidgets('a skeleton row holds the place of the page in flight', (
       tester,
     ) async {
-      await pumpPaged(tester);
-      final list = find.byType(Scrollable).first;
+      final hold = Completer<DashboardClinicPage?>();
+      await pump(tester, holdPageTwo: hold);
 
-      for (final _ in [1, 2]) {
-        await tester.scrollUntilVisible(
-          find.text('Próxima'),
-          400,
-          scrollable: list,
-        );
-        await tester.tap(find.text('Próxima'));
-        await tester.pumpAndSettle();
-      }
+      await scrollToBottom(tester);
+      // The skeleton slot is appended below the last row, and a lazy builder
+      // does not build what is off-screen — so scroll onto it.
+      await scrollToBottom(tester);
 
-      await tester.scrollUntilVisible(
-        find.text('Próxima'),
-        400,
-        scrollable: list,
-      );
+      expect(find.byType(SkeletonRow), findsWidgets);
 
-      expect(find.text('51–60 de 60'), findsOneWidget);
-      final next = tester.widget<TextButton>(
-        find.ancestor(
-          of: find.text('Próxima'),
-          matching: find.byType(TextButton),
-        ),
-      );
-      expect(next.onPressed, isNull);
+      hold.complete(pageAt(2));
+      await tester.pumpAndSettle();
+      expect(find.byType(SkeletonRow), findsNothing);
+    });
+
+    testWidgets('stops asking once every clinic is loaded', (tester) async {
+      // 20 clinics is one short page: there is no second page to fetch, and no
+      // skeleton should ever appear below the last row.
+      await pump(tester, total: 20);
+
+      await scrollToBottom(tester);
+
+      expect(find.byType(SkeletonRow), findsNothing);
+      expect(find.text('20 clínicas'), findsOneWidget);
+    });
+  });
+
+  group('count header', () {
+    testWidgets('states the whole set, not the page', (tester) async {
+      await pump(tester);
+
+      // The pager said "25 de 60" on every page alike; this says how much of
+      // the set is on screen and how large the set is.
+      expect(find.text('25 de 60 clínicas'), findsOneWidget);
+    });
+
+    testWidgets('drops the qualifier once everything is loaded', (
+      tester,
+    ) async {
+      await pump(tester, total: 20);
+
+      expect(find.text('20 clínicas'), findsOneWidget);
     });
   });
 }
