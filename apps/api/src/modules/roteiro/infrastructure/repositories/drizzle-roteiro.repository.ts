@@ -303,6 +303,41 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     };
   }
 
+  async searchAddableClinics(input: {
+    userId: number;
+    verticalId: number;
+    query: string | null;
+    limit: number;
+  }) {
+    const term = input.query?.trim();
+    const rows = (await db.execute(sql`
+      select p.id as profile_id, f.id as facility_id, f.name as facility_name,
+             mu.name as municipality, rf.neighborhood as neighborhood,
+             p.purchase_funnel_stage::text as funnel_stage
+      from facility_vertical_profiles p
+      join facilities f on f.id = p.facility_id
+      join facility_vertical_rep_assignments a
+        on a.facility_vertical_profile_id = p.id and a.ended_at is null
+      left join municipalities mu on mu.id = f.municipality_id
+      left join registry.facilities rf on rf.cnes_id = f.cnes_code
+      where p.is_active
+        and p.vertical_id = ${input.verticalId}
+        and a.user_id = ${input.userId}
+        and f.location is not null
+        ${term ? sql`and f.name ilike ${'%' + term + '%'}` : sql``}
+      order by f.name
+      limit ${input.limit}
+    `)) as unknown as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      facilityVerticalProfileId: Number(row.profile_id),
+      facilityId: Number(row.facility_id),
+      facilityName: String(row.facility_name),
+      municipality: row.municipality === null ? null : String(row.municipality),
+      neighborhood: row.neighborhood === null ? null : String(row.neighborhood),
+      funnelStage: String(row.funnel_stage),
+    }));
+  }
+
   async locateFacilities(input: { facilityIds: number[]; verticalId: number }) {
     if (input.facilityIds.length === 0) return [];
     const rows = (await db.execute(sql`

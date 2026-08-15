@@ -238,6 +238,31 @@ export interface RoteiroRepository {
    */
   markConfirmed(input: { roteiroId: number; confirmedAt: Date }): Promise<void>;
   /**
+   * The agent's own clinics for this linha, for the "add a clinic" picker.
+   *
+   * Deliberately **not** filtered by reachability or cooldown: a rep adding a
+   * clinic by hand knows something the engine does not, and a picker that hid
+   * the clinic they were told to visit would be worse than no picker. The day
+   * still has to hold it — that check belongs to generation, which reports when
+   * it cannot.
+   */
+  searchAddableClinics(input: {
+    userId: number;
+    verticalId: number;
+    query: string | null;
+    limit: number;
+  }): Promise<
+    Array<{
+      facilityVerticalProfileId: number;
+      facilityId: number;
+      facilityName: string;
+      municipality: string | null;
+      neighborhood: string | null;
+      funnelStage: string;
+    }>
+  >;
+
+  /**
    * Locations for facilities the agent is already booked into today, so those
    * visits can act as fixed points rather than merely blocked time.
    */

@@ -7,6 +7,7 @@ import {
   ConfirmRoteiroUseCase,
   type CalendarEventCreator,
 } from "./application/use-cases/confirm-roteiro.use-case";
+import { ListAddableClinicsUseCase } from "./application/use-cases/list-addable-clinics.use-case";
 import { calendarUseCases } from "../calendar/composition";
 import { MapboxTravelTimeSource } from "./infrastructure/adapters/mapbox-travel.adapter";
 import { CachedTravelTimeSource } from "./infrastructure/adapters/cached-travel.adapter";
@@ -30,6 +31,7 @@ export const roteiroUseCases = {
       travel: new CachedTravelTimeSource(new MapboxTravelTimeSource()),
       quota: new RedisGenerationQuota(),
     }),
+  listAddable: () => new ListAddableClinicsUseCase({ repository }),
   confirm: () =>
     new ConfirmRoteiroUseCase({
       repository,

@@ -2,6 +2,8 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_workspace_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_day_map_screen.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/add_clinic_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_stop_card.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_timeline.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -131,6 +133,30 @@ class _RoteiroWorkspaceScreenState
     );
   }
 
+  Future<void> _add(
+    RoteiroWorkspaceState state,
+    RoteiroWorkspaceNotifier notifier,
+  ) async {
+    final verticalId = ref
+        .read(currentUserVerticalIdsProvider)
+        .valueOrNull
+        ?.firstOrNull;
+    if (verticalId == null) return;
+    final chosen = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddClinicSheet(
+        repository: ref.read(roteiroRepositoryProvider),
+        verticalId: verticalId,
+        alreadyInSlate: {
+          for (final stop in state.roteiro?.stops ?? const [])
+            stop.facilityVerticalProfileId,
+        },
+      ),
+    );
+    if (chosen != null) await notifier.add(chosen);
+  }
+
   Future<void> _save(RoteiroWorkspaceState state) async {
     final verticalId = ref
         .read(currentUserVerticalIdsProvider)
@@ -199,6 +225,7 @@ class _RoteiroWorkspaceScreenState
               state: state,
               onRegenerate: notifier.generate,
               onReset: notifier.reset,
+              onAdd: () => _add(state, notifier),
             ),
             if (roteiro.stops.isNotEmpty && roteiro.fixedPoints.isNotEmpty)
               Padding(
@@ -271,11 +298,13 @@ class _Toolbar extends StatelessWidget {
     required this.state,
     required this.onRegenerate,
     required this.onReset,
+    required this.onAdd,
   });
 
   final RoteiroWorkspaceState state;
   final VoidCallback onRegenerate;
   final VoidCallback onReset;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -300,10 +329,15 @@ class _Toolbar extends StatelessWidget {
             ),
           if (state.dirty)
             TextButton(onPressed: onReset, child: const Text('Recomeçar')),
-          TextButton.icon(
+          IconButton(
+            tooltip: 'Adicionar clínica',
+            onPressed: onAdd,
+            icon: const Icon(Icons.add_circle_outline, size: 20),
+          ),
+          IconButton(
+            tooltip: 'Gerar de novo',
             onPressed: onRegenerate,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Gerar de novo'),
+            icon: const Icon(Icons.refresh, size: 20),
           ),
         ],
       ),

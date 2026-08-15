@@ -14,6 +14,7 @@ type Executable = { execute(input: never): Promise<unknown> };
 export interface RoteiroHttpUseCases {
   generate(): Executable;
   confirm(): Executable;
+  listAddable(): Executable;
 }
 
 /**
@@ -133,6 +134,39 @@ export const roteiroRoute = (
           security: [{ bearerAuth: [] }],
         },
         body: generationBody,
+      },
+    )
+    .get(
+      "/roteiros/addable",
+      async ({ query, getScope, getUserId, getAuthContext }) => {
+        const [scope, userId, authContext] = await Promise.all([
+          getScope(),
+          getUserId(),
+          getAuthContext(),
+        ]);
+        return useCases.listAddable().execute({
+          actor: { userId, roleName: authContext.roleName },
+          scope,
+          subjectUserId: query.subjectUserId,
+          verticalId: query.verticalId,
+          query: query.q,
+        } as never);
+      },
+      {
+        detail: {
+          summary: "Clinics the agent may add to a roteiro by hand",
+          description:
+            "The agent's own book for the linha, searchable by name. Not narrowed by " +
+            "reachability or cooldown — a rep adding a clinic knows something the engine does " +
+            "not; whether the day can hold it is generation's answer.",
+          tags: ["Roteiro"],
+          security: [{ bearerAuth: [] }],
+        },
+        query: t.Object({
+          verticalId: t.Number({ minimum: 1 }),
+          q: t.Optional(t.String()),
+          subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+        }),
       },
     )
     .post(

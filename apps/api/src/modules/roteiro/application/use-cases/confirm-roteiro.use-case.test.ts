@@ -87,6 +87,9 @@ class FakeRepository implements RoteiroRepository {
   async countAssignedProfiles() {
     return 0;
   }
+  async searchAddableClinics() {
+    return [];
+  }
   async locateFacilities() {
     return [];
   }

@@ -270,6 +270,35 @@ class RoteiroFixedPoint {
   final DateTime endsAt;
 }
 
+/// A clinic the rep may add to the day by hand.
+class AddableClinic {
+  const AddableClinic({
+    required this.facilityVerticalProfileId,
+    required this.facilityName,
+    required this.funnelStage,
+    this.municipality,
+    this.neighborhood,
+  });
+
+  factory AddableClinic.fromJson(Map<String, dynamic> json) => AddableClinic(
+    facilityVerticalProfileId:
+        (json['facilityVerticalProfileId'] as num?)?.toInt() ?? 0,
+    facilityName: json['facilityName'] as String? ?? 'Clínica',
+    funnelStage: json['funnelStage'] as String? ?? '',
+    municipality: json['municipality'] as String?,
+    neighborhood: json['neighborhood'] as String?,
+  );
+
+  final int facilityVerticalProfileId;
+  final String facilityName;
+  final String funnelStage;
+  final String? municipality;
+  final String? neighborhood;
+
+  /// The bairro tells two branches of a chain apart; the city is the fallback.
+  String? get place => neighborhood ?? municipality;
+}
+
 class Roteiro {
   const Roteiro({
     this.id,

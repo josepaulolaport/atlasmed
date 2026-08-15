@@ -49,6 +49,7 @@ function errorEnvelope(app: never) {
 interface Captured {
   generate: unknown[];
   confirm: unknown[];
+  listAddable: unknown[];
 }
 
 function build(options: {
@@ -56,7 +57,7 @@ function build(options: {
   confirm?: () => Promise<unknown>;
   role?: string;
 } = {}) {
-  const captured: Captured = { generate: [], confirm: [] };
+  const captured: Captured = { generate: [], confirm: [], listAddable: [] };
   const useCases: RoteiroHttpUseCases = {
     generate: () => ({
       execute: async (input: never) => {
@@ -68,6 +69,12 @@ function build(options: {
       execute: async (input: never) => {
         captured.confirm.push(input);
         return options.confirm ? await options.confirm() : { id: 1, status: "CONFIRMED" };
+      },
+    }),
+    listAddable: () => ({
+      execute: async (input: never) => {
+        captured.listAddable.push(input);
+        return { data: [] };
       },
     }),
   };
@@ -219,6 +226,27 @@ describe("roteiro HTTP", () => {
     const { app } = build();
 
     const response = await app.handle(post("/roteiros/abc/confirm"));
+
+    expect(response.status).toBe(400);
+  });
+
+  it("GET /roteiros/addable passes the linha and search term through", async () => {
+    const { app, captured } = build();
+
+    const response = await app.handle(
+      new Request("http://localhost/roteiros/addable?verticalId=1&q=cohen"),
+    );
+
+    expect(response.status).toBe(200);
+    const input = captured.listAddable[0] as { verticalId: number; query: string };
+    expect(input.verticalId).toBe(1);
+    expect(input.query).toBe("cohen");
+  });
+
+  it("rejects an addable lookup with no linha", async () => {
+    const { app } = build();
+
+    const response = await app.handle(new Request("http://localhost/roteiros/addable"));
 
     expect(response.status).toBe(400);
   });

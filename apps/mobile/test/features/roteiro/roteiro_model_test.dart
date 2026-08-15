@@ -165,6 +165,37 @@ void main() {
     );
   });
 
+  group('AddableClinic', () {
+    test('prefers the bairro, which is what tells two branches apart', () {
+      final clinic = AddableClinic.fromJson({
+        'facilityVerticalProfileId': 77,
+        'facilityName': 'Vita Clinicas',
+        'municipality': 'Sao Paulo',
+        'neighborhood': 'Ibirapuera',
+        'funnelStage': 'NEVER_PURCHASED',
+      });
+
+      expect(clinic.place, 'Ibirapuera');
+      expect(clinic.facilityVerticalProfileId, 77);
+    });
+
+    test('falls back to the city when CNES has no bairro', () {
+      final clinic = AddableClinic.fromJson({
+        'facilityVerticalProfileId': 78,
+        'facilityName': 'Clinica X',
+        'municipality': 'Londrina',
+      });
+
+      expect(clinic.place, 'Londrina');
+    });
+
+    test('survives a row missing everything optional', () {
+      final clinic = AddableClinic.fromJson(const {});
+      expect(clinic.facilityName, 'Clínica');
+      expect(clinic.place, isNull);
+    });
+  });
+
   group('Roteiro.fromJson', () {
     test('reads stops, totals and notices', () {
       final roteiro = Roteiro.fromJson({

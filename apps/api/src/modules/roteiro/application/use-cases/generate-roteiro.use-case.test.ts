@@ -73,6 +73,9 @@ class FakeRepository implements RoteiroRepository {
   async countAssignedProfiles() {
     return this.options.assigned ?? 100;
   }
+  async searchAddableClinics() {
+    return [];
+  }
   async locateFacilities() {
     return this.options.located ?? [];
   }

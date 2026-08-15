@@ -73,6 +73,32 @@ class RoteiroRepository extends Repository<String>
     return Roteiro.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
+  /// The rep's own clinics for the linha, for the add picker.
+  Future<List<AddableClinic>> addable({
+    required int verticalId,
+    String? query,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_baseUrl/api/v1/roteiros/addable').replace(
+          queryParameters: {
+            'verticalId': '$verticalId',
+            if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+          },
+        ),
+      ),
+    );
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) throw StateError('Não foi possível buscar clínicas.');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return ((body['data'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => AddableClinic.fromJson(e.cast<String, dynamic>()))
+        .toList();
+  }
+
   /// Persists the shaped slate, then writes it into the agenda.
   ///
   /// Two calls rather than one because persisting and confirming are separate

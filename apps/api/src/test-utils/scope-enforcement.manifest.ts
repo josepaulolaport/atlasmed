@@ -162,6 +162,13 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
   // own calendar, so ownership is checked directly rather than through the
   // manager/global widening that generation allows. The scope itself is passed
   // through to the calendar use case, which enforces facility visibility.
+  // The picker lists the subject's own book, so scope is the same
+  // owner/manager check generation makes before it will plan for someone.
+  "modules/roteiro/application/use-cases/list-addable-clinics.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["managedUserIds", "isGlobal"],
+  },
+
   "modules/roteiro/application/use-cases/confirm-roteiro.use-case.ts": {
     kind: "assert-id",
     patterns: ["roteiro.userId", "ForbiddenError"],
