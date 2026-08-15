@@ -35,7 +35,8 @@ instruction: *go here, in this order, for this reason, and here is how long the 
 | Drive times between points | `GET /maps/matrix` → Mapbox Matrix | **proxied, tested, zero callers** |
 | Rep's free time | `conflict.service.ts` | live |
 | Executing a visit | `calendar` + `interactions` (`start` / `complete`, linked orders) | live |
-| Paperwork blocking revenue | `facility_vertical_profiles.conformity_status` | live |
+| Which surgeons work where | `registry.facility_professional_occupations` (CBO 225270) | **loaded, zero callers** |
+| What kind of unit it is | `registry.facilities.unit_type_code` → `registry.unit_types` | loaded |
 | Device GPS | `features/location/data/location_service.dart` | live |
 
 What is genuinely new: a scoring model, a selection/routing algorithm, three tables, one API
@@ -185,22 +186,21 @@ n = 1.0 when there has never been one
 *reach* of inactive clinics is guaranteed by the §4.3 quota instead, which is the honest mechanism
 — inflating a score to force coverage makes every explanation a lie.
 
-**f) Blocker — `b`.** `1` when `conformity_status <> 'COMPLETE'` on a profile that has ordered,
-else `0`. Incomplete cadastro on a paying clinic is revenue at risk and gives the visit a concrete
-errand.
+> **No cadastro/conformity component** (user decision, 2026-08-14). An earlier draft scored
+> `conformity_status <> 'COMPLETE'` as revenue at risk. The premise is false on the real data:
+> **every one of the 1 442 profiles is `UNREGISTERED`, including all 89 that buy.** Clinics order,
+> get approved and get invoiced in that state, so incomplete cadastro is not blocking revenue and
+> is not a reason to route a rep. It was also a constant, and would have contributed nothing but a
+> misleading sentence on the stop card.
+>
+> Cadastro remains a real workflow; it is simply not an input to *where to go today*.
 
-```
-mérito = w_t·t + w_h·h + w_n·n + w_v·v + w_k·k + w_b·b        Σw = 1
-```
+**Further components not in v1** — whether the unit serves convênio at all, product-level purchase
+gaps, contracted hours per surgeon, and credit blocks from Emultec. Each would add a term to the
+sum below. They are catalogued, ranked by value ÷ effort and sequenced in
+[`data-sources.md`](./data-sources.md).
 
-**Components deliberately not in v1.** Several further signals are available — orthopaedist
-headcount per clinic (already loaded into `registry.professional_workloads` and read by nothing),
-whether the unit serves convênio at all, product-level purchase gaps, and credit blocks from
-Emultec. Each would add a component to the sum above. They are catalogued, ranked by value ÷ effort,
-and sequenced in [`data-sources.md`](./data-sources.md). The first three are hours of work and
-should land immediately after P1 — `PROSPECTAR` has almost no signal without them.
-
-**g) Capacity — `c`.** The number of orthopaedic surgeons CNES records at the facility, from
+**f) Capacity — `c`.** The number of orthopaedic surgeons CNES records at the facility, from
 `registry.facility_professional_occupations` where `occupation_cnes_id = '225270'`
 (*MEDICO ORTOPEDISTA E TRAUMATOLOGISTA*), percentile-ranked within the candidate set.
 
@@ -208,7 +208,7 @@ This is not an enrichment. **It is the only component that discriminates for 94 
 (§4.9), and it is measurably predictive: clinics with ≥5 orthopaedists convert at 21–26 %, those
 with ≤4 at 3.6–4.8 %. It is already in the database and read by nothing.
 
-**h) Fit — `q`.** How well the facility's CNES **unit type** matches who actually buys from us.
+**g) Fit — `q`.** How well the facility's CNES **unit type** matches who actually buys from us.
 Measured conversion by type (§4.9):
 
 | unit type | clinics | buyers | % |
@@ -238,26 +238,26 @@ Applying fit turns a list headed by a staffing co-op into one headed by Institut
 CEOT, Ortovida, Hospital Ortopédico, Cortrel and COT. Same data, one join.
 
 ```
-mérito = w_t·t + w_h·h + w_n·n + w_v·v + w_k·k + w_b·b + w_c·c + w_q·q        Σw = 1
+mérito = w_t·t + w_h·h + w_n·n + w_v·v + w_k·k + w_c·c + w_q·q        Σw = 1
 ```
 
 **Default weights** (per vertical, tunable — §6.3), set from the §4.9 measurement:
 
-| w_t | w_h | w_n | w_v | w_k | w_b | w_c | w_q |
-|---|---|---|---|---|---|---|---|
-| 0.16 | 0.10 | 0.12 | 0.06 | 0.07 | 0.04 | **0.25** | **0.20** |
+| w_t | w_h | w_n | w_v | w_k | w_c | w_q |
+|---|---|---|---|---|---|---|
+| 0.16 | 0.10 | 0.12 | 0.06 | 0.07 | **0.27** | **0.22** |
 
-> ⚠️ **On day one, five of these eight components are constants.** Timing is flat for the 93.8 %
+> ⚠️ **On day one, five of these seven components are constants.** Timing is flat for the 93.8 %
 > that never purchased; headroom is `HEADROOM_UNKNOWN` for everyone because
 > `facility_metric_snapshots` is empty; neglect is 1.0 for everyone because `interactions` and
 > `visits` both hold **zero rows**; account value is 0 for 94 %; risk is 0 for 95 %.
 >
-> **What actually ranks the book at launch is capacity × fit, plus the cadastro blocker.** That is
-> not a flaw to hide — it is the honest description of a book nobody has visited yet, and those two
-> components are exactly the ones measured to work. Every other component switches itself on as the
-> data arrives: the first visits make neglect vary, the first competitor surveys make headroom vary,
-> the first orders make timing vary. The weights above anticipate that; they are deliberately not
-> tuned to make today's constants disappear.
+> **What actually ranks the book at launch is capacity × fit** — the two components measured to
+> work (§4.9). That is not a flaw to hide; it is the honest description of a book nobody has
+> visited yet. Every other component switches itself on as the data arrives: the first visits make
+> neglect vary, the first competitor surveys make headroom vary, the first orders make timing vary.
+> The weights above anticipate that and are deliberately not tuned to make today's constants
+> disappear.
 
 > **These are not the weights this spec was first drafted with**, and the difference is the whole
 > argument for measuring before building. The original set put `w_t = 0.34` and `w_h = 0.22` — 56 %
@@ -577,7 +577,7 @@ roteiro_stop_rejections
 roteiro_params                                   (one row per vertical; §6.3)
   vertical_id              bigint pk → business_verticals
   daily_limit              smallint  default 5   check between 1 and 12
-  weights                  jsonb                 (w_t … w_b, must sum to 1 — checked)
+  weights                  jsonb                 (w_t … w_q, must sum to 1 — checked)
   bucket_ratios            jsonb                 (MANTER/RECUPERAR/PROSPECTAR)
   cooldown_days            jsonb                 (per bucket)
   service_minutes          jsonb                 (per modality, per bucket override)
@@ -603,9 +603,10 @@ Weights and quotas change. A stored score must stay explainable after they do, a
   "t": {"raw": 0.93, "weighted": 0.316, "r": 0.78, "daysToWindow": -12},
   "h": {"raw": 0.81, "weighted": 0.178, "theirsQty": 80, "share": 0.33, "surveyed": true},
   "n": {"raw": 1.00, "weighted": 0.160, "daysSinceInteraction": 62},
-  "v": {"raw": 0.44, "weighted": 0.053, "oursQty": 40},
+  "v": {"raw": 0.44, "weighted": 0.026, "oursQty": 40},
   "k": {"raw": 0.00, "weighted": 0.000, "stage": "PURCHASE_WINDOW"},
-  "b": {"raw": 1.00, "weighted": 0.060, "conformityStatus": "PENDING"}
+  "c": {"raw": 0.88, "weighted": 0.238, "orthopaedists": 24},
+  "q": {"raw": 1.00, "weighted": 0.220, "unitType": "Clinica/Centro de Especialidade"}
 }
 ```
 
@@ -773,7 +774,7 @@ Three coordinated views over one slate — never three separate screens with sep
      - *"Entra na janela de compra em 3 dias"*
      - *"Concorrente com 80 ampolas/mês aqui — nossa participação 33%"*
      - *"Sem visita há 62 dias"*
-     - *"Cadastro incompleto — bloqueia faturamento"*
+     - *"24 ortopedistas registrados aqui"*
      - *"Potencial não medido — vale levantar a concorrência"*
    - overflow: **Trocar** · **Remover** · **Ver clínica** · **Mudar para remoto**
 2. **Mapa**. Numbered pins in visiting order, the driving polyline, origin marker, REMOTE stops
