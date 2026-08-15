@@ -374,6 +374,7 @@ Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possíve
 - Handle offline first for visit logging: assume network can fail mid-form.
 - Respect GPS/battery: no continuous foreground GPS unless the user is actively navigating.
 - Version é gerenciada pelo Cider, nunca editada manualmente no `pubspec.yaml`.
+- `CHANGELOG.md`: títulos de versão no formato `## <versão> - <data>`, sem colchetes, e mudanças pendentes sob `## Unreleased`. O Cider identifica releases por esse padrão; com colchetes ele não reconhece versão alguma, escapa os títulos existentes e grava a nova seção no fim do arquivo — silenciosamente, com exit 0, num passo do CI que só commita o resultado.
 - Patches Shorebird são declarativos: adicione ao `shorebird-patches.json` e o CI aplica.
 - `config.production.json` NÃO é versionado — materializado no CI via `CONFIG_PRODUCTION_JSON_BASE64`.
 - Flutter SDK version pinned via FVM (`.fvmrc`).
