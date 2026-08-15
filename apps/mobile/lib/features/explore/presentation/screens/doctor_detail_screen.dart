@@ -265,56 +265,34 @@ class _DoctorDetailContent extends ConsumerWidget {
                 DetailQuickActions(
                   themeColor: detail.primaryColor,
                   actions: [
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.phone_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('Ligar'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: callUrl(detail.phone),
-                        contactLabel: 'telefone',
-                      ),
+                    // Greyed when the doctor has no number on file, rather than
+                    // live and answering a tap with "não há telefone".
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.phone_rounded,
+                      color: detail.primaryColor,
+                      label: 'Ligar',
+                      url: callUrl(detail.phone),
+                      contactLabel: 'telefone',
+                      launch: launchContactUrl,
                     ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.chat_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('WhatsApp'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: whatsappUrl(detail.whatsapp),
-                        contactLabel: 'WhatsApp',
-                      ),
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.chat_rounded,
+                      color: detail.primaryColor,
+                      label: 'WhatsApp',
+                      url: whatsappUrl(detail.whatsapp),
+                      contactLabel: 'WhatsApp',
+                      launch: launchContactUrl,
                     ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.email_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('E-mail'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: emailUrl(detail.email),
-                        contactLabel: 'e-mail',
-                      ),
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.email_rounded,
+                      color: detail.primaryColor,
+                      label: 'E-mail',
+                      url: emailUrl(detail.email),
+                      contactLabel: 'e-mail',
+                      launch: launchContactUrl,
                     ),
                     QuickActionItem(
                       icon: CircleAvatar(

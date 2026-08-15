@@ -61,6 +61,24 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
+QuickActionItem _contactAction(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required Uri? url,
+  required String contactLabel,
+}) {
+  return contactQuickAction(
+    context: context,
+    icon: icon,
+    color: AppColors.navyBright,
+    label: label,
+    url: url,
+    contactLabel: contactLabel,
+    launch: launchContactUrl,
+  );
+}
+
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
 // ===============================================================
@@ -683,41 +701,30 @@ class _ClinicDetailContent extends ConsumerWidget {
                 DetailQuickActions(
                   themeColor: AppColors.navyBright,
                   actions: [
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: AppColors.navyBright.createSecondary(),
-                        radius: 18,
-                        child: const Icon(
-                          Icons.phone_rounded,
-                          size: 18,
-                          color: AppColors.navyBright,
-                        ),
-                      ),
-                      label: const Text('Ligar'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: callUrl(detail.contact?.phone),
-                        contactLabel: 'telefone',
-                      ),
+                    // Built from the URL rather than always live.
+                    //
+                    // `QuickActionItem` greys itself out when `onTap` is null,
+                    // and that path was unreachable here: the callback was
+                    // always supplied and only discovered inside
+                    // `launchContactUrl` that there was no number, answering a
+                    // tap with "Não há telefone cadastrado". A clinic with no
+                    // phone offered Ligar and WhatsApp at full strength, and
+                    // the only way to learn otherwise was to press them.
+                    _contactAction(
+                      context,
+                      icon: Icons.phone_rounded,
+                      label: 'Ligar',
+                      url: callUrl(detail.contact?.phone),
+                      contactLabel: 'telefone',
                     ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: AppColors.navyBright.createSecondary(),
-                        radius: 18,
-                        child: const Icon(
-                          Icons.chat_rounded,
-                          size: 18,
-                          color: AppColors.navyBright,
-                        ),
+                    _contactAction(
+                      context,
+                      icon: Icons.chat_rounded,
+                      label: 'WhatsApp',
+                      url: whatsappUrl(
+                        detail.contact?.whatsapp ?? detail.contact?.phone,
                       ),
-                      label: const Text('WhatsApp'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: whatsappUrl(
-                          detail.contact?.whatsapp ?? detail.contact?.phone,
-                        ),
-                        contactLabel: 'WhatsApp',
-                      ),
+                      contactLabel: 'WhatsApp',
                     ),
                     QuickActionItem(
                       icon: CircleAvatar(
