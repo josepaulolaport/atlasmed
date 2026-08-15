@@ -362,6 +362,7 @@ class Roteiro {
     required this.driveSeconds,
     required this.serviceMinutes,
     this.endsAt,
+    this.workdayEndsAt,
   });
 
   factory Roteiro.fromJson(Map<String, dynamic> json) {
@@ -392,6 +393,9 @@ class Roteiro {
       driveSeconds: (totals['driveSeconds'] as num?)?.toInt() ?? 0,
       serviceMinutes: (totals['serviceMinutes'] as num?)?.toInt() ?? 0,
       endsAt: DateTime.tryParse(totals['endsAt'] as String? ?? '')?.toLocal(),
+      workdayEndsAt: DateTime.tryParse(
+        totals['workdayEndsAt'] as String? ?? '',
+      )?.toLocal(),
     );
   }
 
@@ -413,6 +417,11 @@ class Roteiro {
   final int driveSeconds;
   final int serviceMinutes;
   final DateTime? endsAt;
+
+  /// When the rep's workday closes. The engine never plans past it — but the
+  /// rep can, by lengthening a visit, and a day that quietly runs to 18:28 is
+  /// not a plan they can keep.
+  final DateTime? workdayEndsAt;
 
   /// How many suggestion slots the day has — the engine's daily limit, not the
   /// number it managed to fill. The difference is what an empty slot shows.

@@ -152,6 +152,37 @@ void main() {
       expect(schedule.warnings.first.message, contains('deslocamento'));
     });
 
+    test('warns when an edit pushes the day past the rep\'s closing time', () {
+      // The engine never plans past it. The rep can, by lengthening a visit,
+      // and a day that quietly runs to 18:28 is not a plan anyone can keep.
+      final stops = [_stop(id: 1, hour: 16), _stop(id: 2, hour: 17)];
+
+      final schedule = buildSchedule(
+        stops: stops,
+        fixedPoints: const [],
+        durationOverrides: const {1: 120},
+        workdayEndsAt: DateTime(2026, 8, 17, 18),
+      );
+
+      expect(schedule.hasWarnings, isTrue);
+      expect(
+        schedule.warnings.any((w) => w.message.contains('19:00')),
+        isTrue,
+      );
+    });
+
+    test('says nothing when the day still fits', () {
+      final stops = [_stop(id: 1, hour: 9), _stop(id: 2, hour: 11)];
+
+      final schedule = buildSchedule(
+        stops: stops,
+        fixedPoints: const [],
+        workdayEndsAt: DateTime(2026, 8, 17, 18),
+      );
+
+      expect(schedule.hasWarnings, isFalse);
+    });
+
     test('every offered duration is a whole calendar slot', () {
       // Anything else is rounded up by the calendar and the rep is shown a
       // number their agenda then quietly changes.

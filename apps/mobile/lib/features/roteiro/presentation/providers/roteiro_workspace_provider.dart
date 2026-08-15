@@ -242,6 +242,7 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
     fixedPoints: roteiro.fixedPoints,
     durationOverrides: state.durations,
     startOverrides: state.startTimes,
+    workdayEndsAt: roteiro.workdayEndsAt,
   );
 
   /// Suggestions the rep has not pulled out of the slate.

@@ -986,6 +986,11 @@ export class GenerateRoteiroUseCase {
         driveSeconds: stops.reduce((sum, s) => sum + (s.travelSecondsFromPrev ?? 0), 0),
         serviceMinutes: stops.reduce((sum, s) => sum + s.serviceMinutes, 0),
         endsAt: stops.at(-1)?.plannedEndsAt ?? null,
+        // The rep's workday end, sent so the client can say when *their* edits
+        // push the day past it. The engine enforces this when it plans; a
+        // duration the rep lengthens afterwards has to be checked by whoever
+        // is holding the change, and that is the workspace.
+        workdayEndsAt: dayEnd,
       },
     };
   }

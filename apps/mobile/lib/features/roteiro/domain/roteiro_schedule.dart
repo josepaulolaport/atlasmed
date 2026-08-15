@@ -1,5 +1,8 @@
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 
+String _hhmm(DateTime at) =>
+    '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+
 /// Durations the calendar can actually hold.
 ///
 /// Multiples of 30 because the calendar rounds up to its slot (spec 0016 §7.3):
@@ -63,6 +66,7 @@ RoteiroSchedule buildSchedule({
   required List<RoteiroFixedPoint> fixedPoints,
   Map<int, int> durationOverrides = const {},
   Map<int, DateTime> startOverrides = const {},
+  DateTime? workdayEndsAt,
 }) {
   final ordered = [...stops]
     ..sort((a, b) => a.plannedStartsAt.compareTo(b.plannedStartsAt));
@@ -136,15 +140,32 @@ RoteiroSchedule buildSchedule({
 
   return RoteiroSchedule(
     stops: result,
-    warnings: _warnings(result, fixedPoints),
+    warnings: _warnings(result, fixedPoints, workdayEndsAt),
   );
 }
 
 List<RoteiroScheduleWarning> _warnings(
   List<ScheduledStop> result,
   List<RoteiroFixedPoint> fixedPoints,
+  DateTime? workdayEndsAt,
 ) {
   final warnings = <RoteiroScheduleWarning>[];
+
+  // The engine never plans past the end of the workday. The rep can, by
+  // lengthening a visit — and a day that quietly runs to 18:28 is not a plan
+  // anyone can keep, so it is said rather than absorbed.
+  final last = result.isEmpty ? null : result.last;
+  if (workdayEndsAt != null &&
+      last != null &&
+      last.endsAt.isAfter(workdayEndsAt)) {
+    final over = last.endsAt.difference(workdayEndsAt).inMinutes;
+    warnings.add(
+      RoteiroScheduleWarning(
+        'O dia agora termina $over min depois do seu horário '
+        '(${_hhmm(last.endsAt)} contra ${_hhmm(workdayEndsAt)}).',
+      ),
+    );
+  }
 
   // A commitment already in the calendar cannot move to make room. If an edit
   // runs into one, the rep has a real conflict to resolve, not a display bug.

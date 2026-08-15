@@ -325,6 +325,23 @@ class _Toolbar extends StatelessWidget {
   final VoidCallback onReset;
   final VoidCallback onAdd;
 
+  /// Counts only the kinds of edit the rep actually made.
+  ///
+  /// Listing every kind means a rep who only stretched one visit is told
+  /// "0 removidas", which is both noise and slightly wrong — it describes the
+  /// edit they did not make.
+  static String _editSummary(RoteiroWorkspaceState state) {
+    final parts = <String>[
+      if (state.excluded.isNotEmpty)
+        '${state.excluded.length} removida${state.excluded.length == 1 ? "" : "s"}',
+      if (state.included.isNotEmpty)
+        '${state.included.length} adicionada${state.included.length == 1 ? "" : "s"}',
+      if (state.durations.isNotEmpty || state.startTimes.isNotEmpty)
+        'horários ajustados',
+    ];
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -334,15 +351,14 @@ class _Toolbar extends StatelessWidget {
           if (state.dirty)
             Expanded(
               child: Text(
-                '${state.excluded.length} removida${state.excluded.length == 1 ? "" : "s"}'
-                '${state.included.isNotEmpty ? " · ${state.included.length} adicionada${state.included.length == 1 ? "" : "s"}" : ""}',
+                _editSummary(state),
                 style: const TextStyle(fontSize: 12, color: AppColors.gray500),
               ),
             )
           else
             const Expanded(
               child: Text(
-                'Arraste uma parada para remover',
+                'Ajuste horário e duração; o dia se reorganiza',
                 style: TextStyle(fontSize: 12, color: AppColors.gray500),
               ),
             ),
