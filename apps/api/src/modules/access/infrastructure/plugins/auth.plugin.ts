@@ -18,8 +18,6 @@ import { getClientIp } from "../../../../shared/utils/client-ip";
 import { readVerticalIdHeader, resolveVerticalIds } from "../../application/services/vertical-access.service";
 import { parseCrmId } from "../../../../shared/utils/parse-crm-id";
 
-const LAST_SEEN_THRESHOLD = 5 * 60 * 1000;
-
 function assertActiveUserStatus(
   status: string,
   userId: number,
@@ -68,10 +66,44 @@ type AuthContext = {
   status: string;
 };
 
+/**
+ * The header a client sets on a request that followed a real interaction
+ * (spec 0015 §4.1).
+ *
+ * `last_seen_at` exists to answer "is this person still using the app". The
+ * token refresh runs on an 8-minute timer, so counting every authenticated
+ * request would keep an untouched phone looking alive indefinitely — the field
+ * would say what it does not mean.
+ *
+ * Client-declared, and deliberately so: this is telemetry about our own reps,
+ * not an authorisation input, so nothing turns on it being unforgeable. A build
+ * that never sends it simply stops moving the field, which is the honest
+ * failure — better than silently reporting timer traffic as activity.
+ */
+const CLIENT_ACTIVITY_HEADER = "x-client-activity";
+
+/**
+ * How stale the cached timestamp must be before it is worth a write.
+ *
+ * Compared in memory against the session we already hold, so the common request
+ * costs nothing at all — no Redis round-trip, no query. Two instances deciding
+ * to write at once is harmless: they write near-identical timestamps and the
+ * last one wins, so there is nothing here to serialise.
+ */
+const LAST_SEEN_REFRESH_MS = 5 * 60 * 1000;
+
+function isLastSeenStale(lastSeenAt: string | Date | null | undefined): boolean {
+  if (!lastSeenAt) return true;
+  const seen = new Date(lastSeenAt).getTime();
+  if (Number.isNaN(seen)) return true;
+  return Date.now() - seen >= LAST_SEEN_REFRESH_MS;
+}
+
 async function resolveAccessSessionFromToken(
   token: string,
   ipAddress: string,
-  dependencies: AuthPluginDependencies
+  dependencies: AuthPluginDependencies,
+  isUserActivity = false,
 ): Promise<AuthContext> {
   const { 
     tokenService, 
@@ -356,52 +388,20 @@ async function resolveAccessSessionFromToken(
 
   assertActiveUserStatus(authContext.status, userId, ipAddress);
 
-  const lastSeenKey = `session:${sessionId}:lastSeen`;
-  const lastSeenCache = await redis.get(lastSeenKey);
-  
-  if (!lastSeenCache) {
-    sessionRepository.updateLastSeen(sessionId).catch((error) => {
+  // Spec 0015 §4.1. Fire-and-forget: nothing on this request depends on it and
+  // a slow write must not sit in front of the response. Failures are logged
+  // rather than swallowed — a last-seen that quietly stopped moving would read
+  // as a team that stopped working.
+  if (isUserActivity && isLastSeenStale(session.lastSeenAt)) {
+    void Promise.all([
+      sessionRepository.updateLastSeen(sessionId),
+      sessionCacheService.updateLastSeen(sessionId),
+    ]).catch((error) => {
       logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to update lastSeen"
+        { err: error, sessionId: payload.sid, userId },
+        "Failed to refresh session last_seen_at",
       );
     });
-    sessionCacheService.updateLastSeen(sessionId).catch((error) => {
-      logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to update lastSeen in cache"
-      );
-    });
-    redis.setex(lastSeenKey, 300, Date.now().toString()).catch((error) => {
-      logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to cache lastSeen"
-      );
-    });
-  } else {
-    const lastSeenTime = parseInt(lastSeenCache, 10);
-    const timeSinceLastUpdate = Date.now() - lastSeenTime;
-    
-    if (timeSinceLastUpdate > LAST_SEEN_THRESHOLD) {
-      sessionRepository.updateLastSeen(sessionId).catch((error) => {
-        logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to update lastSeen"
-      );
-      });
-      sessionCacheService.updateLastSeen(sessionId).catch((error) => {
-        logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to update lastSeen in cache"
-      );
-      });
-      redis.setex(lastSeenKey, 300, Date.now().toString()).catch((error) => {
-        logger.error(
-        { sessionId: payload.sid, error: error.message },
-        "Failed to cache lastSeen"
-      );
-      });
-    }
   }
 
   return {
@@ -429,7 +429,12 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
       const token = authHeader.substring(7);
 
       try {
-        const authContext = await resolveAccessSessionFromToken(token, ipAddress, dependencies);
+        const authContext = await resolveAccessSessionFromToken(
+          token,
+          ipAddress,
+          dependencies,
+          request.headers.get(CLIENT_ACTIVITY_HEADER) === "1",
+        );
 
         const headerVerticalId = readVerticalIdHeader(request.headers);
 

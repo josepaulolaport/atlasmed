@@ -366,6 +366,38 @@ class CompetitorPickerListSkeleton extends StatelessWidget {
   );
 }
 
+/// Equipe's roster, in the shape its rows actually have — 44px rounded avatar,
+/// a name, and one line of meta.
+class TeamListSkeleton extends StatelessWidget {
+  const TeamListSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) => _ListPlaceholder(
+    children: List.generate(
+      4,
+      (index) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            _SkeletonIconBox(size: 44, radius: 12),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBar(width: 160, height: 14),
+                  SizedBox(height: 7),
+                  _SkeletonBar(width: 210, height: 11),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class UserPickerListSkeleton extends StatelessWidget {
   const UserPickerListSkeleton({super.key});
 

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:flutter/material.dart';
 
@@ -11,7 +11,7 @@ class PurchaseStatusDonutCard extends StatelessWidget {
     this.onBucketTap,
   });
 
-  final DashboardPurchaseStatus data;
+  final DashboardBuckets data;
 
   /// Opens dedicated clinics list for this purchase-status bucket.
   final ValueChanged<String>? onBucketTap;

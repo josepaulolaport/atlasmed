@@ -58,9 +58,18 @@ export class DrizzleScopeRepository implements ScopeRepository {
         AND zone_tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND patch_tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND u.deleted_at IS NULL
-    `) as Array<{ id: number }>;
+    `) as Array<{ id: number | string }>;
 
-    return rows.map((row) => row.id);
+    // `user_id` is a bigint and this is a raw `db.execute`, so postgres-js hands
+    // it back as a **string** — the previous `as Array<{ id: number }>` was a
+    // cast, not a conversion, and the declared `Promise<number[]>` was a lie.
+    //
+    // It survived because every consumer fed the ids straight back into SQL,
+    // where '4' and 4 compare equal. The first consumer to compare in
+    // JavaScript found it: `managedUserIds.includes(subjectUserId)` in
+    // `resolveSubject` is `['4','5','6'].includes(4)` — false — so a manager
+    // sorting Equipe by any metric got 403 on their own reps.
+    return rows.map((row) => Number(row.id));
   }
 
   async assignTerritory(params: {

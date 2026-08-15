@@ -40,6 +40,8 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
 {
   async findOutOfTerritoryAssignments(params: {
     verticalIds?: number[];
+    /** Spec 0015 §4.2: one person's overrides, for their profile card. */
+    userId?: number;
     limit: number;
     offset: number;
   }): Promise<{
@@ -94,6 +96,7 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
       WHERE fvra.ended_at IS NULL
         AND fvra.override_reason IS NOT NULL
         AND (cardinality(s.vertical_ids) = 0 OR fvp.vertical_id = ANY(s.vertical_ids))
+        AND (${params.userId ?? null}::bigint IS NULL OR fvra.user_id = ${params.userId ?? null})
       ORDER BY fvra.started_at DESC, fvra.id DESC
       LIMIT ${params.limit} OFFSET ${params.offset}
     `)) as Array<{
@@ -341,6 +344,12 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
     facilityId: number;
     verticalId: number;
     endReason: string;
+    /**
+     * Who ended it. The boundary path has always recorded this; a manual
+     * unassign did not, so a rep could lose a clinic with the row saying only
+     * that someone, at some point, decided so.
+     */
+    endedByUserId?: number | null;
   }): Promise<{ endedUserId: number | null }> {
     const current = await this.findCurrentByFacilityVertical(
       params.facilityId,
@@ -353,6 +362,7 @@ export class DrizzleFacilityVerticalRepAssignmentRepository
       .set({
         endedAt: new Date(),
         endReason: params.endReason,
+        endedByUserId: params.endedByUserId ?? null,
         updatedAt: new Date(),
       })
       .where(eq(facilityVerticalRepAssignments.id, current.id));

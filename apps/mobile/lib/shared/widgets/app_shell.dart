@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
@@ -35,8 +36,61 @@ class AppShellScreen extends StatefulWidget {
   State<AppShellScreen> createState() => AppShellScreenState();
 }
 
+/// The branches visited before the current one, most recent last.
+///
+/// `StatefulNavigationShell` gives each branch its own stack and no order
+/// between them, so at the root of a branch there is nothing to go back to: you
+/// land on Equipe from Desempenho and the only way out is the drawer again.
+/// This is that memory, and it is the whole of it — enough to answer "where was
+/// I", not a second navigator.
+class BranchHistory {
+  /// Bounded because this is a convenience, not a record. Somebody moving
+  /// between two sections all afternoon should not accumulate an afternoon of
+  /// history to walk back through.
+  static const maxEntries = 12;
+
+  final List<int> _entries = [];
+
+  bool get canGoBack => _entries.isNotEmpty;
+
+  /// Records leaving [current]. Re-selecting the open branch is not a move, so
+  /// it remembers nothing — otherwise tapping Equipe twice would make "back"
+  /// return to Equipe.
+  void push({required int leaving, required int entering}) {
+    if (leaving == entering) return;
+    _entries.add(leaving);
+    if (_entries.length > maxEntries) _entries.removeAt(0);
+  }
+
+  /// The branch to return to, or null when there is none.
+  int? pop() => _entries.isEmpty ? null : _entries.removeLast();
+}
+
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  final BranchHistory _branchHistory = BranchHistory();
+
+  bool get canGoBackBranch => _branchHistory.canGoBack;
+
+  /// Switches branch, remembering the one being left.
+  void selectBranch(int branchIndex) {
+    final current = widget.navigationShell.currentIndex;
+    _branchHistory.push(leaving: current, entering: branchIndex);
+    widget.navigationShell.goBranch(
+      branchIndex,
+      initialLocation: branchIndex == current,
+    );
+    setState(() {});
+  }
+
+  /// Returns to the branch this one was opened from.
+  void goBackBranch() {
+    final previous = _branchHistory.pop();
+    if (previous == null) return;
+    widget.navigationShell.goBranch(previous);
+    setState(() {});
+  }
 
   static const Color _defaultShellChromeColor = AppColors.background;
 
@@ -68,10 +122,7 @@ class AppShellScreenState extends State<AppShellScreen> {
         backgroundColor: _defaultShellChromeColor,
         drawer: AtlasDrawer(
           activeBranchIndex: navigationShell.currentIndex,
-          onSelectBranch: (branchIndex) => navigationShell.goBranch(
-            branchIndex,
-            initialLocation: branchIndex == navigationShell.currentIndex,
-          ),
+          onSelectBranch: selectBranch,
         ),
         body: Stack(
           children: [
@@ -94,6 +145,36 @@ class AppShellScreenState extends State<AppShellScreen> {
 /// Convenience call to open the AppShell drawer from any descendant context.
 void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
+
+/// Signing out drops the session **and** the cached user.
+///
+/// The session was never the only thing identifying a person. `UserRepository`
+/// is a long-lived singleton and `currentValueOrResolve()` returns its cached
+/// value without refetching — it says so in its own doc comment — so a logout
+/// that clears only the session leaves the previous user's name, e-mail and
+/// role in place. The next person to sign in then inherits them: the drawer
+/// greets them by someone else's name, and `currentUserRoleProvider` reports
+/// someone else's role to every screen that gates on it, until the app is
+/// restarted.
+///
+/// Revoking remotely is best effort. An expired token or a dead network must
+/// not leave the app signed in locally, so the user is cleared in a `finally` —
+/// but the failure is logged rather than swallowed, because a revoke that
+/// quietly failed leaves a live session on the server.
+Future<void> performLogout({
+  required Future<void> Function() revokeSession,
+  required Future<void> Function() clearUser,
+}) async {
+  try {
+    await revokeSession();
+  } catch (error) {
+    BaseRepository.logger(
+      'Logout: failed to revoke the remote session: $error',
+    );
+  } finally {
+    await clearUser();
+  }
+}
 
 // ======================================================================
 // AtlasTopBar — legacy inline bar with hamburger + breadcrumb
@@ -171,6 +252,15 @@ class _AtlasTopBarContent extends StatelessWidget {
         height: 40,
         child: Row(
           children: [
+            // Shown only once there is somewhere to return to. At the root of a
+            // branch the leading control is a menu, which opens a list of
+            // destinations rather than retracing the one step you took — so
+            // arriving on Equipe from Desempenho left no way back but choosing
+            // Desempenho again from that list.
+            if (_branchBackAvailable(context)) ...[
+              _branchBackButton(context),
+              const SizedBox(width: 8),
+            ],
             _hamburgerButton(context),
             if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
             if (compact) const Spacer(),
@@ -180,6 +270,51 @@ class _AtlasTopBarContent extends StatelessWidget {
     );
   }
 
+  static bool _branchBackAvailable(BuildContext context) =>
+      AppShellScreenState.of(context)?.canGoBackBranch ?? false;
+
+  /// Back to the section you came from, drawn like the leading control so the
+  /// pair reads as one bar rather than as a button bolted onto one.
+  Widget _branchBackButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => AppShellScreenState.of(context)?.goBackBranch(),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: AppColors.surfaceSecondary),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A0f1729),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+            BoxShadow(
+              color: Color(0x0D0f1729),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: AppColors.navyDeep,
+          size: 15,
+        ),
+      ),
+    );
+  }
+
+  /// The leading button, which is a *menu* inside the shell and a *back* button
+  /// above it.
+  ///
+  /// It always did both — a screen pushed over the shell has no
+  /// `AppShellScreenState` ancestor, so the tap fell through to `maybePop`. What
+  /// it did not do was say so: it drew a hamburger either way, so on a rep's
+  /// Desempenho, pushed from Equipe, the only way back looked like a menu and
+  /// nobody tried it. The icon now matches the action.
   Widget _hamburgerButton(BuildContext context) {
     final isInsideAppShell = AppShellScreenState.of(context) != null;
 
@@ -210,27 +345,35 @@ class _AtlasTopBarContent extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.menu_rounded, color: AppColors.navyDeep, size: 15),
-            // Green dot accent
-            Positioned(
-              top: 6,
-              right: 5,
-              child: Container(
-                width: 5,
-                height: 5,
-                decoration: const BoxDecoration(
-                  color: AppColors.green,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white,
-                      blurRadius: 0,
-                      spreadRadius: 1.5,
-                    ),
-                  ],
+            Icon(
+              isInsideAppShell
+                  ? Icons.menu_rounded
+                  : Icons.arrow_back_ios_new_rounded,
+              color: AppColors.navyDeep,
+              size: 15,
+            ),
+            // Green dot accent — the drawer's "you have somewhere to go" mark.
+            // A back button has one obvious destination, so it carries none.
+            if (isInsideAppShell)
+              Positioned(
+                top: 6,
+                right: 5,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: AppColors.green,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white,
+                        blurRadius: 0,
+                        spreadRadius: 1.5,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -335,13 +478,20 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.layers_outlined,
     visibleFor: canReadTerritories,
   ),
+  // Spec 0014 §6. `Usuários` below stays admin-only and unrelated: this is the
+  // roster a manager works from, not the user-administration surface.
   AppNavigationItem(
-    branchIndex: 5,
-    label: 'Usuários',
-    route: '/users',
-    icon: Icons.people_outline_rounded,
-    visibleFor: canManageUsers,
+    branchIndex: 11,
+    label: 'Equipe',
+    route: '/team',
+    icon: Icons.groups_outlined,
+    visibleFor: canReadTeam,
   ),
+  // Usuários is deliberately absent from the drawer: Equipe is now the one
+  // place people are listed. Branch 5 and `/users` still exist and still work —
+  // only the way in is gone — so restoring the entry is one item, not a
+  // rebuild. Note that this also removes the only entry point to "Convidar":
+  // nothing else in the app starts an invitation.
   AppNavigationItem(
     branchIndex: 6,
     label: 'Pedidos',
@@ -369,12 +519,12 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.inventory_outlined,
     visibleFor: canReadCatalog,
   ),
-  AppNavigationItem(
-    branchIndex: 10,
-    label: 'Perfil',
-    route: '/profile',
-    icon: Icons.person_outline_rounded,
-  ),
+
+  // Perfil is hidden alongside Usuários. Branch 10 and `/profile` still exist —
+  // only the drawer entry is gone. Note what goes with it: the avatar picker,
+  // the push-notification preference and the personal Território card have no
+  // other entry point in the app. Signing out does not: "Sair" is in the
+  // drawer's own footer, not on Perfil.
 ];
 
 class AtlasDrawer extends ConsumerWidget {
@@ -429,7 +579,11 @@ class AtlasDrawer extends ConsumerWidget {
                     _DrawerFooter(
                       onLogout: () {
                         Navigator.of(context).pop();
-                        repository.delete();
+                        final userRepository = ref.read(userProvider);
+                        performLogout(
+                          revokeSession: repository.delete,
+                          clearUser: userRepository.clear,
+                        );
                       },
                     ),
                   ],

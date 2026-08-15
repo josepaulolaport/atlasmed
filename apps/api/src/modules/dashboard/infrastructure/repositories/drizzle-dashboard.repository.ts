@@ -1,12 +1,18 @@
 import { db } from "../../../../infrastructure/database/db";
 import {
   facilityVerticalProfiles,
+  facilityVerticalRepAssignments,
   personFacilities,
   facilities,
+  municipalities,
+  orders,
+  productPotentialDefinitions,
+  states,
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
-import { sql, eq, and, inArray, isNotNull, isNull } from "drizzle-orm";
+import { sql, eq, and, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
+import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
 /**
  * One count per `purchase_funnel_stage`, plus `UNKNOWN` for profiles the funnel
@@ -49,6 +55,27 @@ export type DashboardTerritoryFeature = {
   boundary: unknown;
 };
 
+export type DashboardPenetrationRow = {
+  definitionId: number;
+  key: string;
+  label: string;
+  /** Mean share across clinics where it is calculated, 0–1. Null when none is. */
+  meanShare: number | null;
+  /** How many clinics contributed — the denominator of the mean, not of scope. */
+  clinicsCounted: number;
+};
+
+export type DashboardClinicRow = {
+  facilityId: number;
+  facilityVerticalProfileId: number;
+  name: string;
+  city: string | null;
+  state: string | null;
+  purchaseFunnelStage: string;
+  conformityStatus: string;
+  repName: string | null;
+};
+
 /**
  * CPF clinics whose document cannot be used, split by why.
  *
@@ -82,82 +109,98 @@ function liveFacility() {
   return isNull(facilities.deactivatedAt);
 }
 
-/**
- * Purchase buckets for profiled facilities in the given verticals,
- * optionally restricted to a facility id set (non-global scopes).
- * Exported for query-shape tests; callers use the repository method.
- */
-export function buildPurchaseBucketsQuery(input: {
-  verticalIds: number[];
-  facilityIds: number[] | null;
-}) {
-  const conditions = [
-    inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
-    eq(facilityVerticalProfiles.isActive, true),
-    liveFacility(),
-  ];
-  if (input.facilityIds !== null) {
-    conditions.push(
-      inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
-    );
-  }
+/** An open rep assignment on this profile, held by one of `userIds`. */
+function hasOpenAssignmentTo(userIds: number[]) {
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(facilityVerticalRepAssignments)
+      .where(
+        and(
+          eq(
+            facilityVerticalRepAssignments.facilityVerticalProfileId,
+            facilityVerticalProfiles.id,
+          ),
+          inArray(facilityVerticalRepAssignments.userId, userIds),
+          isNull(facilityVerticalRepAssignments.endedAt),
+        ),
+      ),
+  );
+}
 
-  return db
-    .select({
-      NEVER_PURCHASED:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'NEVER_PURCHASED')::int`,
-      OUTSIDE_WINDOW:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'OUTSIDE_WINDOW')::int`,
-      PURCHASE_WINDOW:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'PURCHASE_WINDOW')::int`,
-      CHURN:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'CHURN')::int`,
-      INACTIVE:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'INACTIVE')::int`,
-      UNKNOWN:
-        sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
-      total: sql<number>`COUNT(*)::int`,
-    })
-    .from(facilityVerticalProfiles)
-    .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
-    .where(and(...conditions));
+/** Any open rep assignment on this profile, whoever holds it. */
+function hasAnyOpenAssignment() {
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(facilityVerticalRepAssignments)
+      .where(
+        and(
+          eq(
+            facilityVerticalRepAssignments.facilityVerticalProfileId,
+            facilityVerticalProfiles.id,
+          ),
+          isNull(facilityVerticalRepAssignments.endedAt),
+        ),
+      ),
+  );
 }
 
 /**
- * CPF clinics with an unusable document, in the given verticals.
+ * The one predicate every metric shares (spec 0014 §4: "Each metric is a
+ * separate endpoint, taking the same scope + filter parameters").
  *
- * Deliberately built from the same conditions as [buildPurchaseBucketsQuery] —
- * same vertical join, same `is_active`, same `liveFacility`, same optional
- * facility set. The two numbers sit next to each other on Desempenho, and a
- * warning scoped differently from the donut beside it would read as a bug in
- * whichever one the rep checked second.
+ * Exported so the metric queries and their per-clinic breakdowns (§4.1) cannot
+ * drift: a card whose drill-down lists a different set of clinics than the
+ * number it came from is worse than either alone.
+ */
+export function profileScopeConditions(filter: DashboardProfileFilter): SQL[] {
+  const conditions: SQL[] = [
+    eq(facilityVerticalProfiles.verticalId, filter.verticalId),
+    eq(facilityVerticalProfiles.isActive, true),
+    liveFacility(),
+  ];
+
+  if (filter.zoneIds !== null) {
+    conditions.push(
+      inArray(facilityVerticalProfiles.managerZoneId, filter.zoneIds),
+    );
+  }
+  if (filter.repUserIds !== null) {
+    conditions.push(hasOpenAssignmentTo(filter.repUserIds));
+  }
+  if (filter.stateIds !== null) {
+    conditions.push(inArray(facilities.stateId, filter.stateIds));
+  }
+  if (filter.municipalityIds !== null) {
+    conditions.push(inArray(facilities.municipalityId, filter.municipalityIds));
+  }
+  if (filter.unitTypeIds !== null) {
+    conditions.push(inArray(facilities.unitTypeId, filter.unitTypeIds));
+  }
+
+  return conditions;
+}
+
+/**
+ * CPF clinics with an unusable document, in the given scope.
  *
- * `COUNT(DISTINCT facilities.id)`, unlike the bucket counts, which count
- * *profiles*: a clinic in two linhas has two profiles but only one CPF, so
- * counting rows would report one problem twice and send the rep to a list
- * shorter than the number that opened it.
+ * Built from [profileScopeConditions] like every other metric, so the warning
+ * answers the same question as the cards beside it. It arrived taking its own
+ * `{verticalIds, facilityIds}` pair, which meant a rep who narrowed the screen
+ * by state saw a warning counting the whole country.
+ *
+ * `COUNT(DISTINCT facilities.id)`, unlike the profile counts: a clinic in two
+ * linhas has two profiles but only one CPF, so counting rows would report one
+ * problem twice and send the rep to a list shorter than the number that opened
+ * it.
  *
  * The two filters are mutually exclusive by construction — `invalid` requires a
  * non-blank document — so no clinic lands in both.
  *
  * Exported for query-shape tests; callers use the repository method.
  */
-export function buildCpfIssueCountsQuery(input: {
-  verticalIds: number[];
-  facilityIds: number[] | null;
-}) {
-  const conditions = [
-    inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
-    eq(facilityVerticalProfiles.isActive, true),
-    liveFacility(),
-    eq(facilities.legalDocumentType, "CPF"),
-  ];
-  if (input.facilityIds !== null) {
-    conditions.push(
-      inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
-    );
-  }
-
+export function buildCpfIssueCountsQuery(filter: DashboardProfileFilter) {
   const blank = sql`(${facilities.legalDocument} is null or btrim(${facilities.legalDocument}) = '')`;
 
   return db
@@ -167,58 +210,251 @@ export function buildCpfIssueCountsQuery(input: {
     })
     .from(facilityVerticalProfiles)
     .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
-    .where(and(...conditions));
+    .where(
+      and(
+        ...profileScopeConditions(filter),
+        eq(facilities.legalDocumentType, "CPF"),
+      ),
+    );
 }
 
 /**
- * Distinct people attached to live, profiled facilities in the given verticals.
- * Exported for query-shape tests; callers use the repository method.
+ * The profile ids in scope, as a subquery.
+ *
+ * Exported for query-shape tests: API tests are unit-only (no database is
+ * seeded), so invariants like "deactivated facilities appear in no count" are
+ * asserted against the emitted SQL rather than against rows.
  */
-export function buildDoctorCountQuery(input: {
-  verticalIds: number[];
-  facilityIds: number[] | null;
-}) {
-  const joinCondition = and(
-    eq(facilityVerticalProfiles.facilityId, personFacilities.facilityId),
-    inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
-    eq(facilityVerticalProfiles.isActive, true),
-    isNull(personFacilities.endedAt),
-  );
-
-  const conditions = [liveFacility()];
-  if (input.facilityIds !== null) {
-    conditions.push(inArray(personFacilities.facilityId, input.facilityIds));
-  }
-
+export function buildScopedProfilesQuery(filter: DashboardProfileFilter) {
   return db
-    .select({
-      n: sql<number>`COUNT(DISTINCT ${personFacilities.personId})::int`,
-    })
-    .from(personFacilities)
-    .innerJoin(facilityVerticalProfiles, joinCondition)
-    .innerJoin(facilities, eq(facilities.id, personFacilities.facilityId))
-    .where(and(...conditions));
+    .select({ id: facilityVerticalProfiles.id })
+    .from(facilityVerticalProfiles)
+    .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+    .where(and(...profileScopeConditions(filter)));
 }
+
+/**
+ * One choice in a filter drawer, and — for the nested facets — what it belongs
+ * to (spec 0014 §5).
+ *
+ * `parentIds` is what lets selection cascade rather than only options: picking
+ * the *city* of Rio de Janeiro selects the state of Rio de Janeiro with it, and
+ * deselecting that state drops every municipality inside it. Without the link
+ * the client would have to infer parentage from the option lists, which it
+ * cannot do — the lists it holds are already narrowed, so a municipality whose
+ * state was filtered out would have no discoverable parent at all.
+ *
+ * A municipality has exactly one state. A rep may hold patches under two
+ * managers (spec 0009), so `parentIds` is a list, and a rep is dropped only when
+ * *none* of their managers is still selected.
+ */
+export type DashboardFilterOption = {
+  id: number;
+  label: string;
+  parentIds?: number[];
+};
 
 export class DrizzleDashboardRepository {
   /**
-   * Purchase buckets for profiled facilities in the given verticals,
-   * optionally restricted to a facility id set (non-global scopes).
+   * The states that actually have clinics in this scope (spec 0014 §5).
+   *
+   * Not "the 27 states of Brazil": a manager whose zones are Paraná and Norte
+   * has no business being offered Bahia, and an option that can only ever
+   * return zero clinics is not a filter, it is a dead end the user has to
+   * discover by tapping it.
    */
-  async countPurchaseBuckets(input: {
-    verticalIds: number[];
-    facilityIds: number[] | null;
-  }): Promise<PurchaseStatusBuckets> {
-    const empty = {
-      stages: { ...EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS },
-      total: 0,
-    };
-    if (input.verticalIds.length === 0) return empty;
-    if (input.facilityIds !== null && input.facilityIds.length === 0) {
-      return empty;
-    }
+  async listStateOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const rows = await db
+      .selectDistinct({ id: states.id, label: states.name })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .innerJoin(states, eq(states.id, facilities.stateId))
+      .where(and(...profileScopeConditions(filter)))
+      .orderBy(states.name);
 
-    const [row] = await buildPurchaseBucketsQuery(input);
+    return rows;
+  }
+
+  /**
+   * Municipalities with clinics in scope, each carrying its state.
+   *
+   * The state comes from `facilities.state_id` rather than from the
+   * municipality row, so the parent is the one the clinic is actually filtered
+   * by — if those two ever disagreed, cascading on the other would deselect a
+   * municipality that the state filter still matches.
+   */
+  async listMunicipalityOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const rows = await db
+      .selectDistinct({
+        id: municipalities.id,
+        label: municipalities.name,
+        stateId: facilities.stateId,
+      })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .where(and(...profileScopeConditions(filter)))
+      .orderBy(municipalities.name);
+
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      parentIds: [row.stateId],
+    }));
+  }
+
+  /**
+   * Managers who own a zone holding clinics in this scope.
+   *
+   * Derived through `manager_zone_id` rather than from the user table, so the
+   * list is the managers who actually have something here — the same
+   * territory-derived definition the roster uses (spec 0009).
+   */
+  async listManagerOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const scoped = db
+      .select({ zoneId: facilityVerticalProfiles.managerZoneId })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .where(and(...profileScopeConditions(filter)));
+
+    const rows = await db.execute(sql`
+      SELECT DISTINCT u.id AS id,
+             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label
+        FROM ${userTerritoryAssignments} uta
+        JOIN users u ON u.id = uta.user_id AND u.deleted_at IS NULL
+        JOIN roles r ON r.id = u.role_id AND r.name = 'MANAGER'
+       WHERE uta.territory_id IN (${scoped})
+       ORDER BY label
+    `);
+
+    return (rows as unknown as Array<{ id: number | string; label: string }>).map((row) => ({
+      id: Number(row.id),
+      label: row.label,
+    }));
+  }
+
+  /**
+   * Reps holding an open assignment on a clinic in this scope, each carrying
+   * the managers they report to.
+   *
+   * Parentage is territory-derived like everything else in spec 0009 — patch →
+   * its manager zone → whoever holds that zone — never `users.manager_id`. A
+   * rep with patches under two managers therefore has two parents, and stays
+   * selected while either one is.
+   */
+  async listRepOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const scoped = buildScopedProfilesQuery(filter);
+
+    const rows = await db.execute(sql`
+      SELECT DISTINCT
+             u.id AS id,
+             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label,
+             -- A correlated subquery of INNER JOINs, not a LEFT JOIN chain.
+             -- In a LEFT JOIN, a condition in the ON clause does not filter the
+             -- row out — it only nulls the joined side — so a rep holding a
+             -- territory that is *not* a patch would still have had that
+             -- territory's parent counted as their manager. Here every
+             -- condition genuinely excludes.
+             COALESCE((
+               SELECT ARRAY_AGG(DISTINCT mgr.id)
+                 FROM user_territory_assignments patch_uta
+                 JOIN territories patch
+                   ON patch.id = patch_uta.territory_id AND patch.is_active
+                 JOIN territory_types patch_tt
+                   ON patch_tt.id = patch.territory_type_id AND patch_tt.slug = 'patch'
+                 JOIN territories zone
+                   ON zone.id = patch.manager_territory_id AND zone.is_active
+                 JOIN territory_types zone_tt
+                   ON zone_tt.id = zone.territory_type_id AND zone_tt.slug = 'manager_zone'
+                 JOIN user_territory_assignments zone_uta ON zone_uta.territory_id = zone.id
+                 JOIN users mgr ON mgr.id = zone_uta.user_id AND mgr.deleted_at IS NULL
+                 JOIN roles mgr_role ON mgr_role.id = mgr.role_id AND mgr_role.name = 'MANAGER'
+                WHERE patch_uta.user_id = u.id
+                  -- Per linha, like findManagerZoneIds: a rep may work Ortopedia
+                  -- here and something else elsewhere, and the other linha's
+                  -- manager is not a parent in this one.
+                  AND patch.vertical_id = ${filter.verticalId}
+             ), ARRAY[]::bigint[]) AS parent_ids
+        FROM ${facilityVerticalRepAssignments} a
+        JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
+       WHERE a.facility_vertical_profile_id IN (${scoped})
+         AND a.ended_at IS NULL
+       ORDER BY label
+    `);
+
+    return (
+      rows as unknown as Array<{
+        id: number | string;
+        label: string;
+        parent_ids: Array<number | string>;
+      }>
+    ).map((row) => ({
+      id: Number(row.id),
+      label: row.label,
+      parentIds: (row.parent_ids ?? []).map(Number),
+    }));
+  }
+
+  /** Clínicas atribuídas — the denominator every ratio below divides by. */
+  async countProfiles(filter: DashboardProfileFilter): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(and(...profileScopeConditions(filter)));
+
+    return Number(row?.n ?? 0);
+  }
+
+  /**
+   * Purchase buckets — the donut, and the numerator of Cobertura.
+   *
+   * Buckets come from `purchase_funnel_stage`; `purchase_status` was dropped as
+   * dead in spec 0010 §5.1.
+   *
+   * One count per stage, not the three pre-grouped buckets this returned
+   * before. Grouping in SQL cost two things: PURCHASE_WINDOW ("due to buy now")
+   * and OUTSIDE_WINDOW ("recently served") were summed into one number even
+   * though a rep acts on them differently, and INACTIVE was folded in with
+   * NEVER_PURCHASED — so a clinic that bought for two years and then lapsed
+   * counted as never having bought, and Cobertura read lower than reality.
+   */
+  async countPurchaseBuckets(
+    filter: DashboardProfileFilter,
+  ): Promise<PurchaseStatusBuckets> {
+    const [row] = await db
+      .select({
+        NEVER_PURCHASED:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'NEVER_PURCHASED')::int`,
+        OUTSIDE_WINDOW:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'OUTSIDE_WINDOW')::int`,
+        PURCHASE_WINDOW:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'PURCHASE_WINDOW')::int`,
+        CHURN:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'CHURN')::int`,
+        INACTIVE:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'INACTIVE')::int`,
+        UNKNOWN:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
+        total: sql<number>`COUNT(*)::int`,
+      })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(and(...profileScopeConditions(filter)));
 
     return {
       stages: {
@@ -233,18 +469,9 @@ export class DrizzleDashboardRepository {
     };
   }
 
-  async countCpfIssues(input: {
-    verticalIds: number[];
-    facilityIds: number[] | null;
-  }): Promise<CpfIssueCounts> {
-    // Same guards as the bucket counts: no accessible vertical, or an empty
-    // facility set, means nothing is in scope — not "count everything".
-    if (input.verticalIds.length === 0) return { ...EMPTY_CPF_ISSUE_COUNTS };
-    if (input.facilityIds !== null && input.facilityIds.length === 0) {
-      return { ...EMPTY_CPF_ISSUE_COUNTS };
-    }
-
-    const [row] = await buildCpfIssueCountsQuery(input);
+  /** CPF clinics whose document is blank or fails the check digits. */
+  async countCpfIssues(filter: DashboardProfileFilter): Promise<CpfIssueCounts> {
+    const [row] = await buildCpfIssueCountsQuery(filter);
 
     return {
       missing: Number(row?.missing ?? 0),
@@ -252,26 +479,260 @@ export class DrizzleDashboardRepository {
     };
   }
 
-  async countDoctors(input: {
-    verticalIds: number[];
-    facilityIds: number[] | null;
-  }): Promise<number> {
-    if (input.verticalIds.length === 0) return 0;
-    if (input.facilityIds !== null && input.facilityIds.length === 0) {
-      return 0;
-    }
+  /** Taxa de cadastro completo — `conformity_status = REGISTERED` over scope. */
+  async countRegisteredProfiles(
+    filter: DashboardProfileFilter,
+  ): Promise<{ registered: number; total: number }> {
+    const [row] = await db
+      .select({
+        registered:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.conformityStatus} = 'REGISTERED')::int`,
+        total: sql<number>`COUNT(*)::int`,
+      })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(and(...profileScopeConditions(filter)));
 
-    const [row] = await buildDoctorCountQuery(input);
+    return {
+      registered: Number(row?.registered ?? 0),
+      total: Number(row?.total ?? 0),
+    };
+  }
+
+  /**
+   * Clínicas não atribuídas (spec 0014 §4, manager only).
+   *
+   * "Unassigned" here means the `no_consultant` case of spec 0009 R4: a profile
+   * inside the scope with no open rep assignment. The other two reasons that
+   * roster carries — `ambiguous_zone` and `no_zone` — describe clinics with *no*
+   * manager zone, so they are outside a manager's denominator by definition and
+   * cannot appear in this count. Same rule, arrived at from the other side.
+   */
+  async countProfilesWithoutRep(
+    filter: DashboardProfileFilter,
+  ): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(
+        and(...profileScopeConditions(filter), sql`NOT ${hasAnyOpenAssignment()}`),
+      );
+
+    return Number(row?.n ?? 0);
+  }
+
+  /**
+   * Pedidos — a count of orders whose profile is in scope, in each window.
+   *
+   * Eligibility follows ADR 0003 (`APPROVED`/`INVOICED`, `SALE`/`CONSIGNMENT`),
+   * the same rule the funnel and the market metric use. Counting every row
+   * instead would count `DRAFT` and `REJECTED` orders as commercial activity,
+   * which is the one thing this number is read as meaning.
+   */
+  async countOrders(input: {
+    filter: DashboardProfileFilter;
+    ranges: Array<{ key: string; start: Date; end: Date }>;
+  }): Promise<Record<string, number>> {
+    if (input.ranges.length === 0) return {};
+
+    const scoped = buildScopedProfilesQuery(input.filter);
+
+    // A `Date` bound inside a raw `sql` template never reaches the column's
+    // encoder — there is no column for the driver to infer from — and postgres-js
+    // rejects it at Bind time with ERR_INVALID_ARG_TYPE. Mapping through the
+    // column itself is what the builder path does, so the two agree on how a
+    // `timestamp without time zone` holding UTC is written.
+    const bound = (instant: Date) =>
+      orders.orderedAt.mapToDriverValue(instant) as string;
+
+    const counters = input.ranges.map(
+      (range) =>
+        sql`COUNT(*) FILTER (WHERE ${orders.orderedAt} >= ${bound(range.start)}::timestamp AND ${orders.orderedAt} < ${bound(range.end)}::timestamp)::int`,
+    );
+
+    const rows = (await db.execute(sql`
+      SELECT ${sql.join(
+        counters.map((counter, index) => sql`${counter} AS ${sql.identifier(`c${index}`)}`),
+        sql`, `,
+      )}
+      FROM ${orders}
+      WHERE ${orders.facilityVerticalProfileId} IN (${scoped})
+        AND ${orders.status} IN ('APPROVED', 'INVOICED')
+        AND ${orders.type} IN ('SALE', 'CONSIGNMENT')
+    `)) as Array<Record<string, number | string>>;
+
+    const row = rows[0];
+    const result: Record<string, number> = {};
+    input.ranges.forEach((range, index) => {
+      result[range.key] = Number(row?.[`c${index}`] ?? 0);
+    });
+    return result;
+  }
+
+  /**
+   * Penetração média — the mean of each clinic's share, per metric.
+   *
+   * **Per metric, not one blended number.** A vertical may define several
+   * metrics (`ampolas_mes`, `prp`), and a product carries one `metric_units`
+   * value per metric, so summing two definitions would add ampoules to
+   * something that is not ampoules. One row per definition is the only
+   * arithmetic that means anything.
+   *
+   * **Averages the stored `share`; it does not recompute one.** That is the
+   * whole point after spec 0013 §4.6. `share` is null unless the market is
+   * actually known — either a competitor figure exists, or a rep has claimed
+   * "nenhuma outra marca" — so a clinic with orders and no competitor data
+   * contributes nothing. Dividing `ours_qty` by the total here instead would
+   * call that clinic 100% and fold it into a manager's average: the plausible
+   * wrong number the claim was introduced to prevent, arriving through the
+   * aggregate rather than the clinic screen.
+   *
+   * `AVG` and `COUNT` both skip nulls, which is exactly spec 0014 §4's "counting
+   * only clinics where it is calculated" — and why `COALESCE(share, 0)` must
+   * never appear here: it would average "we know nothing" in as "we sell
+   * nothing".
+   *
+   * One row per (profile, metric) since §4.6 — no month, no window, no summing.
+   * The value is what is true now, and nothing reads it as a series.
+   */
+  async averageShareByDefinition(input: {
+    filter: DashboardProfileFilter;
+  }): Promise<DashboardPenetrationRow[]> {
+    const scoped = buildScopedProfilesQuery(input.filter);
+
+    const rows = (await db.execute(sql`
+      SELECT d.id    AS definition_id,
+             d.key   AS key,
+             d.label AS label,
+             AVG(s.share)        AS mean_share,
+             COUNT(s.share)::int AS clinics_counted
+      FROM ${productPotentialDefinitions} d
+      LEFT JOIN facility_metric_snapshots s
+        ON s.definition_id = d.id
+       AND s.facility_vertical_profile_id IN (${scoped})
+      WHERE d.vertical_id = ${input.filter.verticalId}
+        AND d.deleted_at IS NULL
+      GROUP BY d.id, d.key, d.label
+      ORDER BY d.label
+    `)) as Array<{
+      definition_id: number | string;
+      key: string;
+      label: string;
+      mean_share: string | number | null;
+      clinics_counted: number | string;
+    }>;
+
+    return rows.map((row) => ({
+      definitionId: Number(row.definition_id),
+      key: row.key,
+      label: row.label,
+      meanShare: row.mean_share === null ? null : Number(row.mean_share),
+      clinicsCounted: Number(row.clinics_counted),
+    }));
+  }
+
+  /**
+   * The per-clinic breakdown behind every metric card (spec 0014 §4.1).
+   *
+   * `predicate` narrows the shared scope to the metric's own subset — the
+   * clinics in a bucket, the ones without a rep — so a card and its drill-down
+   * are the same query with one extra condition, and cannot disagree.
+   */
+  async listScopedClinics(input: {
+    filter: DashboardProfileFilter;
+    predicate?: SQL;
+    offset: number;
+    limit: number;
+  }): Promise<{ rows: DashboardClinicRow[]; total: number }> {
+    const conditions = profileScopeConditions(input.filter);
+    if (input.predicate) conditions.push(input.predicate);
+
+    const rows = await db
+      .select({
+        facilityId: facilities.id,
+        facilityVerticalProfileId: facilityVerticalProfiles.id,
+        name: facilities.displayName,
+        city: municipalities.name,
+        state: states.abbreviation,
+        purchaseFunnelStage: facilityVerticalProfiles.purchaseFunnelStage,
+        conformityStatus: facilityVerticalProfiles.conformityStatus,
+        repName: sql<
+          string | null
+        >`(SELECT NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), '')
+             FROM facility_vertical_rep_assignments a
+             JOIN users u ON u.id = a.user_id
+            WHERE a.facility_vertical_profile_id = ${facilityVerticalProfiles.id}
+              AND a.ended_at IS NULL
+            LIMIT 1)`,
+        total: sql<number>`COUNT(*) OVER ()::int`,
+      })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .innerJoin(
+        municipalities,
+        eq(municipalities.id, facilities.municipalityId),
+      )
+      .innerJoin(states, eq(states.id, facilities.stateId))
+      .where(and(...conditions))
+      .orderBy(facilities.displayName, facilities.id)
+      .offset(input.offset)
+      .limit(input.limit);
+
+    return {
+      rows: rows.map((row) => ({
+        facilityId: row.facilityId,
+        facilityVerticalProfileId: row.facilityVerticalProfileId,
+        name: row.name,
+        city: row.city,
+        state: row.state,
+        purchaseFunnelStage: row.purchaseFunnelStage,
+        conformityStatus: row.conformityStatus,
+        repName: row.repName,
+      })),
+      total: Number(rows[0]?.total ?? 0),
+    };
+  }
+
+  /** Distinct people attached to the clinics in scope — the territory card. */
+  async countDoctors(filter: DashboardProfileFilter): Promise<number> {
+    const scoped = db
+      .select({ facilityId: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(and(...profileScopeConditions(filter)));
+
+    const [row] = await db
+      .select({
+        n: sql<number>`COUNT(DISTINCT ${personFacilities.personId})::int`,
+      })
+      .from(personFacilities)
+      .where(
+        and(
+          isNull(personFacilities.endedAt),
+          inArray(personFacilities.facilityId, scoped),
+        ),
+      );
 
     return Number(row?.n ?? 0);
   }
 
   async listAssignedTerritoryFeatures(input: {
     userId: number;
-    verticalIds: number[];
+    verticalId: number;
   }): Promise<DashboardTerritoryFeature[]> {
-    if (input.verticalIds.length === 0) return [];
-
     const rows = await db
       .select({
         id: territories.id,
@@ -286,7 +747,11 @@ export class DrizzleDashboardRepository {
       .where(
         and(
           eq(userTerritoryAssignments.userId, input.userId),
-          inArray(territories.verticalId, input.verticalIds),
+          eq(territories.verticalId, input.verticalId),
+          // Same predicate the denominator uses (`findManagerZoneIds`). Without
+          // it the card can draw a retired zone the metrics already stopped
+          // counting, and the map would disagree with every number beside it.
+          eq(territories.isActive, true),
         ),
       )
       .orderBy(territories.name);
@@ -299,10 +764,8 @@ export class DrizzleDashboardRepository {
   }
 
   async listVerticalTerritoryFeatures(
-    verticalIds: number[],
+    verticalId: number,
   ): Promise<DashboardTerritoryFeature[]> {
-    if (verticalIds.length === 0) return [];
-
     const rows = await db
       .select({
         id: territories.id,
@@ -312,7 +775,8 @@ export class DrizzleDashboardRepository {
       .from(territories)
       .where(
         and(
-          inArray(territories.verticalId, verticalIds),
+          eq(territories.verticalId, verticalId),
+          eq(territories.isActive, true),
           isNotNull(territories.boundary),
         ),
       )

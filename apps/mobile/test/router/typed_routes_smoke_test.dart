@@ -21,8 +21,40 @@ void main() {
     expect(const InviteUserRoute().location, '/users/invite');
   });
 
+  test('desempenho drill-downs carry the whole scope', () {
+    // Spec 0014 §4.1: the breakdown must answer for the same population the
+    // card counted, so every filter travels with it.
+    expect(
+      MetricClinicsRoute(
+        metric: 'coverage',
+        verticalId: 1,
+        stateIds: '35,33',
+        repIds: '7',
+      ).location,
+      '/dashboard/metrics/coverage/clinics?verticalId=1&repIds=7&stateIds=35%2C33',
+    );
+    expect(
+      SubjectDashboardRoute(subjectUserId: 5, subjectName: 'Ana').location,
+      '/team/member/5?subjectName=Ana',
+    );
+    // The subject's role rides along so the screen knows which cards may be
+    // asked about them: "Clínicas não atribuídas" is a zone question, and a rep
+    // holds no zones, so requesting it for one earns a 403.
+    expect(
+      SubjectDashboardRoute(
+        subjectUserId: 5,
+        subjectName: 'Ana',
+        subjectRole: 'REP',
+      ).location,
+      '/team/member/5?subjectName=Ana&subjectRole=REP',
+    );
+    expect(TeamMemberRoute(managerId: 2).location, '/team/manager/2');
+    expect(const RepsWithoutPatchRoute().location, '/team/reps-without-patch');
+  });
+
   test('shell + auth locations stay stable', () {
     expect(const DashboardRoute().location, '/dashboard');
+    expect(const TeamRoute().location, '/team');
     expect(const ExploreRoute().location, '/explore');
     expect(const AgendaRoute().location, '/agenda');
     expect(const UsersRoute().location, '/users');
