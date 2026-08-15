@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
-import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_facility_field.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_facility_selector.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/recurrence_fields.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +20,14 @@ class CalendarEditorScreen extends ConsumerStatefulWidget {
 class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
   late final TextEditingController _titleController;
   bool _showValidation = false;
+
+  /// Editing an existing appointment never re-asks for the clinic — the series
+  /// owns it — so only a new one takes its behaviour from the entry point.
+  CalendarFacilityChoice get _facilityChoice =>
+      widget.target.mode == CalendarEditorMode.create
+      ? (widget.target.prefill?.facilityChoice ??
+            CalendarFacilityChoice.anyClinic)
+      : CalendarFacilityChoice.anyClinic;
 
   @override
   void initState() {
@@ -123,7 +131,9 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                 if (draft.kind ==
                                     CalendarEventKind.interaction) ...[
                                   const SizedBox(height: 16),
-                                  CalendarFacilityField(
+                                  CalendarFacilitySelector(
+                                    choice: _facilityChoice,
+                                    personId: widget.target.prefill?.personId,
                                     selected: draft.facilityId == null
                                         ? null
                                         : CalendarIdentity(

@@ -766,7 +766,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                           ),
                         ),
                         label: const Text('Visita'),
-                        onTap: () => openVisitScheduler(
+                        onTap: () => openClinicVisitScheduler(
                           context,
                           facilityId: detail.id,
                           facilityName: detail.name,

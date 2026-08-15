@@ -310,6 +310,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
     if (occurrence.recurrence == CalendarRecurrence.none) {
       await AgendaEditRoute(
         id: occurrence.calendarId,
+        recurrenceKey: occurrence.recurrenceKey,
         $extra: occurrence,
       ).push(context);
     } else {
@@ -345,6 +346,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
       } else {
         await AgendaEditRoute(
           id: occurrence.calendarId,
+          recurrenceKey: occurrence.recurrenceKey,
           $extra: occurrence,
         ).push(context);
       }

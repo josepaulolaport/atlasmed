@@ -296,10 +296,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                       contactLabel: 'e-mail',
                       launch: launchContactUrl,
                     ),
-                    // Asks which clinic before opening the agenda editor: the
-                    // appointment is stored against a facility, and a doctor
-                    // attending at several would otherwise be booked at
-                    // whichever one the code guessed.
+                    // The editor asks which clinic, offering only the ones this
+                    // doctor works at: the appointment is stored against a
+                    // facility, and a doctor attending at several would
+                    // otherwise be booked at whichever one the code guessed.
                     if (ref.watch(canCreateCalendarEventProvider))
                       QuickActionItem(
                         icon: CircleAvatar(
@@ -313,10 +313,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                           ),
                         ),
                         label: const Text('Nova visita'),
-                        onTap: () => scheduleVisitWithDoctor(
+                        onTap: () => openProfessionalVisitScheduler(
                           context,
-                          doctorName: detail.name,
-                          clinics: detail.clinics,
+                          personId: doctorId,
+                          personName: detail.name,
                         ),
                       ),
                   ],

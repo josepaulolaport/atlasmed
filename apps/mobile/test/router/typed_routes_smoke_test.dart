@@ -92,11 +92,26 @@ void main() {
     // Opened from the agenda's own "+", it carries nothing.
     expect(const AgendaNewRoute().location, '/agenda/new');
 
-    // From a doctor whose clinics are outside the viewer's territory: the
-    // subject travels, the clinic is left for the form to ask.
+    // From a doctor: the person travels instead of a clinic, so the editor can
+    // offer that doctor's clinics and nothing else.
     expect(
-      const AgendaNewRoute(title: 'Visita · Dra. Helena').location,
-      '/agenda/new?title=Visita+%C2%B7+Dra.+Helena',
+      const AgendaNewRoute(
+        personId: 138,
+        personName: 'Dra. Helena',
+        title: 'Visita · Dra. Helena',
+      ).location,
+      '/agenda/new?title=Visita+%C2%B7+Dra.+Helena&person-id=138'
+      '&person-name=Dra.+Helena',
+    );
+  });
+
+  test('editing an appointment carries enough to find it again', () {
+    // `extra` does not survive a router refresh, so the recurrence key — which
+    // dates the appointment — rides in the URL and the screen can refetch.
+    const key = '2026-08-15T14:30[America/Sao_Paulo]';
+    expect(
+      AgendaEditRoute(id: 5, recurrenceKey: key).location,
+      '/agenda/5/edit?recurrence-key=${Uri.encodeQueryComponent(key)}',
     );
   });
 

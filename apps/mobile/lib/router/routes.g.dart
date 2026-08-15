@@ -637,6 +637,12 @@ mixin $AgendaNewRoute on GoRouteData {
     ),
     facilityName: state.uri.queryParameters['facility-name'],
     title: state.uri.queryParameters['title'],
+    personId: _$convertMapValue(
+      'person-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    personName: state.uri.queryParameters['person-name'],
   );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
@@ -648,6 +654,8 @@ mixin $AgendaNewRoute on GoRouteData {
       if (_self.facilityId != null) 'facility-id': _self.facilityId!.toString(),
       if (_self.facilityName != null) 'facility-name': _self.facilityName,
       if (_self.title != null) 'title': _self.title,
+      if (_self.personId != null) 'person-id': _self.personId!.toString(),
+      if (_self.personName != null) 'person-name': _self.personName,
     },
   );
 
@@ -684,6 +692,7 @@ RouteBase get $agendaEditRoute => GoRouteData.$route(
 mixin $AgendaEditRoute on GoRouteData {
   static AgendaEditRoute _fromState(GoRouterState state) => AgendaEditRoute(
     id: int.parse(state.pathParameters['id']!),
+    recurrenceKey: state.uri.queryParameters['recurrence-key'],
     $extra: state.extra as CalendarOccurrence?,
   );
 
@@ -692,6 +701,9 @@ mixin $AgendaEditRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/agenda/${Uri.encodeComponent(_self.id.toString())}/edit',
+    queryParams: {
+      if (_self.recurrenceKey != null) 'recurrence-key': _self.recurrenceKey,
+    },
   );
 
   @override

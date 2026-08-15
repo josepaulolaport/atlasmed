@@ -47,12 +47,28 @@ String calendarModalityToApi(CalendarModality value) => switch (value) {
 String calendarRecurrenceToApi(CalendarRecurrence value) =>
     value.name.toUpperCase();
 
+/// How the clinic field behaves, which depends on where the editor was opened.
+enum CalendarFacilityChoice {
+  /// Search every clinic. The agenda's own "+" knows nothing yet.
+  anyClinic,
+
+  /// The clinic is already settled — opened from that clinic's own page.
+  fixed,
+
+  /// Only the clinics the professional in [CalendarEditorPrefill.personId]
+  /// works at. Visiting a doctor somewhere they do not attend is not a thing.
+  professionalClinics,
+}
+
 class CalendarEditorPrefill extends Equatable {
   const CalendarEditorPrefill({
     this.facilityId,
     this.facilityName,
     this.kind,
     this.title,
+    this.personId,
+    this.personName,
+    this.facilityChoice = CalendarFacilityChoice.anyClinic,
   });
 
   final int? facilityId;
@@ -65,8 +81,22 @@ class CalendarEditorPrefill extends Equatable {
   /// from a clinic, say — fill it in so the rep only picks a time.
   final String? title;
 
+  /// The professional the visit is about, when opened from their page.
+  final int? personId;
+  final String? personName;
+
+  final CalendarFacilityChoice facilityChoice;
+
   @override
-  List<Object?> get props => [facilityId, facilityName, kind, title];
+  List<Object?> get props => [
+    facilityId,
+    facilityName,
+    kind,
+    title,
+    personId,
+    personName,
+    facilityChoice,
+  ];
 }
 
 class CalendarEditorTarget extends Equatable {

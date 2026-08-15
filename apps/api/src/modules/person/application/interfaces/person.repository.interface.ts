@@ -13,7 +13,14 @@ export interface PersonRecord {
   languages: string | null;
   imageUrl: string | null;
   facilityIds: number[];
+  /** Same active links as `facilityIds`, named, ordered by name. */
+  facilities: PersonFacilitySummary[];
   hasHealthcareProfile: boolean;
+}
+
+export interface PersonFacilitySummary {
+  id: number;
+  name: string;
 }
 
 export interface PatchPersonInput {
@@ -31,7 +38,7 @@ export interface PatchPersonInput {
 }
 
 export interface PersonRepository {
-  /** Active (non-deleted) person with facilityIds + healthcare flag, or null. */
+  /** Active (non-deleted) person with their clinics + healthcare flag, or null. */
   findActiveById(personId: number): Promise<PersonRecord | null>;
 
   update(personId: number, input: PatchPersonInput): Promise<void>;

@@ -80,6 +80,7 @@ async function serializePerson(
     languages: person.languages,
     imageUrl: person.imageUrl,
     facilityIds: person.facilityIds,
+    facilities: person.facilities,
     hasHealthcareProfile: person.hasHealthcareProfile,
     registrations,
     primaryRegistrationDisplay,
