@@ -84,11 +84,21 @@ class _FilterDrawerState extends State<FilterDrawer> {
                         ),
                       ),
                     ),
-                    if (_selected.isNotEmpty)
-                      TextButton(
+                    // Holds its space while empty rather than appearing on the
+                    // first tick. Materialising it pushed the whole list down
+                    // by the height of a button, so the row under the finger
+                    // moved and a quick second tap landed on its neighbour —
+                    // selecting a state nobody chose.
+                    Visibility(
+                      visible: _selected.isNotEmpty,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: TextButton(
                         onPressed: () => setState(_selected.clear),
                         child: const Text('Limpar'),
                       ),
+                    ),
                   ],
                 ),
               ),
