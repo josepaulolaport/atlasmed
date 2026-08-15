@@ -295,7 +295,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
                             / greatest(21, least(90, r.purchase_interval_days)))
           end                                                                     as n_raw
         from raw r
-      )
+      ),
       ranked as (
         select
           s.*,

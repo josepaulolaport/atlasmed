@@ -150,6 +150,14 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "facility"],
   },
 
+  // Scope is asserted by assertMayPlanFor: a rep plans only their own day, a
+  // manager only their reps'. Confirming — which writes to a calendar — is a
+  // separate and stricter gate (spec 0016 §7.3), landing with P2.
+  "modules/roteiro/application/use-cases/generate-roteiro.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["managedUserIds", "isGlobal"],
+  },
+
   "modules/orders/application/use-cases/orders.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],

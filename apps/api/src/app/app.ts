@@ -23,6 +23,7 @@ import { visits } from "../modules/visits";
 import { dashboard } from "../modules/dashboard";
 import { calendar } from "../modules/calendar";
 import { interactions } from "../modules/interactions";
+import { roteiro } from "../modules/roteiro";
 import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
@@ -223,7 +224,8 @@ const app = new Elysia()
       .use(visits)
       .use(dashboard)
       .use(calendar)
-      .use(interactions),
+      .use(interactions)
+      .use(roteiro),
   );
 
 export default app;
