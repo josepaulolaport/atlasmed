@@ -8,6 +8,7 @@ import {
 import { sql } from "drizzle-orm";
 import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
+import type { FacilityListSort } from "../../../facility/application/interfaces/facility.repository.interface";
 import {
   EMPTY_CPF_ISSUE_COUNTS,
   EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS,
@@ -531,6 +532,9 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
        * different questions that happen to be one tap apart.
        */
       search?: string;
+      /** Explorar's sort keys, so the two lists order alike. */
+      sort?: FacilityListSort;
+      order?: "asc" | "desc";
     },
   ): Promise<{
     verticalId: number;
@@ -564,6 +568,8 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
       filter: context.filter,
       predicate: metricPredicate(request.metric),
       search: request.search,
+      sort: request.sort,
+      order: request.order,
       offset: (request.page - 1) * request.limit,
       limit: request.limit,
     });

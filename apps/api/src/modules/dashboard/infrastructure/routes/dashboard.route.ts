@@ -239,6 +239,8 @@ const dashboardMetricRoutes = (
         page: query.page ?? 1,
         limit: query.limit ?? 25,
         search: query.search,
+        sort: query.sort,
+        order: query.order,
       } as never);
     },
     {
@@ -260,6 +262,20 @@ const dashboardMetricRoutes = (
               description:
                 "Narrows the breakdown by clinic name, neighbourhood or city. Narrows the list only — the card's count is the metric, and it does not move because somebody typed.",
             }),
+          ),
+          // Explorar's own keys, honoured by Explorar's own ordering. No
+          // `distance`: this list carries no origin, and the sort sheet hides
+          // that option rather than offering one that does nothing.
+          sort: t.Optional(
+            t.Union([
+              t.Literal("name"),
+              t.Literal("purchaseFunnelStage"),
+              t.Literal("purchaseIntervalDays"),
+              t.Literal("lastPurchaseDate"),
+            ]),
+          ),
+          order: t.Optional(
+            t.Union([t.Literal("asc"), t.Literal("desc")]),
           ),
         }),
       ]),

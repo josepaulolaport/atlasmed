@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic_sort_option.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
@@ -122,6 +124,7 @@ class MetricClinicsListState {
     this.total = 0,
     this.page = 0,
     this.query = '',
+    this.sort = 'name-asc',
     this.loading = true,
     this.loadingMore = false,
   });
@@ -135,6 +138,11 @@ class MetricClinicsListState {
   /// Highest page fetched; 0 before the first has landed.
   final int page;
   final String query;
+
+  /// A `SortSheet(kind: 'clinic')` key. Defaults to the ordering this list
+  /// always had, so opening a breakdown shows what it showed before.
+  final String sort;
+
   final bool loading;
   final bool loadingMore;
 
@@ -147,6 +155,7 @@ class MetricClinicsListState {
     int? total,
     int? page,
     String? query,
+    String? sort,
     bool? loading,
     bool? loadingMore,
   }) {
@@ -155,6 +164,7 @@ class MetricClinicsListState {
       total: total ?? this.total,
       page: page ?? this.page,
       query: query ?? this.query,
+      sort: sort ?? this.sort,
       loading: loading ?? this.loading,
       loadingMore: loadingMore ?? this.loadingMore,
     );
@@ -168,6 +178,7 @@ typedef MetricClinicsFetch =
       required int page,
       required int limit,
       String? search,
+      String? sortKey,
     });
 
 Future<DashboardClinicPage?> _fetchMetricClinics({
@@ -176,13 +187,21 @@ Future<DashboardClinicPage?> _fetchMetricClinics({
   required int page,
   required int limit,
   String? search,
+  String? sortKey,
 }) async {
+  // The sheet's key, translated once, by the table both lists share. This
+  // screen has no origin, so `distance` resolves to null and the request falls
+  // back to the server's default ordering rather than asking for a sort the
+  // rows cannot support.
+  final resolved = clinicSortForKey(sortKey);
   final repository = metricClinicsRepository(
     metric: metric,
     args: scope,
     page: page,
     limit: limit,
     search: search,
+    sort: resolved.sort?.apiValue,
+    order: resolved.sort == null ? null : resolved.order?.name,
   );
   try {
     return await repository.currentValueOrResolve();
@@ -219,7 +238,23 @@ class MetricClinicsListNotifier extends StateNotifier<MetricClinicsListState> {
   }
 
   Future<void> refresh() async {
-    state = MetricClinicsListState(query: state.query);
+    state = MetricClinicsListState(query: state.query, sort: state.sort);
+    await _load(1);
+  }
+
+  /// Re-orders the whole set, not the page on screen.
+  ///
+  /// Starts over at page 1: the rows already loaded are the first N of the
+  /// *old* ordering, and keeping them would put a sorted page under an
+  /// unsorted one.
+  Future<void> setSort(String key) async {
+    if (key == state.sort) return;
+    state = state.copyWith(
+      sort: key,
+      clinics: const [],
+      page: 0,
+      loading: true,
+    );
     await _load(1);
   }
 
@@ -248,17 +283,20 @@ class MetricClinicsListNotifier extends StateNotifier<MetricClinicsListState> {
 
   Future<void> _load(int page) async {
     final requestedQuery = state.query;
+    final requestedSort = state.sort;
     final result = await _fetch(
       metric: metric,
       scope: scope,
       page: page,
       limit: pageSize,
       search: requestedQuery,
+      sortKey: requestedSort,
     );
     if (!mounted) return;
-    // Dropped if the box moved on while this was in flight: a slow answer to an
-    // old query would otherwise overwrite a fast answer to the current one.
-    if (requestedQuery != state.query) return;
+    // Dropped if the box or the ordering moved on while this was in flight: a
+    // slow answer to an old query would otherwise overwrite a fast answer to
+    // the current one, and the list would settle on something nobody asked for.
+    if (requestedQuery != state.query || requestedSort != state.sort) return;
     if (result == null) {
       state = state.copyWith(loading: false, loadingMore: false);
       return;

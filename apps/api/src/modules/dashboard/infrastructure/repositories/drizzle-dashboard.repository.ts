@@ -12,6 +12,8 @@ import {
   userTerritoryAssignments,
 } from "@atlasmed/database";
 import { sql, eq, and, or, ilike, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
+import type { FacilityListSort } from "../../../facility/application/interfaces/facility.repository.interface";
+import { buildFacilityListOrderBy } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
 import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
 /**
@@ -709,6 +711,18 @@ export class DrizzleDashboardRepository {
     predicate?: SQL;
     /** Free text over name, neighbourhood and city — the list's own search. */
     search?: string;
+    /**
+     * Explorar's own sort keys, honoured by Explorar's own expression.
+     *
+     * Imported rather than reimplemented: "Nome Z–A" and "Status de compras"
+     * have to mean the same thing in both lists, and the funnel-stage rank and
+     * the nulls-last handling on last purchase are exactly the details a second
+     * copy gets subtly wrong. `distance` is absent on purpose — this list has
+     * no origin, and the sheet hides the option rather than offering a sort
+     * that does nothing.
+     */
+    sort?: FacilityListSort;
+    order?: "asc" | "desc";
     offset: number;
     limit: number;
   }): Promise<{ rows: DashboardClinicRow[]; total: number }> {
@@ -767,7 +781,13 @@ export class DrizzleDashboardRepository {
       )
       .innerJoin(states, eq(states.id, facilities.stateId))
       .where(and(...conditions))
-      .orderBy(facilities.displayName, facilities.id)
+      .orderBy(
+        ...buildFacilityListOrderBy({
+          sort: input.sort,
+          order: input.order,
+          verticalIds: [input.filter.verticalId],
+        }),
+      )
       .offset(input.offset)
       .limit(input.limit);
 

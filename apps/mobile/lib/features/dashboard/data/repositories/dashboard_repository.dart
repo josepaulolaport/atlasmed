@@ -107,6 +107,8 @@ DashboardMetricRepository<DashboardClinicPage> metricClinicsRepository({
   int page = 1,
   int limit = 25,
   String? search,
+  String? sort,
+  String? order,
 }) => DashboardMetricRepository(
   path: '/dashboard/metrics/$metric/clinics',
   args: args,
@@ -117,6 +119,9 @@ DashboardMetricRepository<DashboardClinicPage> metricClinicsRepository({
     // Omitted rather than sent empty: the key is part of the cache identity,
     // and "search=" is not the same request as no search at all.
     if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    // Both or neither: `order` without `sort` would ask the server to reverse
+    // an ordering it was never told to use.
+    if (sort != null) ...{'sort': sort, 'order': ?order},
   },
 );
 

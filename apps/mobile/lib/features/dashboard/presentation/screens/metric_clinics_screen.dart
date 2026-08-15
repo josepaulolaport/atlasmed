@@ -10,6 +10,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_en
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 // `Left` only — dartz also exports a `State` that collides with Flutter's.
@@ -121,19 +123,48 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
               hintText: 'Buscar clínica, bairro…',
             ),
           ),
+          // Count on the left, sort on the right — the row Explorar puts above
+          // its own results.
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _CountLabel(
-                total: state.total,
-                loaded: state.clinics.length,
-                loading: state.loading,
-              ),
+            child: Row(
+              children: [
+                _CountLabel(
+                  total: state.total,
+                  loaded: state.clinics.length,
+                  loading: state.loading,
+                ),
+                const Spacer(),
+                ExploreSortChip(
+                  sort: state.sort,
+                  onTap: () => _showSortSheet(state, notifier),
+                ),
+              ],
             ),
           ),
           Expanded(child: _body(state, notifier)),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showSortSheet(
+    MetricClinicsListState state,
+    MetricClinicsListNotifier notifier,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (_) => SortSheet(
+        kind: 'clinic',
+        sort: state.sort,
+        // No origin here, so "Mais próximos" is not offered. Explorar's own
+        // mechanism for exactly this, rather than listing a sort that would
+        // quietly do nothing.
+        hasLocation: false,
+        onApply: (key) => unawaited(notifier.setSort(key)),
       ),
     );
   }

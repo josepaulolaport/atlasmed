@@ -76,6 +76,7 @@ Future<void> pump(
                   required page,
                   required limit,
                   search,
+                  sortKey,
                 }) async {
                   searches.add(search);
                   if (page == 2 && holdPageTwo != null) {

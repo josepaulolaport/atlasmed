@@ -38,7 +38,7 @@ DashboardClinicPage pageOf({
 }
 
 class Recorder {
-  final calls = <({int page, String? search})>[];
+  final calls = <({int page, String? search, String? sortKey})>[];
   final holds = <int, Completer<DashboardClinicPage?>>{};
   int total = 60;
   int matches = 2;
@@ -49,8 +49,9 @@ class Recorder {
     required int page,
     required int limit,
     String? search,
+    String? sortKey,
   }) {
-    calls.add((page: page, search: search));
+    calls.add((page: page, search: search, sortKey: sortKey));
     final hold = holds[page];
     if (hold != null) return hold.future;
     final narrowed = search != null && search.trim().isNotEmpty;
@@ -139,7 +140,8 @@ void main() {
       // Page two of the old query must not survive into the new one.
       expect(notifier.state.clinics, hasLength(2));
       expect(notifier.state.total, 2);
-      expect(recorder.calls.last, (page: 1, search: 'joelho'));
+      expect(recorder.calls.last.page, 1);
+      expect(recorder.calls.last.search, 'joelho');
     });
 
     test('one request for a burst of keystrokes', () async {
@@ -186,6 +188,22 @@ void main() {
       expect(notifier.state.total, 7);
     });
 
+    test('keeps the ordering while narrowing', () async {
+      // A search is not a re-sort; the rows that match must come back in the
+      // order the reader chose.
+      final recorder = Recorder();
+      final notifier = notifierFor(recorder);
+      await pumpEventQueue();
+
+      await notifier.setSort('name-desc');
+      notifier.setQuery('joelho');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      await pumpEventQueue();
+
+      expect(recorder.calls.last.sortKey, 'name-desc');
+      expect(recorder.calls.last.search, 'joelho');
+    });
+
     test('clearing the box asks for the whole recorte again', () async {
       final recorder = Recorder();
       final notifier = notifierFor(recorder);
@@ -201,7 +219,68 @@ void main() {
       await pumpEventQueue();
 
       expect(notifier.state.total, 60);
-      expect(recorder.calls.last, (page: 1, search: ''));
+      expect(recorder.calls.last.page, 1);
+      expect(recorder.calls.last.search, '');
+    });
+  });
+
+  group('sort', () {
+    test('opens on the ordering the list always had', () async {
+      final recorder = Recorder();
+      final notifier = notifierFor(recorder);
+      await pumpEventQueue();
+
+      expect(notifier.state.sort, 'name-asc');
+      expect(recorder.calls.single.sortKey, 'name-asc');
+    });
+
+    test('re-orders the whole set, from page one', () async {
+      // The rows already loaded are the first 50 of the *old* ordering. Keeping
+      // them would put a sorted page underneath an unsorted one.
+      final recorder = Recorder();
+      final notifier = notifierFor(recorder);
+      await pumpEventQueue();
+      await notifier.loadMore();
+      expect(notifier.state.clinics, hasLength(50));
+
+      await notifier.setSort('last-purchase-desc');
+
+      expect(notifier.state.clinics, hasLength(25));
+      expect(recorder.calls.last.page, 1);
+      expect(recorder.calls.last.sortKey, 'last-purchase-desc');
+    });
+
+    test('choosing the ordering already applied asks nothing', () async {
+      final recorder = Recorder();
+      final notifier = notifierFor(recorder);
+      await pumpEventQueue();
+      final before = recorder.calls.length;
+
+      await notifier.setSort('name-asc');
+
+      expect(recorder.calls.length, before);
+    });
+
+    test('a slow answer to an old ordering never lands', () async {
+      // Same hazard as the search box: pick one sort, it hangs; pick another,
+      // it answers; the first must not overwrite it when it finally arrives.
+      final recorder = Recorder();
+      final notifier = notifierFor(recorder);
+      await pumpEventQueue();
+
+      recorder.holds[1] = Completer<DashboardClinicPage?>();
+      unawaited(notifier.setSort('name-desc'));
+      await pumpEventQueue();
+
+      recorder.holds.remove(1);
+      recorder.total = 33;
+      await notifier.setSort('purchase-funnel-asc');
+      expect(notifier.state.total, 33);
+
+      await pumpEventQueue();
+
+      expect(notifier.state.sort, 'purchase-funnel-asc');
+      expect(notifier.state.total, 33);
     });
   });
 }
