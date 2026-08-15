@@ -586,13 +586,14 @@ export class GenerateRoteiroUseCase {
       ...DEFAULT_ROTEIRO_PARAMS,
     };
     const notices: RoteiroNotice[] = [];
-    if (!stored) {
-      notices.push({
-        code: "PARAMS_DEFAULTED",
-        message: "Parâmetros padrão em uso — nenhuma configuração salva para esta linha.",
-        verticalId: input.verticalId,
-      });
-    }
+    /*
+     * Deliberately not a notice. That the linha has no saved configuration is
+     * true, unchanging and completely outside a rep's control — showing it on
+     * every generation trains them to ignore the notice area, which is where
+     * the things they *can* act on appear. It belongs in ops tooling, not on
+     * the screen where someone is planning their morning.
+     */
+    const usingDefaultParams = !stored;
 
     const limit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
     if (limit < 1) {
@@ -809,6 +810,7 @@ export class GenerateRoteiroUseCase {
       reachBoundKm,
       travelSource,
       params,
+      usingDefaultParams,
       notices,
       stops,
       totals: {
@@ -1165,20 +1167,30 @@ export class GenerateRoteiroUseCase {
       best.gap.clock = best.placement.endsAt;
     }
 
+    /*
+     * A quota only went *unfilled* if the bucket had nothing to offer.
+     *
+     * When the day itself ran out of room every bucket looks short, and saying
+     * "no eligible clinic within reach" is then simply false — measured against
+     * a real book it fired while 126 reachable prospects sat in the candidate
+     * set. `DAY_FULL` is the true explanation in that case and this one
+     * contradicts it, so it is only raised when the bucket is genuinely empty.
+     */
     for (const bucket of ["PROSPECTAR", "MANTER", "RECUPERAR"] as RoteiroBucket[]) {
       const filled = chosen.filter((c) => c.candidate.bucket === bucket).length;
-      if (filled < quotas[bucket]) {
-        notices.push({
-          code: "QUOTA_UNFILLED",
-          bucket,
-          requested: quotas[bucket],
-          filled,
-          message:
-            bucket === "PROSPECTAR"
-              ? "Nenhuma clínica sem compras elegível ao alcance — as vagas foram para outros baldes."
-              : `Sem clínicas suficientes no balde ${bucket} — as vagas foram redistribuídas.`,
-        });
-      }
+      if (filled >= quotas[bucket]) continue;
+      const available = candidates.filter((c) => c.bucket === bucket).length;
+      if (available > filled) continue;
+      notices.push({
+        code: "QUOTA_UNFILLED",
+        bucket,
+        requested: quotas[bucket],
+        filled,
+        message:
+          bucket === "PROSPECTAR"
+            ? "Nenhuma clínica sem compras elegível ao alcance — as vagas foram para outros baldes."
+            : `Sem clínicas suficientes no balde ${bucket} — as vagas foram redistribuídas.`,
+      });
     }
 
     return chosen;

@@ -172,13 +172,35 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.stops).toHaveLength(DEFAULT_ROTEIRO_PARAMS.dailyLimit);
   });
 
-  it("says when it fell back to default params instead of pretending they were configured", async () => {
+  it("reports default params to ops without putting them in the rep's notices", async () => {
+    // True, unchanging and outside a rep's control. On every generation it
+    // trains them to ignore the notice area, which is where the things they can
+    // act on appear.
     const repository = new FakeRepository([candidate({ id: 1 })]);
     const useCase = new GenerateRoteiroUseCase({ repository });
 
     const result = await useCase.execute(baseInput());
 
-    expect(result.notices.map((n) => n.code)).toContain("PARAMS_DEFAULTED");
+    expect(result.usingDefaultParams).toBe(true);
+    expect(result.notices.map((n) => n.code)).not.toContain("PARAMS_DEFAULTED");
+  });
+
+  it("does not claim a bucket was empty when the day merely ran out of room", async () => {
+    // Measured against a real book this fired while 126 reachable prospects sat
+    // in the candidate set — DAY_FULL was the true explanation and this
+    // contradicted it.
+    const repository = new FakeRepository(
+      Array.from({ length: 20 }, (_, i) => candidate({ id: i + 1, bucket: "PROSPECTAR" })),
+    );
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    // Late start: only one visit fits before the workday ends.
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T17:00:00-03:00") }),
+    );
+
+    const unfilled = result.notices.filter((n) => n.code === "QUOTA_UNFILLED");
+    expect(unfilled.map((n) => n.bucket)).not.toContain("PROSPECTAR");
   });
 
   it("reports an unfilled quota rather than silently dropping the bucket", async () => {

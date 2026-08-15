@@ -50,6 +50,10 @@ class RoteiroRepository extends Repository<String>
       request: RepositoryHttpRequest(
         url: Uri.parse('$_baseUrl/api/v1/roteiros/preview'),
         method: RepositoryHttpMethod.post,
+        // Required: the shared client JSON-encodes the body but sets no
+        // content type, so without this Elysia never parses it and the request
+        // fails schema validation with a 400 that says nothing.
+        headers: const {'Content-Type': 'application/json'},
         body: {
           'verticalId': verticalId,
           'scopeDate': ?scopeDate,
@@ -117,6 +121,10 @@ class RoteiroRepository extends Repository<String>
       request: RepositoryHttpRequest(
         url: Uri.parse('$_baseUrl/api/v1/roteiros'),
         method: RepositoryHttpMethod.post,
+        // Required: the shared client JSON-encodes the body but sets no
+        // content type, so without this Elysia never parses it and the request
+        // fails schema validation with a 400 that says nothing.
+        headers: const {'Content-Type': 'application/json'},
         body: {
           'verticalId': verticalId,
           'scopeDate': ?scopeDate,
@@ -152,6 +160,7 @@ class RoteiroRepository extends Repository<String>
       request: RepositoryHttpRequest(
         url: Uri.parse('$_baseUrl/api/v1/roteiros/$roteiroId/confirm'),
         method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
         body: const {},
       ),
     );
