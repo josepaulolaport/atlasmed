@@ -709,10 +709,35 @@ Interleaved with real bookings — a rep with commitments at 08:14 and 14:08 —
 ignores both fixed times. The 12.7 km forced by the two bookings alone means five extra visits cost
 **0.6 km each**.
 
-⚠️ **All of this is straight-line × 1.35 at a flat 28 km/h.** It says the *ordering* is sound; it
-says nothing about real drive times. A 2 km straight line across a river or a one-way system is not
-2 km, and São Paulo at 17:00 is not 28 km/h. Only the Matrix (P2) settles that, and until it lands
-every duration on screen is labelled `estimado`.
+### 4.8.2 Real drive times, verified 2026-08-15
+
+The Matrix integration was exercised against a live token. It works, and it matters more than
+expected: **every one of the five reps received a different set of clinics** once real road times
+replaced straight-line estimates. The estimator was not merely imprecise about durations — it was
+choosing the wrong clinics.
+
+| rep | estimated (28 km/h) | real | ratio |
+|---|---|---|---|
+| Rio | 19 min | 30 min | 1.58 |
+| São Paulo | 43 min | 55 min | 1.28 |
+| Londrina | 9 min | 14 min | 1.56 |
+| Brasília | 27 min | 26 min | **0.96** |
+| São Luís | 17 min | 23 min | 1.35 |
+
+Two conclusions.
+
+**The Matrix belongs in production, not as polish.** Labels changing from *estimado* to a real
+number is the least of it; the plan itself is different.
+
+**No single constant fits Brazil.** Brasília's planned grid makes straight lines nearly drivable
+while Rio's hills and Londrina's layout do not — a 1.6× spread between cities in the same country.
+The fallback speed was lowered from 28 km/h to 22, which recentres it on the observed median
+(ratios 0.76–1.27, from 0.96–1.58) rather than sitting under every city but one. It remains a
+fallback: good enough to keep working with no signal, never good enough to be trusted silently,
+and always labelled `estimado`.
+
+⚠️ Matrix durations are **asymmetric** — the probe returned 927 s one way and 940 s back. The
+lookup indexes `[from][to]` accordingly. Straight-line distance cannot express a one-way system.
 
 ### 4.9 Measured against the production clone, 2026-08-14
 

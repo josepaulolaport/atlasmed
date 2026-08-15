@@ -53,18 +53,34 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
 };
 
 /**
- * Straight-line kilometres understate a drive. 1.35 is the usual circuity
- * factor for Brazilian urban road networks, and 28 km/h a conservative mixed
- * urban average.
+ * The fallback when Mapbox cannot answer. Straight-line kilometres understate a
+ * drive, so they are inflated by a circuity factor and divided by an assumed
+ * speed.
  *
- * These produce **estimates and are labelled as such** end to end
- * (`travelSource = ESTIMATED`, spec 0016 §4.8). P2 replaces them with the
- * Mapbox Matrix. They exist so P1 ships something useful without a paid
- * dependency — and so the feature keeps working in the field when Mapbox is
- * unreachable, which is the situation a rep is most likely to be in.
+ * **Calibrated against real Matrix responses, 2026-08-15**, not guessed. A full
+ * day generated for each of the five reps, estimated against real:
+ *
+ * | rep | estimated | real | ratio |
+ * |---|---|---|---|
+ * | Rio | 19 min | 30 min | 1.58 |
+ * | São Paulo | 43 min | 55 min | 1.28 |
+ * | Londrina | 9 min | 14 min | 1.56 |
+ * | Brasília | 27 min | 26 min | **0.96** |
+ * | São Luís | 17 min | 23 min | 1.35 |
+ *
+ * The original 28 km/h was optimistic by roughly a third. Speed drops to 22,
+ * which centres the fallback on the observed median instead of sitting under
+ * every city but one.
+ *
+ * Brasília being the outlier is not noise — its planned grid means straight
+ * lines are nearly drivable, where Rio's hills and Londrina's layout are not.
+ * **No single constant fits a country this varied**, which is the real argument
+ * for the Matrix rather than a better guess. These numbers exist so the feature
+ * still works with no signal, and every duration they produce is labelled
+ * `estimado` on screen.
  */
 const ROAD_CIRCUITY_FACTOR = 1.35;
-const AVERAGE_SPEED_KMH = 28;
+const AVERAGE_SPEED_KMH = 22;
 
 /**
  * Mapbox's `driving` profile accepts at most 25 coordinates in one matrix call
