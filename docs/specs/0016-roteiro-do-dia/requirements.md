@@ -1725,6 +1725,157 @@ to selection rather than a display bound.
 
 ---
 
+## 15.6 Outcome capture — how a visit gets recorded — P5
+
+Measured 2026-08-15: `visits` is empty and all 7 interactions are `SCHEDULED`.
+Nobody has ever pressed *Iniciar interação*. The controls exist and work, so
+this is not a defect — it is a feature nobody has been given yet. Everything
+below exists to make the recording happen almost by itself, because a loop that
+depends on a rep remembering two button presses is a loop that stays empty.
+
+### 15.6.1 One button, many closers
+
+The rep presses **Cheguei** and nothing else. What ends the visit is whichever
+of these happens first:
+
+| closer | duration is |
+|---|---|
+| the rep starts another visit — **any clinic, in any order** | `MEASURED` |
+| the rep ends it explicitly | `MEASURED` |
+| geofence exit (§15.6.5, later) | `MEASURED` |
+| the end of the rep's own workday (§15.5.5) | `INFERRED` |
+| nothing — the app asks the next morning | `INFERRED` or nothing |
+
+**"Any clinic, in any order" is load-bearing.** A rep who visits stop 3 then
+stop 1 and goes home is not misbehaving; a clinic said "come at three instead".
+The closer is *whatever opens next*, never *the next planned stop*, so
+out-of-order days close themselves correctly without anyone modelling a
+sequence.
+
+### 15.6.2 ⚠️ An inferred ending must never train the model
+
+The obvious fix for a single-destination day — nothing follows it, so close it
+at its planned end — would poison the whole mechanism. The engine planned 60
+minutes; closing at 60 teaches it that visits take 60; the median converges on
+the guess and confirms it forever. The learning becomes a feedback loop of its
+own assumption, and it would look like it was working.
+
+So every interaction records **`duration_source`**, and **only `MEASURED` feeds
+the §15.5.4 median**. The `<5 min / >4 h` sanity filter does not catch this on
+its own: an inferred 60 minutes looks perfectly reasonable.
+
+### 15.6.3 The plan is not the record
+
+Each planned stop resolves independently:
+
+- **aconteceu** — `MEASURED` or `INFERRED`
+- **não aconteceu**, and the reason matters: *acabou o dia* ≠ *estava fechada* ≠
+  *mudei de ideia*
+- **não respondido**
+
+A stop planned and skipped is **not** a rejection. Skipping is a fact about the
+day; rejecting is a judgement about the clinic, and only the second may touch
+merit or start the §15.5.2 pause. Writing a `roteiro_stop_rejections` row for a
+day that simply ran out would penalise a clinic for the rep's traffic.
+
+**A visit to a clinic that was never on the roteiro must be recordable.** Reps
+improvise. *Cheguei* belongs on the clinic's own page, not only inside the day's
+plan — a system that can only record its own suggestions will under-count real
+work and then conclude reps are not visiting.
+
+### 15.6.4 Quick questions, and why they gate the duration
+
+⚠️ **A short visit and a failed visit are identical on a clock.** Twelve minutes
+is either a quick catch-up with someone who knows you or a gatekeeper turning
+you away. If both feed the same median unexamined, the engine learns that
+prospecting takes twelve minutes and starts planning days that cannot happen.
+
+Three questions, every answer one tap:
+
+| question | answers |
+|---|---|
+| Conseguiu falar com quem queria? | sim · falei com outra pessoa · não consegui |
+| Resultado | pedido · vai avaliar · sem interesse agora · só relacionamento |
+| Precisa de retorno? | não · 15 dias · 30 dias · 90 dias |
+
+The third is worth more than it looks: it feeds the §4.3.1 coverage rotation
+directly, so a rep answering it is scheduling their own next visit.
+
+### 15.6.5 Push and geofence — accelerators, not the mechanism
+
+Neither exists today. `firebase_messaging` is absent, there is no device-token
+store and nothing reads `pushNotificationsEnabled`; `geolocator` is present but
+one-shot and foreground, with When-In-Use permission and no background mode.
+
+- **Push reminder with an "Iniciar" action** needs FCM + APNs, token storage and
+  a scheduler. Action buttons are supported on both platforms.
+- **Arrival/exit geofencing** additionally needs Always-location permission, a
+  background mode, App Store justification and a battery budget.
+
+Both make the single tap easier. Neither is what makes the loop work, and
+building them first would be building the accelerator before the engine.
+
+### 15.6.6 Weak links, found by reading the code against this design
+
+Two of these are **already live**. They are invisible today only because no
+visit has ever been completed, and they become wrong on the day capture starts
+working — which is the day nobody will be looking for them.
+
+**1. The coverage clock turns on intention, not action.** `last_suggested_at` is
+stamped in `markConfirmed` and nowhere else, so confirming a roteiro marks every
+clinic in it as covered for 90–180 days (§4.3.1) whether or not the rep ever
+went. A rep who plans a day and stays home has just hidden five clinics from
+themselves for a quarter. Either the stamp moves to completion, or coverage
+needs two clocks — *last planned* and *last visited* — and the rotation should
+read the second.
+
+**2. `cooldown_days` is a dead parameter.** §4.1 says a candidate needs its
+"last `COMPLETED` interaction older than `cooldown_days` for its bucket". It is
+in `DEFAULT_ROTEIRO_PARAMS`, in the table, in the ops surface — and applied
+nowhere in the candidate query. Today every `COMPLETED` count is zero so nothing
+is filtered and nothing looks wrong. The first week of real capture is when the
+engine starts re-proposing a clinic visited three days ago.
+
+**3. Excluding failed visits biases the estimate long.** §15.6.4 keeps
+"não consegui falar" out of the median so a gatekeeper does not teach the engine
+that prospecting takes twelve minutes. But `serviceMinutes` is not answering
+*how long is a visit*, it is answering *how much of my day does this stop eat* —
+and a failed visit eats a real, unpredictable amount. Excluding failures makes
+the engine plan **fewer** stops than actually fit. The two questions want
+different statistics from the same column, and the spec currently pretends they
+are one.
+
+**4. The server stamps the start, so offline capture is silently wrong.**
+`interaction.use-cases.ts` sets `startedAt: now` at receipt. A start queued in a
+clinic with no signal is stamped when connectivity returns — minutes or hours
+late — and the duration computed from it is fiction. P6 is therefore not a
+convenience for P5, it is a **correctness dependency**: either the client stamps
+and the server accepts it, or offline capture must be refused outright rather
+than recorded wrongly.
+
+**5. Workday-end auto-close can precede the start.** The rep's day ends at 18:00
+by default and visits at 19:00 are demonstrably possible (§15.5.5 was written
+after watching one). Closing at the workday end would produce
+`actual_ended_at < actual_started_at`, which
+`interactions_actual_ends_after_starts_check` rejects outright. Auto-close must
+take `max(workdayEnd, start + minimum)` and be prepared to leave a visit open.
+
+**6. Two open interactions are ambiguous.** A phone call taken during a visit is
+`REMOTE`, does not anchor the route (§4.4) and should not close the in-person
+visit — but then "the next start closes the open one" no longer identifies which
+one. The closer needs to be scoped to `IN_PERSON`, and a remote interaction
+needs its own end.
+
+**7. Measured samples may never reach the threshold.** With close-on-next-start,
+the **last visit of every day is always inferred**, and a single-destination day
+is entirely inferred. A rep who mostly makes one or two calls a day contributes
+almost no `MEASURED` rows, so the ≥12 threshold (§15.5.4) may never be crossed
+for their linha and the learning silently never fires. Worth measuring before
+trusting: if measured supply is thin, the threshold is wrong, or the explicit
+end button matters more than this design assumes.
+
+---
+
 ## 16. Deferred
 
 ### 16.1 Trip planning for geographically spread books
