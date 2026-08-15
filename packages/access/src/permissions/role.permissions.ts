@@ -26,6 +26,7 @@ export function applyRoleAbilities(
       can("manage", "INTERACTION");
       can("manage", "FIELD_SUGGESTION");
       can("manage", "CADASTRO_SUBMISSION");
+      can("manage", "ROTEIRO");
       break;
 
     case "MANAGER":
@@ -61,6 +62,12 @@ export function applyRoleAbilities(
       // screen at all today.
       cannot("read", "CADASTRO_SUBMISSION");
       cannot("update", "CADASTRO_SUBMISSION");
+      // A manager may read their reps' plans and draft one for them (spec 0016
+      // S16), but confirming writes to the rep's calendar and is gated on
+      // INTERACTION, which stays owner-only. Manager proposes, rep accepts.
+      can("read", "ROTEIRO");
+      can("create", "ROTEIRO");
+      cannot("delete", "ROTEIRO");
       break;
 
     case "REP":
@@ -90,6 +97,11 @@ export function applyRoleAbilities(
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");
+      // Their own day: generate, edit, discard.
+      can("create", "ROTEIRO");
+      can("read", "ROTEIRO");
+      can("update", "ROTEIRO");
+      can("delete", "ROTEIRO");
       break;
 
     case "OPS":
@@ -114,6 +126,11 @@ export function applyRoleAbilities(
       cannot("create", "TERRITORY");
       cannot("update", "TERRITORY");
       cannot("delete", "TERRITORY");
+      // OPS tunes the engine's parameters but does not plan anyone's day.
+      can("read", "ROTEIRO");
+      can("update", "ROTEIRO");
+      cannot("create", "ROTEIRO");
+      cannot("delete", "ROTEIRO");
       break;
   }
 }
