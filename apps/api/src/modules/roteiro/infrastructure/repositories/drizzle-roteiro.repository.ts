@@ -737,10 +737,22 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         group by 1
       ),
       last_done as (
-        select i.facility_id, max(i.actual_ended_at) as ended_at
+        -- The most recent completed visit per clinic, and what the rep said on
+        -- the way out of it (§15.6.4). distinct on beats a group-by here
+        -- because the follow-up has to come from *that* visit, not from
+        -- whichever row an aggregate happened to touch.
+        select distinct on (i.facility_id)
+               i.facility_id,
+               i.actual_ended_at as ended_at,
+               case i.follow_up
+                 when 'NENHUM'  then null
+                 when 'DIAS_15' then 15
+                 when 'DIAS_30' then 30
+                 when 'DIAS_90' then 90
+               end               as follow_up_days
         from interactions i
-        where i.status = 'COMPLETED'
-        group by 1
+        where i.status = 'COMPLETED' and i.actual_ended_at is not null
+        order by i.facility_id, i.actual_ended_at desc
       ),
       raw as (
         select
@@ -768,9 +780,18 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           -- stamped on confirm — so a rep who plans a day and stays
           -- home used to mark all five clinics covered for a quarter — the
           -- rotation turned on intention rather than on anyone having gone.
+          --
+          -- The rep's own answer wins over the bucket horizon. Asked on the way
+          -- out of the last visit (§15.6.4), it is the one part of coverage that
+          -- is stated rather than inferred: a rep who said "30 dias" has
+          -- scheduled their own return, and the engine second-guessing them with
+          -- a 180-day default would make answering pointless.
           (ld.ended_at is null
            or ld.ended_at < ${input.today}::date - make_interval(days =>
-                coalesce((${JSON.stringify(params.coverageHorizonDays)}::jsonb ->> c.bucket)::int, 180)))
+                coalesce(
+                  ld.follow_up_days,
+                  (${JSON.stringify(params.coverageHorizonDays)}::jsonb ->> c.bucket)::int,
+                  180)))
                                                                    as coverage_overdue,
           -- §4.2a timing ramp: peaks just BEFORE the expected reorder, because
           -- the point of the visit is to be there when the decision is made.

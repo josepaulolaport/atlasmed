@@ -55,6 +55,37 @@ export const interactionEventSourceEnum = pgEnum("interaction_event_source", ["U
  * planned, and the median would converge on its own assumption while looking
  * like it was learning.
  */
+/**
+ * How a visit went, in the rep's own terms — spec 0016 §15.6.4.
+ *
+ * ⚠️ `NAO_FALEI_COM_NINGUEM` is deliberately **not** the rejection vocabulary's
+ * `SEM_INTERESSE`. That word describes a judgement about a clinic made before
+ * going, and it carries a decaying merit penalty (§15.5.2). This enum describes
+ * a visit that already happened and touches merit not at all — a rep who could
+ * not get past reception has learned nothing about whether the clinic wants the
+ * product, and saying "sem interesse" would quietly claim they had.
+ */
+export const interactionOutcomeEnum = pgEnum("interaction_outcome", [
+  "PEDIDO",
+  "VAI_AVALIAR",
+  "RELACIONAMENTO",
+  "NAO_FALEI_COM_NINGUEM",
+]);
+
+/**
+ * When the rep wants to come back, in days — spec 0016 §15.6.4.
+ *
+ * The load-bearing answer. Everything else in the §4.3.1 coverage rotation is
+ * inference; this is the rep saying it outright, so answering it is how they
+ * schedule their own next visit.
+ */
+export const interactionFollowUpEnum = pgEnum("interaction_follow_up", [
+  "NENHUM",
+  "DIAS_15",
+  "DIAS_30",
+  "DIAS_90",
+]);
+
 export const interactionDurationSourceEnum = pgEnum("interaction_duration_source", [
   "MEASURED",
   "INFERRED",
@@ -183,6 +214,14 @@ export const interactions = pgTable(
     actualEndedAt: timestamp("actual_ended_at", { withTimezone: true }),
     /** Null until the visit has an end. See the enum for why this exists. */
     durationSource: interactionDurationSourceEnum("duration_source"),
+    /**
+     * The two quick questions (§15.6.4). Null means unanswered, which is a real
+     * and common state — the questions are asked, never enforced, because a
+     * visit that happened is worth recording even when the rep was in a hurry.
+     */
+    outcome: interactionOutcomeEnum("outcome"),
+    followUp: interactionFollowUpEnum("follow_up"),
+    outcomeAnsweredAt: timestamp("outcome_answered_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelledByUserId: bigint("cancelled_by_user_id", { mode: "number" }).references(
       () => users.id,

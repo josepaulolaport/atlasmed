@@ -1821,16 +1821,30 @@ So the questions do **not** filter the duration. The median takes the mixture,
 which is exactly the statistic a planner needs. What the questions are for is
 the outcome record and the return clock.
 
-Three questions, every answer one tap:
+**Two** questions, every answer one tap:
 
-| question | answers |
-|---|---|
-| Conseguiu falar com quem queria? | sim · falei com outra pessoa · não consegui |
-| Resultado | pedido · vai avaliar · sem interesse agora · só relacionamento |
-| Precisa de retorno? | não · 15 dias · 30 dias · 90 dias |
+| question | answers | feeds |
+|---|---|---|
+| Como foi? | fechei pedido · vai avaliar · só relacionamento · não falei com ninguém | outcome record, conversão |
+| Quando voltar? | não precisa · 15 dias · 30 dias · 90 dias | §4.3.1 coverage rotation |
 
-The third is worth more than it looks: it feeds the §4.3.1 coverage rotation
-directly, so a rep answering it is scheduling their own next visit.
+Three was one too many. The original first question — *conseguiu falar com quem
+queria* — is answerable from the outcome: **não falei com ninguém** is the
+failed-visit case, and it belongs on the same list rather than on a list of its
+own. Every question asked at the end of a visit is friction on the one loop that
+has never yet run, so a question that can be folded into another has to be.
+
+**The second is the load-bearing one.** Everything else in coverage is
+inference; this is the rep saying it outright, and a rep answering *30 dias* is
+scheduling their own next visit.
+
+⚠️ **`não falei com ninguém` is deliberately not `SEM_INTERESSE`.** The rejection
+vocabulary (§15.5.2) uses that word for a judgement about a clinic, made *before*
+going. This list is about a visit that already happened, and the two must not
+share wording: one carries a decaying merit penalty, the other does not touch
+merit at all. A rep who could not get past reception has learned nothing about
+whether the clinic wants the product, and an outcome list that said
+"sem interesse" would quietly claim they had.
 
 
 ### 15.6.4a Two defects the audit found in the capture code itself
