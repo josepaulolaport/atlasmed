@@ -11,6 +11,7 @@ void main() {
         'rep_changed',
         'clinic_closed',
         'wrong_assignment',
+        'other',
       };
 
       for (final reason in UnassignReason.values) {
@@ -30,11 +31,20 @@ void main() {
       expect(wire, isNot(contains('vertical_deactivated')));
     });
 
-    test('"outro" keeps the historical catch-all rather than a new value', () {
-      // Rows written before the vocabulary existed say `manual_unassign`.
-      // Reusing it keeps one meaning — "unassigned, unexplained" — instead of
-      // splitting it across two spellings nobody can aggregate.
-      expect(UnassignReason.other.wireValue, 'manual_unassign');
+    test('"outro" is its own value, not the "unrecorded" catch-all', () {
+      // It used to send `manual_unassign`, which the API writes for a legacy
+      // row and for any caller that sends no reason at all. A rep who looked at
+      // the four options and picked "none of these" was recorded as having said
+      // nothing, so the one number the vocabulary exists to produce — how often
+      // the list fails — could never be counted.
+      expect(UnassignReason.other.wireValue, 'other');
+
+      final wire = UnassignReason.values.map((r) => r.wireValue).toList();
+      expect(
+        wire.where((value) => value == 'manual_unassign'),
+        isEmpty,
+        reason: 'no motivo should claim the "reason unrecorded" code',
+      );
     });
   });
 

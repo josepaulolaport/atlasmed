@@ -237,7 +237,8 @@ export class AssignFacilityVerticalRepUseCase {
  *
  * `manual_unassign` is the historical catch-all and stays as the default, so
  * rows written before the vocabulary existed remain readable for what they are:
- * someone unassigned this, reason unrecorded.
+ * someone unassigned this, reason unrecorded. A person choosing "none of these"
+ * is a different fact and writes `other`.
  *
  * The other end reasons the system writes — `reassigned`, `boundary_impact`,
  * `vertical_deactivated` — are not in this list on purpose. They are things the
@@ -249,6 +250,16 @@ export const UNASSIGN_REASONS = [
   "rep_changed",
   "clinic_closed",
   "wrong_assignment",
+  /**
+   * Someone looked at the four options and none of them fitted.
+   *
+   * Distinct from `manual_unassign` on purpose. The picker used to send the
+   * catch-all for "Outro motivo", so a deliberate choice was written as the
+   * same value as a row from before the vocabulary existed and as any caller
+   * that sent no reason at all — three different facts under one code, and the
+   * one the vocabulary exists to count was the one that disappeared.
+   */
+  "other",
 ] as const;
 
 export type UnassignReason = (typeof UNASSIGN_REASONS)[number];
