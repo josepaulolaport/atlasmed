@@ -68,6 +68,7 @@ class RoteiroStop {
     required this.isAnchor,
     required this.reasons,
     this.municipality,
+    this.neighborhood,
     this.unitType,
     this.travelSecondsFromPrev,
     this.straightLineKm,
@@ -84,6 +85,7 @@ class RoteiroStop {
           (candidate['facilityVerticalProfileId'] as num?)?.toInt() ?? 0,
       facilityName: candidate['facilityName'] as String? ?? 'Clínica',
       municipality: candidate['municipality'] as String?,
+      neighborhood: candidate['neighborhood'] as String?,
       unitType: candidate['unitType'] as String?,
       bucket: bucketFromApi(candidate['bucket']),
       modality: json['modality'] == 'REMOTE'
@@ -109,6 +111,14 @@ class RoteiroStop {
   final int facilityVerticalProfileId;
   final String facilityName;
   final String? municipality;
+
+  /// Bairro, from CNES.
+  ///
+  /// Load-bearing, not decoration: 61 name-groups in the book cover 149
+  /// facilities — eight Vita Clínicas branches share one name across São Paulo.
+  /// Two of them can legitimately appear in the same day, and without the bairro
+  /// they render as the same clinic listed twice.
+  final String? neighborhood;
   final String? unitType;
   final RoteiroBucket bucket;
   final RoteiroModality modality;

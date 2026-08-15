@@ -81,7 +81,12 @@ class RoteiroStopCard extends StatelessWidget {
                         Text(
                           [
                             '${_hhmm(stop.plannedStartsAt)}–${_hhmm(stop.plannedEndsAt)}',
-                            if (stop.municipality != null) stop.municipality!,
+                            // Bairro first — it is what tells two branches of
+                            // the same chain apart on screen.
+                            if (stop.neighborhood != null)
+                              stop.neighborhood!
+                            else if (stop.municipality != null)
+                              stop.municipality!,
                             if (stop.straightLineKm != null)
                               '${stop.straightLineKm!.toStringAsFixed(1)} km',
                           ].join(' · '),

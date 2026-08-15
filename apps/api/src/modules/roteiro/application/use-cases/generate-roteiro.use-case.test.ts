@@ -25,6 +25,7 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
     cnesCode: `cnes-${id}`,
     unitType: "Clinica/Centro de Especialidade",
     municipality: "Sao Paulo",
+    neighborhood: null,
     funnelStage: "NEVER_PURCHASED",
     bucket: "PROSPECTAR",
     lat: SAO_PAULO.lat + id * 0.01,

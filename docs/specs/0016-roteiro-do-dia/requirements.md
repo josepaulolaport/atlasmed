@@ -952,7 +952,7 @@ today, and a bottom-nav/home action **"Roteiro do dia"**.
 Three coordinated views over one slate — never three separate screens with separate state.
 
 1. **Lista** (default). Ordered cards. Each card:
-   - order badge `1 … 5`, clinic name, neighbourhood
+   - order badge `1 … 5`, clinic name, **bairro**
    - bucket chip (`Manter` / `Recuperar` / `Prospectar`) — colours reuse `PurchaseBucketFilter`
    - modality chip (`Presencial` / `Remoto`), tappable to flip
    - `08:30 – 09:15` planned window, and `+22 min de deslocamento` above it
@@ -1211,6 +1211,29 @@ constant components cannot support.
 
 **Hospitals rank below clinics by commercial decision**, beyond what conversion alone justifies
 (§4.2g).
+
+### 15.2b Chains and branches — open commercial question, 2026-08-15
+
+Two *Vita Clínicas Medicina Especializada* stops appeared in one generated day
+and read as the same clinic twice. They are not: the book holds **eight**
+branches of that chain across São Paulo — one CNPJ root (`11831222`), eight
+filiais, from Ibirapuera (32 orthopaedists) to Morumbi (0) — and all eight
+belong to the same rep. The engine picked the two largest, which is correct.
+
+The **presentation** was not. Both cards said only "Sao Paulo", so nothing on
+screen distinguished them. The stop card now leads with the bairro
+(`registry.facilities.neighborhood`). This is not cosmetic: **61 name-groups in
+the book cover 149 facilities**, about 10 % of it, so a rep meets this regularly.
+
+**Still open, and it is a commercial question rather than a technical one:** is a
+chain one buying decision or eight? If purchasing is centralised at the group,
+two branches in a single day is duplicated effort and the engine should cap
+stops per CNPJ root — `substring(tax_id_cnpj, 1, 8)` is a clean group key and
+`registry.facilities.tax_id_cnpj` already carries it. If each branch orders
+independently, the current behaviour is right and no cap should exist.
+
+Nothing is implemented either way until this is answered. Guessing would encode
+a purchasing model nobody has confirmed.
 
 ### 15.3 Still open
 

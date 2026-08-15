@@ -51,6 +51,13 @@ export interface RoteiroCandidate {
   cnesCode: string | null;
   unitType: string | null;
   municipality: string | null;
+  /**
+   * From CNES. The only thing distinguishing branches of a chain on screen:
+   * 61 name-groups in the book cover 149 facilities, and eight Vita Clínicas
+   * units share one name across São Paulo. Without it two suggestions read as
+   * the same clinic listed twice.
+   */
+  neighborhood: string | null;
   funnelStage: PurchaseFunnelStage;
   bucket: RoteiroBucket;
   lat: number;

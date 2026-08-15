@@ -48,6 +48,7 @@ interface CandidateRow extends Record<string, unknown> {
   cnes_code: string | null;
   unit_type: string | null;
   municipality: string | null;
+  neighborhood: string | null;
   funnel_stage: string;
   bucket: string;
   lat: number;
@@ -194,6 +195,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           f.cnes_code                       as cnes_code,
           ut.name                           as unit_type,
           mu.name                           as municipality,
+          rf.neighborhood                   as neighborhood,
           p.purchase_funnel_stage::text     as funnel_stage,
           p.purchase_interval_days::int     as purchase_interval_days,
           p.last_valid_purchase_date        as last_purchase,
@@ -355,7 +357,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       )
       select
         w.profile_id, w.facility_id, w.facility_name, w.cnes_code, w.unit_type,
-        w.municipality, w.funnel_stage, w.bucket, w.lat, w.lng, w.straight_line_km,
+        w.municipality, w.neighborhood, w.funnel_stage, w.bucket, w.lat, w.lng, w.straight_line_km,
         w.ortho_n, w.ortho_total, w.ortho_ratio, w.assignment_started_at,
         w.theirs_qty, w.ours_qty, w.days_since_interaction,
         w.days_since_purchase, w.purchase_interval_days, w.last_suggested_at,
@@ -407,6 +409,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       cnesCode: row.cnes_code,
       unitType: row.unit_type,
       municipality: row.municipality,
+      neighborhood: row.neighborhood,
       funnelStage: row.funnel_stage as RoteiroCandidate["funnelStage"],
       bucket: row.bucket as RoteiroCandidate["bucket"],
       lat: Number(row.lat),
