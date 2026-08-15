@@ -142,7 +142,15 @@ abstract class DashboardMetricUseCase {
   }
 }
 
-/** Clínicas atribuídas — count of profiles in scope. */
+/**
+ * Clínicas atribuídas — profiles in scope that hold an open rep assignment.
+ *
+ * Not the whole scope, which is what this counted and what the label denied: an
+ * admin saw "2374 atribuídas" next to "941 sem representante", two cards
+ * describing the same clinics and disagreeing about them. Counting the
+ * assignment makes the pair exhaustive — atribuídas + não atribuídas is the
+ * denominator, for every filter.
+ */
 export class GetAssignedClinicsMetricUseCase extends DashboardMetricUseCase {
   async execute(request: DashboardMetricRequest): Promise<{
     verticalId: number;
@@ -152,7 +160,7 @@ export class GetAssignedClinicsMetricUseCase extends DashboardMetricUseCase {
     if (!context.filter) return { verticalId: context.verticalId, value: 0 };
     return {
       verticalId: context.verticalId,
-      value: await this.deps.repository.countProfiles(context.filter),
+      value: await this.deps.repository.countProfilesWithRep(context.filter),
     };
   }
 }
@@ -530,23 +538,33 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
 /**
  * The one extra condition that turns the shared scope into a metric's own set.
  *
- * `assigned-clinics` and `coverage` add nothing — their breakdown is the
- * denominator itself, which is exactly what a user drilling into "247 clínicas"
- * expects to see.
+ * `coverage` adds nothing — its breakdown is the denominator itself, which is
+ * exactly what a user drilling into "247 clínicas" expects to see.
+ *
+ * `assigned-clinics` used to add nothing either, and had to start: once the card
+ * counts clinics that hold a rep, a breakdown over the whole scope would list
+ * the unassigned ones too and open a list longer than the number that opened it.
+ * It is the exact negation of `unassigned-clinics` on purpose — one rule, two
+ * signs — so no clinic can be missing from both lists or present in both.
  */
 export function metricPredicateForTest(metric: DashboardMetricKey) {
   return metricPredicate(metric);
 }
 
+/** An open rep assignment on the row's profile — the pair's shared predicate. */
+const OPEN_REP_ASSIGNMENT = sql`EXISTS (
+  SELECT 1 FROM facility_vertical_rep_assignments a
+   WHERE a.facility_vertical_profile_id = facility_vertical_profiles.id
+     AND a.ended_at IS NULL)`;
+
 function metricPredicate(metric: DashboardMetricKey) {
   switch (metric) {
     case "cadastro-completion":
       return sql`facility_vertical_profiles.conformity_status = 'REGISTERED'`;
+    case "assigned-clinics":
+      return OPEN_REP_ASSIGNMENT;
     case "unassigned-clinics":
-      return sql`NOT EXISTS (
-        SELECT 1 FROM facility_vertical_rep_assignments a
-         WHERE a.facility_vertical_profile_id = facility_vertical_profiles.id
-           AND a.ended_at IS NULL)`;
+      return sql`NOT ${OPEN_REP_ASSIGNMENT}`;
     case "bucket-active":
     case "bucket-inactive":
       return sql`facility_vertical_profiles.purchase_funnel_stage IN ${stageList(metric)}`;
@@ -614,11 +632,18 @@ export class GetDashboardTerritoryUseCase extends DashboardMetricUseCase {
     const [clinicCount, doctorCount, features] = await Promise.all([
       this.deps.repository.countProfiles(context.filter),
       this.deps.repository.countDoctors(context.filter),
+      // The filter travels with the geometry, not only with the counts beside
+      // it: the card prints "146 clínicas · 214 médicos" under the map, and
+      // those three numbers have to be about the same clinics.
       isGlobal
-        ? this.deps.repository.listVerticalTerritoryFeatures(context.verticalId)
+        ? this.deps.repository.listVerticalTerritoryFeatures({
+            verticalId: context.verticalId,
+            filter: context.filter,
+          })
         : this.deps.repository.listAssignedTerritoryFeatures({
             userId: context.subject.userId,
             verticalId: context.verticalId,
+            filter: context.filter,
           }),
     ]);
 
