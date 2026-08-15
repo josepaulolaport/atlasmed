@@ -46,6 +46,32 @@ Uri? whatsappUrl(String? phone) {
       : Uri.https('wa.me', '/$normalizedPhone');
 }
 
+/// Ways to reach a conversation with [phone], the app itself first.
+///
+/// `https://wa.me/<number>` is the documented click-to-chat link, but it is a
+/// *web* URL: `launchUrl` opens web URLs in an in-app browser by default, and a
+/// universal link cannot hand off to WhatsApp from there. The rep landed on the
+/// wa.me page with a "Continue to Chat" button — the app, one more tap away,
+/// when they had already pressed WhatsApp. The custom scheme opens the
+/// conversation directly, and the https link stays as the fallback for a phone
+/// without WhatsApp installed.
+@visibleForTesting
+List<Uri> whatsappUrls(String? phone) {
+  final normalizedPhone = normalizeBrazilianPhone(phone);
+  if (normalizedPhone == null) return const [];
+  return [
+    // `whatsapp://send?...`. Built with an authority rather than a path: an
+    // empty host puts a third slash in — `whatsapp:///send` — which iOS does
+    // not match against the app's registered scheme.
+    Uri(
+      scheme: 'whatsapp',
+      host: 'send',
+      queryParameters: {'phone': normalizedPhone},
+    ),
+    Uri.https('wa.me', '/$normalizedPhone'),
+  ];
+}
+
 Uri? emailUrl(String? email) {
   final normalizedEmail = email?.trim() ?? '';
   return normalizedEmail.isEmpty
@@ -57,9 +83,14 @@ enum _MapsApp { waze, googleMaps }
 
 /// Candidate deep links for a maps app, native first then https fallback.
 ///
-/// When both coords and a street address exist, address is always included
-/// (`q` / `daddr` / `destination`) so Waze/Google populate the search field;
-/// coords stay on Waze via `ll` for pin accuracy.
+/// Coordinates win whenever we have them, and the address is what we fall back
+/// to. It used to be the other way round — the address went in as `q` on Waze
+/// and as `daddr` on Google even when coordinates were known — and that is not
+/// a destination, it is a search term. Waze treats `q` as a search (`ll` only
+/// biases where it looks), so the rep arrived at a result screen instead of a
+/// route they could accept; and the strings we hold are CNES-shaped —
+/// "AV MARACANA, 987 — RIO DE JANEIRO — RJ" — which is exactly the sort of
+/// thing geocoding fumbles. A latitude and longitude cannot be misread.
 @visibleForTesting
 List<Uri> mapsAppRouteUrls({
   required String app,
@@ -91,44 +122,56 @@ List<Uri> _mapsAppRouteUrls({
   final query = address?.trim() ?? '';
   if (!hasCoords && query.isEmpty) return const [];
 
+  final coordDestination = hasCoords ? '$latitude,$longitude' : null;
+  final addressDestination = query.isNotEmpty ? query : null;
+  // Coordinates first; the address only when there are none.
+  final primary = coordDestination ?? addressDestination!;
+
   switch (app) {
     case _MapsApp.waze:
+      // `ll` + navigate=yes routes straight to the point. `q` is only sent when
+      // there is nothing to route to, because supplying both makes Waze search
+      // for the text and ignore the pin.
       final params = <String, String>{'navigate': 'yes'};
-      if (hasCoords) params['ll'] = '$latitude,$longitude';
-      if (query.isNotEmpty) params['q'] = query;
+      if (coordDestination != null) {
+        params['ll'] = coordDestination;
+      } else {
+        params['q'] = addressDestination!;
+      }
       return [
-        Uri(scheme: 'waze', queryParameters: params),
+        // `waze://?...` — with an empty authority, not `waze:?...`. Both are
+        // legal URIs; the documented one is the form the app registers.
+        Uri(scheme: 'waze', host: '', queryParameters: params),
         Uri.https('waze.com', '/ul', params),
       ];
     case _MapsApp.googleMaps:
-      // Prefer human-readable address in the destination field; keep a
-      // coords fallback so navigation still works if geocoding fails.
-      final addressDestination = query.isNotEmpty ? query : null;
-      final coordDestination = hasCoords ? '$latitude,$longitude' : null;
-      final primary = addressDestination ?? coordDestination!;
+      final fallback = coordDestination != null ? addressDestination : null;
       return [
         Uri(
           scheme: 'comgooglemaps',
+          host: '',
           queryParameters: {'daddr': primary, 'directionsmode': 'driving'},
         ),
-        if (addressDestination != null && coordDestination != null)
+        if (fallback != null)
           Uri(
             scheme: 'comgooglemaps',
-            queryParameters: {
-              'daddr': coordDestination,
-              'directionsmode': 'driving',
-            },
+            host: '',
+            queryParameters: {'daddr': fallback, 'directionsmode': 'driving'},
           ),
         // Android Google Maps navigation scheme.
-        Uri(scheme: 'google.navigation', queryParameters: {'q': primary}),
+        Uri(
+          scheme: 'google.navigation',
+          host: '',
+          queryParameters: {'q': primary},
+        ),
         Uri.https('www.google.com', '/maps/dir/', {
           'api': '1',
           'destination': primary,
         }),
-        if (addressDestination != null && coordDestination != null)
+        if (fallback != null)
           Uri.https('www.google.com', '/maps/dir/', {
             'api': '1',
-            'destination': coordDestination,
+            'destination': fallback,
           }),
       ];
   }
@@ -144,15 +187,27 @@ Future<void> launchContactUrl(
     return;
   }
 
-  try {
-    final wasLaunched = await launchUrl(url);
-    if (!wasLaunched && context.mounted) {
-      _showContactFeedback(context, 'Não foi possível abrir $contactLabel.');
+  // WhatsApp is reached through the app itself when it is installed; see
+  // `whatsappUrls`. Everything else — tel:, mailto: — is a non-web scheme that
+  // always leaves the app anyway.
+  final candidates = url.host == 'wa.me'
+      ? whatsappUrls(url.pathSegments.isEmpty ? null : url.pathSegments.first)
+      : [url];
+
+  for (final candidate in candidates) {
+    try {
+      final wasLaunched = await launchUrl(
+        candidate,
+        mode: LaunchMode.externalApplication,
+      );
+      if (wasLaunched) return;
+    } catch (_) {
+      // Not installed, or the scheme is unhandled: try the next one.
     }
-  } catch (_) {
-    if (context.mounted) {
-      _showContactFeedback(context, 'Não foi possível abrir $contactLabel.');
-    }
+  }
+
+  if (context.mounted) {
+    _showContactFeedback(context, 'Não foi possível abrir $contactLabel.');
   }
 }
 

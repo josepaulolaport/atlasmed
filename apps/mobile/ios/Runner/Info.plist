@@ -88,6 +88,14 @@
 		<string>waze</string>
 		<string>comgooglemaps</string>
 		<string>google.navigation</string>
+		<!--
+		  WhatsApp: the contact button opens `whatsapp://send?phone=…` so the
+		  conversation is what appears. Without the scheme listed here iOS
+		  answers "cannot open" when asked, and the button falls through to
+		  wa.me in a browser — a page with a button that opens the app the rep
+		  had already asked for.
+		-->
+		<string>whatsapp</string>
 		<string>https</string>
 		<string>http</string>
 	</array>
