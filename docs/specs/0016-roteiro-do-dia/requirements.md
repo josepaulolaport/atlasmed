@@ -1746,6 +1746,18 @@ of these happens first:
 | the end of the rep's own workday (§15.5.5) | `INFERRED` |
 | nothing — the app asks the next morning | `INFERRED` or nothing |
 
+**Close-on-next-start is implemented.** Starting an in-person visit closes any
+in-person visit the rep left open, inside the same transaction, as `MEASURED`
+with a `SYSTEM` event recording why — so a visit that says it lasted forty
+minutes can be explained later. A `visits` row is created for it exactly as an
+explicit completion would.
+
+⚠️ Verified against Postgres, and the run caught a real bug: the scoping held on
+the closed side but not the closing side, so a phone call taken mid-visit
+silently ended the visit the rep was still sitting in. The decision now lives in
+`visitsClosedByArrival`, a pure function with six tests, because it is a rule
+rather than a query and should not need a database to be checked.
+
 **"Any clinic, in any order" is load-bearing.** A rep who visits stop 3 then
 stop 1 and goes home is not misbehaving; a clinic said "come at three instead".
 The closer is *whatever opens next*, never *the next planned stop*, so

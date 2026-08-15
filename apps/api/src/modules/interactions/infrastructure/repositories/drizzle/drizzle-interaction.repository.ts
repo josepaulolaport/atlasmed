@@ -53,6 +53,123 @@ export async function collectOverdueCandidates<T extends { interaction: { id: nu
   return overdue;
 }
 
+
+/**
+ * Which of the rep's open visits a new arrival ends — spec 0016 §15.6.1.
+ *
+ * Pulled out of the query on purpose. The scoping has to hold on **both**
+ * sides — an in-person arrival closes in-person visits, a call closes nothing
+ * and is closed by nothing (§15.6.6-6) — and a live run against Postgres caught
+ * it holding on only one, with a phone call silently ending the visit the rep
+ * was still sitting in. That asymmetry is a decision, not a query, so it is
+ * testable here rather than only observable against a database.
+ */
+export function visitsClosedByArrival<
+  T extends { modality: string; actualStartedAt: Date | null },
+>(args: {
+  startingModality: string;
+  open: T[];
+  at: Date;
+}): (T & { actualStartedAt: Date })[] {
+  if (args.startingModality !== "IN_PERSON") return [];
+  // The narrowed return is the point: a caller cannot forget that everything
+  // surviving this filter has a start to measure from.
+  return args.open.filter(
+    (visit): visit is T & { actualStartedAt: Date } =>
+      visit.modality === "IN_PERSON" &&
+      // The check constraint requires a positive duration, and clock skew or a
+      // start replayed out of order can produce one that is not. Such a visit
+      // is left open for the next-morning question rather than closed at a time
+      // that would have to be invented (§15.6.6-5).
+      visit.actualStartedAt !== null &&
+      args.at > visit.actualStartedAt,
+  );
+}
+
+/**
+ * Closes whatever in-person visit the rep left open — spec 0016 §15.6.1.
+ *
+ * A rep's day is a sequence: arriving somewhere is proof they left the last
+ * place. Requiring a second button press to say so is what leaves the whole
+ * outcome loop empty, so starting the next visit ends the previous one.
+ *
+ * **Scoped to `IN_PERSON` on both sides (§15.6.6-6).** The caller only invokes
+ * this for an in-person start, and only in-person visits are closed. A phone
+ * call taken during a visit neither ends it nor is ended by it — roteirização never proposes calls and
+ * only accounts for the time they occupy (§4.4), so at most one in-person visit
+ * is open at a time and a remote one carries its own end.
+ *
+ * The close is `MEASURED`: nobody pressed a button, but the rep's arrival
+ * elsewhere is a witnessed fact about the world, not an assumption the engine
+ * made. That distinction is the whole of §15.6.2 — an *inferred* end, such as
+ * an auto-close at a planned time, would teach the engine its own guess.
+ *
+ * Runs inside the caller's transaction so a start can never half-happen and
+ * leave two visits open.
+ */
+async function closeOpenVisits(
+  tx: AnyDatabase,
+  args: { agentUserId: number; exceptId: number; at: Date; startingModality: string },
+): Promise<void> {
+  const open = await tx
+    .select()
+    .from(interactions)
+    .where(
+      and(
+        eq(interactions.agentUserId, args.agentUserId),
+        eq(interactions.status, "IN_PROGRESS"),
+        sql`${interactions.id} <> ${args.exceptId}`,
+      ),
+    )
+    .for("update");
+
+  for (const stale of visitsClosedByArrival({
+    startingModality: args.startingModality,
+    open,
+    at: args.at,
+  })) {
+    let visitId = stale.visitId;
+    if (!visitId) {
+      const [visit] = await tx
+        .insert(visits)
+        .values({
+          userId: stale.agentUserId,
+          facilityId: stale.facilityId,
+          visitedAt: stale.actualStartedAt,
+        })
+        .returning({ id: visits.id });
+      if (!visit) throw new DatabaseError("create compatibility visit");
+      visitId = visit.id;
+    }
+
+    const [closed] = await tx
+      .update(interactions)
+      .set({
+        status: "COMPLETED",
+        actualEndedAt: args.at,
+        durationSource: "MEASURED",
+        visitId,
+        updatedAt: args.at,
+        version: sql`${interactions.version} + 1`,
+      })
+      .where(eq(interactions.id, stale.id))
+      .returning();
+    if (!closed) continue;
+
+    // SYSTEM, not USER: the rep started something else, they did not ask for
+    // this. The event is what makes the close visible when somebody asks why a
+    // visit says it lasted forty minutes.
+    await tx.insert(interactionEvents).values({
+      interactionId: stale.id,
+      actorUserId: null,
+      source: "SYSTEM",
+      previousStatus: "IN_PROGRESS",
+      newStatus: "COMPLETED",
+      metadata: { source: "closed-by-next-visit", closedAt: args.at.toISOString() },
+    });
+  }
+}
+
 export class DrizzleInteractionRepository implements InteractionRepository {
   constructor(private readonly database: AnyDatabase = db) {}
 
@@ -121,6 +238,8 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       }
       await tx.insert(interactionEvents).values({ interactionId: input.id, actorUserId: input.actorUserId, source: "USER",
         previousStatus: "SCHEDULED", newStatus: "IN_PROGRESS", metadata: commandMetadata("start", input.idempotencyKey, updated.version) });
+      await closeOpenVisits(tx, { agentUserId: updated.agentUserId, exceptId: input.id,
+        at: input.startedAt, startingModality: updated.modality });
       const detail = await repository.findById(input.id);
       if (!detail) throw new DatabaseError("load started interaction");
       return { interaction: detail, replayed: false };
