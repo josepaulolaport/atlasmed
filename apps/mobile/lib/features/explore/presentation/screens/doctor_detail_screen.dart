@@ -722,6 +722,12 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
 // 1. DoctorHeader — gradient background + avatar + name + badge
 // ======================================================================
 
+/// Whatever the header pill actually has to say, joined — often nothing.
+String _headerBadge(Professional detail) => [
+  detail.statusLabel,
+  detail.specialty,
+].map((part) => part.trim()).where((part) => part.isNotEmpty).join(' · ');
+
 class _DoctorHeader extends StatelessWidget {
   final Professional detail;
   const _DoctorHeader({required this.detail});
@@ -776,44 +782,53 @@ class _DoctorHeader extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.28),
+                        // Status badge, only when it has something to say.
+                        //
+                        // It printed "$statusLabel · $specialty" whatever those
+                        // held, and `statusLabel` is hardcoded empty in
+                        // `Professional.fromDto` — so a doctor with no
+                        // specialty got a pill containing a dot and a
+                        // separator, and every other doctor got a stray "·"
+                        // in front of their specialty.
+                        if (_headerBadge(detail).isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.28),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _headerBadge(detail),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 5,
-                                height: 5,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${detail.statusLabel} · ${detail.specialty}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.3,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
+                          const SizedBox(height: 6),
+                        ],
                         Text(
                           detail.name,
                           style: const TextStyle(

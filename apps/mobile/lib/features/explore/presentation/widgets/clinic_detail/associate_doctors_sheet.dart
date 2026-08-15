@@ -177,6 +177,12 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     return 'Associar';
   }
 
+  /// Nothing to add and something to remove.
+  bool get _isPureRemoval =>
+      _pendingRemovals.isNotEmpty &&
+      _selected.difference(widget.alreadyAssociatedIds).isEmpty &&
+      _selectedCnesIds.isEmpty;
+
   bool get _useApi {
     final id = widget.facilityId;
     return id != null && id > 0;
@@ -571,8 +577,16 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
                             _saving
                         ? null
                         : _confirm,
+                    // Red when the press only removes, which is how the rest of
+                    // the app colours a destructive action ("Desassociar",
+                    // "Encerrar vínculo"). A button reading "Remover (1)" in
+                    // the same navy as "Associar" says nothing about which of
+                    // the two is about to happen. A mixed save stays navy —
+                    // it is not purely destructive.
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.navyBright,
+                      backgroundColor: _isPureRemoval
+                          ? AppColors.red
+                          : AppColors.navyBright,
                       disabledBackgroundColor: AppColors.gray200,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
