@@ -27,9 +27,29 @@ final class ClinicClusterMarker {
   static const _layoutVersion = 24;
   static int _registeredLayoutVersion = 0;
   static double _registeredDpr = 0;
+
+  /// Painted PNGs, keyed by image id. Style-independent: the bytes depend on
+  /// the counts and the dpr, not on which map is showing them.
   static final Map<String, ({Uint8List bytes, int width, int height})> _cache =
       {};
-  static final Set<String> _inStyle = {};
+
+  /// Which ids are registered **in a given style**.
+  ///
+  /// Per style, not global. It used to be one static `Set<String>` shared by
+  /// every map in the app, while `addStyleImage` only ever registers into the
+  /// one style it is called on. So after the clinic-detail nearby map — or any
+  /// style reload — registered an id, this set claimed it existed everywhere,
+  /// `ensureImages` skipped it, and the main map asked Mapbox for an image it
+  /// had never been given. A symbol with a missing icon draws nothing, which is
+  /// why the cluster pins disappeared and left their halo circles behind: the
+  /// halo is a CircleLayer and needs no image.
+  ///
+  /// An Expando keys the set to the style object itself, so a new style starts
+  /// empty and re-registers, and the entry dies with the style.
+  static final Expando<Set<String>> _inStyle = Expando<Set<String>>();
+
+  static Set<String> _registeredIn(StyleManager style) =>
+      _inStyle[style] ??= <String>{};
 
   /// Disc + spilling pill. [pillOverlap] = how far pill tucks under disc.
   static ({
@@ -231,8 +251,8 @@ final class ClinicClusterMarker {
     required double devicePixelRatio,
   }) async {
     final dpr = devicePixelRatio.clamp(1.0, 3.0);
-    // Style reload drops images — always re-check style membership.
-    _inStyle.clear();
+    // Style reload drops images — start this style's membership from empty.
+    _inStyle[style] = <String>{};
     if (_registeredLayoutVersion != _layoutVersion ||
         (_registeredDpr - dpr).abs() > 0.01) {
       _cache.clear();
@@ -272,6 +292,7 @@ final class ClinicClusterMarker {
     specs,
   }) async {
     final dpr = devicePixelRatio.clamp(1.0, 3.0);
+    final registered = _registeredIn(style);
     for (final spec in specs) {
       final id = imageId(
         sizeTier: spec.sizeTier,
@@ -280,7 +301,7 @@ final class ClinicClusterMarker {
         inactive: spec.inactive,
         neverBought: spec.neverBought,
       );
-      if (_inStyle.contains(id)) continue;
+      if (registered.contains(id)) continue;
 
       var painted = _cache[id];
       if (painted == null) {
@@ -312,7 +333,7 @@ final class ClinicClusterMarker {
           null,
         );
       }
-      _inStyle.add(id);
+      registered.add(id);
     }
   }
 
