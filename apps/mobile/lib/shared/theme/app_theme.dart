@@ -121,6 +121,22 @@ class AppTheme {
     /// Material 3's elevated `surfaceTint`, which washes the sheet mauve and
     /// tints the confirm button to match. Beside the navy the rest of the app
     /// paints, they read as a different product interrupting it.
+    /// Row menus (the "⋯" on a registration, a doctor, a note), same story as
+    /// the dialog below: Material tints the sheet with `surfaceTint`, so a
+    /// menu that opens over a white card arrives lavender.
+    popupMenuTheme: PopupMenuThemeData(
+      color: AppColors.cardBg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      textStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14.5,
+        fontWeight: FontWeight.w500,
+        color: AppColors.gray900,
+      ),
+    ),
+
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.cardBg,
       surfaceTintColor: Colors.transparent,

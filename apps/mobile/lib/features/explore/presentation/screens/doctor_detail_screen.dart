@@ -994,18 +994,27 @@ class _DoctorPersonalCard extends StatelessWidget {
             DoctorEditableField? field,
           })
         >[
-          (
-            label: 'Formação',
-            value: detail.faculty,
-            icon: Icons.school_outlined,
-            field: null,
-          ),
-          (
-            label: 'Residência',
-            value: detail.residency,
-            icon: Icons.local_hospital_outlined,
-            field: null,
-          ),
+          // Only when there is something to show.
+          //
+          // Nothing populates these: `Professional.fromDto` sets both to null
+          // and the API has no such field, so every doctor in the app carried
+          // two rows reading "—" that no pencil could fill — under a card that
+          // says "toque no lápis ou em + Completar para editar um campo". They
+          // reappear on their own if the API ever sends them.
+          if ((detail.faculty ?? '').trim().isNotEmpty)
+            (
+              label: 'Formação',
+              value: detail.faculty,
+              icon: Icons.school_outlined,
+              field: null,
+            ),
+          if ((detail.residency ?? '').trim().isNotEmpty)
+            (
+              label: 'Residência',
+              value: detail.residency,
+              icon: Icons.local_hospital_outlined,
+              field: null,
+            ),
           (
             label: 'Aniversário',
             value: _displayBirthday(detail.birthday),
@@ -1742,10 +1751,47 @@ class _DoctorNotes extends StatelessWidget {
 
                 return Column(
                   children: [
+                    // Same shape as the clinic's field notes, which say the
+                    // same thing about the same kind of note one screen away:
+                    // icon, title, then what the notes are for.
                     if (notes.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Nenhuma nota adicionada ainda.'),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: detail.primaryColor
+                                  .createSecondary(),
+                              child: Icon(
+                                Icons.note_alt_outlined,
+                                size: 24,
+                                color: detail.primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Nenhuma nota registrada',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.gray900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Anote o que só interessa a você sobre este '
+                              'médico.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.35,
+                                color: AppColors.gray500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                     ...List.generate(notes.length, (i) {
