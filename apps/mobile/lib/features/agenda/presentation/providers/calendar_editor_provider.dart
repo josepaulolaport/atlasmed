@@ -483,7 +483,7 @@ CalendarEditorDraft _initialDraft(
   final prefill = target.prefill;
   return CalendarEditorDraft(
     kind: prefill?.kind ?? CalendarEventKind.interaction,
-    title: '',
+    title: prefill?.title ?? '',
     facilityId: prefill?.facilityId,
     facilityName: prefill?.facilityName,
     modality: CalendarModality.inPerson,

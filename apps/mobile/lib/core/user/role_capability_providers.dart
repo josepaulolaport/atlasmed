@@ -77,6 +77,10 @@ final canCreateVisitProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canCreateVisit),
 );
 
+final canCreateCalendarEventProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canCreateCalendarEvent),
+);
+
 final canCreateFieldSuggestionProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canCreateFieldSuggestion),
 );

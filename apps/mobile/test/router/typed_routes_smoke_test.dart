@@ -66,6 +66,40 @@ void main() {
     );
   });
 
+  test('a seeded appointment keeps its seed in the URL', () {
+    // The router refreshes on the session, and a refresh rebuilds the matches
+    // from the location alone — anything passed as `extra` is gone by then, and
+    // the editor reopens empty over a form the rep had already filled. So the
+    // clinic travels as query parameters and survives the rebuild.
+    final location = AgendaNewRoute(
+      facilityId: 11,
+      facilityName: 'Centro Reumatologico Botafogo',
+      title: 'Visita · Centro Reumatologico Botafogo',
+    ).location;
+
+    final uri = Uri.parse(location);
+    expect(uri.path, '/agenda/new');
+    expect(uri.queryParameters['facility-id'], '11');
+    expect(
+      uri.queryParameters['facility-name'],
+      'Centro Reumatologico Botafogo',
+    );
+    expect(
+      uri.queryParameters['title'],
+      'Visita · Centro Reumatologico Botafogo',
+    );
+
+    // Opened from the agenda's own "+", it carries nothing.
+    expect(const AgendaNewRoute().location, '/agenda/new');
+
+    // From a doctor whose clinics are outside the viewer's territory: the
+    // subject travels, the clinic is left for the form to ask.
+    expect(
+      const AgendaNewRoute(title: 'Visita · Dra. Helena').location,
+      '/agenda/new?title=Visita+%C2%B7+Dra.+Helena',
+    );
+  });
+
   test('agenda occurrence edit encodes recurrenceKey', () {
     const key = '2026-08-17T12:00[America/Sao_Paulo]';
     expect(

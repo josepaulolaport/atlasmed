@@ -431,16 +431,38 @@ class ProfileRoute extends GoRouteData with $ProfileRoute {
 
 @TypedGoRoute<AgendaNewRoute>(path: '/agenda/new')
 class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
-  const AgendaNewRoute({this.$extra});
+  const AgendaNewRoute({this.facilityId, this.facilityName, this.title});
 
-  final CalendarEditorPrefill? $extra;
+  // Query parameters, not `$extra`.
+  //
+  // The router refreshes on `sessionListenable`, and each refresh rebuilds the
+  // matches from the location alone — `extra` does not survive it. The seeded
+  // draft then arrived as `prefill: null`, a different key for the
+  // `autoDispose.family`, so a form opened from a clinic quietly reverted to
+  // an empty one mid-edit and answered "Informe um título" over a filled
+  // title field. The URL survives the refresh; an object passed beside it
+  // does not.
+  final int? facilityId;
+  final String? facilityName;
+  final String? title;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return AgendaEditorRouteGuard(
-      target: CalendarEditorTarget.creating(prefill: $extra),
+      target: CalendarEditorTarget.creating(
+        prefill: facilityId == null && title == null
+            ? null
+            : CalendarEditorPrefill(
+                // Only interactions carry a clinic; a personal block cannot be
+                // seeded from one.
+                kind: CalendarEventKind.interaction,
+                facilityId: facilityId,
+                facilityName: facilityName,
+                title: title,
+              ),
+      ),
     );
   }
 }

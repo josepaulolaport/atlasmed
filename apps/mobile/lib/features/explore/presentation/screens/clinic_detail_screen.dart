@@ -17,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/visit_scheduling.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
@@ -744,7 +745,15 @@ class _ClinicDetailContent extends ConsumerWidget {
                         address: detail.address?.formattedAddress,
                       ),
                     ),
-                    if (ref.watch(canCreateVisitProvider))
+                    // Schedules, rather than logging a visit on the spot.
+                    //
+                    // This used to POST /visits the instant it was tapped —
+                    // one press recorded a visit as having happened now, with
+                    // no date, no duration and no way to plan ahead, and
+                    // nothing about it reached the rep's agenda. A visit is an
+                    // agenda interaction, so the button opens the interaction
+                    // editor with this clinic filled in.
+                    if (ref.watch(canCreateCalendarEventProvider))
                       QuickActionItem(
                         icon: CircleAvatar(
                           backgroundColor: AppColors.navyBright
@@ -757,36 +766,11 @@ class _ClinicDetailContent extends ConsumerWidget {
                           ),
                         ),
                         label: const Text('Visita'),
-                        onTap: () async {
-                          try {
-                            final repo = ref.read(
-                              clinicVisitsRepositoryProvider(detail.id),
-                            );
-                            await repo.createVisit();
-                            ref.invalidate(
-                              clinicVisitsRepositoryProvider(detail.id),
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Visita registrada com sucesso',
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          } catch (_) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Erro ao registrar visita'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          }
-                        },
+                        onTap: () => openVisitScheduler(
+                          context,
+                          facilityId: detail.id,
+                          facilityName: detail.name,
+                        ),
                       ),
                     // A "Pedido" action used to sit here, opening /orders/new
                     // with no clinic and no interaction. Checkout requires both

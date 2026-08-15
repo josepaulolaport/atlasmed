@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -96,9 +97,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final isManager = currentUser?.role.name == UserRoleName.manager;
     final canCreate =
-        currentUser != null &&
-        (currentUser.role.name == UserRoleName.admin ||
-            currentUser.role.name == UserRoleName.rep);
+        currentUser != null && canCreateCalendarEvent(currentUser.role.name);
     final ownerPicker =
         widget.ownerPicker ?? (isManager ? _buildManagerFilters() : null);
     final createAction =

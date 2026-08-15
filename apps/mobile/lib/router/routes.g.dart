@@ -629,28 +629,49 @@ RouteBase get $agendaNewRoute => GoRouteData.$route(
 );
 
 mixin $AgendaNewRoute on GoRouteData {
-  static AgendaNewRoute _fromState(GoRouterState state) =>
-      AgendaNewRoute($extra: state.extra as CalendarEditorPrefill?);
+  static AgendaNewRoute _fromState(GoRouterState state) => AgendaNewRoute(
+    facilityId: _$convertMapValue(
+      'facility-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    facilityName: state.uri.queryParameters['facility-name'],
+    title: state.uri.queryParameters['title'],
+  );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
 
   @override
-  String get location => GoRouteData.$location('/agenda/new');
+  String get location => GoRouteData.$location(
+    '/agenda/new',
+    queryParams: {
+      if (_self.facilityId != null) 'facility-id': _self.facilityId!.toString(),
+      if (_self.facilityName != null) 'facility-name': _self.facilityName,
+      if (_self.title != null) 'title': _self.title,
+    },
+  );
 
   @override
-  void go(BuildContext context) => context.go(location, extra: _self.$extra);
+  void go(BuildContext context) => context.go(location);
 
   @override
-  Future<T?> push<T>(BuildContext context) =>
-      context.push<T>(location, extra: _self.$extra);
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
   @override
   void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location, extra: _self.$extra);
+      context.pushReplacement(location);
 
   @override
-  void replace(BuildContext context) =>
-      context.replace(location, extra: _self.$extra);
+  void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
 }
 
 RouteBase get $agendaEditRoute => GoRouteData.$route(
@@ -772,15 +793,6 @@ mixin $SubjectDashboardRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 RouteBase get $assignClinicRoute => GoRouteData.$route(

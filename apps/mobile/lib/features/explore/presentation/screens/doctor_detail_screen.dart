@@ -13,7 +13,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.da
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctor_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/visit_scheduling.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/professional_notes_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
@@ -294,19 +296,29 @@ class _DoctorDetailContent extends ConsumerWidget {
                       contactLabel: 'e-mail',
                       launch: launchContactUrl,
                     ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.event_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
+                    // Asks which clinic before opening the agenda editor: the
+                    // appointment is stored against a facility, and a doctor
+                    // attending at several would otherwise be booked at
+                    // whichever one the code guessed.
+                    if (ref.watch(canCreateCalendarEventProvider))
+                      QuickActionItem(
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
+                          child: Icon(
+                            Icons.event_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('Nova visita'),
+                        onTap: () => scheduleVisitWithDoctor(
+                          context,
+                          doctorName: detail.name,
+                          clinics: detail.clinics,
                         ),
                       ),
-                      label: const Text('Nova visita'),
-                      onTap: null,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
