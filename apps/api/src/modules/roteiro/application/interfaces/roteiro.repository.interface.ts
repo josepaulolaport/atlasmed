@@ -3,6 +3,23 @@ import type { PurchaseFunnelStage } from "@atlasmed/facility-insights";
 /** Spec 0016 §4.3. */
 export type RoteiroBucket = "MANTER" | "RECUPERAR" | "PROSPECTAR";
 
+/**
+ * Why a rep pulled a clinic out — spec 0016 §15.5.2.
+ *
+ * Deliberately routed rather than scored: only `SEM_INTERESSE` and `OUTRO` are
+ * claims about the clinic. `FECHADA` is a fact about the world and removes it
+ * for everyone; the rest are defect reports about our own data — a wrong
+ * assignment, a missing interaction, reach parameters that do not fit this rep
+ * — and turning them into a score would bury the actual problem.
+ */
+export type RoteiroRejectionReason =
+  | "MUITO_LONGE"
+  | "JA_VISITEI"
+  | "NAO_E_MEU_CLIENTE"
+  | "FECHADA"
+  | "SEM_INTERESSE"
+  | "OUTRO";
+
 /** Spec 0016 §4.1 — how the reachable set is bounded. */
 export type RoteiroReachMode = "LIVRE" | "ANCORA";
 
@@ -273,6 +290,31 @@ export interface RoteiroRepository {
    * rep who regenerates ten times a morning.
    */
   markConfirmed(input: { roteiroId: number; confirmedAt: Date }): Promise<void>;
+
+  /**
+   * Records that a rep pulled a clinic out of a slate — spec 0016 §15.5.2.
+   *
+   * Written on removal, not on save, because a preview is deliberately never
+   * persisted (§7.3) and a rep does all their rejecting in the draft. Returns
+   * `priorCount`: how many times this rep has already rejected this clinic
+   * inside the recency window, which is what decides whether to ask them why.
+   */
+  recordRejection(input: {
+    userId: number;
+    verticalId: number;
+    facilityVerticalProfileId: number;
+    roteiroId?: number | null;
+    position?: number | null;
+    replacedByProfileId?: number | null;
+  }): Promise<{ id: number; priorCount: number }>;
+
+  /** Attaches the reason once the rep has been asked for it. */
+  setRejectionReason(input: {
+    rejectionId: number;
+    userId: number;
+    reason: RoteiroRejectionReason;
+    note?: string | null;
+  }): Promise<void>;
   /**
    * The agent's own clinics for this linha, for the "add a clinic" picker.
    *

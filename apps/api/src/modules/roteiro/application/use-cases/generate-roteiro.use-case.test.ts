@@ -10,6 +10,7 @@ import type {
   RoteiroBucket,
   RoteiroCandidate,
   RoteiroParams,
+  RoteiroRejectionReason,
   RoteiroRepository,
   ScoreCandidatesInput,
 } from "../interfaces/roteiro.repository.interface";
@@ -50,6 +51,37 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.5.2 — what the rep has thrown away, in the order they threw it. */
+  rejections: {
+    id: number;
+    userId: number;
+    facilityVerticalProfileId: number;
+    reason: RoteiroRejectionReason | null;
+  }[] = [];
+  async recordRejection(input: {
+    userId: number;
+    facilityVerticalProfileId: number;
+  }): Promise<{ id: number; priorCount: number }> {
+    const priorCount = this.rejections.filter(
+      (r) =>
+        r.userId === input.userId &&
+        r.facilityVerticalProfileId === input.facilityVerticalProfileId,
+    ).length;
+    const id = this.rejections.length + 1;
+    this.rejections.push({ ...input, id, reason: null });
+    return { id, priorCount };
+  }
+  async setRejectionReason(input: {
+    rejectionId: number;
+    userId: number;
+    reason: RoteiroRejectionReason;
+  }): Promise<void> {
+    const row = this.rejections.find(
+      (r) => r.id === input.rejectionId && r.userId === input.userId,
+    );
+    if (row) row.reason = input.reason;
+  }
+
   calls: ScoreCandidatesInput[] = [];
   constructor(
     private readonly candidates: RoteiroCandidate[],

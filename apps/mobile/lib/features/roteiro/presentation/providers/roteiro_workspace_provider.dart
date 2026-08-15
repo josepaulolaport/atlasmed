@@ -173,11 +173,48 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
   /// under their thumb — and the slate they were reading would change between
   /// the decision and the tap. The empty slot stays until they ask for a new
   /// plan, which is what the regenerate control is for.
+  ///
+  /// The state change is synchronous and the rejection is recorded behind it:
+  /// the card must leave the screen the instant the rep taps, and a failed
+  /// write is a lost signal, never a removal that did not happen.
   void remove(int facilityVerticalProfileId) {
     state = state.copyWith(
       excluded: {...state.excluded, facilityVerticalProfileId},
       included: {...state.included}..remove(facilityVerticalProfileId),
     );
+  }
+
+  /// Records the removal, and says whether the rep should be asked why.
+  ///
+  /// Returns null when the write failed — the removal still stands. Losing a
+  /// rejection costs us a signal; blocking on it would cost the rep their tap.
+  Future<RoteiroRejection?> recordRejection(
+    int facilityVerticalProfileId,
+  ) async {
+    try {
+      return await _repository.reject(
+        verticalId: _key.verticalId,
+        facilityVerticalProfileId: facilityVerticalProfileId,
+        roteiroId: state.roteiro?.id,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> explainRejection(
+    int rejectionId,
+    RoteiroRejectionReason reason,
+  ) async {
+    try {
+      await _repository.explainRejection(
+        rejectionId: rejectionId,
+        reason: reason,
+      );
+    } catch (_) {
+      // A reason we failed to store is a reason we do not have. The rep has
+      // already been asked once; asking again would be the app nagging.
+    }
   }
 
   /// Sets how long a visit takes, and moves the day around it.

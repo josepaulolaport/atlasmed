@@ -65,6 +65,10 @@ function build(options: {
         return options.generate ? await options.generate() : { id: null, stops: [], notices: [] };
       },
     }),
+    reject: () => ({
+      execute: async () => ({ rejectionId: 1, shouldAskReason: false }),
+    }),
+    explainRejection: () => ({ execute: async () => undefined }),
     confirm: () => ({
       execute: async (input: never) => {
         captured.confirm.push(input);

@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_workspace_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_day_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/rejection_reason_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/add_clinic_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_slot_list.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_timeline.dart';
@@ -133,6 +134,33 @@ class _RoteiroWorkspaceScreenState
     );
   }
 
+  /// Removes a stop, then records why — in that order.
+  ///
+  /// The card leaves the screen the instant the rep taps. The rejection is
+  /// written behind it, and the rep is only asked for a reason the second time
+  /// they turn the same clinic down: the first removal means "not today" as
+  /// often as "not here", and a sheet on every tap becomes something to
+  /// dismiss rather than answer.
+  Future<void> _remove(
+    RoteiroStop stop,
+    RoteiroWorkspaceNotifier notifier,
+  ) async {
+    notifier.remove(stop.facilityVerticalProfileId);
+
+    final rejection = await notifier.recordRejection(
+      stop.facilityVerticalProfileId,
+    );
+    if (rejection == null || !rejection.shouldAskReason) return;
+    if (!mounted) return;
+
+    final reason = await showRejectionReasonSheet(
+      context,
+      facilityName: stop.facilityName,
+    );
+    if (reason == null) return;
+    await notifier.explainRejection(rejection.id, reason);
+  }
+
   Future<void> _add(
     RoteiroWorkspaceState state,
     RoteiroWorkspaceNotifier notifier,
@@ -256,8 +284,7 @@ class _RoteiroWorkspaceScreenState
                 roteiro: roteiro,
                 schedule: notifier.scheduleFor(roteiro),
                 slotCount: roteiro.slotCount,
-                onRemove: (stop) =>
-                    notifier.remove(stop.facilityVerticalProfileId),
+                onRemove: (stop) => _remove(stop, notifier),
                 onFillEmpty: () => _add(state, notifier),
                 onDurationChanged: (stop, minutes) => notifier.setDuration(
                   stop.facilityVerticalProfileId,

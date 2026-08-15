@@ -280,6 +280,44 @@ class RoteiroFixedPoint {
   final DateTime endsAt;
 }
 
+/// Why a rep pulled a clinic out — spec 0016 §15.5.2.
+///
+/// Routed rather than scored. Only [semInteresse] and [outro] are claims about
+/// the clinic; [fechada] is a fact about the world and removes it for everyone,
+/// and the rest are defect reports about our own data. Turning those into a
+/// score would bury the actual problem under a number.
+enum RoteiroRejectionReason {
+  semInteresse('SEM_INTERESSE', 'Não tem interesse'),
+  fechada('FECHADA', 'Fechou / não existe mais'),
+  naoEMeuCliente('NAO_E_MEU_CLIENTE', 'Não é meu cliente'),
+  jaVisitei('JA_VISITEI', 'Já visitei recentemente'),
+  muitoLonge('MUITO_LONGE', 'Longe demais para valer a viagem'),
+  outro('OUTRO', 'Outro motivo');
+
+  const RoteiroRejectionReason(this.wire, this.label);
+
+  final String wire;
+  final String label;
+}
+
+/// What the server said when the rep dropped a clinic.
+class RoteiroRejection {
+  const RoteiroRejection({required this.id, required this.shouldAskReason});
+
+  factory RoteiroRejection.fromJson(Map<String, dynamic> json) =>
+      RoteiroRejection(
+        id: (json['rejectionId'] as num?)?.toInt() ?? 0,
+        shouldAskReason: json['shouldAskReason'] as bool? ?? false,
+      );
+
+  final int id;
+
+  /// True once this rep has turned this clinic down before. The first removal
+  /// is a shrug — it means "not today" as often as "not here" — and asking
+  /// every time buys worse data, not more.
+  final bool shouldAskReason;
+}
+
 /// A clinic the rep may add to the day by hand.
 class AddableClinic {
   const AddableClinic({

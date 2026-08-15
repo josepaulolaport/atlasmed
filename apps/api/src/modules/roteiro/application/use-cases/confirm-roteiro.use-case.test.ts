@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ConfirmRoteiroUseCase, type CalendarEventCreator } from "./confirm-roteiro.use-case";
 import type {
+  RoteiroRejectionReason,
   RoteiroRepository,
   StoredRoteiro,
   StoredRoteiroStop,
@@ -50,6 +51,37 @@ function roteiro(overrides: Partial<StoredRoteiro> = {}): StoredRoteiro {
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.5.2 — what the rep has thrown away, in the order they threw it. */
+  rejections: {
+    id: number;
+    userId: number;
+    facilityVerticalProfileId: number;
+    reason: RoteiroRejectionReason | null;
+  }[] = [];
+  async recordRejection(input: {
+    userId: number;
+    facilityVerticalProfileId: number;
+  }): Promise<{ id: number; priorCount: number }> {
+    const priorCount = this.rejections.filter(
+      (r) =>
+        r.userId === input.userId &&
+        r.facilityVerticalProfileId === input.facilityVerticalProfileId,
+    ).length;
+    const id = this.rejections.length + 1;
+    this.rejections.push({ ...input, id, reason: null });
+    return { id, priorCount };
+  }
+  async setRejectionReason(input: {
+    rejectionId: number;
+    userId: number;
+    reason: RoteiroRejectionReason;
+  }): Promise<void> {
+    const row = this.rejections.find(
+      (r) => r.id === input.rejectionId && r.userId === input.userId,
+    );
+    if (row) row.reason = input.reason;
+  }
+
   links: Array<{ position: number; calendarId: number; interactionId: number }> = [];
   confirmedAt: Date | null = null;
   constructor(private current: StoredRoteiro | null) {}

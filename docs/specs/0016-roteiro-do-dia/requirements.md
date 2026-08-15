@@ -1523,6 +1523,24 @@ So the design is **routing, not scoring**. Only `SEM_INTERESSE` and an unexplain
 merit; everything else is a defect report about data we hold, and treating it as "this clinic is
 bad" would bury the actual problem under a score adjustment.
 
+#### One gesture, two meanings
+
+Removing a card means both **"wrong clinic"** and **"wrong day"**, and it is the
+same tap. A rep drops a good clinic three Mondays running because Monday is a bad
+drive; reading that as a verdict on the clinic is reading the calendar as
+commerce. So removal is handled in two tiers:
+
+**Tier 1 — an unexplained removal is a pause, not a verdict.** No reason asked,
+no merit penalty, recorded anyway. The clinic is not offered again for
+`REJECTION_PAUSE_DAYS` (7). That is the honest reading of "not now".
+
+**Tier 2 — the reason is asked for on the *second* removal**, same rep, same
+clinic, inside `REJECTION_PROMPT_WINDOW_DAYS` (60). That is the point at which
+the question is earned and the answer means something. Asking on every removal
+buys worse data, not more: the sheet becomes something to dismiss. The sheet is
+also dismissible without answering — the removal already stands, so it is a
+question, not a toll.
+
 **The merit half:**
 
 ```

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/database/db";
 import type {
+  RoteiroRejectionReason,
   CreateRoteiroInput,
   RoteiroCandidate,
   RoteiroPoint,
@@ -46,6 +47,52 @@ const CAPACITY_COUNT_WEIGHT = 0.6;
 const CAPACITY_RATIO_WEIGHT = 0.4;
 
 /**
+ * How a rejection feeds the next generation — spec 0016 §15.5.2.
+ *
+ * A removal without a reason is not scored at all. It means "not now" as often
+ * as it means "not here", and the same tap has to carry both: a rep drops a
+ * good clinic three Mondays running because Monday is a bad drive, and treating
+ * that as a verdict on the clinic would be reading the calendar as commerce.
+ * So an unexplained removal only buys a pause, and the reason is asked for on
+ * the **second** removal — the point at which the question is earned and the
+ * answer means something. Asking every time buys worse data, not more.
+ */
+const REJECTION_PAUSE_DAYS = 7;
+
+/**
+ * Half-life of a scored rejection.
+ *
+ * A clinic turned down two quarters ago should not be condemned forever. Staff
+ * change, an orthopaedist arrives, the reason expires — and the coverage slot
+ * (§4.3.1) is deliberately left to bring it back once the horizon passes.
+ */
+const REJECTION_HALFLIFE_DAYS = 90;
+
+/**
+ * The most a rejection history may ever move a clinic, however many times the
+ * rep has said no.
+ *
+ * A cap rather than an unbounded sum because both extremes are failures: an
+ * engine that overrules the rep is useless, and one that defers absolutely is
+ * just the rep's memory with extra steps.
+ */
+const REJECTION_PENALTY_CAP = 0.15;
+
+/** Only reasons that are about the clinic score at all — see the CTE. */
+const REJECTION_WEIGHT_SEM_INTERESSE = 0.08;
+const REJECTION_WEIGHT_OUTRO = 0.04;
+
+/**
+ * How far back the "have they told us this before?" question looks.
+ *
+ * Longer than the pause, shorter than the half-life: a rep who declined a
+ * clinic a year ago is not being evasive by declining it again, and
+ * interrupting them for a reason then would be the app nagging rather than
+ * listening.
+ */
+const REJECTION_PROMPT_WINDOW_DAYS = 60;
+
+/**
  * The legs the agent is already committed to driving today.
  *
  * `[origin → first booking, booking → booking, …]`, plus a final leg from the
@@ -89,6 +136,7 @@ interface CandidateRow extends Record<string, unknown> {
   ortho_ratio: string;
   /** False means CNES has no staff row at all — not that the facility has none. */
   registry_known: boolean;
+  rejection_penalty: string;
   assignment_started_at: string | Date | null;
   theirs_qty: string | null;
   ours_qty: string | null;
@@ -215,6 +263,56 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           interaction_id = ${input.interactionId},
           updated_at = now()
       where roteiro_id = ${input.roteiroId} and position = ${input.position}
+    `);
+  }
+
+  /**
+   * §15.5.2 — a rep pulled a clinic out.
+   *
+   * `priorCount` counts only rejections inside the window the prompt cares
+   * about. A rep who declined a clinic once last year is not being evasive by
+   * declining it again; a rep who declined it last month is telling us
+   * something, and that is the one worth interrupting for.
+   */
+  async recordRejection(input: {
+    userId: number;
+    verticalId: number;
+    facilityVerticalProfileId: number;
+    roteiroId?: number | null;
+    position?: number | null;
+    replacedByProfileId?: number | null;
+  }): Promise<{ id: number; priorCount: number }> {
+    const prior = await db.execute<Record<string, unknown>>(sql`
+      select count(*)::int as n
+      from roteiro_stop_rejections
+      where user_id = ${input.userId}
+        and rejected_profile_id = ${input.facilityVerticalProfileId}
+        and created_at >= now() - make_interval(days => ${REJECTION_PROMPT_WINDOW_DAYS})
+    `);
+    const rows = await db.execute<Record<string, unknown>>(sql`
+      insert into roteiro_stop_rejections
+        (roteiro_id, user_id, vertical_id, position, rejected_profile_id, replaced_by_profile_id)
+      values (${input.roteiroId ?? null}, ${input.userId}, ${input.verticalId},
+              ${input.position ?? null}, ${input.facilityVerticalProfileId},
+              ${input.replacedByProfileId ?? null})
+      returning id
+    `);
+    return { id: Number(rows[0]?.id), priorCount: Number(prior[0]?.n ?? 0) };
+  }
+
+  async setRejectionReason(input: {
+    rejectionId: number;
+    userId: number;
+    reason: RoteiroRejectionReason;
+    note?: string | null;
+  }): Promise<void> {
+    await db.execute(sql`
+      update roteiro_stop_rejections
+      set reason = ${input.reason}::roteiro_rejection_reason,
+          reason_note = ${input.note ?? null}
+      -- Scoped to the rep who made it: a reason is a statement, and nobody else
+      -- gets to put words in their mouth.
+      where id = ${input.rejectionId} and user_id = ${input.userId}
     `);
   }
 
@@ -455,6 +553,58 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
             select 1 from interactions i
             where i.facility_id = f.id and i.status in ('SCHEDULED', 'IN_PROGRESS')
           )
+          -- §15.5.2 — a clinic reported closed is a fact about the world, not a
+          -- preference, so it drops out for everyone rather than being scored
+          -- down for the rep who found out.
+          and not exists (
+            select 1 from roteiro_stop_rejections x
+            where x.rejected_profile_id = p.id and x.reason = 'FECHADA'
+          )
+          -- A clinic the rep pulled out this week is not offered again this
+          -- week. Removal without a reason says "not now", and the honest
+          -- reading of "not now" is a pause, not a verdict.
+          and not exists (
+            select 1 from roteiro_stop_rejections x
+            where x.rejected_profile_id = p.id
+              and x.user_id = ${input.userId}
+              and x.created_at >= now() - make_interval(days => ${REJECTION_PAUSE_DAYS})
+          )
+      ),
+      /**
+       * §15.5.2 — what the rep has told us by rejecting this clinic before.
+       *
+       * Summed rather than latched, because repetition is the signal: one
+       * removal is a shrug, three is a fact. Decayed, because a clinic turned
+       * down two quarters ago should not be condemned forever — an orthopaedist
+       * arrives, the reason expires.
+       *
+       * Only the reasons that are *about the clinic* score. FECHADA is handled
+       * above, and NAO_E_MEU_CLIENTE, JA_VISITEI and MUITO_LONGE are defect
+       * reports about our own data — an assignment, a missing interaction, the
+       * reach parameters — so scoring them would bury the real problem under a
+       * number.
+       */
+      rejection as (
+        select
+          x.rejected_profile_id as profile_id,
+          -- Every branch cast explicitly: Postgres infers the CASE's type from
+          -- the parameters, and an untyped zero in the else makes the whole
+          -- expression integer — which then rejects the fractional weights.
+          least(
+            ${REJECTION_PENALTY_CAP}::numeric,
+            sum(
+              case x.reason
+                when 'SEM_INTERESSE' then ${REJECTION_WEIGHT_SEM_INTERESSE}::numeric
+                when 'OUTRO'         then ${REJECTION_WEIGHT_OUTRO}::numeric
+                else 0::numeric
+              end
+              * power(0.5, extract(epoch from now() - x.created_at)
+                           / (86400 * ${REJECTION_HALFLIFE_DAYS}))
+            )
+          )::numeric as penalty
+        from roteiro_stop_rejections x
+        where x.user_id = ${input.userId}
+        group by 1
       ),
       -- Both halves of capacity in one pass (§4.2f): how many orthopaedists,
       -- and what share of the facility's staff they are.
@@ -491,6 +641,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           -- us anything about this facility, which is a different claim from
           -- "it employs no orthopaedists" — and the one a failed load produces.
           (o.facility_cnes_id is not null)                         as registry_known,
+          coalesce(rj.penalty, 0)                                 as rejection_penalty,
           m.theirs_qty, m.ours_qty,
           (${input.today}::date - c.last_purchase)                as days_since_purchase,
           (${input.today}::date - ld.ended_at::date)              as days_since_interaction,
@@ -530,6 +681,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
             (${JSON.stringify(params.unitTypePolicy)}::jsonb -> '*' ->> 'fit')::numeric,
             0.05)                                                  as q_raw
         from cand c
+        left join rejection rj on rj.profile_id = c.profile_id
         left join ortho  o  on o.facility_cnes_id = c.cnes_code
         left join metric m  on m.profile_id = c.profile_id
         left join last_done ld on ld.facility_id = c.facility_id
@@ -564,10 +716,14 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       ranked as (
         select
           s.*,
-          round(${w.t}::numeric * s.t_raw + ${w.h}::numeric * s.h_raw
+          -- The penalty shades the order; it never removes a clinic. Capped at
+          -- REJECTION_PENALTY_CAP however many times the rep has said no,
+          -- because the engine knowing better than the rep is a failure and so
+          -- is the engine deferring to them absolutely.
+          round(greatest(0, ${w.t}::numeric * s.t_raw + ${w.h}::numeric * s.h_raw
               + ${w.n}::numeric * s.n_raw + ${w.v}::numeric * s.v_raw
               + ${w.k}::numeric * s.k_raw + ${w.c}::numeric * s.c_raw
-              + ${w.q}::numeric * s.q_raw, 5)                                     as merit
+              + ${w.q}::numeric * s.q_raw - s.rejection_penalty), 5)               as merit
         from scored s
       ),
       windowed as (
@@ -592,7 +748,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         w.ortho_n, w.ortho_total, w.ortho_ratio, w.registry_known, w.assignment_started_at,
         w.theirs_qty, w.ours_qty, w.days_since_interaction,
         w.days_since_purchase, w.purchase_interval_days, w.last_suggested_at,
-        w.coverage_overdue,
+        w.coverage_overdue, w.rejection_penalty,
         w.t_raw, w.h_raw, w.n_raw, w.v_raw, w.k_raw, w.c_raw, w.q_raw, w.merit
       from windowed w
       -- The shortlist is the top slice by merit **plus** the most
@@ -667,6 +823,10 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       coverageOverdue: row.coverage_overdue,
       meritScore: num(row.merit),
       components: {
+        // Not a component — a subtraction (§15.5.2). Carried so a demotion is
+        // as inspectable as a promotion: if we cannot say why a clinic ranks
+        // where it does, it does not belong in the ranking.
+        rejectionPenalty: component(row.rejection_penalty, 1, {}),
         t: component(row.t_raw, w.t, {
           stage: row.funnel_stage,
           daysSinceLastPurchase:

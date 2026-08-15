@@ -8,6 +8,10 @@ import {
   type CalendarEventCreator,
 } from "./application/use-cases/confirm-roteiro.use-case";
 import { ListAddableClinicsUseCase } from "./application/use-cases/list-addable-clinics.use-case";
+import {
+  ExplainRejectionUseCase,
+  RejectStopUseCase,
+} from "./application/use-cases/reject-stop.use-case";
 import { calendarUseCases } from "../calendar/composition";
 import { MapboxTravelTimeSource } from "./infrastructure/adapters/mapbox-travel.adapter";
 import { CachedTravelTimeSource } from "./infrastructure/adapters/cached-travel.adapter";
@@ -40,4 +44,6 @@ export const roteiroUseCases = {
       // through rather than a second implementation.
       calendar: calendarUseCases.create() as unknown as CalendarEventCreator,
     }),
+  reject: () => new RejectStopUseCase({ repository }),
+  explainRejection: () => new ExplainRejectionUseCase({ repository }),
 };

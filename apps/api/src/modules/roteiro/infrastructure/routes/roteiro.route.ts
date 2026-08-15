@@ -15,7 +15,19 @@ export interface RoteiroHttpUseCases {
   generate(): Executable;
   confirm(): Executable;
   listAddable(): Executable;
+  reject(): Executable;
+  explainRejection(): Executable;
 }
+
+/** §15.5.2 — the reasons that mean different things, spelled out. */
+const rejectionReason = t.Union([
+  t.Literal("MUITO_LONGE"),
+  t.Literal("JA_VISITEI"),
+  t.Literal("NAO_E_MEU_CLIENTE"),
+  t.Literal("FECHADA"),
+  t.Literal("SEM_INTERESSE"),
+  t.Literal("OUTRO"),
+]);
 
 /**
  * `POST`, not `GET`, even though generating reads rather than writes.
@@ -208,6 +220,72 @@ export const roteiroRoute = (
           verticalId: t.Number({ minimum: 1 }),
           q: t.Optional(t.String()),
           subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+        }),
+      },
+    )
+    .post(
+      "/roteiros/rejections",
+      async ({ body, getUserId }) => {
+        const userId = await getUserId();
+        return useCases.reject().execute({
+          actor: { userId },
+          subjectUserId: body.subjectUserId,
+          verticalId: body.verticalId,
+          facilityVerticalProfileId: body.facilityVerticalProfileId,
+          roteiroId: body.roteiroId,
+          position: body.position,
+          replacedByProfileId: body.replacedByProfileId,
+        } as never);
+      },
+      {
+        detail: {
+          summary: "Record that the agent pulled a clinic out of a slate",
+          description:
+            "Written on removal rather than on save: a preview is never persisted and a rep " +
+            "does all their rejecting in the draft. An unexplained removal only pauses the " +
+            "clinic for a week — it means 'not now' as often as 'not here'. Returns " +
+            "shouldAskReason once the same rep has turned the same clinic down before, which " +
+            "is the point at which the question is earned.",
+          tags: ["Roteiro"],
+          security: [{ bearerAuth: [] }],
+        },
+        body: t.Object({
+          verticalId: t.Number({ minimum: 1 }),
+          facilityVerticalProfileId: t.Number({ minimum: 1 }),
+          subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+          roteiroId: t.Optional(t.Number({ minimum: 1 })),
+          position: t.Optional(t.Number({ minimum: 0 })),
+          replacedByProfileId: t.Optional(t.Number({ minimum: 1 })),
+        }),
+      },
+    )
+    .patch(
+      "/roteiros/rejections/:id",
+      async ({ params, body, getUserId }) => {
+        const userId = await getUserId();
+        await useCases.explainRejection().execute({
+          actor: { userId },
+          rejectionId: params.id,
+          reason: body.reason,
+          note: body.note,
+        } as never);
+        return { ok: true };
+      },
+      {
+        detail: {
+          summary: "Attach the agent's reason to a rejection",
+          description:
+            "Only SEM_INTERESSE and OUTRO reach the ranking. FECHADA removes the clinic for " +
+            "everyone; the rest are defect reports about our own data — a wrong assignment, a " +
+            "missing interaction, reach parameters that do not fit this rep — and scoring them " +
+            "would bury the real problem under a number.",
+          tags: ["Roteiro"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: t.Object({ id: t.Number({ minimum: 1 }) }),
+        body: t.Object({
+          reason: rejectionReason,
+          note: t.Optional(t.String({ maxLength: 500 })),
         }),
       },
     )

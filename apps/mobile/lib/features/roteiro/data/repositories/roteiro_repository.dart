@@ -25,6 +25,53 @@ class RoteiroRepository extends Repository<String>
   @override
   RepositoryHttpClient get client => _client ?? super.client;
 
+  /// Records that the rep pulled a clinic out of the slate.
+  ///
+  /// Written on removal rather than on save, because a preview is never
+  /// persisted and a rep does all their rejecting in the draft. Fire-and-forget
+  /// from the caller's point of view: losing a rejection must never block the
+  /// removal the rep asked for.
+  Future<RoteiroRejection?> reject({
+    required int verticalId,
+    required int facilityVerticalProfileId,
+    int? roteiroId,
+    int? position,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_baseUrl/api/v1/roteiros/rejections'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'verticalId': verticalId,
+          'facilityVerticalProfileId': facilityVerticalProfileId,
+          'roteiroId': ?roteiroId,
+          'position': ?position,
+        },
+      ),
+    );
+    if (!successfulCondition(response.statusCode, response.body)) return null;
+    return RoteiroRejection.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  /// Attaches the rep's reason to a rejection already recorded.
+  Future<void> explainRejection({
+    required int rejectionId,
+    required RoteiroRejectionReason reason,
+    String? note,
+  }) async {
+    await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_baseUrl/api/v1/roteiros/rejections/$rejectionId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'reason': reason.wire, 'note': ?note},
+      ),
+    );
+  }
+
   /// Generates a slate from the rep's live position.
   ///
   /// `latitude`/`longitude` are required and have no fallback: the server

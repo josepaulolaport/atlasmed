@@ -345,10 +345,30 @@ export const roteiroStopRejections = pgTable(
   "roteiro_stop_rejections",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    roteiroId: bigint("roteiro_id", { mode: "number" })
+    /**
+     * Null when the rejection happened in a draft.
+     *
+     * A rep works the slate before it is a roteiro — generate, drop one, look
+     * again — and a preview is deliberately never persisted (§7.3). Requiring a
+     * roteiro would therefore throw away every rejection made at the only moment
+     * a rep actually makes them.
+     */
+    roteiroId: bigint("roteiro_id", { mode: "number" }).references(() => roteiros.id, {
+      onDelete: "cascade",
+    }),
+    /**
+     * Whose rejection. Carried on the row rather than reached through
+     * `roteiros` because it is what scoring keys on — one rep's "not my client"
+     * is another rep's account — and because a draft rejection has no roteiro
+     * to reach through.
+     */
+    userId: bigint("user_id", { mode: "number" })
       .notNull()
-      .references(() => roteiros.id, { onDelete: "cascade" }),
-    position: smallint("position").notNull(),
+      .references(() => users.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "restrict" }),
+    position: smallint("position"),
     /** Both profile FKs are named explicitly below — see `roteiro_stops`. */
     rejectedProfileId: bigint("rejected_profile_id", { mode: "number" }).notNull(),
     /** Null when the rep removed the stop instead of swapping it. */
@@ -370,6 +390,13 @@ export const roteiroStopRejections = pgTable(
     }).onDelete("restrict"),
     index("roteiro_stop_rejections_roteiro_id_idx").on(t.roteiroId),
     index("roteiro_stop_rejections_rejected_profile_id_idx").on(t.rejectedProfileId),
+    // How generation reads it: every rejection this rep has made about this
+    // clinic, newest first, to decay and sum (§15.5.2).
+    index("roteiro_stop_rejections_user_profile_idx").on(
+      t.userId,
+      t.rejectedProfileId,
+      t.createdAt,
+    ),
     index("roteiro_stop_rejections_reason_created_at_idx").on(t.reason, t.createdAt),
   ],
 );
