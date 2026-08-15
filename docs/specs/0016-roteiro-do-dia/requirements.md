@@ -50,7 +50,8 @@ surface, one mobile flow, and an outcome field on the interaction.
 
 1. A ranked, explained slate of clinics to visit, for **today** or **a chosen day**.
 2. A **hard, configurable limit** on suggestions per day. Default **5**.
-3. **Weekly** generation — one slate per working day, geographically clustered, deduplicated.
+3. **Reachability** — suggestions are filtered to what is actually doable from where the rep is,
+   with a self-expanding radius and the distance reached stated on screen (§4.1).
 4. **Anchor mode** — "I am already going to clinic X at 10:00; what else is worth it while I am
    there?" Anchors may be an already-scheduled interaction or an ad-hoc point.
 5. **Explicit visiting order**, with drive time between each stop.
@@ -65,6 +66,7 @@ surface, one mobile flow, and an outcome field on the interaction.
 ### Out of scope (v1), with reasons
 
 - **Free-form AI chat over the CRM.** See §12. Deliberately excluded, not deferred by accident.
+- **Weekly generation and trip planning.** §4.6 and §16.1. One day at a time.
 - **Multi-rep / territory-wide optimisation.** One rep's day at a time.
 - **Automatic rescheduling when a visit runs long.** The rep re-generates; we do not move their
   calendar behind their back.
@@ -127,6 +129,36 @@ Merit must not be polluted by drive time, because the rep is shown *why* a clini
 
 Scope is enforced through the existing `ScopeContext` / `buildFacilityListScope` path, not
 re-derived here.
+
+#### Reachability — a filter, not a tiebreaker
+
+**Candidates must be within reach of the origin before merit is considered.**
+
+```
+ST_DWithin(facility.location, origin, radius)      -- straight-line, PostGIS, cheap
+radius starts at reach_radius_km  (default 60 km)
+```
+
+If the reachable set yields fewer than `4·N` candidates, the radius **expands in steps** —
+60 → 120 → 250 → 500 km — stopping at the first step that clears the bar. The radius actually used
+is returned in `notices`, because "your nearest suggestion is 210 km away" is something the rep must
+be told rather than left to discover from the drive time.
+
+**This is a correctness fix, not a tuning knob.** §4.5 shortlists the top `K` candidates *by merit*
+and only then asks Mapbox for travel times. On a compact book that is harmless. On a spread one it
+is broken: rep 6's clinics span **seven states and 2 080 km** — São Luís 58, Manaus 43, Belém 42,
+Porto Velho 37, Rio Branco 29 — so a merit-first shortlist can return twenty clinics in Manaus to a
+rep standing in Belém. Every one of them scores well and not one is reachable today. The engine
+would produce a confident, useless slate and burn a Matrix call proving it.
+
+Straight-line first because it is free and Matrix is not; Stage B then refines with real driving
+times and drops anything that does not fit the day.
+
+> **Deliberately unsolved: the genuinely spread book.** A reachability filter keeps rep 6's daily
+> roteiro honest — it will suggest Belém clinics while they are in Belém — but it does not answer
+> *which city they should fly to next*. That is trip planning, it is a different question, and it is
+> **out of scope** (user decision, 2026-08-15: focus on the day-to-day; suggest clinics nearby or at
+> least doable). See §16.1.
 
 ### 4.2 Merit components
 
@@ -218,14 +250,37 @@ Measured conversion by type (§4.9):
 | Hospital Geral | 141 | 5 | 3.5 |
 | Consultório Isolado | 504 | 17 | 3.4 |
 
+**The mapping is data, not code** (user decision, 2026-08-15). `roteiro_params.unit_type_policy`
+holds one row per CNES unit type, editable by ADMIN/OPS without a deploy:
+
+```jsonc
+{ "Clinica/Centro de Especialidade": {"fit": 1.00, "eligible": true,  "forceRemote": false},
+  "Hospital/Dia - Isolado":         {"fit": 1.00, "eligible": true,  "forceRemote": false},
+  "Policlinica":                    {"fit": 0.55, "eligible": true,  "forceRemote": false},
+  "Consultorio Isolado":            {"fit": 0.35, "eligible": true,  "forceRemote": false},
+  "Hospital Especializado":         {"fit": 0.35, "eligible": true,  "forceRemote": false},
+  "Hospital Geral":                 {"fit": 0.20, "eligible": true,  "forceRemote": false},
+  "*":                              {"fit": 0.05, "eligible": true,  "forceRemote": false} }
 ```
-q = 1.00  Clínica/Centro de Especialidade, Hospital/Dia - Isolado
-    0.55  Policlínica
-    0.35  Consultório Isolado, Hospital Especializado
-    0.20  Hospital Geral
-    0.05  Cooperativa / Empresa de Cessão de Trabalhadores, Central de Regulação,
-          and every other administrative or staffing type
-```
+
+Three independent levers per type, because the three questions are genuinely different:
+
+- **`fit`** — how far down the ranking it sits
+- **`eligible`** — whether the engine may propose it at all; `false` removes the type from the
+  candidate set **and from the coverage denominator**, so a type nobody wants visited does not
+  quietly wreck the cobertura metric
+- **`forceRemote`** — the type is proposed as a phone contact unless the rep overrides. Aimed at
+  **Consultório Isolado**: 504 clinics, 35 % of the book, 3.4 % conversion, typically one surgeon.
+  Rarely worth a drive on its own, well worth a call in a day-edge slot.
+
+Defaults ship as above — every type eligible, none forced remote — so behaviour is the measured
+ranking until someone deliberately changes it. `"*"` is the fallback for any type not listed,
+which is what catches staffing cooperatives and administrative units without enumerating them.
+
+⚠️ Unit-type names come from `registry.unit_types.name` and are **CNES's strings, not ours**. A
+reload that renames one silently drops it to the `"*"` default. The params editor must therefore
+offer the current catalogue as a picker rather than accepting free text, and a policy key matching
+no known unit type must be reported, not ignored.
 
 **Capacity without fit is actively misleading**, and the measurement caught it. Ranked on
 orthopaedist headcount alone, the top untapped clinic in the whole book is **ITO AM** — 131
@@ -373,7 +428,7 @@ Mapbox's Optimization API cannot be used for selection — it solves TSP over a 
 We use **Matrix** for the numbers and select ourselves.
 
 ```
-1. Shortlist: top K = min(24, 4·N) candidates by mérito.          [one SQL query]
+1. Shortlist: top K = min(24, 4·N) by mérito **within the reachable set** (§4.1). [one SQL query]
 
 2. Travel: ONE Mapbox Matrix call over [origin, anchors…, shortlist…]
    profile = mapbox/driving  (driving-traffic caps at 10 coordinates; driving allows 25)
@@ -408,17 +463,22 @@ We use **Matrix** for the numbers and select ourselves.
 it packs the day tighter. It is the feature's single most legible tuning knob and belongs in
 `roteiro_params`.
 
-### 4.6 Weekly mode
+### 4.6 Weekly mode — deferred
 
-Same engine, run per working day, with two additions:
+**Cut from v1** (user decision, 2026-08-15): *"Lets not think of the week yet. That would be
+overcomplicating things."*
 
-1. **Cluster first.** k-medoids (k = number of working days requested) over the candidate
-   coordinates, weighted by merit. Each day draws from one cluster. Without this the week is five
-   overlapping stars radiating from the base and the rep crosses the territory five times.
-2. **Global dedup.** A clinic appears at most once in the week.
+One day at a time. The engine plans **today, or a chosen single day**. Everything the weekly design
+needed — k-medoids day-clustering, cross-day deduplication, a non-GPS origin for future days —
+leaves the critical path with it.
 
-Origin for a future day cannot be GPS. It is `users.base_location` (§6.1), falling back to the
-centroid of the rep's assigned territories, and the response says which was used.
+`users.base_location` (§5.3, §6.1) **stays**, because planning tomorrow from home still needs an
+origin that is not the rep's current GPS position, and because the reachability filter needs
+somewhere to centre when GPS is unavailable.
+
+`roteiros.week_group_id` stays in the schema as a nullable column. It costs nothing, and adding a
+column later to a table with confirmed roteiros in it is more disruptive than carrying an unused
+one. Nothing writes it in v1.
 
 ### 4.7 Substitution
 
@@ -581,8 +641,11 @@ roteiro_params                                   (one row per vertical; §6.3)
   bucket_ratios            jsonb                 (MANTER/RECUPERAR/PROSPECTAR)
   cooldown_days            jsonb                 (per bucket)
   service_minutes          jsonb                 (per modality, per bucket override)
+  unit_type_policy         jsonb                 (§4.2g — fit / eligible / forceRemote per type)
+  reach_radius_km          integer   default 60  (§4.1, expands 60→120→250→500)
   tau_seconds              integer   default 900
   remote_threshold_seconds integer   default 2700
+  coverage_horizon_days    jsonb                 (§4.3.1, per bucket)
   headroom_unknown         numeric   default 0.40
   workday_start / workday_end   time
   lunch_start / lunch_minutes   time / smallint
@@ -690,8 +753,8 @@ where a resource id exists. Use-cases receive `ScopeContext` and enforce it — 
 ```jsonc
 {
   "verticalId": 3,
-  "mode": "DAY",                      // DAY | WEEK
-  "date": "2026-08-15",               // or "from"/"to" for WEEK
+  "mode": "DAY",                      // DAY only in v1; WEEK deferred (§4.6)
+  "date": "2026-08-15",
   "limit": 5,
   "origin": {"lat": -22.90, "lng": -47.06, "source": "GPS"},
   "anchors": [
@@ -749,7 +812,8 @@ Manager proposes; rep accepts.
 - Clinic↔clinic durations are effectively static. Cache in Redis keyed on the ordered pair of
   6-decimal-rounded coordinates, TTL 30 days. Only origin legs are fetched fresh.
 - `max_generations_per_day` per rep (default 20), enforced and surfaced.
-- WEEK mode: cluster first, then at most one Matrix call per day.
+- The §4.1 reachability filter also caps Matrix cost: candidates are bounded by radius before the
+  shortlist, so a spread book cannot produce a wider matrix than a compact one.
 - Route geometry for the map: one `GET /maps/directions` call with `overview=simplified`,
   `geometries=polyline6`, only after the slate settles — not on every substitution
   (substitutions recompute times from the cached matrix; the drawn line refreshes on demand).
@@ -902,7 +966,7 @@ never be the source of a number.**
 | **P1** | Tables, params, merit scoring in SQL, `POST /roteiros`, list view, no map, no Matrix (haversine estimate) | yes — already better than today |
 | **P2** | Matrix integration, real drive times, ordering + 2-opt, map view, timeline, confirm → calendar | yes |
 | **P3** | Substitution, alternatives, rejection reasons, modality override | yes |
-| **P4** | Anchor mode, weekly mode + clustering | yes |
+| **P4** | Anchor mode ("já vou visitar X — o que mais?") | yes |
 | **P5** | Outcome capture on `visits`, manager metrics, aderência/conversão | yes |
 | **P6** | Offline cache for confirmed roteiros | yes |
 | **P7** | AI phase 2 (form filler), then phase 3 (briefing) | separate spec |
@@ -962,6 +1026,28 @@ prompt for it; a rep with no base and no GPS gets an actionable error, not a gue
 shippable; the sequence is a delivery order, not a set of gates awaiting separate approval. AI work
 (P7) stays a separate spec.
 
+### 15.1b Decided 2026-08-15
+
+**Day-to-day only. Weekly and trip planning are out** — *"Lets not think of the week yet. That
+would be overcomplicating things."* §4.6 is deferred; §16.1 records what the spread books still
+need.
+
+**Suggestions must be reachable.** *"We should suggest clinics closeby or at least something
+doable."* Implemented as the §4.1 reachability filter with a self-expanding radius, which also
+fixes a genuine defect: merit-first shortlisting could hand a rep in Belém twenty excellent clinics
+in Manaus.
+
+**The book is curated** — the 1 442 assignments are deliberate, despite arriving in one bulk write
+on 2026-08-09. Coverage therefore walks the whole book (§4.3.1) with no qualification gate, and a
+one-surgeon consultório still gets its turn.
+
+**Unit-type handling is configurable**, not hard-coded — *"maybe we should be able to set it up and
+edit this somehow."* `roteiro_params.unit_type_policy`, three levers per type (§4.2g).
+
+**Five stops a day is right**, with 45-minute visits. Confirmed against how reps actually work,
+which is the only place that number could have come from — `interactions` and `visits` are empty,
+so the system knows nothing about it.
+
 ### 15.2 Defaults taken without asking
 
 Change any of these by saying so — none is load-bearing, all live in `roteiro_params`.
@@ -987,7 +1073,33 @@ Change any of these by saying so — none is load-bearing, all live in `roteiro_
 
 ---
 
-## 16. Risks
+## 16. Deferred
+
+### 16.1 Trip planning for geographically spread books
+
+Measured spread per rep, straight-line from their own book's centroid:
+
+| rep | clinics | states | cities | max km |
+|---|---|---|---|---|
+| 2 | 146 | 1 (RJ) | 1 | 18 |
+| 3 | 145 | 1 (SP) | 9 | 222 |
+| 4 | 447 | 1 (PR) | 40 | 277 |
+| 5 | 259 | 2 (DF, TO) | 10 | 1 004 |
+| 6 | 445 | 7 (PA, MA, RO, AM, AC, RR…) | 72 | **2 080** |
+
+Rep 6's book is not a territory, it is a set of city clusters — São Luís 58, Manaus 43, Belém 42,
+Porto Velho 37, Rio Branco 29, Boa Vista 16. For that rep the unit of planning is a **trip**, not a
+day, and the question the product cannot yet answer is *which city do I fly to next*.
+
+The §4.1 reachability filter makes the daily engine **correct** for these reps — it will suggest
+Belém clinics while they are in Belém, and say how far it had to reach. It does not make the
+product complete for them.
+
+When this is picked up, the shape is already known: k-medoids over the rep's book by city, each
+cluster scored by summed merit and by coverage debt, and the winner planned as N consecutive days
+with a fixed origin. It is the deferred weekly engine with the day replaced by a trip.
+
+## 17. Risks
 
 | Risk | Mitigation |
 |---|---|
