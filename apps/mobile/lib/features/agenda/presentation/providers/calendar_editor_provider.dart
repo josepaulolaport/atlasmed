@@ -487,9 +487,12 @@ CalendarEditorDraft _initialDraft(
     facilityId: prefill?.facilityId,
     facilityName: prefill?.facilityName,
     modality: CalendarModality.inPerson,
-    startsAt: rounded,
+    // A slot drawn on the day grid wins over the next free half hour: the rep
+    // has already said when, and reopening the form on a default time would
+    // discard the one decision they had made.
+    startsAt: prefill?.startsAt ?? rounded,
     timeZone: timeZoneResolver(now),
-    durationMinutes: 60,
+    durationMinutes: prefill?.durationMinutes ?? 60,
     recurrence: CalendarRecurrence.none,
     recurrenceEnd: CalendarRecurrenceEnd.none,
     recurrenceUntil: null,

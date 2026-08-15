@@ -69,6 +69,8 @@ class CalendarEditorPrefill extends Equatable {
     this.personId,
     this.personName,
     this.facilityChoice = CalendarFacilityChoice.anyClinic,
+    this.startsAt,
+    this.durationMinutes,
   });
 
   final int? facilityId;
@@ -87,6 +89,14 @@ class CalendarEditorPrefill extends Equatable {
 
   final CalendarFacilityChoice facilityChoice;
 
+  /// The slot the rep already drew on the day grid.
+  ///
+  /// Carried so "Mais opções" opens the full form *on the block they just
+  /// dragged* rather than on a default time. Reopening at 09:00 after they had
+  /// chosen 18:00–18:30 would throw away the only decision they had made.
+  final DateTime? startsAt;
+  final int? durationMinutes;
+
   @override
   List<Object?> get props => [
     facilityId,
@@ -96,6 +106,8 @@ class CalendarEditorPrefill extends Equatable {
     personId,
     personName,
     facilityChoice,
+    startsAt,
+    durationMinutes,
   ];
 }
 

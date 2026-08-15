@@ -485,6 +485,8 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
     this.title,
     this.personId,
     this.personName,
+    this.startsAt,
+    this.durationMinutes,
   });
 
   // Query parameters, not `$extra`.
@@ -505,11 +507,27 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
   final int? personId;
   final String? personName;
 
+  /// The slot the rep drew on the day grid, ISO-8601, and how long it is.
+  ///
+  /// Query parameters for the same reason as the rest: the router rebuilds
+  /// matches from the location alone on every refresh, and a time passed beside
+  /// it would vanish — reopening the form on a default hour after the rep had
+  /// already chosen one.
+  final String? startsAt;
+  final int? durationMinutes;
+
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    final seeded = facilityId != null || title != null || personId != null;
+    final drawnStartsAt = startsAt == null
+        ? null
+        : DateTime.tryParse(startsAt!);
+    final seeded =
+        facilityId != null ||
+        title != null ||
+        personId != null ||
+        drawnStartsAt != null;
     return AgendaEditorRouteGuard(
       target: CalendarEditorTarget.creating(
         prefill: !seeded
@@ -523,6 +541,8 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
                 title: title,
                 personId: personId,
                 personName: personName,
+                startsAt: drawnStartsAt,
+                durationMinutes: durationMinutes,
                 facilityChoice: facilityId != null
                     ? CalendarFacilityChoice.fixed
                     : personId != null

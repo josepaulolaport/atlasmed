@@ -119,6 +119,43 @@ void main() {
     expect(notifier.validationErrors, isEmpty);
   });
 
+  test('a block drawn on the day grid opens the form on that block', () {
+    // Reopening the editor at the next free half hour would discard the one
+    // decision the rep had already made by dragging.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+          startsAt: DateTime(2026, 8, 14, 18),
+          durationMinutes: 30,
+        ),
+      ),
+      now: () => DateTime(2026, 8, 14, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.startsAt, DateTime(2026, 8, 14, 18));
+    expect(notifier.state.draft.durationMinutes, 30);
+    expect(notifier.validationErrors, isEmpty);
+  });
+
+  test('without a drawn block the form still opens on the next half hour', () {
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(),
+      now: () => DateTime(2026, 8, 14, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.startsAt.hour, 9);
+    expect(notifier.state.draft.startsAt.minute, 30);
+    expect(notifier.state.draft.durationMinutes, 60);
+  });
+
   test(
     'interaction requires clinic and duration must be a positive multiple of 30',
     () {

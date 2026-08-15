@@ -724,6 +724,12 @@ mixin $AgendaNewRoute on GoRouteData {
       int.tryParse,
     ),
     personName: state.uri.queryParameters['person-name'],
+    startsAt: state.uri.queryParameters['starts-at'],
+    durationMinutes: _$convertMapValue(
+      'duration-minutes',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
   );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
@@ -737,6 +743,9 @@ mixin $AgendaNewRoute on GoRouteData {
       if (_self.title != null) 'title': _self.title,
       if (_self.personId != null) 'person-id': _self.personId!.toString(),
       if (_self.personName != null) 'person-name': _self.personName,
+      if (_self.startsAt != null) 'starts-at': _self.startsAt,
+      if (_self.durationMinutes != null)
+        'duration-minutes': _self.durationMinutes!.toString(),
     },
   );
 

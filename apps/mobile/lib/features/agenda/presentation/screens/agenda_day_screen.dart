@@ -1,6 +1,10 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_day_grid.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/schedule_draft_sheet.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_speed_dial.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
@@ -30,7 +34,7 @@ const _monthNames = [
 /// when, and what still fits". The second question is the one roteirização
 /// needs the rep to have an opinion about, which is why the "+" reaches it from
 /// here.
-class AgendaDayScreen extends ConsumerWidget {
+class AgendaDayScreen extends ConsumerStatefulWidget {
   const AgendaDayScreen({
     super.key,
     required this.day,
@@ -45,7 +49,22 @@ class AgendaDayScreen extends ConsumerWidget {
   final String? ownerName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AgendaDayScreen> createState() => _AgendaDayScreenState();
+}
+
+class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
+  /// The block being drawn, held here rather than in the grid: the sheet below
+  /// names and saves the same one, and two copies would disagree the moment a
+  /// handle moved.
+  DayGridDraft? _draft;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = widget.day;
+    final ownerUserId = widget.ownerUserId;
+    final ownerName = widget.ownerName;
     final start = DateTime(day.year, day.month, day.day);
     final agenda = ref.watch(
       agendaProvider(
@@ -77,7 +96,7 @@ class AgendaDayScreen extends ConsumerWidget {
             ),
             if (ownerName != null)
               Text(
-                ownerName!,
+                ownerName,
                 style: const TextStyle(fontSize: 12, color: AppColors.gray500),
               ),
           ],
@@ -105,6 +124,16 @@ class AgendaDayScreen extends ConsumerWidget {
               data: (occurrences) => AgendaDayGrid(
                 day: start,
                 occurrences: occurrences,
+                draft: _draft,
+                onDraftStarted: canCreate
+                    ? (draft) => setState(() {
+                        _draft = draft;
+                        _error = null;
+                      })
+                    : null,
+                onDraftChanged: canCreate
+                    ? (draft) => setState(() => _draft = draft)
+                    : null,
                 onOccurrenceTap: (occurrence) {
                   final interactionId = occurrence.interaction?.id;
                   // Personal blocks have no interaction to open.
@@ -114,10 +143,114 @@ class AgendaDayScreen extends ConsumerWidget {
               ),
             ),
           ),
+          if (_draft != null)
+            ScheduleDraftSheet(
+              day: start,
+              draft: _draft!,
+              clashes: draftClashes(
+                _draft!,
+                start,
+                agenda.valueOrNull ?? const [],
+              ),
+              saving: _saving,
+              errorText: _error,
+              onCancel: () => setState(() {
+                _draft = null;
+                _error = null;
+              }),
+              onSave: (value) => _save(value, start),
+              onMoreOptions: (value) => _openFullEditor(value, start),
+            ),
         ],
       ),
-      floatingActionButton: canCreate ? _dial(context, start) : null,
+      // Hidden while a block is being drawn: the sheet already owns the bottom
+      // of the screen, and a button floating over it offers a second way to
+      // start something the rep is already in the middle of.
+      floatingActionButton: canCreate && _draft == null
+          ? _dial(context, start)
+          : null,
     );
+  }
+
+  /// Saves through the editor's own notifier rather than a second write path.
+  ///
+  /// That is what makes the quick sheet safe: validation, the idempotency key
+  /// and the conflict handling are the editor's, already written and already
+  /// tested. A parallel save would be a second set of rules to keep in step,
+  /// and the first thing to drift would be the one that refuses double-booking.
+  Future<void> _save(ScheduleDraftValue value, DateTime start) async {
+    final draft = _draft;
+    if (draft == null) return;
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    // Built here rather than read from `calendarEditorProvider`, which is an
+    // autoDispose family: nothing watches it from a callback, so Riverpod tore
+    // the notifier down inside the same frame. The POST still went out and
+    // returned 200 — the appointment was created — but the reply landed on a
+    // disposed object, so the sheet span forever and a second tap would have
+    // made a duplicate under a fresh idempotency key.
+    final notifier = CalendarEditorNotifier(
+      repository: ref.read(calendarMutationRepositoryProvider),
+      target: CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: value.kind,
+          title: value.title,
+          facilityId: value.facility?.id,
+          facilityName: value.facility?.name,
+          startsAt: draft.startsAt(start),
+          durationMinutes: draft.durationMinutes,
+        ),
+      ),
+    );
+
+    // `state` is protected on a StateNotifier, so the error is read through
+    // the stream the notifier already exposes rather than by reaching inside.
+    String? lastError;
+    final subscription = notifier.stream.listen(
+      (value) => lastError = value.errorMessage,
+    );
+
+    try {
+      final saved = await notifier.submit();
+      if (!mounted) return;
+      if (saved) {
+        setState(() {
+          _saving = false;
+          _draft = null;
+        });
+        ref.invalidate(
+          agendaProvider(
+            AgendaQuery(from: start, to: start.add(const Duration(days: 1))),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _error = lastError ?? 'Não foi possível salvar.';
+      });
+    } finally {
+      await subscription.cancel();
+      notifier.dispose();
+    }
+  }
+
+  /// Hands the block to the full editor, carrying what the rep already typed.
+  void _openFullEditor(ScheduleDraftValue value, DateTime start) {
+    final draft = _draft;
+    if (draft == null) return;
+    setState(() => _draft = null);
+    AgendaNewRoute(
+      title: value.title.isEmpty ? null : value.title,
+      facilityId: value.facility?.id,
+      facilityName: value.facility?.name,
+      startsAt: draft.startsAt(start).toIso8601String(),
+      durationMinutes: draft.durationMinutes,
+    ).push(context);
   }
 
   Widget _dial(BuildContext context, DateTime day) => AgendaSpeedDial(
