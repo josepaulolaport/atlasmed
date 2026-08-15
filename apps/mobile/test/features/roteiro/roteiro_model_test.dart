@@ -244,6 +244,33 @@ void main() {
       expect(roteiro.canConfirm, isFalse);
     });
 
+    test('reads the bookings the day was planned around', () {
+      final roteiro = Roteiro.fromJson({
+        'id': 1,
+        'status': 'DRAFT',
+        'stops': const [],
+        'fixedPoints': [
+          {
+            'facilityId': 55,
+            'facilityName': 'Ja agendada',
+            'lat': -23.6,
+            'lng': -46.7,
+            'startsAt': '2026-08-17T13:00:00.000Z',
+            'endsAt': '2026-08-17T14:00:00.000Z',
+          },
+        ],
+      });
+
+      expect(roteiro.fixedPoints, hasLength(1));
+      expect(roteiro.fixedPoints.single.facilityName, 'Ja agendada');
+      expect(roteiro.fixedPoints.single.lat, -23.6);
+    });
+
+    test('a clear day has no fixed points', () {
+      final roteiro = Roteiro.fromJson({'stops': const []});
+      expect(roteiro.fixedPoints, isEmpty);
+    });
+
     test('survives a response missing every optional field', () {
       // Installed builds must not crash on a server that adds or drops keys.
       final roteiro = Roteiro.fromJson(const {});

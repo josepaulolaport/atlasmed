@@ -218,6 +218,39 @@ List<String> buildReasons(
   return reasons;
 }
 
+/// A visit the rep already had booked, read from their calendar.
+///
+/// Shown alongside the suggestions because a slate without them is unreadable:
+/// two suggestions floating in an empty day look arbitrary until you can see
+/// the five commitments they were planned around.
+class RoteiroFixedPoint {
+  const RoteiroFixedPoint({
+    required this.facilityId,
+    required this.facilityName,
+    required this.startsAt,
+    required this.endsAt,
+    this.lat,
+    this.lng,
+  });
+
+  factory RoteiroFixedPoint.fromJson(Map<String, dynamic> json) => RoteiroFixedPoint(
+    facilityId: (json['facilityId'] as num?)?.toInt() ?? 0,
+    facilityName: json['facilityName'] as String? ?? 'Compromisso',
+    lat: (json['lat'] as num?)?.toDouble(),
+    lng: (json['lng'] as num?)?.toDouble(),
+    startsAt:
+        DateTime.tryParse(json['startsAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+    endsAt: DateTime.tryParse(json['endsAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+  );
+
+  final int facilityId;
+  final String facilityName;
+  final double? lat;
+  final double? lng;
+  final DateTime startsAt;
+  final DateTime endsAt;
+}
+
 class Roteiro {
   const Roteiro({
     this.id,
@@ -227,6 +260,7 @@ class Roteiro {
     required this.reachBoundKm,
     required this.travelSource,
     required this.stops,
+    required this.fixedPoints,
     required this.notices,
     required this.driveSeconds,
     required this.serviceMinutes,
@@ -245,6 +279,10 @@ class Roteiro {
       stops: ((json['stops'] as List?) ?? const [])
           .whereType<Map>()
           .map((e) => RoteiroStop.fromJson(e.cast<String, dynamic>()))
+          .toList(),
+      fixedPoints: ((json['fixedPoints'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((e) => RoteiroFixedPoint.fromJson(e.cast<String, dynamic>()))
           .toList(),
       notices: ((json['notices'] as List?) ?? const [])
           .whereType<Map>()
@@ -267,6 +305,9 @@ class Roteiro {
   /// present a straight-line guess as a measured drive.
   final String travelSource;
   final List<RoteiroStop> stops;
+
+  /// Visits the rep already had. Not suggestions — context.
+  final List<RoteiroFixedPoint> fixedPoints;
   final List<RoteiroNotice> notices;
   final int driveSeconds;
   final int serviceMinutes;

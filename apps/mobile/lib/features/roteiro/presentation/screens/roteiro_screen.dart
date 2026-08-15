@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_stop_card.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_timeline.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,8 +20,16 @@ class RoteiroScreen extends ConsumerStatefulWidget {
   ConsumerState<RoteiroScreen> createState() => _RoteiroScreenState();
 }
 
+/// Two readings of the same slate.
+///
+/// `lista` answers "why these clinics"; `dia` answers "does this day work". A
+/// rep with commitments needs the second, because suggestions alone give no
+/// sense of the day they slot into.
+enum _View { lista, dia }
+
 class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
   bool _requested = false;
+  _View _view = _View.lista;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +122,21 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         if (roteiro.stops.isNotEmpty) _Summary(roteiro: roteiro),
+        // Offered only when there is something to interleave with. On a clear
+        // day the timeline shows the same thing as the list, and a toggle that
+        // changes nothing is noise.
+        if (roteiro.stops.isNotEmpty && roteiro.fixedPoints.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: SegmentedButton<_View>(
+              segments: const [
+                ButtonSegment(value: _View.lista, label: Text('Sugestões')),
+                ButtonSegment(value: _View.dia, label: Text('Meu dia')),
+              ],
+              selected: {_view},
+              onSelectionChanged: (v) => setState(() => _view = v.first),
+            ),
+          ),
         // Notices are rendered, never swallowed (§4.8). A slate missing its
         // prospecting stop must not look like one where prospecting was
         // impossible.
@@ -124,6 +148,8 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
             body:
                 'Nada ao alcance da sua posição atual nesta linha. Puxe para atualizar.',
           )
+        else if (_view == _View.dia && roteiro.fixedPoints.isNotEmpty)
+          RoteiroTimeline(roteiro: roteiro)
         else
           ...roteiro.stops.map(
             (stop) => RoteiroStopCard(
