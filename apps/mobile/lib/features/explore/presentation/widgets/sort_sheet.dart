@@ -76,10 +76,9 @@ class SortSheet extends StatelessWidget {
         ),
       ];
     }
-    // Facility-scoped people lists (no distance / last-contact).
-    if (kind == 'facility-people') {
-      return [_SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética')];
-    }
+    // No `facility-people` branch: it returned a single option, so the two
+    // screens using it opened a menu with nothing to choose. They order by
+    // name and no longer show the control.
     return [
       _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
       _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),

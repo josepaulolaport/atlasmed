@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SortRow extends StatelessWidget {
-  final String sort;
-  final VoidCallback onSortTap;
+  /// Both null on a row that shows only filter chips — a surface with a single
+  /// possible ordering has nothing to offer and should not carry the control.
+  final String? sort;
+  final VoidCallback? onSortTap;
   final List<FilterChipData> filterChips;
 
-  /// When false, only filter chips are shown (sort lives elsewhere).
+  /// When false, only filter chips are shown (sort lives elsewhere, or there
+  /// is no ordering worth choosing).
   final bool includeSort;
 
   const SortRow({
     super.key,
-    required this.sort,
-    required this.onSortTap,
+    this.sort,
+    this.onSortTap,
     required this.filterChips,
     this.includeSort = true,
-  });
+  }) : assert(
+         !includeSort || (sort != null && onSortTap != null),
+         'a sort chip needs a key and a handler',
+       );
 
   /// Short label for a sort key — one or two words.
   ///
@@ -88,7 +94,7 @@ class SortRow extends StatelessWidget {
         children: [
           if (includeSort) ...[
             Center(
-              child: _SortChip(sort: sort, onTap: onSortTap),
+              child: _SortChip(sort: sort!, onTap: onSortTap!),
             ),
             if (filterChips.isNotEmpty) const SizedBox(width: 6),
           ],
