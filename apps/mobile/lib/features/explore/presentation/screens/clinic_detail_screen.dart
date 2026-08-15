@@ -420,16 +420,14 @@ Future<void> _openPayerSourcesEditor(
     );
     return;
   }
-  if (catalog.isEmpty) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nenhuma fonte pagadora disponível no catálogo.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    return;
-  }
+  // An empty catalogue is not a reason to refuse.
+  //
+  // This used to bail with "Nenhuma fonte pagadora disponível no catálogo",
+  // which blocked the one screen that can create the first one: the editor
+  // carries "Criar fonte pagadora", and the section's own empty state tells
+  // the rep to "toque em Editar para cadastrar as fontes pagadoras". So the
+  // first clinic to need a payer source could never get one — the instruction
+  // and the refusal pointed at each other.
   if (!context.mounted) return;
 
   final updated = await Navigator.of(context).push<List<PayerShare>>(

@@ -972,7 +972,13 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
-                        _pool.isEmpty
+                        // An empty catalogue is not an exhausted one: the first
+                        // clinic to need a payer source was told everything had
+                        // "already been added" when nothing existed at all.
+                        _catalog.isEmpty
+                            ? 'O catálogo ainda não tem fontes pagadoras. '
+                                  'Crie a primeira abaixo.'
+                            : _pool.isEmpty
                             ? 'Todas as fontes do catálogo já foram adicionadas. '
                                   'Crie uma nova abaixo.'
                             : query.isEmpty
