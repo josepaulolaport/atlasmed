@@ -31,6 +31,9 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
     lng: SAO_PAULO.lng,
     straightLineKm: id,
     orthopaedistCount: 10,
+    totalProfessionalCount: 20,
+    orthopaedistShare: 0.5,
+    assignmentStartedAt: null,
     theirsQty: null,
     oursQty: null,
     daysSinceLastInteraction: null,
@@ -185,6 +188,37 @@ describe("GenerateRoteiroUseCase", () => {
     const coverage = result.stops.filter((s) => s.isCoverageSlot);
     expect(coverage).toHaveLength(1);
     expect(coverage[0]?.candidate.facilityName).toBe("Nunca visitada");
+  });
+
+  it("breaks a never-covered tie by assignment age, not by merit", async () => {
+    // Every never-covered clinic shares a null lastSuggestedAt — today that is
+    // the entire book — so without this the tie falls to merit and the clinic a
+    // rep has been sitting on for months never surfaces.
+    const recentlyAssigned = candidate({
+      id: 50,
+      coverageOverdue: true,
+      assignmentStartedAt: new Date("2026-08-10"),
+      meritScore: 0.9,
+      facilityName: "Recem atribuida",
+    });
+    const longAssigned = candidate({
+      id: 51,
+      coverageOverdue: true,
+      assignmentStartedAt: new Date("2026-02-01"),
+      meritScore: 0.2,
+      facilityName: "Esquecida ha meses",
+    });
+    const repository = new FakeRepository([
+      ...Array.from({ length: 20 }, (_, i) => candidate({ id: i + 1, meritScore: 0.95 })),
+      recentlyAssigned,
+      longAssigned,
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput());
+
+    const coverage = result.stops.find((s) => s.isCoverageSlot);
+    expect(coverage?.candidate.facilityName).toBe("Esquecida ha meses");
   });
 
   it("widens the bound when nothing is close, and says how far it reached", async () => {

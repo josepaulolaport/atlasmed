@@ -14,6 +14,37 @@ void main() {
       expect(reasons, contains('24 ortopedistas registrados aqui'));
     });
 
+    test('adds the share when the clinic is mostly orthopaedic', () {
+      // What separates a clinic from a hospital that employs a few
+      // orthopaedists: ≥40% share converts at 32% against 11%.
+      final reasons = buildReasons({
+        'c': {
+          'raw': 0.9,
+          'weighted': 0.24,
+          'orthopaedists': 24,
+          'totalProfessionals': 25,
+          'orthopaedistShare': 0.96,
+        },
+      }, coverage: false);
+
+      expect(reasons, contains('24 ortopedistas registrados aqui — 96% do corpo clínico'));
+    });
+
+    test('omits the share when orthopaedists are a small part of a big staff', () {
+      final reasons = buildReasons({
+        'c': {
+          'raw': 0.5,
+          'weighted': 0.13,
+          'orthopaedists': 3,
+          'totalProfessionals': 120,
+          'orthopaedistShare': 0.025,
+        },
+      }, coverage: false);
+
+      expect(reasons, contains('3 ortopedistas registrados aqui'));
+      expect(reasons.any((r) => r.contains('corpo clínico')), isFalse);
+    });
+
     test('says "1 ortopedista" rather than "1 ortopedistas"', () {
       final reasons = buildReasons({
         'c': {'raw': 0.1, 'weighted': 0.02, 'orthopaedists': 1},

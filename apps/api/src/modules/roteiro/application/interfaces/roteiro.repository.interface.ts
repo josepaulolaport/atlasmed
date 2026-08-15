@@ -57,6 +57,16 @@ export interface RoteiroCandidate {
   lng: number;
   straightLineKm: number;
   orthopaedistCount: number;
+  /** Every professional CNES records at the facility, any occupation. */
+  totalProfessionalCount: number;
+  /** `orthopaedistCount / totalProfessionalCount`, 0 when the facility has none. */
+  orthopaedistShare: number;
+  /**
+   * When this rep was given the clinic. Breaks the tie among the never-covered,
+   * who all share a null `lastSuggestedAt` — a book handed over 180 days ago is
+   * more overdue than one handed over last week (§4.3.1).
+   */
+  assignmentStartedAt: Date | null;
   theirsQty: number | null;
   oursQty: number | null;
   daysSinceLastInteraction: number | null;

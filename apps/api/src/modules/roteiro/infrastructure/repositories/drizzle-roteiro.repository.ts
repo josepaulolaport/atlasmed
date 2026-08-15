@@ -28,6 +28,19 @@ const M_PER_KM = 1000;
  */
 const COVERAGE_SHORTLIST_DEPTH = 5;
 
+/**
+ * How capacity splits between "how many orthopaedists" and "what share of the
+ * staff they are" (§4.2f).
+ *
+ * Count leads because absolute capacity is what a rep sells into, but the share
+ * carries real independent signal: inside the ≥5-orthopaedist band the count
+ * treats as identical, a high share converts at 32.3 % against 11.4 %. Weighting
+ * the share to zero is what let a staffing cooperative with 131 registered
+ * surgeons top the ranking.
+ */
+const CAPACITY_COUNT_WEIGHT = 0.6;
+const CAPACITY_RATIO_WEIGHT = 0.4;
+
 interface CandidateRow extends Record<string, unknown> {
   profile_id: number;
   facility_id: number;
@@ -41,6 +54,9 @@ interface CandidateRow extends Record<string, unknown> {
   lng: number;
   straight_line_km: string;
   ortho_n: number;
+  ortho_total: number;
+  ortho_ratio: string;
+  assignment_started_at: Date | null;
   theirs_qty: string | null;
   ours_qty: string | null;
   days_since_interaction: number | null;
@@ -182,6 +198,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           p.purchase_interval_days::int     as purchase_interval_days,
           p.last_valid_purchase_date        as last_purchase,
           p.last_suggested_at               as last_suggested_at,
+          a.started_at                      as assignment_started_at,
           st_y(f.location::geometry)        as lat,
           st_x(f.location::geometry)        as lng,
           round((st_distance(f.location::geography, ${originGeog}) / ${M_PER_KM})::numeric, 1)
@@ -215,10 +232,15 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
             where i.facility_id = f.id and i.status in ('SCHEDULED', 'IN_PROGRESS')
           )
       ),
+      -- Both halves of capacity in one pass (§4.2f): how many orthopaedists,
+      -- and what share of the facility's staff they are.
       ortho as (
-        select o.facility_cnes_id, count(distinct o.professional_cnes_id)::int as n
+        select
+          o.facility_cnes_id,
+          count(distinct o.professional_cnes_id)
+            filter (where o.occupation_cnes_id = ${ORTHOPAEDIST_CBO})::int as n,
+          count(distinct o.professional_cnes_id)::int                       as total
         from registry.facility_professional_occupations o
-        where o.occupation_cnes_id = ${ORTHOPAEDIST_CBO}
         group by 1
       ),
       metric as (
@@ -238,6 +260,9 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         select
           c.*,
           coalesce(o.n, 0)                                        as ortho_n,
+          coalesce(o.total, 0)                                    as ortho_total,
+          case when coalesce(o.total, 0) = 0 then 0::numeric
+               else o.n::numeric / o.total end                    as ortho_ratio,
           m.theirs_qty, m.ours_qty,
           (${input.today}::date - c.last_purchase)                as days_since_purchase,
           (${input.today}::date - ld.ended_at::date)              as days_since_interaction,
@@ -284,7 +309,14 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       scored as (
         select
           r.*,
-          percent_rank() over (order by r.ortho_n)::numeric                       as c_raw,
+          -- §4.2f — count says how much orthopaedic capacity exists, ratio says
+          -- how much of the facility that capacity *is*. Measured inside the
+          -- >=5 band the count alone treats as equal, a high share converts at
+          -- 32.3% against 11.4%. A hospital with 120 physicians of whom 3 are
+          -- orthopaedists is not the prospect a clinic with 14 of whom 12 are.
+          (${CAPACITY_COUNT_WEIGHT} * percent_rank() over (order by r.ortho_n)
+           + ${CAPACITY_RATIO_WEIGHT} * percent_rank() over (order by r.ortho_ratio)
+          )::numeric                                                              as c_raw,
           case when r.theirs_qty is null then ${params.headroomUnknown}::numeric
                else percent_rank() over (order by coalesce(r.theirs_qty, 0))::numeric
           end                                                                     as h_raw,
@@ -312,14 +344,20 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           case when r.coverage_overdue then
             row_number() over (
               partition by r.coverage_overdue
-              order by r.last_suggested_at asc nulls first, r.merit desc)
+              -- Every never-covered clinic shares a null last_suggested_at,
+              -- which is one enormous tie — today it is the entire book. The
+              -- older assignment is the more overdue one.
+              order by r.last_suggested_at asc nulls first,
+                       r.assignment_started_at asc nulls first,
+                       r.merit desc)
           end                                       as coverage_rank
         from ranked r
       )
       select
         w.profile_id, w.facility_id, w.facility_name, w.cnes_code, w.unit_type,
         w.municipality, w.funnel_stage, w.bucket, w.lat, w.lng, w.straight_line_km,
-        w.ortho_n, w.theirs_qty, w.ours_qty, w.days_since_interaction,
+        w.ortho_n, w.ortho_total, w.ortho_ratio, w.assignment_started_at,
+        w.theirs_qty, w.ours_qty, w.days_since_interaction,
         w.days_since_purchase, w.purchase_interval_days, w.last_suggested_at,
         w.coverage_overdue,
         w.t_raw, w.h_raw, w.n_raw, w.v_raw, w.k_raw, w.c_raw, w.q_raw, w.merit
@@ -365,6 +403,9 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       lng: Number(row.lng),
       straightLineKm: Number(row.straight_line_km),
       orthopaedistCount: Number(row.ortho_n),
+      totalProfessionalCount: Number(row.ortho_total),
+      orthopaedistShare: Number(row.ortho_ratio),
+      assignmentStartedAt: row.assignment_started_at,
       theirsQty: row.theirs_qty === null ? null : Number(row.theirs_qty),
       oursQty: row.ours_qty === null ? null : Number(row.ours_qty),
       daysSinceLastInteraction:
@@ -394,7 +435,11 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           oursQty: row.ours_qty === null ? null : Number(row.ours_qty),
         }),
         k: component(row.k_raw, w.k, { stage: row.funnel_stage }),
-        c: component(row.c_raw, w.c, { orthopaedists: Number(row.ortho_n) }),
+        c: component(row.c_raw, w.c, {
+          orthopaedists: Number(row.ortho_n),
+          totalProfessionals: Number(row.ortho_total),
+          orthopaedistShare: Number(Number(row.ortho_ratio).toFixed(3)),
+        }),
         q: component(row.q_raw, w.q, { unitType: row.unit_type }),
       },
     };

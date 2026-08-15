@@ -33,7 +33,10 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
     Policlinica: { fit: 0.55, eligible: true, forceRemote: false },
     "Consultorio Isolado": { fit: 0.35, eligible: true, forceRemote: false },
     "Hospital Especializado": { fit: 0.35, eligible: true, forceRemote: false },
-    "Hospital Geral": { fit: 0.2, eligible: true, forceRemote: false },
+    // Below what conversion alone justifies (3.5% vs a clinic's 9.6%), by
+    // commercial decision: a hospital visit costs more of a rep's day in
+    // access and gatekeeping, and purchasing is centralised and slower.
+    "Hospital Geral": { fit: 0.15, eligible: true, forceRemote: false },
     "*": { fit: 0.05, eligible: true, forceRemote: false },
   },
   reachRadiusKm: 60,
@@ -369,7 +372,13 @@ export class GenerateRoteiroUseCase {
       .sort((a, b) => {
         const at = a.lastSuggestedAt?.getTime() ?? -Infinity;
         const bt = b.lastSuggestedAt?.getTime() ?? -Infinity;
-        return at === bt ? b.meritScore - a.meritScore : at - bt;
+        if (at !== bt) return at - bt;
+        // Everything never covered ties at -Infinity above — today that is the
+        // whole book — so the older assignment wins before merit does.
+        const aa = a.assignmentStartedAt?.getTime() ?? Infinity;
+        const ba = b.assignmentStartedAt?.getTime() ?? Infinity;
+        if (aa !== ba) return aa - ba;
+        return b.meritScore - a.meritScore;
       })[0];
     if (coverage && chosen.length < limit) {
       taken.add(coverage.facilityVerticalProfileId);

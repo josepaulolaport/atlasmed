@@ -142,11 +142,18 @@ List<String> buildReasons(
 
   final capacity = part('c');
   final orthopaedists = (capacity?['orthopaedists'] as num?)?.toInt() ?? 0;
+  final share = (capacity?['orthopaedistShare'] as num?)?.toDouble();
   if (orthopaedists > 0) {
+    final head = orthopaedists == 1
+        ? '1 ortopedista registrado aqui'
+        : '$orthopaedists ortopedistas registrados aqui';
+    // The share is what separates a clinic from a hospital that happens to
+    // employ a few orthopaedists — measured, ≥40% converts at 32% against 11%.
+    // Only worth saying when it is high enough to mean something.
     reasons.add(
-      orthopaedists == 1
-          ? '1 ortopedista registrado aqui'
-          : '$orthopaedists ortopedistas registrados aqui',
+      share != null && share >= 0.5
+          ? '$head — ${(share * 100).round()}% do corpo clínico'
+          : head,
     );
   }
 
