@@ -30,6 +30,14 @@ const int ordersPageSize = 20;
 /// The screen fetched exactly one page of 20 before and dropped `pagination`
 /// on the floor, so on 1131 orders it showed 20 with nothing to say more
 /// existed — no next page, no total, no way to reach order 21.
+/// The clinic the list is narrowed to, and what to call it on the chip.
+class OrderFacilityFilter {
+  const OrderFacilityFilter({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
 class OrdersListState {
   const OrdersListState({
     this.orders = const [],
@@ -38,6 +46,7 @@ class OrdersListState {
     this.page = 0,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.facility,
   });
 
   final List<OrderListItem> orders;
@@ -50,6 +59,9 @@ class OrdersListState {
   final bool hasMore;
   final bool isLoadingMore;
 
+  /// Null when the list is showing every clinic in scope.
+  final OrderFacilityFilter? facility;
+
   OrdersListState copyWith({
     List<OrderListItem>? orders,
     Map<String, int>? statusCounts,
@@ -57,6 +69,7 @@ class OrdersListState {
     int? page,
     bool? hasMore,
     bool? isLoadingMore,
+    OrderFacilityFilter? facility,
   }) => OrdersListState(
     orders: orders ?? this.orders,
     statusCounts: statusCounts ?? this.statusCounts,
@@ -64,6 +77,7 @@ class OrdersListState {
     page: page ?? this.page,
     hasMore: hasMore ?? this.hasMore,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    facility: facility ?? this.facility,
   );
 }
 
@@ -80,6 +94,7 @@ OrderListItem _listItemForApi(ApiOrderListItem order) => OrderListItem(
 
 class OrdersListNotifier extends AsyncNotifier<OrdersListState> {
   List<String>? _statuses;
+  int? _facilityId;
 
   @override
   Future<OrdersListState> build() => _loadFirstPage();
@@ -87,13 +102,19 @@ class OrdersListNotifier extends AsyncNotifier<OrdersListState> {
   Future<OrdersListState> _loadFirstPage() async {
     final page = await ref
         .read(ordersRepositoryProvider)
-        .listOrders(page: 1, limit: ordersPageSize, statuses: _statuses);
+        .listOrders(
+          page: 1,
+          limit: ordersPageSize,
+          statuses: _statuses,
+          facilityId: _facilityId,
+        );
     return OrdersListState(
       orders: page.data.map(_listItemForApi).toList(growable: false),
       statusCounts: page.statusCounts,
       total: page.total,
       page: page.page,
       hasMore: page.hasNextPage,
+      facility: _facility,
     );
   }
 
@@ -101,6 +122,20 @@ class OrdersListNotifier extends AsyncNotifier<OrdersListState> {
   /// so they go rather than being appended to.
   Future<void> setStatuses(List<String>? statuses) async {
     _statuses = statuses;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_loadFirstPage);
+  }
+
+  /// Narrows the list to one clinic, or widens it again with null.
+  ///
+  /// The name is carried alongside the id so the chip can say which clinic
+  /// without the list having to find it again.
+  OrderFacilityFilter? _facility;
+
+  Future<void> setFacility(OrderFacilityFilter? facility) async {
+    if (facility?.id == _facilityId) return;
+    _facility = facility;
+    _facilityId = facility?.id;
     state = const AsyncLoading();
     state = await AsyncValue.guard(_loadFirstPage);
   }
@@ -124,6 +159,7 @@ class OrdersListNotifier extends AsyncNotifier<OrdersListState> {
             page: current.page + 1,
             limit: ordersPageSize,
             statuses: _statuses,
+            facilityId: _facilityId,
           );
       state = AsyncData(
         current.copyWith(

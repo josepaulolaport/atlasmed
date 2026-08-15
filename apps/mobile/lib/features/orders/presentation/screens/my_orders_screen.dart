@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_clinic_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
@@ -74,6 +75,15 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
+  Future<void> _pickClinic(OrderFacilityFilter? current) async {
+    final chosen = await showOrderClinicFilterSheet(context, current: current);
+    if (chosen == null || !mounted) return;
+    await ref
+        .read(ordersListProvider.notifier)
+        .setFacility(chosen.id == 0 ? null : chosen);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ordersAsync = ref.watch(ordersListProvider);
@@ -104,6 +114,16 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                     const SizedBox(height: 16),
                     _SummaryStrip(counts: listState?.statusCounts ?? const {}),
                     const SizedBox(height: 18),
+                    _ClinicFilterRow(
+                      facility: listState?.facility,
+                      onTap: () => _pickClinic(listState?.facility),
+                      onClear: listState?.facility == null
+                          ? null
+                          : () => ref
+                                .read(ordersListProvider.notifier)
+                                .setFacility(null),
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       height: 36,
                       child: ListView.separated(
@@ -196,6 +216,80 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
 
 /// "20 de 1131 pedidos" — the count the screen could never show before, since
 /// it discarded `pagination` and had no way to say more existed.
+/// Search for a clinic, or say which one the list is currently narrowed to.
+///
+/// A row of its own rather than another status chip: it answers a different
+/// question ("which clinic") from the ones beside it ("which state"), and the
+/// two combine — a clinic's rejected orders is a reasonable thing to ask for.
+class _ClinicFilterRow extends StatelessWidget {
+  const _ClinicFilterRow({
+    required this.facility,
+    required this.onTap,
+    this.onClear,
+  });
+
+  final OrderFacilityFilter? facility;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = facility != null;
+    return Material(
+      color: selected ? AppColors.blue50 : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        key: const Key('orders-clinic-filter'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.navyBright : AppColors.gray200,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.local_hospital_rounded : Icons.search_rounded,
+                size: 18,
+                color: selected ? AppColors.navyBright : AppColors.gray400,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  facility?.name ?? 'Buscar pedidos de uma clínica',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? AppColors.navyDeep : AppColors.gray500,
+                  ),
+                ),
+              ),
+              if (onClear != null)
+                IconButton(
+                  key: const Key('orders-clinic-filter-clear'),
+                  tooltip: 'Mostrar pedidos de todas as clínicas',
+                  onPressed: onClear,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.navyBright,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ResultCount extends StatelessWidget {
   const _ResultCount({required this.shown, required this.total});
 
