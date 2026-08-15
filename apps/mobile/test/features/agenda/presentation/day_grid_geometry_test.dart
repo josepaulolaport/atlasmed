@@ -99,7 +99,10 @@ void main() {
     test('keeps the length the rep already chose', () {
       // Dragging a block to another hour says nothing about how long it is;
       // resizing it too would answer a question they did not ask.
-      const draft = DayGridDraft(startMinutes: 18 * 60, endMinutes: 18 * 60 + 30);
+      const draft = DayGridDraft(
+        startMinutes: 18 * 60,
+        endMinutes: 18 * 60 + 30,
+      );
 
       final moved = moveDraft(draft, offsetFromMinutes(120));
 
@@ -127,7 +130,10 @@ void main() {
     });
 
     test('an overlap is reported with what it runs into', () {
-      const draft = DayGridDraft(startMinutes: 17 * 60 + 30, endMinutes: 18 * 60 + 30);
+      const draft = DayGridDraft(
+        startMinutes: 17 * 60 + 30,
+        endMinutes: 18 * 60 + 30,
+      );
 
       final clashes = draftClashes(draft, _day, booked);
 
@@ -135,7 +141,10 @@ void main() {
     });
 
     test('a block wholly inside another still clashes', () {
-      const draft = DayGridDraft(startMinutes: 17 * 60, endMinutes: 17 * 60 + 30);
+      const draft = DayGridDraft(
+        startMinutes: 17 * 60,
+        endMinutes: 17 * 60 + 30,
+      );
 
       expect(draftClashes(draft, _day, booked), hasLength(1));
     });
