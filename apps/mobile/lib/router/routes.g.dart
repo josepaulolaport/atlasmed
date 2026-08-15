@@ -298,6 +298,11 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           hasOverriddenOnExit: false,
           factory: $AgendaRoute._fromState,
         ),
+        GoRouteData.$route(
+          path: '/roteiro',
+          hasOverriddenOnExit: false,
+          factory: $RoteiroRoute._fromState,
+        ),
       ],
     ),
     StatefulShellBranchData.$branch(
@@ -445,6 +450,26 @@ mixin $AgendaRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/agenda');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $RoteiroRoute on GoRouteData {
+  static RoteiroRoute _fromState(GoRouterState state) => const RoteiroRoute();
+
+  @override
+  String get location => GoRouteData.$location('/roteiro');
 
   @override
   void go(BuildContext context) => context.go(location);

@@ -42,6 +42,7 @@ import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profil
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_assignments_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_profile_screen.dart';
@@ -226,6 +227,7 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
     TypedStatefulShellBranch<AgendaBranch>(
       routes: <TypedRoute<RouteData>>[
         TypedGoRoute<AgendaRoute>(path: '/agenda'),
+        TypedGoRoute<RoteiroRoute>(path: '/roteiro'),
       ],
     ),
     TypedStatefulShellBranch<TerritoriesBranch>(
@@ -368,6 +370,16 @@ class AgendaRoute extends GoRouteData with $AgendaRoute {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       const NoTransitionPage(child: AgendaRouteGuard());
+}
+
+/// Roteiro do dia — spec 0016. Sits in the Agenda branch: it is how a rep
+/// decides the day the agenda then holds.
+class RoteiroRoute extends GoRouteData with $RoteiroRoute {
+  const RoteiroRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      const NoTransitionPage(child: RoteiroScreen());
 }
 
 class TerritoriesRoute extends GoRouteData with $TerritoriesRoute {
