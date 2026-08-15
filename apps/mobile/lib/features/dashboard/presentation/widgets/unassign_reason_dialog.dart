@@ -96,7 +96,13 @@ class _UnassignReasonDialogState extends State<UnassignReasonDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
+        // Filled, like every other confirm in the app, and red because this
+        // one ends something. The shape says "this is the button"; the colour
+        // says "and it is the destructive one". Splitting those signals is how
+        // the clinic detail ended up with its destructive action rendered
+        // quieter than the neutral one beside it.
         FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.red),
           onPressed: () => Navigator.of(context).pop(_reason),
           child: const Text('Desassociar'),
         ),

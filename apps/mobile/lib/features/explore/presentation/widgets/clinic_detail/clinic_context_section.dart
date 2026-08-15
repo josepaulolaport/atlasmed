@@ -52,9 +52,17 @@ class ClinicContextSection extends StatelessWidget {
                 if (_hasConsultant && onUnassignConsultant != null)
                   TextButton(
                     onPressed: onUnassignConsultant,
+                    // "Desassociar", not "Remover": the dialog it opens, the
+                    // menu item in Desempenho's breakdown and the snackbar
+                    // afterwards all say desassociar, and one act should not
+                    // have two names depending on where it was reached from.
+                    //
+                    // Red, not grey. It was the quieter of the two controls
+                    // while being the destructive one — the neutral "Trocar"
+                    // beside it read as the more serious button.
                     child: const Text(
-                      'Remover',
-                      style: TextStyle(color: AppColors.gray500),
+                      'Desassociar',
+                      style: TextStyle(color: AppColors.red),
                     ),
                   ),
               ],
