@@ -43,6 +43,7 @@ Widget _host({
   int durationMinutes = 60,
   String? excludeOccurrenceId,
   ValueChanged<DateTime>? onPick,
+  DateTime? now,
 }) => ProviderScope(
   overrides: [
     agendaProvider(
@@ -56,6 +57,8 @@ Widget _host({
           width: 402,
           child: DaySchedulePicker(
             day: _day,
+            // Fixed so "already gone" does not depend on when the suite runs.
+            now: now ?? DateTime(2026, 8, 15, 6),
             durationMinutes: durationMinutes,
             selectedStartsAt: selected,
             excludeOccurrenceId: excludeOccurrenceId,
@@ -150,6 +153,40 @@ void main() {
       ]);
       expect(ordered.map((item) => item.occurrenceId), ['a', 'b']);
     });
+  });
+
+  testWidgets('does not offer slots that have already gone today', (
+    tester,
+  ) async {
+    // Offering 08:00 at half past eight in the evening fills the strip with
+    // times nobody can pick and pushes the ones they can off the end.
+    await tester.pumpWidget(
+      _host(
+        booked: const [],
+        selected: DateTime(2026, 8, 15, 19),
+        now: DateTime(2026, 8, 15, 18, 15),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('08:00'), findsNothing);
+    expect(find.text('19:00'), findsOneWidget);
+  });
+
+  testWidgets('offers the whole day when the day is not today', (tester) async {
+    // A future day has no past, so nothing is filtered out of it. Selecting the
+    // first slot keeps the strip parked at the start, where 07:00 is on screen
+    // — it centres on the selection otherwise and scrolls the answer away.
+    await tester.pumpWidget(
+      _host(
+        booked: const [],
+        selected: DateTime(2026, 8, 15, 7),
+        now: DateTime(2026, 8, 14, 18, 15),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('07:00'), findsOneWidget);
   });
 
   testWidgets('lists the day\'s appointments with their times', (tester) async {

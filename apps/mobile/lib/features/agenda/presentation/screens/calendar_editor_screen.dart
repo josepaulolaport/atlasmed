@@ -458,11 +458,21 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
     DateTime current,
     CalendarEditorNotifier notifier,
   ) async {
+    // Scheduling is forward-looking: a visit dated 2020 is born overdue, and
+    // with outcome capture live it can only produce a duration nobody
+    // measured. Editing an appointment that is *already* in the past stays
+    // possible — the floor is that appointment's own day, so a missed visit can
+    // be moved forward but nothing new can be created behind us.
+    final today = DateTime.now();
+    final currentDay = DateTime(current.year, current.month, current.day);
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final floor = currentDay.isBefore(startOfToday) ? currentDay : startOfToday;
+
     final date = await showDatePicker(
       context: context,
       initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: floor,
+      lastDate: DateTime(today.year + 3),
       helpText: 'Data do compromisso',
       cancelText: 'Cancelar',
       confirmText: 'Selecionar',

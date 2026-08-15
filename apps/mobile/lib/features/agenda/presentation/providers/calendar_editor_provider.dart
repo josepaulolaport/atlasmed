@@ -229,6 +229,22 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
         draft.recurrenceUntil == null) {
       errors['recurrenceUntil'] = 'Informe a data final.';
     }
+    // Presence was checked; order was not. A series running from the 20th to
+    // the 10th passes every other rule and produces no occurrences at all —
+    // the rep gets a repeating appointment that never repeats, and nothing
+    // says why.
+    final until = draft.recurrenceUntil;
+    if (draft.recurrenceEnd == CalendarRecurrenceEnd.date &&
+        until != null &&
+        until.isBefore(
+          DateTime(
+            draft.startsAt.year,
+            draft.startsAt.month,
+            draft.startsAt.day,
+          ),
+        )) {
+      errors['recurrenceUntil'] = 'O término não pode ser antes do início.';
+    }
     if (draft.recurrenceEnd == CalendarRecurrenceEnd.count &&
         (draft.recurrenceCount == null || draft.recurrenceCount! <= 0)) {
       errors['recurrenceCount'] = 'Informe uma quantidade válida.';

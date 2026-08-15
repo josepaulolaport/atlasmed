@@ -119,6 +119,53 @@ void main() {
     expect(notifier.validationErrors, isEmpty);
   });
 
+  test('refuses a series that ends before it begins', () {
+    // Presence of an end date was checked; its order was not. A series from
+    // the 20th to the 10th passed every rule and produced no occurrences —
+    // a repeating appointment that never repeats, with nothing saying why.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+        ),
+      ),
+      now: () => DateTime(2026, 8, 20, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+    notifier.setStartsAt(DateTime(2026, 8, 20, 9));
+    notifier.setRecurrence(CalendarRecurrence.weekly);
+    notifier.setRecurrenceEnd(CalendarRecurrenceEnd.date);
+    notifier.setRecurrenceUntil(DateTime(2026, 8, 10));
+
+    expect(notifier.validationErrors['recurrenceUntil'], isNotNull);
+  });
+
+  test('accepts a series ending on the day it begins', () {
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+        ),
+      ),
+      now: () => DateTime(2026, 8, 20, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+    notifier.setStartsAt(DateTime(2026, 8, 20, 9));
+    notifier.setRecurrence(CalendarRecurrence.weekly);
+    notifier.setRecurrenceEnd(CalendarRecurrenceEnd.date);
+    notifier.setRecurrenceUntil(DateTime(2026, 8, 20));
+
+    expect(notifier.validationErrors['recurrenceUntil'], isNull);
+  });
+
   test('a block drawn on the day grid opens the form on that block', () {
     // Reopening the editor at the next free half hour would discard the one
     // decision the rep had already made by dragging.

@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// First and last slot offered, in minutes from midnight, and the step between
 /// them. 07:00–20:00 in half hours, which is the granularity the API accepts
 /// for durations.
+bool _isSameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 const _dayStartMinutes = 7 * 60;
 const _dayEndMinutes = 20 * 60;
 const _slotMinutes = 30;
@@ -26,6 +29,7 @@ class DaySchedulePicker extends ConsumerStatefulWidget {
     required this.selectedStartsAt,
     required this.onPick,
     this.excludeOccurrenceId,
+    this.now,
   });
 
   /// Local day being scheduled into.
@@ -36,6 +40,9 @@ class DaySchedulePicker extends ConsumerStatefulWidget {
 
   /// The appointment being edited, which must not count as a clash with itself.
   final String? excludeOccurrenceId;
+
+  /// Injected so "already gone" is testable. Defaults to the wall clock.
+  final DateTime? now;
 
   @override
   ConsumerState<DaySchedulePicker> createState() => _DaySchedulePickerState();
@@ -146,6 +153,7 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
                     _BusyList(occurrences: busy),
                   const SizedBox(height: 14),
                   _SlotStrip(
+                    now: widget.now ?? DateTime.now(),
                     controller: _slotsController,
                     dayStart: dayStart,
                     durationMinutes: widget.durationMinutes,
@@ -358,6 +366,7 @@ class _BusyList extends StatelessWidget {
 
 class _SlotStrip extends StatelessWidget {
   const _SlotStrip({
+    required this.now,
     required this.controller,
     required this.dayStart,
     required this.durationMinutes,
@@ -372,12 +381,18 @@ class _SlotStrip extends StatelessWidget {
   final DateTime selectedStartsAt;
   final List<CalendarOccurrence> busy;
   final ValueChanged<DateTime> onPick;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
+    // A slot that has already gone is not a choice. Offering 08:00 at
+    // half past eight in the evening fills the strip with times nobody can
+    // pick, and pushes the ones they can off the end of it.
     final slots = <DateTime>[
       for (var m = _dayStartMinutes; m <= _dayEndMinutes; m += _slotMinutes)
-        dayStart.add(Duration(minutes: m)),
+        if (!dayStart.add(Duration(minutes: m)).isBefore(now) ||
+            !_isSameDay(dayStart, now))
+          dayStart.add(Duration(minutes: m)),
     ];
     final selectedMinutes = _minutesOf(selectedStartsAt);
 
