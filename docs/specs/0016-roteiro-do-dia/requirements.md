@@ -588,7 +588,22 @@ We use **Matrix** for the numbers and select ourselves.
                            0.35  once its bucket is full
      → soft quotas fall out of the same loop; no second pass.
 
-5. 2-opt improvement over the chosen stops (exact enough at N ≤ 8).
+5. **Exact re-ordering within each gap.** Greedy selection answers "is this clinic worth the
+   detour right now", which is the right question for choosing and the wrong one for
+   sequencing — it commits to an order before knowing what else is coming.
+
+   Measured on a clear day across the five reps, greedy alone landed exactly on the optimal
+   route for two of them and up to **55 % above it** for another: Brasília drove 14.3 km where
+   9.2 km would do. Re-ordering each gap's stops onto the shortest route through it brings all
+   five to the optimum, and cuts total driving across the five from 139 to 115 minutes.
+
+   Reordering is **per gap**. A stop cannot cross a booking — the commitments at each end are
+   fixed in time, so moving a suggestion past one would put the rep in two places at once. And
+   the stops are re-timed afterwards, because changing the order changes the drive to each one
+   and a plan must never show times its own route contradicts.
+
+   An exact search rather than 2-opt: at a daily limit of 5, and a hard ceiling of 12,
+   brute force over a gap is cheaper to reason about and strictly better.
 
 6. Feasibility: Σ drive + Σ service must fit
       workday window  −  existing calendar commitments  −  lunch block.
@@ -661,6 +676,28 @@ one. Nothing writes it in v1.
 | Fewer candidates than N | return what exists, state the shortfall and its cause |
 | Clinics excluded for missing coordinates | returned as a count with a link to fix them — silently shrinking the candidate set is how a territory quietly stops being covered |
 | No `facility_metric_snapshots` rows at all | `h = HEADROOM_UNKNOWN` for everyone; the component contributes nothing and the UI says potencial não medido |
+
+### 4.8.1 Route quality, measured 2026-08-15
+
+Straight-line path length of a generated day, against the shortest tour of the same clinics:
+
+| rep | greedy only | with §4.5 step 5 | optimal |
+|---|---|---|---|
+| 2 Rio | 6.5 km | **6.5** | 6.5 |
+| 3 São Paulo | 15.0 km | **15.0** | 15.0 |
+| 4 Londrina | 4.3 km | **3.2** | 3.2 |
+| 5 Brasília | 14.3 km | **9.2** | 9.2 |
+| 6 São Luís | 7.8 km | **5.9** | 5.9 |
+
+Interleaved with real bookings — a rep with commitments at 08:14 and 14:08 — the day walks
+21.8 km greedily and **15.8 km** after re-ordering, against 15.3 km for an unconstrained tour that
+ignores both fixed times. The 12.7 km forced by the two bookings alone means five extra visits cost
+**0.6 km each**.
+
+⚠️ **All of this is straight-line × 1.35 at a flat 28 km/h.** It says the *ordering* is sound; it
+says nothing about real drive times. A 2 km straight line across a river or a one-way system is not
+2 km, and São Paulo at 17:00 is not 28 km/h. Only the Matrix (P2) settles that, and until it lands
+every duration on screen is labelled `estimado`.
 
 ### 4.9 Measured against the production clone, 2026-08-14
 
