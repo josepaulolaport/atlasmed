@@ -451,13 +451,21 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       alreadyAssociatedDoctors: _doctors,
       facilityId: widget.facilityId,
     );
-    if (added == null || added.isEmpty || !mounted) return;
+    // Null means dismissed; an empty list means saved with nothing added —
+    // which is what a removal-only save returns. Bailing on `isEmpty` skipped
+    // the refresh, so an ended affiliation stayed on screen until the next
+    // hydrate and looked like it had not worked.
+    if (added == null || !mounted) return;
     await _refreshAfterMutation(added);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          added.length == 1
+          added.isEmpty
+              // The sheet performed the removals; how many is its own business,
+              // and claiming a count here would be a second source for it.
+              ? 'Vínculos atualizados'
+              : added.length == 1
               ? '${added.first.name} associado à clínica'
               : '${added.length} médicos associados à clínica',
         ),
