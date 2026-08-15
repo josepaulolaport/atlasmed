@@ -6,13 +6,12 @@ import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_consta
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full list of administrative professionals — same Explorar table chrome
@@ -45,7 +44,6 @@ class _AdministrativeProfessionalsListScreenState
     widget.professionals,
   );
   String _query = '';
-  String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
 
   static const _typeSection = 'Função';
@@ -210,11 +208,10 @@ class _AdministrativeProfessionalsListScreenState
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-            child: SortRow(
-              sort: _sort,
-              onSortTap: _showSortSheet,
-              filterChips: _filterChips,
-            ),
+            // Chips only — the sort sheet offered one option and never sorted
+            // anything: `_sort` was passed to the row and the sheet and read
+            // nowhere else.
+            child: SortRow(filterChips: _filterChips, includeSort: false),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -295,22 +292,6 @@ class _AdministrativeProfessionalsListScreenState
     );
   }
 
-  Future<void> _showSortSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SortSheet(
-        kind: 'facility-people',
-        sort: _sort,
-        onApply: (s) {
-          setState(() => _sort = s);
-          Navigator.pop(ctx);
-        },
-      ),
-    );
-  }
-
   Future<void> _showFilterSheet() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -328,7 +309,7 @@ class _AdministrativeProfessionalsListScreenState
   }
 
   Future<void> _openAssociate() async {
-    final created = await showCreateAdminProfessionalSheet(
+    final created = await openCreateAdminProfessionalScreen(
       context,
       facilityId: widget.facilityId,
     );

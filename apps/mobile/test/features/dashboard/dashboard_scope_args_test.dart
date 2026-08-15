@@ -175,40 +175,15 @@ void main() {
       expect(metric.denominator, 0);
     });
 
-    test('a null mean share stays null, beside the clinics counted', () {
-      final metric = DashboardPenetrationMetric.fromJson({
-        'denominator': 200,
-        'metrics': [
-          {
-            'definitionId': 1,
-            'key': 'ampolas_mes',
-            'label': 'Ampolas/mês',
-            'meanShare': null,
-            'clinicsCounted': 0,
-          },
-        ],
-      });
-
-      expect(metric.denominator, 200);
-      expect(metric.metrics.single.meanShare, isNull);
-      expect(metric.metrics.single.clinicsCounted, 0);
-    });
-
     test('numeric strings from the API decode as numbers', () {
-      final metric = DashboardPenetrationMetric.fromJson({
+      // Postgres `numeric` reaches the client as a string, not a JSON number.
+      final metric = DashboardRatioMetric.coverageFromJson({
+        'covered': 3,
         'denominator': 10,
-        'metrics': [
-          {
-            'definitionId': 1,
-            'key': 'ampolas_mes',
-            'label': 'Ampolas/mês',
-            'meanShare': '0.42500000',
-            'clinicsCounted': 3,
-          },
-        ],
+        'percent': '0.42500000',
       });
 
-      expect(metric.metrics.single.meanShare, closeTo(0.425, 1e-9));
+      expect(metric.percent, closeTo(0.425, 1e-9));
     });
 
     test('a member with no calculable metric decodes as null, not 0', () {
@@ -223,6 +198,47 @@ void main() {
 
       expect(member.metricValue, isNull);
       expect(member.assignedClinicCount, 12);
+    });
+  });
+
+  group('DashboardClinicPage position', () {
+    DashboardClinicPage pageOf({required int page, required int rows}) {
+      return DashboardClinicPage.fromJson({
+        // Explorar's clinic payload — the breakdown returns the same rows the
+        // Explorar list does, so they decode through the same DTO.
+        'data': [
+          for (var i = 0; i < rows; i++)
+            {'id': i + 1, 'name': 'Clínica ${i + 1}', 'city': 'Niterói'},
+        ],
+        'total': 146,
+        'page': page,
+        'limit': 25,
+      });
+    }
+
+    test('reports where the page sits, not how long it is', () {
+      // The pager printed `data.length`, which is 25 on every full page — so
+      // "25 de 146" was the label on page one, page two and page five alike.
+      final first = pageOf(page: 1, rows: 25);
+      final second = pageOf(page: 2, rows: 25);
+
+      expect('${first.firstRowNumber}–${first.lastRowNumber}', '1–25');
+      expect('${second.firstRowNumber}–${second.lastRowNumber}', '26–50');
+    });
+
+    test('the short last page ends on the total', () {
+      final last = pageOf(page: 6, rows: 21);
+
+      expect(last.firstRowNumber, 126);
+      expect(last.lastRowNumber, 146);
+      expect(last.hasMore, isFalse);
+    });
+
+    test('an empty page counts from zero rather than claiming a row', () {
+      final empty = pageOf(page: 1, rows: 0);
+
+      expect(empty.firstRowNumber, 0);
+      expect(empty.lastRowNumber, 0);
     });
   });
 

@@ -1,4 +1,6 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 
 double? _readRatio(dynamic raw) {
@@ -124,108 +126,6 @@ class DashboardRatioMetric {
   }
 }
 
-class DashboardOrdersMetric {
-  const DashboardOrdersMetric({required this.week, required this.month});
-
-  final int week;
-  final int month;
-
-  factory DashboardOrdersMetric.fromJson(Map<String, dynamic> json) {
-    return DashboardOrdersMetric(
-      week: _readInt(json['week']),
-      month: _readInt(json['month']),
-    );
-  }
-}
-
-/// Penetração média for one metric of the linha.
-///
-/// [clinicsCounted] is shown beside the mean on purpose: an average over 3 of
-/// 200 clinics is a real number about very little, and the card has to say so.
-class DashboardPenetrationEntry {
-  const DashboardPenetrationEntry({
-    required this.definitionId,
-    required this.key,
-    required this.label,
-    required this.meanShare,
-    required this.clinicsCounted,
-  });
-
-  final int definitionId;
-  final String key;
-  final String label;
-  final double? meanShare;
-  final int clinicsCounted;
-
-  factory DashboardPenetrationEntry.fromJson(Map<String, dynamic> json) {
-    return DashboardPenetrationEntry(
-      definitionId: readCrmId(json['definitionId'], 'definitionId'),
-      key: json['key'] as String? ?? '',
-      label: json['label'] as String? ?? '',
-      meanShare: _readRatio(json['meanShare']),
-      clinicsCounted: _readInt(json['clinicsCounted']),
-    );
-  }
-}
-
-class DashboardPenetrationMetric {
-  const DashboardPenetrationMetric({
-    required this.denominator,
-    required this.metrics,
-  });
-
-  final int denominator;
-  final List<DashboardPenetrationEntry> metrics;
-
-  factory DashboardPenetrationMetric.fromJson(Map<String, dynamic> json) {
-    return DashboardPenetrationMetric(
-      denominator: _readInt(json['denominator']),
-      metrics: (json['metrics'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(DashboardPenetrationEntry.fromJson)
-          .toList(growable: false),
-    );
-  }
-}
-
-/// One row of a metric's per-clinic breakdown (spec 0014 §4.1).
-class DashboardClinicRow {
-  const DashboardClinicRow({
-    required this.facilityId,
-    required this.name,
-    required this.purchaseFunnelStage,
-    required this.conformityStatus,
-    this.city,
-    this.state,
-    this.repName,
-  });
-
-  final int facilityId;
-  final String name;
-  final String purchaseFunnelStage;
-  final String conformityStatus;
-  final String? city;
-  final String? state;
-  final String? repName;
-
-  String get locationLabel {
-    final parts = [city, state].where((p) => p != null && p.isNotEmpty);
-    return parts.join(' · ');
-  }
-
-  factory DashboardClinicRow.fromJson(Map<String, dynamic> json) {
-    return DashboardClinicRow(
-      facilityId: readCrmId(json['facilityId'], 'facilityId'),
-      name: json['name'] as String? ?? '',
-      purchaseFunnelStage: json['purchaseFunnelStage'] as String? ?? '',
-      conformityStatus: json['conformityStatus'] as String? ?? '',
-      city: json['city'] as String?,
-      state: json['state'] as String?,
-      repName: json['repName'] as String?,
-    );
-  }
-}
-
 class DashboardClinicPage {
   const DashboardClinicPage({
     required this.data,
@@ -234,18 +134,32 @@ class DashboardClinicPage {
     required this.limit,
   });
 
-  final List<DashboardClinicRow> data;
+  final List<FacilityEntry> data;
   final int total;
   final int page;
   final int limit;
 
   bool get hasMore => page * limit < total;
 
+  /// Where this page sits in the whole set — "26–50 de 146".
+  ///
+  /// Derived from `page` and `limit` rather than counted from `data`, which is
+  /// what the pager did: `data.length` is 25 on every full page, so the label
+  /// read identically no matter how far in you were.
+  int get firstRowNumber => data.isEmpty ? 0 : (page - 1) * limit + 1;
+  int get lastRowNumber => data.isEmpty ? 0 : (page - 1) * limit + data.length;
+
+  /// Rows are Explorar's clinic payload, decoded by Explorar's own DTO.
+  ///
+  /// The breakdown used to carry a thinner shape of its own — id, name, city,
+  /// stage, rep — and the screen grew a row to match it that only resembled
+  /// Explorar's: same tile and title, no médicos count, no foco clínico, no
+  /// status chips. Sharing the payload is what lets the two lists share the row.
   factory DashboardClinicPage.fromJson(Map<String, dynamic> json) {
     return DashboardClinicPage(
       data: (json['data'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map(DashboardClinicRow.fromJson)
+          .map((row) => FacilityEntry.fromDTO(FacilityDTO.fromMap(row)))
           .toList(growable: false),
       total: _readInt(json['total']),
       page: _readInt(json['page']),

@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic_sort_option.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/legal_document_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
@@ -23,7 +24,7 @@ final doctorsQueryProvider = Provider<DoctorsQuery>((ref) {
 });
 
 ClinicsQuery buildClinicsQuery(ExploreState state, {int? verticalId}) {
-  final sort = _facilitySort(state.sort, hasOrigin: state.origin != null);
+  final sort = clinicSortForKey(state.sort, hasLocation: state.origin != null);
   final purchaseBuckets = (state.filters['purchaseBucket'] ?? const [])
       .where(PurchaseBucketFilter.values.contains)
       .toList(growable: false);
@@ -69,7 +70,10 @@ ClinicsQuery buildClinicsQuery(ExploreState state, {int? verticalId}) {
 }
 
 DoctorsQuery buildDoctorsQuery(ExploreState state) {
-  final sort = _doctorSort(state.sort);
+  // Normalised, not dropped. An unsupported key used to resolve to `null` here,
+  // which let the request fall back to the server's default while the chip went
+  // on displaying whatever Clínicas had been set to.
+  final sort = doctorSortForKey(state.sort);
   return DoctorsQuery(
     page: 1,
     limit: explorePageSize,
@@ -110,47 +114,3 @@ String? _commaJoin(List<String>? values) {
 int? _intFilter(Map<String, List<String>> filters, String key) {
   return int.tryParse(_first(filters[key]) ?? '');
 }
-
-({FacilitySort? sort, SortOrder? order}) _facilitySort(
-  String value, {
-  required bool hasOrigin,
-}) => switch (value) {
-  'distance' => (
-    sort: hasOrigin ? FacilitySort.distance : null,
-    order: SortOrder.asc,
-  ),
-  'name-asc' => (sort: FacilitySort.name, order: SortOrder.asc),
-  'name-desc' => (sort: FacilitySort.name, order: SortOrder.desc),
-  'purchase-funnel-asc' => (
-    sort: FacilitySort.purchaseFunnelStage,
-    order: SortOrder.asc,
-  ),
-  'purchase-funnel-desc' => (
-    sort: FacilitySort.purchaseFunnelStage,
-    order: SortOrder.desc,
-  ),
-  'purchase-interval-asc' => (
-    sort: FacilitySort.purchaseIntervalDays,
-    order: SortOrder.asc,
-  ),
-  'purchase-interval-desc' => (
-    sort: FacilitySort.purchaseIntervalDays,
-    order: SortOrder.desc,
-  ),
-  'last-purchase-asc' => (
-    sort: FacilitySort.lastPurchaseDate,
-    order: SortOrder.asc,
-  ),
-  'last-purchase-desc' => (
-    sort: FacilitySort.lastPurchaseDate,
-    order: SortOrder.desc,
-  ),
-  _ => (sort: null, order: null),
-};
-
-({FacilitySort? sort, SortOrder? order}) _doctorSort(String value) =>
-    switch (value) {
-      'name-asc' => (sort: FacilitySort.name, order: SortOrder.asc),
-      'name-desc' => (sort: FacilitySort.name, order: SortOrder.desc),
-      _ => (sort: null, order: null),
-    };

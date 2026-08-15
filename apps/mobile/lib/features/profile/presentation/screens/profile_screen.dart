@@ -822,7 +822,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.only(top: 18),
       child: Center(
         child: Text(
-          since.isEmpty ? 'Atlasmed · $version' : 'Atlasmed · $version · $since',
+          since.isEmpty
+              ? 'Atlasmed · $version'
+              : 'Atlasmed · $version · $since',
           style: const TextStyle(
             fontSize: 10.5,
             color: AppColors.gray300,

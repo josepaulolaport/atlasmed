@@ -142,7 +142,7 @@ void invalidateAssignmentDerivedData(WidgetRef ref) {
   ref.invalidate(teamMemberProvider);
   ref.invalidate(memberTerritoryProvider);
   ref.invalidate(repsWithoutPatchProvider);
-  ref.invalidate(metricClinicsProvider);
+  ref.invalidate(metricClinicsListProvider);
   ref.invalidate(assignedClinicsMetricProvider);
   ref.invalidate(unassignedClinicsMetricProvider);
   ref.invalidate(coverageMetricProvider);

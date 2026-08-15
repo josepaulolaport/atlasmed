@@ -21,8 +21,6 @@ List<RouteBase> get $appRoutes => [
   $teamMemberRoute,
   $repsWithoutPatchRoute,
   $metricClinicsRoute,
-  $purchaseBucketFacilitiesRoute,
-  $cpfIssueFacilitiesRoute,
   $favoritosRoute,
   $clinicDetailRoute,
   $doctorDetailRoute,
@@ -1083,91 +1081,6 @@ mixin $MetricClinicsRoute on GoRouteData {
       if (_self.manageForUserId != null)
         'manageForUserId': _self.manageForUserId!.toString(),
       if (_self.manageForName != null) 'manageForName': _self.manageForName,
-    },
-  );
-
-  @override
-  void go(BuildContext context) => context.go(location);
-
-  @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
-
-  @override
-  void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
-
-  @override
-  void replace(BuildContext context) => context.replace(location);
-}
-
-RouteBase get $purchaseBucketFacilitiesRoute => GoRouteData.$route(
-  path: '/dashboard/facilities/:bucket',
-  hasOverriddenOnExit: false,
-  parentNavigatorKey: PurchaseBucketFacilitiesRoute.$parentNavigatorKey,
-  factory: $PurchaseBucketFacilitiesRoute._fromState,
-);
-
-mixin $PurchaseBucketFacilitiesRoute on GoRouteData {
-  static PurchaseBucketFacilitiesRoute _fromState(GoRouterState state) =>
-      PurchaseBucketFacilitiesRoute(
-        bucket: state.pathParameters['bucket']!,
-        verticalId: _$convertMapValue(
-          'verticalId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-      );
-
-  PurchaseBucketFacilitiesRoute get _self =>
-      this as PurchaseBucketFacilitiesRoute;
-
-  @override
-  String get location => GoRouteData.$location(
-    '/dashboard/facilities/${Uri.encodeComponent(_self.bucket)}',
-    queryParams: {
-      if (_self.verticalId != null) 'verticalId': _self.verticalId!.toString(),
-    },
-  );
-
-  @override
-  void go(BuildContext context) => context.go(location);
-
-  @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
-
-  @override
-  void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
-
-  @override
-  void replace(BuildContext context) => context.replace(location);
-}
-
-RouteBase get $cpfIssueFacilitiesRoute => GoRouteData.$route(
-  path: '/dashboard/cpf-issues/:cpfStatus',
-  hasOverriddenOnExit: false,
-  parentNavigatorKey: CpfIssueFacilitiesRoute.$parentNavigatorKey,
-  factory: $CpfIssueFacilitiesRoute._fromState,
-);
-
-mixin $CpfIssueFacilitiesRoute on GoRouteData {
-  static CpfIssueFacilitiesRoute _fromState(GoRouterState state) =>
-      CpfIssueFacilitiesRoute(
-        cpfStatus: state.pathParameters['cpfStatus']!,
-        verticalId: _$convertMapValue(
-          'verticalId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-      );
-
-  CpfIssueFacilitiesRoute get _self => this as CpfIssueFacilitiesRoute;
-
-  @override
-  String get location => GoRouteData.$location(
-    '/dashboard/cpf-issues/${Uri.encodeComponent(_self.cpfStatus)}',
-    queryParams: {
-      if (_self.verticalId != null) 'verticalId': _self.verticalId!.toString(),
     },
   );
 

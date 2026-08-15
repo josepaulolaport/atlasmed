@@ -176,7 +176,10 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
   });
 
   test("the territory card reads boundaries as GeoJSON", async () => {
-    const features = await repository.listVerticalTerritoryFeatures(1);
+    const features = await repository.listVerticalTerritoryFeatures({
+      verticalId: 1,
+      filter: filter(),
+    });
     for (const feature of features) {
       expect(typeof feature.name).toBe("string");
       // Parsed, not the raw string ST_AsGeoJSON returns.
@@ -187,6 +190,7 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
         await repository.listAssignedTerritoryFeatures({
           userId: 1,
           verticalId: 1,
+          filter: filter(),
         }),
       ),
     ).toBe(true);

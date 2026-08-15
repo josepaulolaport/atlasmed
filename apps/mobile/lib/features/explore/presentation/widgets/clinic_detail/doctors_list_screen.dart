@@ -17,7 +17,6 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
@@ -47,7 +46,6 @@ class DoctorsListScreen extends ConsumerStatefulWidget {
 class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
   late List<ProfessionalRoster> _doctors = List.of(widget.doctors);
   String _query = '';
-  String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
 
   @override
@@ -159,16 +157,9 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       list = list.where((d) => d.roleIds.any(selectedIds.contains)).toList();
     }
 
-    switch (_sort) {
-      case 'name-asc':
-        list.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
-      default:
-        list.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
-    }
+    // Always by name. The switch this replaces had two branches doing exactly
+    // this, which is what a sort control with one option amounts to.
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return list;
   }
 
@@ -235,11 +226,10 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-            child: SortRow(
-              sort: _sort,
-              onSortTap: _showSortSheet,
-              filterChips: _filterChips,
-            ),
+            // Chips only. The sheet offered a single option — "Nome A–Z" — so
+            // it was a menu with nothing to choose, and the switch behind it
+            // sorted by name in both of its branches.
+            child: SortRow(filterChips: _filterChips, includeSort: false),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -283,22 +273,6 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _showSortSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SortSheet(
-        kind: 'facility-people',
-        sort: _sort,
-        onApply: (s) {
-          setState(() => _sort = s);
-          Navigator.pop(ctx);
-        },
       ),
     );
   }
@@ -451,13 +425,21 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       alreadyAssociatedDoctors: _doctors,
       facilityId: widget.facilityId,
     );
-    if (added == null || added.isEmpty || !mounted) return;
+    // Null means dismissed; an empty list means saved with nothing added —
+    // which is what a removal-only save returns. Bailing on `isEmpty` skipped
+    // the refresh, so an ended affiliation stayed on screen until the next
+    // hydrate and looked like it had not worked.
+    if (added == null || !mounted) return;
     await _refreshAfterMutation(added);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          added.length == 1
+          added.isEmpty
+              // The sheet performed the removals; how many is its own business,
+              // and claiming a count here would be a second source for it.
+              ? 'Vínculos atualizados'
+              : added.length == 1
               ? '${added.first.name} associado à clínica'
               : '${added.length} médicos associados à clínica',
         ),

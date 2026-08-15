@@ -53,6 +53,44 @@ class DetailQuickActions extends StatelessWidget {
   }
 }
 
+/// A contact shortcut that is live only when there is something to open.
+///
+/// [QuickActionItem] greys itself out when `onTap` is null, and every contact
+/// action in the app defeated that: each passed a closure that only discovered
+/// inside `launchContactUrl` that the number was missing, and answered the tap
+/// with "Não há telefone cadastrado". A clinic with no phone offered Ligar and
+/// WhatsApp at full strength, and pressing them was the only way to find out.
+///
+/// Taking the `Uri?` instead of a callback makes that impossible to get wrong:
+/// there is no way to build one of these without deciding whether the target
+/// exists.
+QuickActionItem contactQuickAction({
+  required BuildContext context,
+  required IconData icon,
+  required Color color,
+  required String label,
+  required Uri? url,
+  required String contactLabel,
+  required Future<void> Function(
+    BuildContext context, {
+    required Uri? url,
+    required String contactLabel,
+  })
+  launch,
+}) {
+  return QuickActionItem(
+    icon: CircleAvatar(
+      backgroundColor: color.createSecondary(),
+      radius: 18,
+      child: Icon(icon, size: 18, color: color),
+    ),
+    label: Text(label),
+    onTap: url == null
+        ? null
+        : () => launch(context, url: url, contactLabel: contactLabel),
+  );
+}
+
 class QuickActionItem extends StatelessWidget {
   final Widget icon;
   final Widget label;

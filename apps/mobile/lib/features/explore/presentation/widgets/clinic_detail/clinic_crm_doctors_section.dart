@@ -154,55 +154,48 @@ class _DoctorRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                  /*
+                   * Roles wrap under the name, across the full width.
+                   *
+                   * They used to sit in a trailing column capped at 140px, so a
+                   * doctor with four of them — Prescritor, Comprador, Decisor,
+                   * Administrador — got one chip per line, four lines tall, and
+                   * the column beside it shrank until the name ellipsised to
+                   * "Leonardo De Oliv…". The chips are about this person, so
+                   * they belong under their name rather than in a gutter that
+                   * competes with it for room.
+                   */
+                  if (badges.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 6, runSpacing: 6, children: badges),
+                  ] else if (canEditRoles) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Definir papel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.navyBright,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            // The pencil keeps its own 44px target, and nothing else, so the
+            // name column gets the rest of the row.
             if (canEditRoles)
               InkWell(
                 onTap: () => _editRoles(context),
                 borderRadius: BorderRadius.circular(8),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                    maxWidth: 140,
+                child: const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: AppColors.navyBright,
                   ),
-                  child: Center(
-                    child: badges.isEmpty
-                        ? const Text(
-                            'Definir papel',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.navyBright,
-                            ),
-                          )
-                        : Wrap(
-                            alignment: WrapAlignment.end,
-                            spacing: 6,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              ...badges,
-                              const Icon(
-                                Icons.edit_outlined,
-                                size: 16,
-                                color: AppColors.navyBright,
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              )
-            else if (badges.isNotEmpty)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 128),
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 6,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: badges,
                 ),
               ),
           ],

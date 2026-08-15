@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_assignment_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 
 class FacilityVerticalRepAssignmentsException implements Exception {
@@ -55,10 +56,19 @@ class FacilityVerticalRepAssignmentsRepository {
     }
   }
 
-  Future<void> unassign({required int verticalId}) async {
+  /// [reason] is required rather than optional: the server defaults a missing
+  /// one to `manual_unassign`, which records that somebody unassigned this and
+  /// nothing about why. A caller that forgets is indistinguishable from a rep
+  /// who chose "Outro motivo", and spec 0015 R7 keeps this field forever.
+  Future<void> unassign({
+    required int verticalId,
+    required UnassignReason reason,
+  }) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(
-        url: _repEndpoint(verticalId),
+        url: _repEndpoint(
+          verticalId,
+        ).replace(queryParameters: {'reason': reason.wireValue}),
         method: RepositoryHttpMethod.delete,
       ),
     );

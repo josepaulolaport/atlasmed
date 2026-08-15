@@ -123,9 +123,23 @@ describe.if(dbUp)("a card and the list it opens hold the same clinics", () => {
       );
     });
 
-    test(`assigned clinics open the whole denominator — ${scope.name}`, async () => {
-      const count = await repository.countProfiles(scope.filter);
+    test(`assigned clinics open their own count — ${scope.name}`, async () => {
+      const count = await repository.countProfilesWithRep(scope.filter);
       expect(await drillDownTotal("assigned-clinics", scope.filter)).toBe(count);
+    });
+
+    test(`atribuídas and não atribuídas partition the scope — ${scope.name}`, async () => {
+      // The defect this pair shipped with: "Clínicas atribuídas" counted the
+      // whole scope, so an admin read 2374 atribuídas beside 941 sem
+      // representante — the same clinics counted twice, under two labels that
+      // contradict each other. Neither number alone looked wrong.
+      const [withRep, withoutRep, total] = await Promise.all([
+        repository.countProfilesWithRep(scope.filter),
+        repository.countProfilesWithoutRep(scope.filter),
+        repository.countProfiles(scope.filter),
+      ]);
+
+      expect(withRep + withoutRep).toBe(total);
     });
   }
 });

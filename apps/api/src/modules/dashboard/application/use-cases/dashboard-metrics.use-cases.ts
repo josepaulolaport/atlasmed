@@ -8,6 +8,7 @@ import {
 import { sql } from "drizzle-orm";
 import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
+import type { FacilityListSort } from "../../../facility/application/interfaces/facility.repository.interface";
 import {
   EMPTY_CPF_ISSUE_COUNTS,
   EMPTY_PURCHASE_FUNNEL_STAGE_COUNTS,
@@ -142,7 +143,15 @@ abstract class DashboardMetricUseCase {
   }
 }
 
-/** Clínicas atribuídas — count of profiles in scope. */
+/**
+ * Clínicas atribuídas — profiles in scope that hold an open rep assignment.
+ *
+ * Not the whole scope, which is what this counted and what the label denied: an
+ * admin saw "2374 atribuídas" next to "941 sem representante", two cards
+ * describing the same clinics and disagreeing about them. Counting the
+ * assignment makes the pair exhaustive — atribuídas + não atribuídas is the
+ * denominator, for every filter.
+ */
 export class GetAssignedClinicsMetricUseCase extends DashboardMetricUseCase {
   async execute(request: DashboardMetricRequest): Promise<{
     verticalId: number;
@@ -152,7 +161,7 @@ export class GetAssignedClinicsMetricUseCase extends DashboardMetricUseCase {
     if (!context.filter) return { verticalId: context.verticalId, value: 0 };
     return {
       verticalId: context.verticalId,
-      value: await this.deps.repository.countProfiles(context.filter),
+      value: await this.deps.repository.countProfilesWithRep(context.filter),
     };
   }
 }
@@ -470,21 +479,66 @@ export const PURCHASE_BUCKET_STAGES = {
 } as const;
 
 /**
+ * Turns the ids this module scoped into the payload Explorar's list serialises.
+ *
+ * Implemented by the facility module, injected rather than imported, and
+ * deliberately typed as opaque here: Desempenho decides *which* clinics; what a
+ * clinic looks like on a list row is the facility module's answer, and it
+ * already has one.
+ *
+ * The alternative was teaching this module the fields Explorar shows, which is
+ * how the breakdown came to have a row that only resembled Explorar's — the
+ * same 44px tile and title, and none of the médicos count, foco clínico or
+ * status chips beside them. Two rows for one thing, drifting.
+ */
+export interface DashboardClinicHydrationPort {
+  listByIds(input: {
+    ids: number[];
+    verticalId: number;
+    userId: number;
+  }): Promise<{ id: number }[]>;
+}
+
+/**
  * The per-clinic breakdown behind a metric card (spec 0014 §4.1).
  *
  * Every metric drills into the same shape, so the screen has one breakdown
  * component rather than seven — and each row links to the clinic profile.
+ *
+ * The rows are Explorar's, hydrated through [DashboardClinicHydrationPort]:
+ * a list of clinics reached from Desempenho and the same list reached from
+ * Explorar are the same list, and should not be two designs.
  */
 export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
+  constructor(
+    private readonly listDeps: Dependencies & {
+      hydration: DashboardClinicHydrationPort;
+    },
+  ) {
+    super(listDeps);
+  }
+
   async execute(
     request: DashboardMetricRequest & {
       metric: DashboardMetricKey;
       page: number;
       limit: number;
+      /**
+       * Narrows the list, never the metric.
+       *
+       * The card's number is the answer to "how many clinics are in this
+       * bucket", and typing into the list does not change that — so `total`
+       * here follows the search, while the card above stays put. They are two
+       * different questions that happen to be one tap apart.
+       */
+      search?: string;
+      /** Explorar's sort keys, so the two lists order alike. */
+      sort?: FacilityListSort;
+      order?: "asc" | "desc";
     },
   ): Promise<{
     verticalId: number;
-    data: DashboardClinicRow[];
+    data: { id: number }[];
     total: number;
     page: number;
     limit: number;
@@ -513,13 +567,29 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
     const { rows, total } = await this.deps.repository.listScopedClinics({
       filter: context.filter,
       predicate: metricPredicate(request.metric),
+      search: request.search,
+      sort: request.sort,
+      order: request.order,
       offset: (request.page - 1) * request.limit,
       limit: request.limit,
     });
 
+    const ids = rows.map((row) => row.facilityId);
+    const hydrated = await this.listDeps.hydration.listByIds({
+      ids,
+      verticalId: context.verticalId,
+      userId: request.viewerId,
+    });
+
+    // Back into the order this module chose. Hydration is a lookup by id and
+    // says nothing about sequence, so taking its order would re-sort the page
+    // under the reader — and the pager's "26–50 de 146" only means anything if
+    // page 2 holds the 26th to 50th clinic by the same ordering as page 1.
+    const byId = new Map(hydrated.map((row) => [row.id, row]));
+
     return {
       verticalId: context.verticalId,
-      data: rows,
+      data: ids.map((id) => byId.get(id)).filter((row) => row !== undefined),
       total,
       page: request.page,
       limit: request.limit,
@@ -530,23 +600,33 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
 /**
  * The one extra condition that turns the shared scope into a metric's own set.
  *
- * `assigned-clinics` and `coverage` add nothing — their breakdown is the
- * denominator itself, which is exactly what a user drilling into "247 clínicas"
- * expects to see.
+ * `coverage` adds nothing — its breakdown is the denominator itself, which is
+ * exactly what a user drilling into "247 clínicas" expects to see.
+ *
+ * `assigned-clinics` used to add nothing either, and had to start: once the card
+ * counts clinics that hold a rep, a breakdown over the whole scope would list
+ * the unassigned ones too and open a list longer than the number that opened it.
+ * It is the exact negation of `unassigned-clinics` on purpose — one rule, two
+ * signs — so no clinic can be missing from both lists or present in both.
  */
 export function metricPredicateForTest(metric: DashboardMetricKey) {
   return metricPredicate(metric);
 }
 
+/** An open rep assignment on the row's profile — the pair's shared predicate. */
+const OPEN_REP_ASSIGNMENT = sql`EXISTS (
+  SELECT 1 FROM facility_vertical_rep_assignments a
+   WHERE a.facility_vertical_profile_id = facility_vertical_profiles.id
+     AND a.ended_at IS NULL)`;
+
 function metricPredicate(metric: DashboardMetricKey) {
   switch (metric) {
     case "cadastro-completion":
       return sql`facility_vertical_profiles.conformity_status = 'REGISTERED'`;
+    case "assigned-clinics":
+      return OPEN_REP_ASSIGNMENT;
     case "unassigned-clinics":
-      return sql`NOT EXISTS (
-        SELECT 1 FROM facility_vertical_rep_assignments a
-         WHERE a.facility_vertical_profile_id = facility_vertical_profiles.id
-           AND a.ended_at IS NULL)`;
+      return sql`NOT ${OPEN_REP_ASSIGNMENT}`;
     case "bucket-active":
     case "bucket-inactive":
       return sql`facility_vertical_profiles.purchase_funnel_stage IN ${stageList(metric)}`;
@@ -614,11 +694,18 @@ export class GetDashboardTerritoryUseCase extends DashboardMetricUseCase {
     const [clinicCount, doctorCount, features] = await Promise.all([
       this.deps.repository.countProfiles(context.filter),
       this.deps.repository.countDoctors(context.filter),
+      // The filter travels with the geometry, not only with the counts beside
+      // it: the card prints "146 clínicas · 214 médicos" under the map, and
+      // those three numbers have to be about the same clinics.
       isGlobal
-        ? this.deps.repository.listVerticalTerritoryFeatures(context.verticalId)
+        ? this.deps.repository.listVerticalTerritoryFeatures({
+            verticalId: context.verticalId,
+            filter: context.filter,
+          })
         : this.deps.repository.listAssignedTerritoryFeatures({
             userId: context.subject.userId,
             verticalId: context.verticalId,
+            filter: context.filter,
           }),
     ]);
 

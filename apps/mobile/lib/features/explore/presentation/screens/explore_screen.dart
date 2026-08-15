@@ -4,6 +4,7 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic_sort_option.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
@@ -52,6 +53,7 @@ class ExploreResultsList extends ConsumerWidget {
     required this.onLoadMore,
     required this.bottomInset,
     this.preferredVerticalId,
+    this.clinicTrailingBuilder,
     super.key,
   });
 
@@ -61,6 +63,13 @@ class ExploreResultsList extends ConsumerWidget {
   final VoidCallback onLoadMore;
   final double bottomInset;
   final int? preferredVerticalId;
+
+  /// Optional control at the end of a clinic row.
+  ///
+  /// Only Desempenho's breakdown of somebody's own caseload passes one — the
+  /// `⋯` that hands a clinic back. Every other surface passes nothing and gets
+  /// the row exactly as Explorar draws it.
+  final Widget? Function(FacilityEntry clinic)? clinicTrailingBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,6 +101,7 @@ class ExploreResultsList extends ConsumerWidget {
           return items[index].fold(
             (clinic) => ClinicRow(
               clinic: clinic,
+              trailing: clinicTrailingBuilder?.call(clinic),
               onTap: () {
                 seedClinicDetailShellFromEntry(ref, clinic);
                 final verticalId = preferredVerticalId;
@@ -227,7 +237,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             clinicCount: clinicTotal ?? 0,
             doctorCount: doctorTotal ?? 0,
             trailing: ExploreSortChip(
-              sort: state.sort,
+              // The ordering this tab is actually in. Médicos accepts only a
+              // name sort — the endpoint's vocabulary is `["name"]` — so a
+              // "Mais próximos" chosen on Clínicas silently became name order
+              // here while the chip went on reading "Distância", above a list
+              // that plainly was not sorted by distance.
+              sort: isClinic ? state.sort : effectiveDoctorSortKey(state.sort),
               onTap: () => _showSortSheet(state, notifier),
             ),
           ),
@@ -291,7 +306,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       useRootNavigator: true,
       builder: (ctx) => SortSheet(
         kind: state.activeTab,
-        sort: state.sort,
+        // Same normalisation as the chip, or the médicos sheet opens with
+        // nothing ticked: it offers only the two name orderings, and the shared
+        // state may still hold a clinic-only key like `distance`.
+        sort: state.activeTab == 'clinic'
+            ? state.sort
+            : effectiveDoctorSortKey(state.sort),
         onApply: notifier.setSort,
       ),
     );

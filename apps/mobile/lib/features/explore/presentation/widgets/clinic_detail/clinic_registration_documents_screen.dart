@@ -37,7 +37,12 @@ class _ClinicRegistrationDocumentsScreenState
         foregroundColor: AppColors.gray900,
         title: Text(
           checklistAsync.when(
-            data: (c) => 'Cadastro · ${c.fileDocuments.length}',
+            // Counts the rows below, which are `documents` — file documents
+            // *and* the billing email. It counted `fileDocuments` instead, so a
+            // clinic showing three cards was titled "Cadastro · 2" under a
+            // shortcut that said "3 pendentes": three numbers on one path, two
+            // of them describing sets nobody was looking at.
+            data: (c) => 'Cadastro · ${c.documents.length}',
             loading: () => 'Cadastro',
             error: (_, _) => 'Cadastro',
           ),
