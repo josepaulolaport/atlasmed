@@ -135,37 +135,39 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
 
     final active = draft;
 
-    return SingleChildScrollView(
-      controller: _controller,
-      child: SizedBox(
-        height: _hourHeight * 24,
-        child: Stack(
-          children: [
-            for (var hour = 0; hour < 24; hour += 1)
-              Positioned(
-                top: hour * _hourHeight,
-                left: 0,
-                right: 0,
-                child: _HourLine(hour: hour),
-              ),
-            // Below the events: a press lands on the canvas, but tapping an
-            // appointment must still open it rather than draw over it.
-            if (onDraftStarted != null)
-              Positioned.fill(
-                left: _gutterWidth,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  // Long-press rather than tap: the grid scrolls, and a plain
-                  // tap would plant a block every time a scroll ended early.
-                  onLongPressStart: (details) =>
-                      onDraftStarted!(draftAt(details.localPosition.dy)),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        controller: _controller,
+        child: SizedBox(
+          height: _hourHeight * 24,
+          child: Stack(
+            children: [
+              for (var hour = 0; hour < 24; hour += 1)
+                Positioned(
+                  top: hour * _hourHeight,
+                  left: 0,
+                  right: 0,
+                  child: _HourLine(hour: hour),
                 ),
-              ),
-            for (final occurrence in occurrences)
-              _positioned(occurrence, context),
-            if (active != null) _draftBlock(active),
-            if (isToday) _nowLine(current),
-          ],
+              // Below the events: a press lands on the canvas, but tapping an
+              // appointment must still open it rather than draw over it.
+              if (onDraftStarted != null)
+                Positioned.fill(
+                  left: _gutterWidth,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    // Long-press rather than tap: the grid scrolls, and a plain
+                    // tap would plant a block every time a scroll ended early.
+                    onLongPressStart: (details) =>
+                        onDraftStarted!(draftAt(details.localPosition.dy)),
+                  ),
+                ),
+              for (final lane in layOutOverlaps(occurrences))
+                _positioned(lane, context, constraints.maxWidth),
+              if (active != null) _draftBlock(active),
+              if (isToday) _nowLine(current),
+            ],
+          ),
         ),
       ),
     );
@@ -282,7 +284,8 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
     );
   }
 
-  Widget _positioned(CalendarOccurrence occurrence, BuildContext context) {
+  Widget _positioned(DayGridLane lane, BuildContext context, double width) {
+    final occurrence = lane.occurrence;
     final start = occurrence.startsAt.toLocal();
     final end = occurrence.endsAt.toLocal();
     final top = (start.hour + start.minute / 60) * _hourHeight;
@@ -291,10 +294,14 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
       24 * _hourHeight,
     );
 
+    // Overlapping appointments share the width rather than hiding each other.
+    final available = width - _gutterWidth - 8;
+    final columnWidth = available / lane.columns;
+
     return Positioned(
       top: top,
-      left: _gutterWidth,
-      right: 8,
+      left: _gutterWidth + lane.column * columnWidth,
+      width: columnWidth - (lane.columns > 1 ? 2 : 0),
       height: height,
       child: _EventBlock(
         occurrence: occurrence,

@@ -150,6 +150,92 @@ void main() {
     });
   });
 
+  group('layOutOverlaps', () {
+    test('a day without overlaps uses the full width', () {
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 10),
+        _occurrence(startHour: 11, endHour: 12),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 1), isTrue);
+    });
+
+    test('two overlapping appointments sit side by side', () {
+      // They used to render on top of each other, so a double-booking hid one
+      // appointment entirely in a grid whose job is showing what the day holds.
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 11),
+        _occurrence(startHour: 10, endHour: 12),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 2), isTrue);
+      expect(lanes.map((lane) => lane.column).toSet(), {0, 1});
+    });
+
+    test('a chain of overlaps shares one width', () {
+      // A overlaps B, B overlaps C, A and C do not. Splitting only between the
+      // pairs that touch would still stack A and C on top of each other.
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 11),
+        _occurrence(startHour: 10, endHour: 12),
+        _occurrence(startHour: 11, endHour: 13),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 2), isTrue);
+    });
+
+    test('a column is reused once its appointment has finished', () {
+      // A long appointment spans two short ones that follow each other. Three
+      // events, but only two are ever concurrent, so two columns — otherwise a
+      // busy morning shrinks every block to an unreadable sliver.
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 12),
+        _occurrence(startHour: 9, endHour: 10),
+        _occurrence(startHour: 10, endHour: 11),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 2), isTrue);
+      expect(lanes.map((lane) => lane.column).toList()..sort(), [0, 1, 1]);
+    });
+
+    test('an appointment that overlaps nothing keeps the full width', () {
+      // Its own cluster: sharing the width with a neighbour it never touches
+      // would waste half the screen.
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 10),
+        _occurrence(startHour: 9, endHour: 10),
+        _occurrence(startHour: 14, endHour: 15),
+      ]);
+
+      final alone = lanes.firstWhere(
+        (lane) => lane.occurrence.startsAt.hour == 14,
+      );
+      expect(alone.columns, 1);
+    });
+
+    test(
+      'an appointment starting exactly when another ends does not overlap',
+      () {
+        final lanes = layOutOverlaps([
+          _occurrence(startHour: 9, endHour: 10),
+          _occurrence(startHour: 10, endHour: 11),
+        ]);
+
+        expect(lanes.every((lane) => lane.columns == 1), isTrue);
+      },
+    );
+
+    test('keeps every appointment', () {
+      final lanes = layOutOverlaps([
+        _occurrence(startHour: 9, endHour: 12),
+        _occurrence(startHour: 10, endHour: 11),
+        _occurrence(startHour: 14, endHour: 15),
+      ]);
+
+      expect(lanes, hasLength(3));
+    });
+  });
+
   test('every draft the grid can produce is a whole calendar slot', () {
     // The API stores half hours; anything else is rounded on save, which is
     // the silent shift the spec forbids.

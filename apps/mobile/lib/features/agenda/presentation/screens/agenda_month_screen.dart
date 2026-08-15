@@ -41,7 +41,13 @@ class _AgendaMonthScreenState extends ConsumerState<AgendaMonthScreen> {
     );
     final agenda = ref.watch(
       agendaProvider(
-        AgendaQuery(from: from, to: from.add(const Duration(days: 42))),
+        // Without ownerUserId a manager opening a rep's agenda from Equipe
+        // sees their own month under the rep's name.
+        AgendaQuery(
+          from: from,
+          to: from.add(const Duration(days: 42)),
+          ownerUserId: widget.ownerUserId,
+        ),
       ),
     );
     final role = ref.watch(currentUserProvider).valueOrNull?.role.name;

@@ -68,7 +68,13 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     final start = DateTime(day.year, day.month, day.day);
     final agenda = ref.watch(
       agendaProvider(
-        AgendaQuery(from: start, to: start.add(const Duration(days: 1))),
+        // ownerUserId is load-bearing: without it a manager opening a rep's day
+        // from Equipe sees their *own* appointments under the rep's name.
+        AgendaQuery(
+          from: start,
+          to: start.add(const Duration(days: 1)),
+          ownerUserId: ownerUserId,
+        ),
       ),
     );
     final role = ref.watch(currentUserProvider).valueOrNull?.role.name;
@@ -224,7 +230,11 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
         });
         ref.invalidate(
           agendaProvider(
-            AgendaQuery(from: start, to: start.add(const Duration(days: 1))),
+            AgendaQuery(
+              from: start,
+              to: start.add(const Duration(days: 1)),
+              ownerUserId: widget.ownerUserId,
+            ),
           ),
         );
         return;
