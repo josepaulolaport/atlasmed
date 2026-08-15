@@ -376,6 +376,44 @@ describe("GenerateRoteiroUseCase", () => {
     }
   });
 
+  it("refuses once the agent has regenerated too many times today", async () => {
+    // The check runs before the Matrix call, since the point is to stop the
+    // spend rather than report it afterwards.
+    const repository = new FakeRepository([candidate({ id: 1 })]);
+    let matrixCalls = 0;
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      quota: { consume: async () => false },
+      travel: {
+        durations: async (points) => {
+          matrixCalls += 1;
+          return points.map(() => points.map(() => 300));
+        },
+      },
+    });
+
+    await expect(useCase.execute(baseInput())).rejects.toThrow(/gera/i);
+    expect(matrixCalls).toBe(0);
+  });
+
+  it("passes the configured ceiling to the quota", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 })]);
+    let seen: { userId: number; day: string; max: number } | undefined;
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      quota: {
+        consume: async (input) => {
+          seen = input;
+          return true;
+        },
+      },
+    });
+
+    await useCase.execute(baseInput());
+
+    expect(seen?.max).toBe(DEFAULT_ROTEIRO_PARAMS.maxGenerationsPerDay);
+  });
+
   it("marks travel as estimated when no travel source is wired", async () => {
     const repository = new FakeRepository([candidate({ id: 1 })]);
     const useCase = new GenerateRoteiroUseCase({ repository });

@@ -1,5 +1,10 @@
 import type { ScopeContext } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import {
+  AppError,
+  ForbiddenError,
+  ResourceNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
 import type {
   FixedPoint,
   RoteiroBucket,
@@ -147,6 +152,17 @@ export interface TravelTimeSource {
   durations(points: RoteiroPoint[]): Promise<number[][] | null>;
 }
 
+/**
+ * How many generations an agent has left today — spec 0016 §7.4.
+ *
+ * A generation spends a paid Matrix call, and nothing else stops a rep pulling
+ * to refresh through a morning. The ceiling is `max_generations_per_day` in
+ * `roteiro_params`, so it moves without a deploy.
+ */
+export interface GenerationQuota {
+  consume(input: { userId: number; day: string; max: number }): Promise<boolean>;
+}
+
 export interface ScheduleReader {
   execute(input: {
     actor: { userId: number; roleName: string };
@@ -167,6 +183,18 @@ export interface ScheduleReader {
 interface BusyInterval {
   startsAt: number;
   endsAt: number;
+}
+
+/** The agent has regenerated too many times today (§7.4). */
+export class RoteiroQuotaExceededError extends AppError {
+  constructor(max: number) {
+    super(
+      "ROTEIRO_QUOTA_EXCEEDED",
+      429,
+      `Limite de ${max} gerações por dia atingido. Tente novamente amanhã.`,
+      { max },
+    );
+  }
 }
 
 export interface RoteiroNotice {
@@ -507,6 +535,7 @@ export class GenerateRoteiroUseCase {
       repository: RoteiroRepository;
       schedule?: ScheduleReader;
       travel?: TravelTimeSource;
+      quota?: GenerationQuota;
     },
   ) {}
 
@@ -531,6 +560,17 @@ export class GenerateRoteiroUseCase {
     const limit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
     if (limit < 1) {
       throw new ValidationError([{ field: "limit", message: "limit must be at least 1" }]);
+    }
+
+    // Counted before any work: the point is to stop the Matrix call, and a
+    // check after it would have already spent the thing it protects.
+    if (this.deps.quota) {
+      const allowed = await this.deps.quota.consume({
+        userId: subjectUserId,
+        day: input.today,
+        max: params.maxGenerationsPerDay,
+      });
+      if (!allowed) throw new RoteiroQuotaExceededError(params.maxGenerationsPerDay);
     }
 
     const assigned = await this.deps.repository.countAssignedProfiles({
