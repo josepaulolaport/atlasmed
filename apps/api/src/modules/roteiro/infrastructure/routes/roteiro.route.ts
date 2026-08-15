@@ -13,6 +13,7 @@ type Executable = { execute(input: never): Promise<unknown> };
  */
 export interface RoteiroHttpUseCases {
   generate(): Executable;
+  confirm(): Executable;
 }
 
 /**
@@ -76,6 +77,80 @@ export const roteiroRoute = (
           limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
           timeZone: t.Optional(t.String({ minLength: 1 })),
         }),
+      },
+    )
+    .post(
+      "/roteiros",
+      async ({ body, getScope, getUserId, getAuthContext }) => {
+        const [scope, userId, authContext] = await Promise.all([
+          getScope(),
+          getUserId(),
+          getAuthContext(),
+        ]);
+        const now = new Date();
+        return useCases.generate().execute({
+          actor: { userId, roleName: authContext.roleName },
+          scope,
+          subjectUserId: body.subjectUserId,
+          verticalId: body.verticalId,
+          origin: { lat: body.origin.lat, lng: body.origin.lng },
+          anchorProfileId: body.anchorProfileId,
+          limit: body.limit,
+          persist: true,
+          today: localCivilDate(now, body.timeZone),
+          now,
+          timeZone: body.timeZone,
+        } as never);
+      },
+      {
+        detail: {
+          summary: "Generate and persist a roteiro do dia as a DRAFT",
+          description:
+            "Supersedes any live DRAFT for the same agent and day, so regenerating replaces " +
+            "rather than accumulates. Returns the stored roteiro with its id.",
+          tags: ["Roteiro"],
+          security: [{ bearerAuth: [] }],
+        },
+        body: t.Object({
+          verticalId: t.Number({ minimum: 1 }),
+          origin: t.Object({
+            lat: t.Number({ minimum: -90, maximum: 90 }),
+            lng: t.Number({ minimum: -180, maximum: 180 }),
+          }),
+          subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+          anchorProfileId: t.Optional(t.Number({ minimum: 1 })),
+          limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
+          timeZone: t.Optional(t.String({ minLength: 1 })),
+        }),
+      },
+    )
+    .post(
+      "/roteiros/:id/confirm",
+      async ({ params, body, getScope, getUserId, getAuthContext }) => {
+        const [scope, userId, authContext] = await Promise.all([
+          getScope(),
+          getUserId(),
+          getAuthContext(),
+        ]);
+        return useCases.confirm().execute({
+          roteiroId: params.id,
+          actor: { userId, roleName: authContext.roleName },
+          scope,
+          timeZone: body?.timeZone,
+        } as never);
+      },
+      {
+        detail: {
+          summary: "Confirm a roteiro, writing it into the agent's calendar",
+          description:
+            "Creates one calendar event and interaction per stop, with travel-aware start " +
+            "times. Idempotent. Returns 409 with the clashing occurrences if the calendar " +
+            "changed since the roteiro was generated — times are never silently shifted.",
+          tags: ["Roteiro"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: t.Object({ id: t.Number({ minimum: 1 }) }),
+        body: t.Optional(t.Object({ timeZone: t.Optional(t.String({ minLength: 1 })) })),
       },
     );
 

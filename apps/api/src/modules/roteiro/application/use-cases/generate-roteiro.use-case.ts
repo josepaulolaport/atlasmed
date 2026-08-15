@@ -65,6 +65,30 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
 const ROAD_CIRCUITY_FACTOR = 1.35;
 const AVERAGE_SPEED_KMH = 28;
 
+/**
+ * The calendar stores durations in 30-minute steps and rejects anything else
+ * (`validateEventData`: "durationMinutes must be a positive multiple of 30").
+ *
+ * So the roteiro plans in the same unit rather than rounding at confirm time.
+ * Rounding later would hand the rep a plan saying 45 minutes and write 60 into
+ * their calendar — precisely the silent shift §7.3 forbids, and they would only
+ * discover it after approving. Snapping here means the times they approve are
+ * the times that land.
+ *
+ * The cost is real and worth stating: a 45-minute visit reserves 60 and a
+ * 15-minute call reserves 30, so a day holds slightly fewer stops than the raw
+ * durations suggest. Relaxing the calendar's 30-minute rule is the alternative
+ * and is a change to an invariant every other interaction already relies on.
+ */
+const CALENDAR_SLOT_MINUTES = 30;
+
+function toCalendarSlot(minutes: number): number {
+  return Math.max(
+    CALENDAR_SLOT_MINUTES,
+    Math.ceil(minutes / CALENDAR_SLOT_MINUTES) * CALENDAR_SLOT_MINUTES,
+  );
+}
+
 /** §4.1 — how far the bound may widen before we give up, and in what steps. */
 const REACH_EXPANSION_STEPS = [1, 2, 4, 8] as const;
 /** Shortlist depth, per §4.5. */
@@ -86,6 +110,11 @@ export interface GenerateRoteiroInput {
   /** Present turns the generation into `ANCORA` mode. */
   anchorProfileId?: number;
   limit?: number;
+  /**
+   * Persist the result as a DRAFT. `POST /roteiros` does; `/preview` does not,
+   * so exploring anchors never disturbs the rep's live plan for the day.
+   */
+  persist?: boolean;
   today: string;
   now: Date;
   /** Defaults to `APP_TIME_ZONE`. The workday is the rep's, not the server's. */
@@ -250,7 +279,40 @@ export class GenerateRoteiroUseCase {
       timeZone: input.timeZone ?? APP_TIME_ZONE,
     });
 
+    const persisted = input.persist
+      ? await this.deps.repository.createDraft({
+          userId: subjectUserId,
+          createdByUserId: input.actor.userId,
+          verticalId: input.verticalId,
+          scopeDate: input.today,
+          origin: input.origin,
+          reachMode,
+          anchorProfileId,
+          reachBoundKm,
+          travelSource: "ESTIMATED",
+          paramsSnapshot: params as unknown as Record<string, unknown>,
+          notices: notices as unknown[],
+          stops: stops.map((stop) => ({
+            position: stop.position,
+            facilityVerticalProfileId: stop.candidate.facilityVerticalProfileId,
+            facilityId: stop.candidate.facilityId,
+            bucket: stop.candidate.bucket,
+            modality: stop.modality,
+            serviceMinutes: stop.serviceMinutes,
+            travelSecondsFromPrev: stop.travelSecondsFromPrev,
+            plannedStartsAt: stop.plannedStartsAt,
+            plannedEndsAt: stop.plannedEndsAt,
+            isCoverageSlot: stop.isCoverageSlot,
+            source: stop.isAnchor ? ("ANCHOR" as const) : ("SUGGESTED" as const),
+            meritScore: stop.candidate.meritScore,
+            scoreBreakdown: stop.candidate.components,
+          })),
+        })
+      : null;
+
     return {
+      id: persisted?.id ?? null,
+      status: persisted?.status ?? null,
       subjectUserId,
       verticalId: input.verticalId,
       scopeDate: input.today,
@@ -509,8 +571,9 @@ export class GenerateRoteiroUseCase {
       const modality: "IN_PERSON" | "REMOTE" = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
       const here = { lat: entry.candidate.lat, lng: entry.candidate.lng };
       const travelSeconds = modality === "REMOTE" ? null : estimatedTravelSeconds(previous, here);
-      const serviceMinutes =
-        modality === "REMOTE" ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON;
+      const serviceMinutes = toCalendarSlot(
+        modality === "REMOTE" ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
+      );
 
       let startsAt = new Date(clock.getTime() + (travelSeconds ?? 0) * 1000);
       // Never schedule through lunch: push the whole stop past it.

@@ -70,6 +70,20 @@ class FakeRepository implements RoteiroRepository {
   async findAnchorProfile() {
     return this.options.anchor ?? null;
   }
+  // Persistence is exercised by the confirm tests and the HTTP integration
+  // suite; generation itself never writes.
+  async createDraft(): Promise<never> {
+    throw new Error("createDraft is not part of generation");
+  }
+  async findById() {
+    return null;
+  }
+  async linkStop() {
+    /* no-op */
+  }
+  async markConfirmed() {
+    /* no-op */
+  }
   /**
    * Mirrors the repository contract: top `limit` by merit, **plus** the most
    * coverage-overdue candidates regardless of merit. Slicing to `limit` alone

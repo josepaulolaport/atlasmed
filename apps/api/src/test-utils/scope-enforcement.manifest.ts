@@ -158,6 +158,15 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["managedUserIds", "isGlobal"],
   },
 
+  // Confirming is stricter than generating: only the agent may write to their
+  // own calendar, so ownership is checked directly rather than through the
+  // manager/global widening that generation allows. The scope itself is passed
+  // through to the calendar use case, which enforces facility visibility.
+  "modules/roteiro/application/use-cases/confirm-roteiro.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["roteiro.userId", "ForbiddenError"],
+  },
+
   "modules/orders/application/use-cases/orders.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],

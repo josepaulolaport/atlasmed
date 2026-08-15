@@ -1184,7 +1184,7 @@ Change any of these by saying so — none is load-bearing, all live in `roteiro_
 
 | Setting | Default | Reasoning |
 |---|---|---|
-| Service duration | flat **45 min** `IN_PERSON`, **15 min** `REMOTE` | Per-bucket durations are a guess until §10 has real `actual_started_at`/`actual_ended_at` spans to fit against. Then set them from data. |
+| Service duration | **45 min** `IN_PERSON`, **15 min** `REMOTE`, each snapped up to a 30-minute calendar slot → **60 / 30** | Per-bucket durations are a guess until §10 has real spans to fit against. The snap is not a guess: `calendar.validateEventData` requires a positive multiple of 30, so a roteiro planning 45 would write 60 into the rep's calendar at confirm — the silent shift §7.3 forbids, discovered only after they approved it. Planning in the calendar's own unit keeps the approved times and the booked times identical. Cost: a day holds slightly fewer stops than the raw durations suggest. The alternative is relaxing the calendar's 30-minute rule, which every other interaction already relies on. |
 | Workday | **08:00–18:00**, per rep | Per rep, on their profile, per §6.3. |
 | Lunch | **12:00**, 60 min | A block the router must not schedule through. |
 | Cooldowns | `MANTER` 14 · `RECUPERAR` 21 · `PROSPECTAR` 30 days | §4.1. |

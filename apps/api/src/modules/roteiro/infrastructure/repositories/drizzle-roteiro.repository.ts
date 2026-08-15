@@ -1,10 +1,13 @@
 import { sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/database/db";
 import type {
+  CreateRoteiroInput,
   RoteiroCandidate,
   RoteiroParams,
   RoteiroRepository,
   ScoreCandidatesInput,
+  StoredRoteiro,
+  StoredRoteiroStop,
 } from "../../application/interfaces/roteiro.repository.interface";
 
 /**
@@ -113,6 +116,164 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       where p.is_active and p.vertical_id = ${input.verticalId} and a.user_id = ${input.userId}
     `);
     return Number(rows[0]?.n ?? 0);
+  }
+
+  async createDraft(input: CreateRoteiroInput): Promise<StoredRoteiro> {
+    return db.transaction(async (tx) => {
+      // Regenerating replaces the live draft rather than colliding with the
+      // partial unique index that allows one per agent per day.
+      await tx.execute(sql`
+        update roteiros set status = 'SUPERSEDED', updated_at = now()
+        where user_id = ${input.userId} and scope_date = ${input.scopeDate}::date
+          and status = 'DRAFT'
+      `);
+
+      const inserted = (await tx.execute(sql`
+        insert into roteiros (
+          user_id, created_by_user_id, vertical_id, scope_date, origin,
+          reach_mode, anchor_profile_id, reach_bound_km, travel_source,
+          params_snapshot, notices
+        ) values (
+          ${input.userId}, ${input.createdByUserId}, ${input.verticalId},
+          ${input.scopeDate}::date,
+          st_setsrid(st_makepoint(${input.origin.lng}, ${input.origin.lat}), 4326),
+          ${input.reachMode}, ${input.anchorProfileId}, ${input.reachBoundKm},
+          ${input.travelSource},
+          ${JSON.stringify(input.paramsSnapshot)}::jsonb,
+          ${JSON.stringify(input.notices)}::jsonb
+        )
+        returning id, version
+      `)) as unknown as Array<{ id: number }>;
+      const roteiroId = Number(inserted[0]?.id);
+
+      for (const stop of input.stops) {
+        await tx.execute(sql`
+          insert into roteiro_stops (
+            roteiro_id, position, facility_vertical_profile_id, bucket, modality,
+            merit_score, score_breakdown, travel_seconds_from_prev, service_minutes,
+            planned_starts_at, planned_ends_at, source, is_coverage_slot
+          ) values (
+            ${roteiroId}, ${stop.position}, ${stop.facilityVerticalProfileId},
+            ${stop.bucket}, ${stop.modality}, ${stop.meritScore},
+            ${JSON.stringify(stop.scoreBreakdown)}::jsonb,
+            ${stop.travelSecondsFromPrev}, ${stop.serviceMinutes},
+            ${stop.plannedStartsAt.toISOString()}, ${stop.plannedEndsAt.toISOString()},
+            ${stop.source}, ${stop.isCoverageSlot}
+          )
+        `);
+      }
+
+      const stored = await this.loadRoteiro(roteiroId, tx);
+      if (!stored) throw new Error(`roteiro ${roteiroId} vanished after insert`);
+      return stored;
+    });
+  }
+
+  async findById(id: number): Promise<StoredRoteiro | null> {
+    return this.loadRoteiro(id, db);
+  }
+
+  async linkStop(input: {
+    roteiroId: number;
+    position: number;
+    calendarId: number;
+    interactionId: number;
+  }): Promise<void> {
+    await db.execute(sql`
+      update roteiro_stops
+      set calendar_id = ${input.calendarId},
+          interaction_id = ${input.interactionId},
+          updated_at = now()
+      where roteiro_id = ${input.roteiroId} and position = ${input.position}
+    `);
+  }
+
+  async markConfirmed(input: { roteiroId: number; confirmedAt: Date }): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        update roteiros
+        set status = 'CONFIRMED', confirmed_at = ${input.confirmedAt.toISOString()},
+            version = version + 1, updated_at = now()
+        where id = ${input.roteiroId}
+      `);
+      // The write that makes the coverage rotation turn (§4.3.1). Set here, on
+      // confirm, and nowhere else.
+      await tx.execute(sql`
+        update facility_vertical_profiles p
+        set last_suggested_at = ${input.confirmedAt.toISOString()}
+        from roteiro_stops s
+        where s.roteiro_id = ${input.roteiroId}
+          and s.facility_vertical_profile_id = p.id
+      `);
+    });
+  }
+
+  /**
+   * `db` and a transaction handle differ in type but share `execute`, which is
+   * all this needs — so it takes the loosest shape both satisfy.
+   */
+  private async loadRoteiro(
+    id: number,
+    runner: Pick<typeof db, "execute">,
+  ): Promise<StoredRoteiro | null> {
+    const rows = (await runner.execute(sql`
+      select r.id, r.user_id, r.created_by_user_id, r.vertical_id,
+             to_char(r.scope_date, 'YYYY-MM-DD') as scope_date,
+             r.status::text as status, r.reach_mode::text as reach_mode,
+             r.reach_bound_km, r.travel_source::text as travel_source,
+             r.anchor_profile_id, r.version, r.notices
+      from roteiros r where r.id = ${id}
+    `)) as unknown as Record<string, unknown>[];
+    const row = rows[0];
+    if (!row) return null;
+
+    const stopRows = (await runner.execute(sql`
+      select s.position, s.facility_vertical_profile_id, s.bucket::text as bucket,
+             s.modality::text as modality, s.merit_score, s.score_breakdown,
+             s.travel_seconds_from_prev, s.service_minutes,
+             s.planned_starts_at, s.planned_ends_at, s.is_coverage_slot,
+             s.source::text as source, s.calendar_id, s.interaction_id,
+             p.facility_id, f.name as facility_name
+      from roteiro_stops s
+      join facility_vertical_profiles p on p.id = s.facility_vertical_profile_id
+      join facilities f on f.id = p.facility_id
+      where s.roteiro_id = ${id}
+      order by s.position
+    `)) as unknown as Record<string, unknown>[];
+
+    return {
+      id: Number(row.id),
+      userId: Number(row.user_id),
+      createdByUserId: Number(row.created_by_user_id),
+      verticalId: Number(row.vertical_id),
+      scopeDate: String(row.scope_date),
+      status: row.status as StoredRoteiro["status"],
+      reachMode: row.reach_mode as StoredRoteiro["reachMode"],
+      reachBoundKm: Number(row.reach_bound_km),
+      travelSource: row.travel_source as StoredRoteiro["travelSource"],
+      anchorProfileId: row.anchor_profile_id === null ? null : Number(row.anchor_profile_id),
+      version: Number(row.version),
+      notices: (row.notices as unknown[]) ?? [],
+      stops: stopRows.map((s) => ({
+        position: Number(s.position),
+        facilityVerticalProfileId: Number(s.facility_vertical_profile_id),
+        facilityId: Number(s.facility_id),
+        facilityName: String(s.facility_name),
+        bucket: s.bucket as StoredRoteiroStop["bucket"],
+        modality: s.modality as StoredRoteiroStop["modality"],
+        serviceMinutes: Number(s.service_minutes),
+        travelSecondsFromPrev:
+          s.travel_seconds_from_prev === null ? null : Number(s.travel_seconds_from_prev),
+        plannedStartsAt: new Date(String(s.planned_starts_at)),
+        plannedEndsAt: new Date(String(s.planned_ends_at)),
+        isCoverageSlot: Boolean(s.is_coverage_slot),
+        source: s.source as StoredRoteiroStop["source"],
+        meritScore: Number(s.merit_score),
+        scoreBreakdown: (s.score_breakdown as Record<string, unknown>) ?? {},
+        calendarId: s.calendar_id === null ? null : Number(s.calendar_id),
+        interactionId: s.interaction_id === null ? null : Number(s.interaction_id),
+      })),
+    };
   }
 
   async findAnchorProfile(input: {

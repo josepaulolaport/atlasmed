@@ -100,6 +100,57 @@ export interface ScoreCandidatesInput {
   limit: number;
 }
 
+/** A stop as stored, with the links written on confirm. */
+export interface StoredRoteiroStop {
+  position: number;
+  facilityVerticalProfileId: number;
+  facilityId: number;
+  facilityName: string;
+  bucket: RoteiroBucket;
+  modality: "IN_PERSON" | "REMOTE";
+  serviceMinutes: number;
+  travelSecondsFromPrev: number | null;
+  plannedStartsAt: Date;
+  plannedEndsAt: Date;
+  isCoverageSlot: boolean;
+  source: "SUGGESTED" | "SUBSTITUTED" | "MANUAL" | "ANCHOR";
+  meritScore: number;
+  scoreBreakdown: Record<string, unknown>;
+  calendarId: number | null;
+  interactionId: number | null;
+}
+
+export interface StoredRoteiro {
+  id: number;
+  userId: number;
+  createdByUserId: number;
+  verticalId: number;
+  scopeDate: string;
+  status: "DRAFT" | "CONFIRMED" | "DISCARDED" | "SUPERSEDED";
+  reachMode: RoteiroReachMode;
+  reachBoundKm: number;
+  travelSource: "MAPBOX" | "ESTIMATED";
+  anchorProfileId: number | null;
+  version: number;
+  notices: unknown[];
+  stops: StoredRoteiroStop[];
+}
+
+export interface CreateRoteiroInput {
+  userId: number;
+  createdByUserId: number;
+  verticalId: number;
+  scopeDate: string;
+  origin: RoteiroPoint;
+  reachMode: RoteiroReachMode;
+  anchorProfileId: number | null;
+  reachBoundKm: number;
+  travelSource: "MAPBOX" | "ESTIMATED";
+  paramsSnapshot: Record<string, unknown>;
+  notices: unknown[];
+  stops: Array<Omit<StoredRoteiroStop, "calendarId" | "interactionId" | "facilityName">>;
+}
+
 export interface RoteiroRepository {
   findParams(verticalId: number): Promise<RoteiroParams | null>;
   /**
@@ -119,6 +170,31 @@ export interface RoteiroRepository {
   /** Whether the subject has an active assignment in this linha at all. */
   countAssignedProfiles(input: { userId: number; verticalId: number }): Promise<number>;
   /** Live GPS is required, so a rep with no assigned clinics is a real error. */
+  /**
+   * Persists a DRAFT, superseding any live one for the same (user, day).
+   *
+   * Regenerating replaces rather than accumulates: a partial unique index
+   * allows one DRAFT or CONFIRMED roteiro per agent per day, so an orphaned
+   * draft cannot block the next generation.
+   */
+  createDraft(input: CreateRoteiroInput): Promise<StoredRoteiro>;
+  findById(id: number): Promise<StoredRoteiro | null>;
+  /** Writes the calendar/interaction links produced by confirm onto one stop. */
+  linkStop(input: {
+    roteiroId: number;
+    position: number;
+    calendarId: number;
+    interactionId: number;
+  }): Promise<void>;
+  /**
+   * Marks the roteiro confirmed and stamps `last_suggested_at` on every stop's
+   * profile — the write that makes the §4.3.1 coverage rotation actually turn.
+   *
+   * On confirm, never on generation: a clinic in a draft the rep discarded has
+   * not been covered, and marking it covered would let the book rot behind a
+   * rep who regenerates ten times a morning.
+   */
+  markConfirmed(input: { roteiroId: number; confirmedAt: Date }): Promise<void>;
   findAnchorProfile(input: {
     facilityVerticalProfileId: number;
     userId: number;
