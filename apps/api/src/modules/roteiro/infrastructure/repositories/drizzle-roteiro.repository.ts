@@ -56,13 +56,13 @@ interface CandidateRow extends Record<string, unknown> {
   ortho_n: number;
   ortho_total: number;
   ortho_ratio: string;
-  assignment_started_at: Date | null;
+  assignment_started_at: string | Date | null;
   theirs_qty: string | null;
   ours_qty: string | null;
   days_since_interaction: number | null;
   days_since_purchase: number | null;
   purchase_interval_days: number;
-  last_suggested_at: Date | null;
+  last_suggested_at: string | Date | null;
   coverage_overdue: boolean;
   t_raw: string;
   h_raw: string;
@@ -380,6 +380,16 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
 
   private toCandidate(row: CandidateRow, w: RoteiroParams["weights"]): RoteiroCandidate {
     const num = (v: string | null): number => Number(v ?? 0);
+    /**
+     * The driver hands timestamps back as strings, not `Date`s.
+     *
+     * Both of these feed the §4.3.1 coverage ordering, which compares them with
+     * `.getTime()`. Left as strings that call throws, and the unit tests could
+     * not see it — the fake repository supplies real `Date`s, so only a run
+     * against Postgres exposes the difference.
+     */
+    const date = (v: unknown): Date | null =>
+      v === null || v === undefined ? null : v instanceof Date ? v : new Date(String(v));
     const component = (
       raw: string,
       weight: number,
@@ -405,7 +415,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       orthopaedistCount: Number(row.ortho_n),
       totalProfessionalCount: Number(row.ortho_total),
       orthopaedistShare: Number(row.ortho_ratio),
-      assignmentStartedAt: row.assignment_started_at,
+      assignmentStartedAt: date(row.assignment_started_at),
       theirsQty: row.theirs_qty === null ? null : Number(row.theirs_qty),
       oursQty: row.ours_qty === null ? null : Number(row.ours_qty),
       daysSinceLastInteraction:
@@ -413,7 +423,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       daysSinceLastPurchase:
         row.days_since_purchase === null ? null : Number(row.days_since_purchase),
       purchaseIntervalDays: Number(row.purchase_interval_days),
-      lastSuggestedAt: row.last_suggested_at,
+      lastSuggestedAt: date(row.last_suggested_at),
       coverageOverdue: row.coverage_overdue,
       meritScore: num(row.merit),
       components: {

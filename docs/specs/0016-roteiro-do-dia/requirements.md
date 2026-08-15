@@ -1085,8 +1085,8 @@ never be the source of a number.**
 
 | Phase | Contents | Shippable alone |
 |---|---|---|
-| **P1** | Tables, params, merit scoring in SQL, `POST /roteiros`, list view, no map, no Matrix (haversine estimate) | yes — already better than today |
-| **P2** | Matrix integration, real drive times, ordering + 2-opt, map view, timeline, confirm → calendar | yes |
+| **P1** | Tables, params, merit scoring in SQL, **gain-based selection on haversine estimates**, `POST /roteiros`, list view, no map, no Matrix | yes — already better than today |
+| **P2** | Matrix integration (swaps the cost source under §4.5, nothing else changes), 2-opt, map view, timeline, confirm → calendar | yes |
 | **P3** | Substitution, alternatives, rejection reasons, modality override | yes |
 | **P4** | Anchor mode ("já vou visitar X — o que mais?") | yes |
 | **P5** | Outcome capture on `visits`, **validated potential + confidence** (§5.4), manager metrics, aderência/conversão | yes |
@@ -1095,6 +1095,14 @@ never be the source of a number.**
 
 P1 is deliberately useful without Mapbox: a ranked, explained list of five clinics with reasons is
 already the thing that does not exist today.
+
+> **§4.5's selection moved into P1**, because it turned out to need *a* cost model rather than
+> Mapbox specifically, and the haversine estimator is one. Measured against the real book, choosing
+> the top five by merit and only then ordering them produced 405 minutes of driving across the five
+> reps; choosing by merit-per-hour produced **152**. Rep 4's slate went from four clinics inside
+> 2 km plus one at 41 km — an ~80-minute round trip for a single stop — to five inside 3 km, and
+> the merit of the clinics chosen barely moved (top stop unchanged at 0.739). P2 swaps the Matrix in
+> underneath and changes nothing else.
 
 ---
 

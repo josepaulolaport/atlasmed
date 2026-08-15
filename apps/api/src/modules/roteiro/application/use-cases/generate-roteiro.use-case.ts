@@ -233,7 +233,14 @@ export class GenerateRoteiroUseCase {
       });
     }
 
-    const selected = this.select({ candidates, limit, params, notices, anchorProfileId });
+    const selected = this.select({
+      candidates,
+      limit,
+      params,
+      notices,
+      anchorProfileId,
+      origin: input.origin,
+    });
     const stops = this.schedule({
       selected,
       origin: input.origin,
@@ -348,8 +355,9 @@ export class GenerateRoteiroUseCase {
     params: RoteiroParams;
     notices: RoteiroNotice[];
     anchorProfileId: number | null;
+    origin: RoteiroPoint;
   }) {
-    const { candidates, limit, params, notices, anchorProfileId } = args;
+    const { candidates, limit, params, notices, anchorProfileId, origin } = args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
     const chosen: { candidate: RoteiroCandidate; isCoverageSlot: boolean; isAnchor: boolean }[] = [];
@@ -386,37 +394,69 @@ export class GenerateRoteiroUseCase {
       quotas[coverage.bucket] = Math.max(0, quotas[coverage.bucket] - 1);
     }
 
-    for (const bucket of ["PROSPECTAR", "MANTER", "RECUPERAR"] as RoteiroBucket[]) {
-      const pool = candidates.filter(
-        (c) => c.bucket === bucket && !taken.has(c.facilityVerticalProfileId),
-      );
-      const want = quotas[bucket];
-      const got = pool.slice(0, Math.max(0, Math.min(want, limit - chosen.length)));
-      for (const candidate of got) {
-        taken.add(candidate.facilityVerticalProfileId);
-        chosen.push({ candidate, isCoverageSlot: false, isAnchor: false });
+    /**
+     * §4.5 — greedy selection by **merit per hour**, not merit.
+     *
+     * Picking the top N by score and only then ordering them produces a
+     * defensible-looking day that wastes an hour: measured against the real
+     * book, rep 4's slate was four clinics inside 2 km plus one at 41 km, which
+     * alone cost ~80 minutes of the day. Every one of those five was a good
+     * clinic; the fifth was not a good *fifth* clinic.
+     *
+     *     gain = mérito × quotaMultiplier ÷ (added travel + service + τ)
+     *
+     * τ (900 s) stops the ratio exploding at zero distance and sets how much
+     * detour a point of merit is worth. Candidates are appended to the route as
+     * they are chosen, so selection and ordering are the same decision — which
+     * is the honest shape of the problem.
+     *
+     * P1 costs the detour with the haversine estimator. This needs *a* cost
+     * model, not Mapbox specifically; P2 swaps in the Matrix and nothing else
+     * here changes.
+     */
+    const tau = params.tauSeconds;
+    const remainingQuota = { ...quotas };
+    let cursor: RoteiroPoint =
+      chosen.length > 0
+        ? { lat: chosen[chosen.length - 1]!.candidate.lat, lng: chosen[chosen.length - 1]!.candidate.lng }
+        : origin;
+
+    while (chosen.length < limit) {
+      let best: { candidate: RoteiroCandidate; gain: number } | null = null;
+      for (const candidate of candidates) {
+        if (taken.has(candidate.facilityVerticalProfileId)) continue;
+        const here = { lat: candidate.lat, lng: candidate.lng };
+        const serviceSeconds = params.serviceMinutes.IN_PERSON * 60;
+        const deltaCost = estimatedTravelSeconds(cursor, here) + serviceSeconds;
+        // A filled bucket is not banned, only outbid — otherwise a slate with
+        // nothing left in one bucket would come back short.
+        const quotaMultiplier = (remainingQuota[candidate.bucket] ?? 0) > 0 ? 1 : 0.35;
+        const gain = (candidate.meritScore * quotaMultiplier) / (deltaCost + tau);
+        if (!best || gain > best.gain) best = { candidate, gain };
       }
-      if (got.length < want) {
+      if (!best) break;
+      taken.add(best.candidate.facilityVerticalProfileId);
+      chosen.push({ candidate: best.candidate, isCoverageSlot: false, isAnchor: false });
+      remainingQuota[best.candidate.bucket] = Math.max(
+        0,
+        (remainingQuota[best.candidate.bucket] ?? 0) - 1,
+      );
+      cursor = { lat: best.candidate.lat, lng: best.candidate.lng };
+    }
+
+    for (const bucket of ["PROSPECTAR", "MANTER", "RECUPERAR"] as RoteiroBucket[]) {
+      const filled = chosen.filter((c) => c.candidate.bucket === bucket).length;
+      if (filled < quotas[bucket]) {
         notices.push({
           code: "QUOTA_UNFILLED",
           bucket,
-          requested: want,
-          filled: got.length,
+          requested: quotas[bucket],
+          filled,
           message:
             bucket === "PROSPECTAR"
               ? "Nenhuma clínica sem compras elegível ao alcance — as vagas foram para outros baldes."
               : `Sem clínicas suficientes no balde ${bucket} — as vagas foram redistribuídas.`,
         });
-      }
-    }
-
-    // Spill: fill whatever the quotas could not, by merit.
-    if (chosen.length < limit) {
-      for (const candidate of candidates) {
-        if (chosen.length >= limit) break;
-        if (taken.has(candidate.facilityVerticalProfileId)) continue;
-        taken.add(candidate.facilityVerticalProfileId);
-        chosen.push({ candidate, isCoverageSlot: false, isAnchor: false });
       }
     }
 
@@ -452,26 +492,10 @@ export class GenerateRoteiroUseCase {
     const anchored = args.selected.filter((s) => s.isAnchor);
     const remaining = args.selected.filter((s) => !s.isAnchor);
 
-    const ordered = [...anchored];
-    let cursor: RoteiroPoint =
-      anchored[0] !== undefined
-        ? { lat: anchored[0].candidate.lat, lng: anchored[0].candidate.lng }
-        : args.origin;
-    while (remaining.length > 0) {
-      let nearestIndex = 0;
-      let nearest = Number.POSITIVE_INFINITY;
-      remaining.forEach((entry, index) => {
-        const km = haversineKm(cursor, { lat: entry.candidate.lat, lng: entry.candidate.lng });
-        if (km < nearest) {
-          nearest = km;
-          nearestIndex = index;
-        }
-      });
-      const [next] = remaining.splice(nearestIndex, 1);
-      if (!next) break;
-      ordered.push(next);
-      cursor = { lat: next.candidate.lat, lng: next.candidate.lng };
-    }
+    // No re-ordering here. §4.5 selection appends each stop to the route as it
+    // chooses it, so the order is already the one the gain rule paid for —
+    // re-sorting by nearest-neighbour afterwards would discard that decision.
+    const ordered = [...anchored, ...remaining];
 
     const dayStart = this.atLocalTime(args.scopeDate, params.workdayStart, args.timeZone);
     const lunchStart = this.atLocalTime(args.scopeDate, params.lunchStart, args.timeZone);
