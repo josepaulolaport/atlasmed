@@ -85,5 +85,13 @@ export interface InteractionRepository {
     correctionReason?: string;
     persistEffectiveMissed?: boolean;
   }): Promise<InteractionMutationResult | null>;
+  /**
+   * Closes visits the rep walked away from — spec 0016 §15.6.1.
+   *
+   * `INFERRED`, always: nobody witnessed the ending, so it must never train the
+   * duration model (§15.6.2).
+   */
+  closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
+
   markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 }

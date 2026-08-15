@@ -126,6 +126,9 @@ class FakeInteractionRepository implements InteractionRepository {
     return { interaction: this.record, replayed: false };
   }
 
+  async closeStaleVisits(): Promise<number> {
+    return 0;
+  }
   async markOverdue(input: { now: Date; limit: number }) {
     if (!this.record || this.record.status !== "SCHEDULED" || this.overdueCount >= input.limit) return 0;
     const endsAt = this.record.occurrenceOverride?.endsAt ?? new Date("2026-08-03T13:00:00.000Z");

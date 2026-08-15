@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { visitsClosedByArrival } from "./drizzle-interaction.repository";
+import { inferredCloseAt, visitsClosedByArrival } from "./drizzle-interaction.repository";
 
 const at = new Date("2026-08-15T15:00:00Z");
 
@@ -8,6 +8,47 @@ const visit = (overrides: Partial<{ id: number; modality: string; actualStartedA
   modality: "IN_PERSON",
   actualStartedAt: new Date("2026-08-15T14:00:00Z"),
   ...overrides,
+});
+
+describe("inferredCloseAt", () => {
+  it("closes at the end of the rep's workday", () => {
+    const closeAt = inferredCloseAt({
+      startedAt: new Date("2026-08-15T16:00:00Z"),
+      workdayEndsAt: new Date("2026-08-15T21:00:00Z"),
+      minimumMinutes: 30,
+    });
+
+    expect(closeAt.toISOString()).toBe("2026-08-15T21:00:00.000Z");
+  });
+
+  it("never closes a visit before it started", () => {
+    // A 19:00 visit against an 18:00 workday would otherwise end before it
+    // began, and interactions_actual_ends_after_starts_check rejects that
+    // outright — the job would throw once and stop closing anything for
+    // anybody (§15.6.6-5). Visits after hours demonstrably happen.
+    const startedAt = new Date("2026-08-15T22:00:00Z");
+
+    const closeAt = inferredCloseAt({
+      startedAt,
+      workdayEndsAt: new Date("2026-08-15T21:00:00Z"),
+      minimumMinutes: 30,
+    });
+
+    expect(closeAt.getTime()).toBeGreaterThan(startedAt.getTime());
+    expect(closeAt.toISOString()).toBe("2026-08-15T22:30:00.000Z");
+  });
+
+  it("gives a visit started right on the bell its minimum", () => {
+    const startedAt = new Date("2026-08-15T21:00:00Z");
+
+    const closeAt = inferredCloseAt({
+      startedAt,
+      workdayEndsAt: new Date("2026-08-15T21:00:00Z"),
+      minimumMinutes: 30,
+    });
+
+    expect(closeAt.toISOString()).toBe("2026-08-15T21:30:00.000Z");
+  });
 });
 
 describe("visitsClosedByArrival", () => {

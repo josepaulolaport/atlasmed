@@ -54,6 +54,25 @@ export async function collectOverdueCandidates<T extends { interaction: { id: nu
 }
 
 
+
+/**
+ * When an unfinished visit should be given up on — spec 0016 §15.6.1, §15.6.6-5.
+ *
+ * The rep's own workday end (§15.5.5), except never before the visit could
+ * plausibly have happened: a 19:00 visit against an 18:00 workday would
+ * otherwise close *before* it started, and
+ * `interactions_actual_ends_after_starts_check` rejects that outright — the job
+ * would throw once and stop closing anything for anyone.
+ */
+export function inferredCloseAt(args: {
+  startedAt: Date;
+  workdayEndsAt: Date;
+  minimumMinutes: number;
+}): Date {
+  const floor = new Date(args.startedAt.getTime() + args.minimumMinutes * 60_000);
+  return args.workdayEndsAt > floor ? args.workdayEndsAt : floor;
+}
+
 /**
  * Which of the rep's open visits a new arrival ends — spec 0016 §15.6.1.
  *
@@ -169,6 +188,12 @@ async function closeOpenVisits(
     });
   }
 }
+
+/** Falls back to the linha default when the rep has never set their hours. */
+const DEFAULT_WORKDAY_END = "18:00";
+
+/** A visit is never closed shorter than this, whatever the workday says. */
+const INFERRED_CLOSE_MINIMUM_MINUTES = 30;
 
 export class DrizzleInteractionRepository implements InteractionRepository {
   constructor(private readonly database: AnyDatabase = db) {}
@@ -292,6 +317,96 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       const detail = await repository.findById(input.id);
       if (!detail) throw new DatabaseError("load completed interaction");
       return { interaction: detail, replayed: false };
+    });
+  }
+
+
+  /**
+   * Closes visits the rep walked away from — spec 0016 §15.6.1.
+   *
+   * The last visit of a day has no successor to close it, and a
+   * single-destination day has none at all. Without this they stay
+   * `IN_PROGRESS` forever, and the rep's next visit tomorrow would close
+   * yesterday's at a duration that is pure fiction.
+   *
+   * Closed as **`INFERRED`**, which is the whole point: nobody witnessed this
+   * ending, so it must never train the duration model (§15.6.2). Closing at the
+   * planned end and calling it measured would teach the engine that visits take
+   * exactly as long as it guessed.
+   */
+  async closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number> {
+    return this.inTransaction(async (_repository, tx) => {
+      const candidates = await tx.execute<{
+        id: number;
+        agent_user_id: number;
+        facility_id: number;
+        visit_id: number | null;
+        actual_started_at: Date;
+        workday_ends_at: Date;
+      }>(sql`
+        select i.id, i.agent_user_id, i.facility_id, i.visit_id, i.actual_started_at,
+               -- The rep's workday end, on the local day the visit started, in
+               -- the appointment's own zone rather than the server's.
+               ((i.actual_started_at at time zone c.time_zone)::date
+                 + coalesce(
+                     (u.metadata -> 'preferences' ->> 'workdayEnd')::time,
+                     ${DEFAULT_WORKDAY_END}::time))
+                 at time zone c.time_zone                             as workday_ends_at
+        from interactions i
+        join calendar c on c.id = i.calendar_id
+        join users u on u.id = i.agent_user_id
+        where i.status = 'IN_PROGRESS'
+          and i.modality = 'IN_PERSON'
+          and i.actual_started_at is not null
+          -- Cheap prefilter: the close is never earlier than start + the
+          -- minimum, so anything newer than that cannot be due yet. Without it
+          -- a long tail of freshly-started visits fills the page and crowds out
+          -- the ones that actually need closing.
+          and i.actual_started_at < now() - make_interval(mins => ${INFERRED_CLOSE_MINIMUM_MINUTES})
+        order by i.actual_started_at asc
+        limit ${input.limit}
+      `);
+
+      let closed = 0;
+      for (const row of candidates) {
+        const startedAt = new Date(row.actual_started_at);
+        const closeAt = inferredCloseAt({
+          startedAt,
+          workdayEndsAt: new Date(row.workday_ends_at),
+          minimumMinutes: INFERRED_CLOSE_MINIMUM_MINUTES,
+        });
+        if (closeAt > input.now) continue;
+
+        let visitId = row.visit_id;
+        if (!visitId) {
+          const [visit] = await tx.insert(visits)
+            .values({ userId: row.agent_user_id, facilityId: row.facility_id, visitedAt: startedAt })
+            .returning({ id: visits.id });
+          if (!visit) throw new DatabaseError("create compatibility visit");
+          visitId = visit.id;
+        }
+
+        const [updated] = await tx.update(interactions).set({
+          status: "COMPLETED",
+          actualEndedAt: closeAt,
+          durationSource: "INFERRED",
+          visitId,
+          updatedAt: input.now,
+          version: sql`${interactions.version} + 1`,
+        }).where(and(eq(interactions.id, row.id), eq(interactions.status, "IN_PROGRESS"))).returning({ id: interactions.id });
+        if (!updated) continue;
+
+        await tx.insert(interactionEvents).values({
+          interactionId: row.id,
+          actorUserId: input.actorUserId,
+          source: "SYSTEM",
+          previousStatus: "IN_PROGRESS",
+          newStatus: "COMPLETED",
+          metadata: { source: "workday-end-close", closedAt: closeAt.toISOString() },
+        });
+        closed += 1;
+      }
+      return closed;
     });
   }
 

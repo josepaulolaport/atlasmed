@@ -171,6 +171,22 @@ export class CompleteInteractionUseCase {
   }
 }
 
+/**
+ * Gives up on visits the rep walked away from — spec 0016 §15.6.1.
+ *
+ * Runs beside the overdue job rather than inside it: that one decides a
+ * *scheduled* visit never happened, this one decides an *open* visit is over.
+ * Different questions, different statuses, and merging them would make one
+ * job's failure hide the other's work.
+ */
+export class CloseStaleVisitsUseCase {
+  constructor(private readonly deps: Dependencies & { systemActorUserId?: number | null }) {}
+  async execute(input: { now?: Date; limit?: number } = {}) {
+    const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
+    return this.deps.repository.closeStaleVisits({ now: input.now ?? this.deps.now?.() ?? new Date(), limit, actorUserId: this.deps.systemActorUserId ?? null });
+  }
+}
+
 export class MarkOverdueInteractionsUseCase {
   constructor(private readonly deps: Dependencies & { systemActorUserId?: number | null }) {}
   async execute(input: { now?: Date; limit?: number } = {}) {

@@ -1746,6 +1746,18 @@ of these happens first:
 | the end of the rep's own workday (§15.5.5) | `INFERRED` |
 | nothing — the app asks the next morning | `INFERRED` or nothing |
 
+**Both automatic closers are implemented.** The per-minute job that marks
+scheduled interactions overdue now also closes visits left running, using the
+rep's own workday end resolved in the appointment's timezone — and never before
+`start + 30 min`, so a 19:00 visit against an 18:00 workday closes at 19:30
+rather than at a time before it began (§15.6.6-5). It runs in its own `try`:
+a visit left open is a nuisance, but failing the whole job would stop scheduled
+interactions being marked overdue too.
+
+Item 2 was largely already there: a scheduled visit whose time passes becomes
+`NOT_COMPLETED` with a `SYSTEM` event, and the rep corrects it later with a
+justification. That *is* the next-morning question, and it predates this spec.
+
 **Close-on-next-start is implemented.** Starting an in-person visit closes any
 in-person visit the rep left open, inside the same transaction, as `MEASURED`
 with a `SYSTEM` event recording why — so a visit that says it lasted forty
