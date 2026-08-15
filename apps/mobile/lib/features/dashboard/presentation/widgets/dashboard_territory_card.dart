@@ -213,7 +213,6 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
 
   MapboxMap? _mapboxMap;
   bool _mapUnavailable = false;
-  late final ViewportState? _initialViewport = _buildViewport();
 
   List<TerritoryGeometry> get _geometries {
     return widget.features
@@ -223,26 +222,17 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
         .toList(growable: false);
   }
 
-  ViewportState? _buildViewport() {
-    final bounds = _combinedBounds(_geometries);
-    final fit = _idealCameraForBounds(
-      bounds: bounds,
-      boxWidth: 320,
-      boxHeight: 160,
-    );
-    if (fit == null) {
-      // Brazil overview fallback
-      return CameraViewportState(
-        center: Point(coordinates: Position(-51.9, -14.2)),
-        zoom: 3.2,
-      );
+  @override
+  void didUpdateWidget(covariant _TerritoryMiniMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A failed load must not outlive the features it failed on: the flag is
+    // what swaps the map for a grey placeholder, and without this a single
+    // transient error left the card showing that placeholder for every filter
+    // the rep chose afterwards.
+    if (_mapUnavailable &&
+        _featureKey(oldWidget.features) != _featureKey(widget.features)) {
+      setState(() => _mapUnavailable = false);
     }
-    return CameraViewportState(
-      center: Point(
-        coordinates: Position(fit.center.longitude, fit.center.latitude),
-      ),
-      zoom: fit.zoom,
-    );
   }
 
   @override
@@ -270,10 +260,17 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
                       child: SizedMapHost(
                         builder: (context, width, height) => MapWidget(
                           key: ValueKey(
-                            'dashboard-map-${widget.features.map((f) => f.id).join(',')}',
+                            'dashboard-map-${_featureKey(widget.features)}',
                           ),
                           styleUri: MapboxStyles.STANDARD,
-                          viewport: _initialViewport,
+                          // Recomputed here rather than cached in a `late
+                          // final`: the key above already rebuilds the platform
+                          // view when the filters change the zone set, and a
+                          // cached viewport handed that new view the *first*
+                          // filter's camera. Filtering to Rio de Janeiro drew
+                          // the RJ zone under a camera still fitted to all of
+                          // Brazil, leaving it a speck in an empty map.
+                          viewport: territoryViewport(widget.features),
                           onMapCreated: _onMapCreated,
                           onStyleLoadedListener: (_) => _configureMap(),
                           onMapLoadErrorListener: (_) =>
@@ -408,6 +405,45 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
       if (mounted) setState(() => _mapUnavailable = true);
     }
   }
+}
+
+/// Identity of a zone set — what decides the map has to be rebuilt and refitted.
+String _featureKey(List<DashboardTerritoryFeature> features) =>
+    features.map((f) => f.id).join(',');
+
+/// The camera that frames exactly the zones handed to it.
+///
+/// A pure function of the features so the framing can be asserted without a
+/// platform view: the defect it exists to prevent is a *stale* camera, and the
+/// only way to see one is to compute two and compare them.
+///
+/// Falls back to a Brazil overview when nothing has a boundary — a card with no
+/// geometry still shows a basemap rather than an arbitrary corner of the ocean.
+@visibleForTesting
+ViewportState territoryViewport(List<DashboardTerritoryFeature> features) {
+  final geometries = features
+      .where((f) => f.boundary != null)
+      .map((f) => TerritoryGeometry.tryFromGeoJson(f.boundary!))
+      .whereType<TerritoryGeometry>()
+      .toList(growable: false);
+
+  final fit = _idealCameraForBounds(
+    bounds: _combinedBounds(geometries),
+    boxWidth: 320,
+    boxHeight: 160,
+  );
+  if (fit == null) {
+    return CameraViewportState(
+      center: Point(coordinates: Position(-51.9, -14.2)),
+      zoom: 3.2,
+    );
+  }
+  return CameraViewportState(
+    center: Point(
+      coordinates: Position(fit.center.longitude, fit.center.latitude),
+    ),
+    zoom: fit.zoom,
+  );
 }
 
 MapBounds? _combinedBounds(List<TerritoryGeometry> geometries) {

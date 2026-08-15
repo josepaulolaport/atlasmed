@@ -166,8 +166,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               _TerritorySection(scope: scope),
               const SizedBox(height: 12),
               _MetricGrid(scope: scope, canSeeUnassigned: canSeeUnassigned),
-              const SizedBox(height: 12),
-              _PenetrationCard(scope: scope),
             ],
           ],
         ),
@@ -198,14 +196,6 @@ class _MetricGrid extends ConsumerWidget {
         builder: (context, value) => MetricValue(
           value: formatPercent(value.percent),
           caption: '${value.numerator} de ${value.denominator} já compraram',
-        ),
-      ),
-      DashboardMetricCard<DashboardOrdersMetric>(
-        title: 'Pedidos',
-        repository: ref.watch(ordersMetricProvider(scope)),
-        builder: (context, value) => MetricValue(
-          value: '${value.month}',
-          caption: 'no mês · ${value.week} nos últimos 7 dias',
         ),
       ),
       DashboardMetricCard<DashboardRatioMetric>(
@@ -239,66 +229,6 @@ class _MetricGrid extends ConsumerWidget {
           runSpacing: spacing,
           children: [
             for (final card in cards) SizedBox(width: width, child: card),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Penetração média, one row per metric of the linha.
-///
-/// Not blended into a single percentage: a linha may define several metrics and
-/// they measure different units, so adding them would be arithmetic on
-/// incompatible quantities (spec 0013 §4.2).
-class _PenetrationCard extends ConsumerWidget {
-  const _PenetrationCard({required this.scope});
-
-  final DashboardScopeArgs scope;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DashboardMetricCard<DashboardPenetrationMetric>(
-      title: 'Penetração média',
-      repository: ref.watch(penetrationMetricProvider(scope)),
-      builder: (context, value) {
-        if (value.metrics.isEmpty) {
-          return const MetricValue(
-            value: null,
-            caption: 'nenhuma métrica definida para esta linha',
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final entry in value.metrics)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: MetricValue(
-                        value: entry.meanShare == null
-                            ? null
-                            : formatPercent(entry.meanShare),
-                        caption: entry.label,
-                      ),
-                    ),
-                    Text(
-                      // The gap between these two numbers is the point: a mean
-                      // over 3 of 200 clinics is a real number about very
-                      // little, and the card has to say so.
-                      '${entry.clinicsCounted} de ${value.denominator} clínicas',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6b7280),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         );
       },

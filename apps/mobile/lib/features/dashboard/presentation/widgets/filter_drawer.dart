@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/filter_sheet_footer.dart';
 import 'package:flutter/material.dart';
 
 /// A searchable, multi-select drawer for one filter (spec 0014 §5).
@@ -72,24 +73,16 @@ class _FilterDrawerState extends State<FilterDrawer> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
-                    if (_selected.isNotEmpty)
-                      TextButton(
-                        onPressed: () => setState(_selected.clear),
-                        child: const Text('Limpar'),
-                      ),
-                  ],
+                  ),
                 ),
               ),
               Padding(
@@ -140,25 +133,19 @@ class _FilterDrawerState extends State<FilterDrawer> {
                         },
                       ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    // Sorted, because the selection is part of the provider key
-                    // and that key is order-sensitive: picking Rio then São
-                    // Paulo would otherwise be a different scope from picking
-                    // them the other way round, and refetch the whole screen
-                    // for a selection that is the same set.
-                    onPressed: () =>
-                        Navigator.of(context).pop(_selected.toList()..sort()),
-                    child: Text(
-                      _selected.isEmpty
-                          ? 'Aplicar'
-                          : 'Aplicar (${_selected.length})',
-                    ),
-                  ),
-                ),
+              // Explorar's footer, shared rather than copied — and it is where
+              // "Limpar" belongs: next to the button it undoes, instead of a
+              // link in the header that appeared on the first tick and pushed
+              // every row down by its own height.
+              FilterSheetFooter(
+                selectedCount: _selected.length,
+                onClear: () => setState(_selected.clear),
+                // Sorted, because the selection is part of the provider key and
+                // that key is order-sensitive: picking Rio then São Paulo would
+                // otherwise be a different scope from picking them the other way
+                // round, and refetch the whole screen for the same set.
+                onApply: () =>
+                    Navigator.of(context).pop(_selected.toList()..sort()),
               ),
             ],
           ),

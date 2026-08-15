@@ -5,7 +5,7 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -225,7 +225,7 @@ class _RepresentativeDetailScreenState
   }
 
   Future<void> _edit() async {
-    final updated = await showCreateAdminProfessionalSheet(
+    final updated = await openCreateAdminProfessionalScreen(
       context,
       facilityId: widget.facilityId,
       existing: _professional,

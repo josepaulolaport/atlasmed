@@ -38,7 +38,33 @@ export const dashboardUseCases = {
   getPenetration: () => new GetPenetrationMetricUseCase(deps),
   getUnassignedClinics: () => new GetUnassignedClinicsMetricUseCase(deps),
   getTerritory: () => new GetDashboardTerritoryUseCase(deps),
-  listMetricClinics: () => new ListMetricClinicsUseCase(deps),
+  listMetricClinics: () =>
+    new ListMetricClinicsUseCase({
+      ...deps,
+      // Explorar's own list payload, through Explorar's own serialiser — the
+      // same route the unit-type catalogue above takes, and for the same
+      // reason: a second description of a clinic would eventually disagree
+      // with the first. Scope is already settled by the time we get here, so
+      // the hydration runs unrestricted over exactly the ids this module chose.
+      hydration: {
+        listByIds: async ({ ids, verticalId, userId }) => {
+          if (ids.length === 0) return [];
+          const [{ facilityRepositories }, { serializeFacility }] =
+            await Promise.all([
+              import("../facility/composition"),
+              import("../facility/application/mappers/facility.mapper"),
+            ]);
+          const records = await facilityRepositories.facility.findAllByIds({
+            ids,
+            userId,
+            scope: { isGlobal: true, facilityIds: ids },
+          });
+          return records.map((record) =>
+            serializeFacility(record, [verticalId]),
+          );
+        },
+      },
+    }),
   getFilterOptions: () =>
     new GetFilterOptionsUseCase({
       ...deps,

@@ -71,6 +71,34 @@ class AppTheme {
       brightness: Brightness.light,
     ),
     scaffoldBackgroundColor: AppColors.background,
+
+    /// The house app bar, for every pushed screen that does not ask for
+    /// something else.
+    ///
+    /// There was no default at all, so a screen that wrote `AppBar(title: ...)`
+    /// and nothing more inherited Material 3's: a 22px title and a
+    /// `surfaceTint` that washes the bar mauve as content scrolls under it.
+    /// Nothing else in the app does that, and the five screens that set no
+    /// colours were the only ones doing it — visibly a different product from
+    /// the row of screens either side of them.
+    ///
+    /// Flat on the page background rather than white, which is what most bars
+    /// here already set by hand. The ones that deliberately differ — the navy
+    /// contact header, the black image viewers — still say so and still win.
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: AppColors.gray900,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: AppColors.gray900,
+      ),
+    ),
   );
 }
 

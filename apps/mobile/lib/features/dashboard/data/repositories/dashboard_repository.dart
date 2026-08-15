@@ -85,22 +85,6 @@ DashboardMetricRepository<DashboardRatioMetric> cadastroCompletionRepository(
   parse: DashboardRatioMetric.cadastroFromJson,
 );
 
-DashboardMetricRepository<DashboardOrdersMetric> ordersRepository(
-  DashboardScopeArgs args,
-) => DashboardMetricRepository(
-  path: '/dashboard/metrics/orders',
-  args: args,
-  parse: DashboardOrdersMetric.fromJson,
-);
-
-DashboardMetricRepository<DashboardPenetrationMetric> penetrationRepository(
-  DashboardScopeArgs args,
-) => DashboardMetricRepository(
-  path: '/dashboard/metrics/penetration',
-  args: args,
-  parse: DashboardPenetrationMetric.fromJson,
-);
-
 DashboardMetricRepository<DashboardCountMetric> unassignedClinicsRepository(
   DashboardScopeArgs args,
 ) => DashboardMetricRepository(
@@ -122,11 +106,23 @@ DashboardMetricRepository<DashboardClinicPage> metricClinicsRepository({
   required DashboardScopeArgs args,
   int page = 1,
   int limit = 25,
+  String? search,
+  String? sort,
+  String? order,
 }) => DashboardMetricRepository(
   path: '/dashboard/metrics/$metric/clinics',
   args: args,
   parse: DashboardClinicPage.fromJson,
-  extraQuery: {'page': '$page', 'limit': '$limit'},
+  extraQuery: {
+    'page': '$page',
+    'limit': '$limit',
+    // Omitted rather than sent empty: the key is part of the cache identity,
+    // and "search=" is not the same request as no search at all.
+    if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    // Both or neither: `order` without `sort` would ask the server to reverse
+    // an ordering it was never told to use.
+    if (sort != null) ...{'sort': sort, 'order': ?order},
+  },
 );
 
 /// One member's profile (spec 0015 §4). Scoped server-side to the reader's
