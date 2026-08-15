@@ -137,6 +137,15 @@ export interface RoteiroCandidate {
   daysSinceLastPurchase: number | null;
   purchaseIntervalDays: number;
   lastSuggestedAt: Date | null;
+
+  /**
+   * When somebody last actually went — spec 0016 §15.6.6-1.
+   *
+   * Separate from `lastSuggestedAt`, which records only that a day was
+   * planned. Coverage rotates on this one: a rep who confirms a roteiro and
+   * stays home has not covered anything.
+   */
+  lastVisitedAt: Date | null;
   coverageOverdue: boolean;
   meritScore: number;
   components: Record<string, { raw: number; weighted: number; [detail: string]: unknown }>;

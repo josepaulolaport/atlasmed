@@ -39,6 +39,7 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
     orthopaedistShare: 0.5,
     registryKnown: true,
     assignmentStartedAt: null,
+    lastVisitedAt: null,
     theirsQty: null,
     oursQty: null,
     daysSinceLastInteraction: null,
@@ -781,6 +782,83 @@ describe("GenerateRoteiroUseCase", () => {
     expect(byId.get(2)?.serviceMinutes).toBe(90);
     // MANTER has no measurement, so it keeps its 30-minute default.
     expect(byId.get(1)?.serviceMinutes).toBe(30);
+  });
+
+  it("treats a clinic as covered only once somebody has been", async () => {
+    // The rotation used to read last_suggested_at, stamped on confirm — so a
+    // rep who planned a day and stayed home hid five clinics from themselves
+    // for a quarter (§15.6.6-1).
+    const planned = candidate({
+      id: 1,
+      meritScore: 0.01,
+      lastSuggestedAt: new Date("2026-08-14"),
+      coverageOverdue: true,
+    });
+    const repository = new FakeRepository([
+      ...Array.from({ length: 8 }, (_, i) => candidate({ id: i + 2, meritScore: 0.9 })),
+      planned,
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 5 }));
+
+    // Still eligible for the reserved coverage slot despite yesterday's plan.
+    expect(
+      result.stops.some((s) => s.candidate.facilityVerticalProfileId === 1),
+    ).toBe(true);
+  });
+
+  it("gives the coverage slot to the longest unvisited, not the longest unplanned", async () => {
+    // The picker must sort on the same clock the SQL cut the shortlist by
+    // (§15.6.6-1); two orderings on different clocks would choose from a list
+    // assembled by another.
+    const visitedRecently = candidate({
+      id: 1,
+      meritScore: 0.5,
+      coverageOverdue: true,
+      lastVisitedAt: new Date("2026-06-01"),
+      lastSuggestedAt: new Date("2020-01-01"),
+    });
+    const neverVisited = candidate({
+      id: 2,
+      meritScore: 0.5,
+      coverageOverdue: true,
+      lastVisitedAt: null,
+      lastSuggestedAt: new Date("2026-08-14"),
+    });
+    const repository = new FakeRepository([visitedRecently, neverVisited]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 1 }));
+
+    // Never visited wins, even though it was planned only yesterday and the
+    // other has not been planned since 2020.
+    expect(result.stops[0]?.candidate.facilityVerticalProfileId).toBe(2);
+  });
+
+  it("sends the plan clock to the back of the never-visited queue", async () => {
+    // Otherwise a clinic planned and skipped is offered again tomorrow, and
+    // the day after, forever.
+    const plannedYesterday = candidate({
+      id: 1,
+      meritScore: 0.5,
+      coverageOverdue: true,
+      lastVisitedAt: null,
+      lastSuggestedAt: new Date("2026-08-14"),
+    });
+    const neverTouched = candidate({
+      id: 2,
+      meritScore: 0.5,
+      coverageOverdue: true,
+      lastVisitedAt: null,
+      lastSuggestedAt: null,
+    });
+    const repository = new FakeRepository([plannedYesterday, neverTouched]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 1 }));
+
+    expect(result.stops[0]?.candidate.facilityVerticalProfileId).toBe(2);
   });
 
   it("refuses to plan another rep's day", async () => {

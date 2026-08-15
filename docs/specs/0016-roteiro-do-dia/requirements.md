@@ -1783,12 +1783,19 @@ improvise. *Cheguei* belongs on the clinic's own page, not only inside the day's
 plan — a system that can only record its own suggestions will under-count real
 work and then conclude reps are not visiting.
 
-### 15.6.4 Quick questions, and why they gate the duration
+### 15.6.4 Quick questions — what they are for, and what they are not
 
-⚠️ **A short visit and a failed visit are identical on a clock.** Twelve minutes
+**A short visit and a failed visit are identical on a clock** — twelve minutes
 is either a quick catch-up with someone who knows you or a gatekeeper turning
-you away. If both feed the same median unexamined, the engine learns that
-prospecting takes twelve minutes and starts planning days that cannot happen.
+you away. The first instinct was to keep failures out of the duration median.
+That was wrong, and §15.6.6-3 explains why: `serviceMinutes` answers *how much
+of my day does this stop eat*, not *how long is a successful visit*, and a
+gatekeeper eats a real and unpredictable amount of it. Excluding failures biases
+the estimate long and makes the engine plan **fewer** stops than actually fit.
+
+So the questions do **not** filter the duration. The median takes the mixture,
+which is exactly the statistic a planner needs. What the questions are for is
+the outcome record and the return clock.
 
 Three questions, every answer one tap:
 
@@ -1800,6 +1807,7 @@ Three questions, every answer one tap:
 
 The third is worth more than it looks: it feeds the §4.3.1 coverage rotation
 directly, so a rep answering it is scheduling their own next visit.
+
 
 ### 15.6.5 Push and geofence — accelerators, not the mechanism
 
@@ -1873,6 +1881,70 @@ almost no `MEASURED` rows, so the ≥12 threshold (§15.5.4) may never be crosse
 for their linha and the learning silently never fires. Worth measuring before
 trusting: if measured supply is thin, the threshold is wrong, or the explicit
 end button matters more than this design assumes.
+
+### 15.6.7 Resolutions
+
+**1 — coverage clock. Fixed.** `coverage_overdue` and the never-covered
+tie-break now read the *visit* clock (`last_done.ended_at`), not
+`last_suggested_at`. Verified against Postgres: stamping
+`last_suggested_at = now()` on an unvisited clinic leaves
+`coverageOverdue = true`.
+
+The plan clock keeps a narrower job, and it matters — it is the **second**
+tie-break among the never-visited. Without it a clinic planned yesterday and
+skipped would be offered again tomorrow, and the day after, forever: it is
+never visited, so it stays maximally overdue and keeps winning the reserved
+slot. Demoting it behind the ones nobody has even planned breaks that loop.
+
+⚠️ The re-review caught this fix creating an inconsistency of its own: the SQL
+tie-break moved to the visit clock while the selector in
+`generate-roteiro.use-case.ts` still sorted on the plan clock. The shortlist is
+cut by the SQL's `coverage_rank`, so the picker would have been choosing from a
+list assembled under different rules. Both now sort on the same clocks in the
+same order, and two tests pin them together.
+
+**2 — cooldown. Fixed.** The §4.1 rule is now in the candidate query, per bucket
+from `cooldown_days`. Verified against Postgres: a completed visit three days ago
+removes a MANTER clinic from the candidate set; moved to 200 days ago it returns,
+still coverage-overdue.
+
+**3 — failed visits. Spec corrected, code was already right.** The duration
+query filters on the sanity range and `duration_source` only; it never looked at
+the outcome. §15.6.4 has been rewritten to match.
+
+**4 — offline timestamps.** The server stamps `startedAt: now` at receipt, so a
+start queued without signal records the moment the queue drained. The resolution
+is that the **client supplies the instant** and the server accepts it inside a
+trust window — not in the future, not older than 24 h — and where the value has
+to be clamped the visit is marked `INFERRED` rather than silently kept as truth.
+Until that exists, offline capture must **refuse rather than record**: a missing
+visit is recoverable, a wrong duration trains the model.
+
+**5 — auto-close before the start.** Closing at the workday end can precede the
+start (18:00 default, 19:00 visits demonstrably happen), which
+`interactions_actual_ends_after_starts_check` rejects. Auto-close therefore ends
+at `max(workdayEnd, startedAt + kMinDuration)` and, when the overrun is large,
+leaves the visit open for the next-morning question instead of inventing a
+plausible end.
+
+**6 — two open interactions.** The closer is scoped to `IN_PERSON`: at most one
+in-person visit is open at a time, and a phone call taken during one neither
+closes it nor is closed by it. A remote interaction carries its own end, which
+is consistent with §4.4 — roteirização never proposes calls and only accounts
+for the time they occupy.
+
+**7 — measured supply. Instrument before trusting.** `duration_source` now
+exists on `interactions` and the median reads only `MEASURED`, so the guard is
+in place *before* anything that could produce an inferred ending — verified
+against Postgres by flipping three identical rows from `MEASURED` to `INFERRED`
+and watching the observed durations go from three buckets to none. With close-on-next-start
+the last visit of every day is `INFERRED`, and a single-destination day is
+entirely so. Whether enough `MEASURED` rows accumulate to cross the ≥12
+threshold is an empirical question nobody can answer yet, so the threshold is
+**provisional** and the counts of measured versus inferred are reported to ops
+beside `serviceMinutesLearnedFrom`. If measured supply turns out to be thin, the
+answer is the explicit end button mattering more than this design assumes — not
+a lower threshold, which would only make the learning confident sooner on less.
 
 ---
 

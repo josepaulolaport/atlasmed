@@ -841,6 +841,13 @@
       "when": 1786813030332,
       "tag": "0119_roteiro_rejections_stand_alone",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1786826793636,
+      "tag": "0120_interaction_duration_source",
+      "breakpoints": true
     }
   ]
 }

@@ -155,6 +155,9 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       const [updated] = await tx.update(interactions).set({
         status: "COMPLETED",
         actualStartedAt,
+        // The rep pressed the button, so somebody saw this end (§15.6.2).
+        // Everything that closes a visit without a witness must set INFERRED.
+        durationSource: "MEASURED" as const,
         actualEndedAt: input.completedAt,
         correctedAt: corrected ? input.completedAt : null,
         correctedByUserId: corrected ? input.actorUserId : null,

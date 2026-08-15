@@ -147,6 +147,7 @@ interface CandidateRow extends Record<string, unknown> {
   days_since_purchase: number | null;
   purchase_interval_days: number;
   last_suggested_at: string | Date | null;
+  last_visited_at: string | Date | null;
   coverage_overdue: boolean;
   t_raw: string;
   h_raw: string;
@@ -262,9 +263,21 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         and i.actual_ended_at is not null
         and i.actual_ended_at > i.actual_started_at
         and i.actual_started_at >= ${input.since.toISOString()}
+        -- §15.6.2 — only endings somebody actually witnessed. An inferred one
+        -- is worth no more than the guess that produced it, and an auto-close
+        -- at the planned end would teach the engine that visits take exactly as
+        -- long as it planned: the median converges on its own assumption while
+        -- looking like it is learning. The sanity range below does not catch
+        -- that, because an inferred 60 minutes looks perfectly reasonable.
+        and i.duration_source = 'MEASURED'
         -- A visit that ran past midnight is a forgotten timer, not a long
         -- meeting, and one that "took" two minutes is a misfire. Both would
         -- teach the engine something untrue.
+        --
+        -- Deliberately NOT filtered by outcome (§15.6.6-3): this parameter
+        -- answers "how much of my day does a stop eat", and a gatekeeper
+        -- turning the rep away eats a real, unpredictable amount. Excluding
+        -- failures would bias the estimate long and plan fewer stops than fit.
         and extract(epoch from (i.actual_ended_at - i.actual_started_at)) between 300 and 4 * 3600
       group by 1
     `);
@@ -648,6 +661,26 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
               and x.user_id = ${input.userId}
               and x.created_at >= now() - make_interval(days => ${REJECTION_PAUSE_DAYS})
           )
+          -- §4.1 cooldown, which until now was specified, stored, exposed to
+          -- ops — and applied nowhere (§15.6.6-2). It was invisible while every
+          -- COMPLETED count was zero; the first week of real outcome capture is
+          -- when the engine would have started re-proposing a clinic visited
+          -- three days ago.
+          and not exists (
+            select 1 from interactions done
+            where done.facility_id = f.id
+              and done.status = 'COMPLETED'
+              and done.actual_ended_at is not null
+              and done.actual_ended_at >= now() - make_interval(days =>
+                    coalesce(
+                      (${JSON.stringify(params.cooldownDays)}::jsonb ->> (
+                        case
+                          when p.purchase_funnel_stage = 'NEVER_PURCHASED' then 'PROSPECTAR'
+                          when p.purchase_funnel_stage in ('CHURN', 'INACTIVE') then 'RECUPERAR'
+                          else 'MANTER'
+                        end))::int,
+                      30))
+          )
       ),
       /**
        * §15.5.2 — what the rep has told us by rejecting this clinic before.
@@ -724,10 +757,19 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           m.theirs_qty, m.ours_qty,
           (${input.today}::date - c.last_purchase)                as days_since_purchase,
           (${input.today}::date - ld.ended_at::date)              as days_since_interaction,
-          -- §4.3.1 coverage: overdue when never committed to, or older than the
-          -- bucket's horizon. NULL is the most overdue state there is.
-          (c.last_suggested_at is null
-           or c.last_suggested_at < ${input.today}::date - make_interval(days =>
+          -- Kept distinct from the plan clock on purpose: one records that a
+          -- day was planned, the other that somebody went (§15.6.6-1).
+          ld.ended_at                                            as last_visited_at,
+          -- §4.3.1 coverage: overdue when never **visited**, or last visited
+          -- longer ago than the bucket's horizon. NULL is the most overdue
+          -- state there is.
+          --
+          -- Reads the visit clock, not the plan clock (§15.6.6-1), which is
+          -- stamped on confirm — so a rep who plans a day and stays
+          -- home used to mark all five clinics covered for a quarter — the
+          -- rotation turned on intention rather than on anyone having gone.
+          (ld.ended_at is null
+           or ld.ended_at < ${input.today}::date - make_interval(days =>
                 coalesce((${JSON.stringify(params.coverageHorizonDays)}::jsonb ->> c.bucket)::int, 180)))
                                                                    as coverage_overdue,
           -- §4.2a timing ramp: peaks just BEFORE the expected reorder, because
@@ -812,10 +854,11 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           case when r.coverage_overdue then
             row_number() over (
               partition by r.coverage_overdue
-              -- Every never-covered clinic shares a null last_suggested_at,
-              -- which is one enormous tie — today it is the entire book. The
-              -- older assignment is the more overdue one.
-              order by r.last_suggested_at asc nulls first,
+              -- Every never-visited clinic shares a null last visit, which is
+              -- one enormous tie — today it is the entire book. The older
+              -- assignment is the more overdue one.
+              order by r.last_visited_at asc nulls first,
+                       r.last_suggested_at asc nulls first,
                        r.assignment_started_at asc nulls first,
                        r.merit desc)
           end                                       as coverage_rank
@@ -827,6 +870,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         w.ortho_n, w.ortho_total, w.ortho_ratio, w.registry_known, w.assignment_started_at,
         w.theirs_qty, w.ours_qty, w.days_since_interaction,
         w.days_since_purchase, w.purchase_interval_days, w.last_suggested_at,
+        w.last_visited_at,
         w.coverage_overdue, w.rejection_penalty,
         w.t_raw, w.h_raw, w.n_raw, w.v_raw, w.k_raw, w.c_raw, w.q_raw, w.merit
       from windowed w
@@ -899,6 +943,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
         row.days_since_purchase === null ? null : Number(row.days_since_purchase),
       purchaseIntervalDays: Number(row.purchase_interval_days),
       lastSuggestedAt: date(row.last_suggested_at),
+      lastVisitedAt: date(row.last_visited_at),
       coverageOverdue: row.coverage_overdue,
       meritScore: num(row.merit),
       components: {

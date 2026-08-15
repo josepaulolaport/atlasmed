@@ -44,6 +44,22 @@ export const interactionModalityEnum = pgEnum("interaction_modality", [
 
 export const interactionEventSourceEnum = pgEnum("interaction_event_source", ["USER", "SYSTEM"]);
 
+/**
+ * Whether a visit's length was observed or assumed — spec 0016 §15.6.2.
+ *
+ * `INFERRED` covers every ending nobody witnessed: an auto-close at the end of
+ * the workday, a next-morning "sim, aconteceu", a server-side close after a
+ * dead battery. Such a duration is only ever as good as the guess that produced
+ * it, and **must never train the duration model** — closing a visit at its
+ * planned end would teach the engine that visits take exactly as long as it
+ * planned, and the median would converge on its own assumption while looking
+ * like it was learning.
+ */
+export const interactionDurationSourceEnum = pgEnum("interaction_duration_source", [
+  "MEASURED",
+  "INFERRED",
+]);
+
 export const interactionStatusEnum = pgEnum("interaction_status", [
   "SCHEDULED",
   "IN_PROGRESS",
@@ -165,6 +181,8 @@ export const interactions = pgTable(
     status: interactionStatusEnum("status").notNull().default("SCHEDULED"),
     actualStartedAt: timestamp("actual_started_at", { withTimezone: true }),
     actualEndedAt: timestamp("actual_ended_at", { withTimezone: true }),
+    /** Null until the visit has an end. See the enum for why this exists. */
+    durationSource: interactionDurationSourceEnum("duration_source"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelledByUserId: bigint("cancelled_by_user_id", { mode: "number" }).references(
       () => users.id,

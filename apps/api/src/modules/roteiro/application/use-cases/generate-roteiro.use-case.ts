@@ -1303,11 +1303,20 @@ export class GenerateRoteiroUseCase {
     const coverage = candidates
       .filter((c) => !taken.has(c.facilityVerticalProfileId) && c.coverageOverdue)
       .sort((a, b) => {
+        // Longest unvisited first. Must match the SQL's coverage_rank ordering
+        // exactly — the shortlist is cut by that rank, so a picker sorting on
+        // a different clock would choose from a list assembled by another.
+        const av = a.lastVisitedAt?.getTime() ?? -Infinity;
+        const bv = b.lastVisitedAt?.getTime() ?? -Infinity;
+        if (av !== bv) return av - bv;
+        // Everything never visited ties at -Infinity above — today that is the
+        // whole book — so the plan clock breaks it next. This is the one job
+        // `lastSuggestedAt` still has: a clinic planned yesterday and not
+        // visited goes to the back of the never-visited queue rather than
+        // being offered again tomorrow, and the day after, forever.
         const at = a.lastSuggestedAt?.getTime() ?? -Infinity;
         const bt = b.lastSuggestedAt?.getTime() ?? -Infinity;
         if (at !== bt) return at - bt;
-        // Everything never covered ties at -Infinity above — today that is the
-        // whole book — so the older assignment wins before merit does.
         const aa = a.assignmentStartedAt?.getTime() ?? Infinity;
         const ba = b.assignmentStartedAt?.getTime() ?? Infinity;
         if (aa !== ba) return aa - ba;
