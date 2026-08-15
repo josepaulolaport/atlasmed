@@ -376,13 +376,91 @@ describe("GenerateRoteiroUseCase", () => {
     }
   });
 
-  it("marks travel as estimated — P1 has no Matrix call", async () => {
+  it("marks travel as estimated when no travel source is wired", async () => {
     const repository = new FakeRepository([candidate({ id: 1 })]);
     const useCase = new GenerateRoteiroUseCase({ repository });
 
     const result = await useCase.execute(baseInput());
 
     expect(result.travelSource).toBe("ESTIMATED");
+  });
+
+  it("uses real drive times when Mapbox answers", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 6 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    let asked: unknown[] = [];
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      travel: {
+        durations: async (points) => {
+          asked = points;
+          // A flat 5 minutes between everything.
+          return points.map(() => points.map(() => 300));
+        },
+      },
+    });
+
+    const result = await useCase.execute(baseInput());
+
+    expect(result.travelSource).toBe("MAPBOX");
+    // One call, covering the rep plus the shortlist.
+    expect(asked.length).toBeGreaterThan(1);
+    for (const stop of result.stops.slice(1)) {
+      expect(stop.travelSecondsFromPrev).toBe(300);
+    }
+  });
+
+  it("falls back to estimates when Mapbox declines, and says so", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 }), candidate({ id: 2 })]);
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      travel: { durations: async () => null },
+    });
+
+    const result = await useCase.execute(baseInput());
+
+    expect(result.travelSource).toBe("ESTIMATED");
+    expect(result.notices.map((n) => n.code)).toContain("TRAVEL_ESTIMATED");
+    expect(result.stops.length).toBeGreaterThan(0);
+  });
+
+  it("still produces a plan when Mapbox throws — a rep in a car has no signal", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 }), candidate({ id: 2 })]);
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      travel: {
+        durations: async () => {
+          throw new Error("ECONNREFUSED");
+        },
+      },
+    });
+
+    const result = await useCase.execute(baseInput());
+
+    expect(result.travelSource).toBe("ESTIMATED");
+    expect(result.stops.length).toBeGreaterThan(0);
+    expect(result.notices.map((n) => n.code)).toContain("TRAVEL_ESTIMATED");
+  });
+
+  it("never exceeds the Matrix coordinate cap", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 40 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    let count = 0;
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      travel: {
+        durations: async (points) => {
+          count = points.length;
+          return points.map(() => points.map(() => 300));
+        },
+      },
+    });
+
+    await useCase.execute(baseInput());
+
+    expect(count).toBeLessThanOrEqual(25);
   });
 
   it("gives a remote-forced unit type no travel time at all", async () => {

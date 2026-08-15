@@ -568,10 +568,25 @@ We use **Matrix** for the numbers and select ourselves.
 ```
 1. Shortlist: top K = min(24, 4·N) by mérito **within the reachable set** (§4.1). [one SQL query]
 
-2. Travel: ONE Mapbox Matrix call over [origin, anchors…, shortlist…]
+2. Travel: ONE Mapbox Matrix call over [origin, the day's fixed points…, shortlist…]
    profile = mapbox/driving  (driving-traffic caps at 10 coordinates; driving allows 25)
    annotations = duration
-   → symmetric-ish duration matrix, seconds
+   → duration matrix, seconds
+
+   **Fetched once, before selection.** The same pair is costed many times — once per gap per
+   candidate while choosing, again while ordering — so asking Mapbox per lookup would be both
+   slow and expensive.
+
+   The rep and their commitments occupy the first slots, because those pairs are costed against
+   every candidate; when the shortlist overflows 25 coordinates the lowest-merit candidates
+   drop out of the matrix and fall back to estimates. They stay selectable, just costed less
+   precisely, which is the right thing to lose first.
+
+   **Any failure is estimates, never an error.** No token, Mapbox down, a short matrix, a
+   thrown request — each falls back to haversine, labels the roteiro `ESTIMATED` and adds
+   `TRAVEL_ESTIMATED` to the notices. A rep between clinics has a bad connection more often
+   than a good one, and a feature that fails there fails exactly when it is needed. The
+   fallback is per *pair*, so a point missing from the matrix cannot poison the whole plan.
 
 3. Seed the route with the anchors, at their fixed times. Route may start empty.
 

@@ -8,6 +8,7 @@ import {
   type CalendarEventCreator,
 } from "./application/use-cases/confirm-roteiro.use-case";
 import { calendarUseCases } from "../calendar/composition";
+import { MapboxTravelTimeSource } from "./infrastructure/adapters/mapbox-travel.adapter";
 
 const repository = new DrizzleRoteiroRepository();
 
@@ -20,6 +21,9 @@ export const roteiroUseCases = {
       // visit is, not only that the hour is taken — that is what lets it plan
       // clinics on the way to something already committed.
       schedule: calendarUseCases.list() as unknown as ScheduleReader,
+      // Real drive times when Mapbox is configured and reachable; the engine
+      // falls back to estimates and labels them when it is not.
+      travel: new MapboxTravelTimeSource(),
     }),
   confirm: () =>
     new ConfirmRoteiroUseCase({

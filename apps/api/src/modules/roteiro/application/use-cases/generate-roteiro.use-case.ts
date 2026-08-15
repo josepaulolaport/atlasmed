@@ -67,6 +67,17 @@ const ROAD_CIRCUITY_FACTOR = 1.35;
 const AVERAGE_SPEED_KMH = 28;
 
 /**
+ * Mapbox's `driving` profile accepts at most 25 coordinates in one matrix call
+ * (`driving-traffic` allows only 10, which is why it is not used).
+ *
+ * One call per generation is the §7.4 budget, so when the shortlist plus the
+ * day's fixed points exceed this the lowest-merit candidates are dropped from
+ * the matrix and fall back to estimates. They are still selectable — they are
+ * simply costed less precisely, which is the right thing to lose first.
+ */
+const MATRIX_MAX_COORDINATES = 25;
+
+/**
  * The calendar stores durations in 30-minute steps and rejects anything else
  * (`validateEventData`: "durationMinutes must be a positive multiple of 30").
  *
@@ -103,6 +114,23 @@ const SHORTLIST_FACTOR = 4;
  * same way they do everywhere else — a weekly block occurring today is busy
  * today, and re-deriving that here would be a second expansion to keep in sync.
  */
+/**
+ * Real driving times between points — spec 0016 §4.5 step 2.
+ *
+ * `null` means unavailable for any reason: no token, Mapbox down, too many
+ * coordinates, a malformed response. The engine then falls back to the
+ * haversine estimator and labels every duration `estimado` end to end (§4.8).
+ * That is not a degraded corner case — it is the state a rep in a basement or
+ * on a bad connection is actually in, and the feature has to keep working there.
+ */
+export interface TravelTimeSource {
+  /**
+   * A full duration matrix over `points`, in seconds. `matrix[i][j]` is the
+   * drive from `points[i]` to `points[j]`.
+   */
+  durations(points: RoteiroPoint[]): Promise<number[][] | null>;
+}
+
 export interface ScheduleReader {
   execute(input: {
     actor: { userId: number; roleName: string };
@@ -306,16 +334,17 @@ function fitInGap(
   point: RoteiroPoint,
   serviceMs: number,
   busy: BusyInterval[],
+  travel: TravelFn,
 ): { startsAt: number; endsAt: number; travelSeconds: number; addedSeconds: number } | null {
-  const inbound = estimatedTravelSeconds(gap.cursor, point);
+  const inbound = travel(gap.cursor, point);
   const startsAt = pushPastBusy(gap.clock + inbound * 1000, serviceMs, busy);
   const endsAt = startsAt + serviceMs;
 
-  const outbound = gap.to === null ? 0 : estimatedTravelSeconds(point, gap.to);
+  const outbound = gap.to === null ? 0 : travel(point, gap.to);
   // Bounded gaps must still allow the rep to reach the next commitment.
   if (endsAt + outbound * 1000 > gap.endsAt) return null;
 
-  const direct = gap.to === null ? 0 : estimatedTravelSeconds(gap.cursor, gap.to);
+  const direct = gap.to === null ? 0 : travel(gap.cursor, gap.to);
   return {
     startsAt,
     endsAt,
@@ -347,6 +376,7 @@ function bestOrder<T extends { lat: number; lng: number }>(
   from: RoteiroPoint,
   to: RoteiroPoint | null,
   stops: T[],
+  travel: TravelFn,
 ): T[] {
   if (stops.length < 2 || stops.length > MAX_EXACT_ORDER) return stops;
 
@@ -354,10 +384,10 @@ function bestOrder<T extends { lat: number; lng: number }>(
     let total = 0;
     let cursor: RoteiroPoint = from;
     for (const stop of order) {
-      total += estimatedTravelSeconds(cursor, stop);
+      total += travel(cursor, stop);
       cursor = stop;
     }
-    if (to) total += estimatedTravelSeconds(cursor, to);
+    if (to) total += travel(cursor, to);
     return total;
   };
 
@@ -411,6 +441,30 @@ function estimatedTravelSeconds(from: RoteiroPoint, to: RoteiroPoint): number {
   return Math.round((km / AVERAGE_SPEED_KMH) * 3600);
 }
 
+/** How the engine asks for a drive time. Swapped, not branched on, at the top. */
+type TravelFn = (from: RoteiroPoint, to: RoteiroPoint) => number;
+
+/**
+ * A lookup over a Mapbox duration matrix, falling back per pair.
+ *
+ * Per *pair*, deliberately: a point that did not make it into the matrix still
+ * gets a usable number instead of poisoning the whole plan. Keyed on rounded
+ * coordinates because the same clinic arrives from several code paths and
+ * floating-point identity is not reliable across them.
+ */
+function matrixTravelFn(points: RoteiroPoint[], durations: number[][]): TravelFn {
+  const key = (p: RoteiroPoint) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+  const index = new Map(points.map((p, i) => [key(p), i]));
+  return (from, to) => {
+    const i = index.get(key(from));
+    const j = index.get(key(to));
+    const value = i === undefined || j === undefined ? undefined : durations[i]?.[j];
+    return typeof value === "number" && Number.isFinite(value)
+      ? Math.round(value)
+      : estimatedTravelSeconds(from, to);
+  };
+}
+
 /** `slots_bucket = max(1, round(N × ratio))`, remainder to PROSPECTAR (§4.3). */
 export function bucketQuotas(limit: number, ratios: Record<RoteiroBucket, number>) {
   const order: RoteiroBucket[] = ["PROSPECTAR", "MANTER", "RECUPERAR"];
@@ -433,7 +487,11 @@ export function bucketQuotas(limit: number, ratios: Record<RoteiroBucket, number
 
 export class GenerateRoteiroUseCase {
   constructor(
-    private readonly deps: { repository: RoteiroRepository; schedule?: ScheduleReader },
+    private readonly deps: {
+      repository: RoteiroRepository;
+      schedule?: ScheduleReader;
+      travel?: TravelTimeSource;
+    },
   ) {}
 
   async execute(input: GenerateRoteiroInput) {
@@ -513,11 +571,28 @@ export class GenerateRoteiroUseCase {
       dayEnd: dayEnd.getTime(),
     });
 
+    /**
+     * One Matrix call per generation (§7.4), covering everything the cost model
+     * will ask about: where the rep is, every commitment they already have, and
+     * the shortlist.
+     *
+     * Placed here rather than inside selection because the same pair is costed
+     * many times — once per gap per candidate during selection, again during
+     * ordering — and asking Mapbox each time would be both slow and expensive.
+     */
+    const { travel, travelSource } = await this.resolveTravel(
+      input.origin,
+      fixedPoints,
+      candidates,
+      notices,
+    );
+
     const selected = this.reorder(
-      this.select({ candidates, limit, params, notices, gaps, busy }),
+      this.select({ candidates, limit, params, notices, gaps, busy, travel }),
       gaps,
       params,
       busy,
+      travel,
     );
 
     // Selection placed every stop inside a gap, so ordering is just time order
@@ -575,7 +650,7 @@ export class GenerateRoteiroUseCase {
           reachMode,
           anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
           reachBoundKm,
-          travelSource: "ESTIMATED",
+          travelSource,
           paramsSnapshot: params as unknown as Record<string, unknown>,
           notices: notices as unknown[],
           stops: stops.map((stop) => ({
@@ -616,7 +691,7 @@ export class GenerateRoteiroUseCase {
         endsAt: point.endsAt,
       })),
       reachBoundKm,
-      travelSource: "ESTIMATED" as const,
+      travelSource,
       params,
       notices,
       stops,
@@ -788,8 +863,9 @@ export class GenerateRoteiroUseCase {
     notices: RoteiroNotice[];
     gaps: DayGap[];
     busy: BusyInterval[];
+    travel: TravelFn;
   }) {
-    const { candidates, limit, params, notices, gaps, busy } = args;
+    const { candidates, limit, params, notices, gaps, busy, travel } = args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
     const chosen: PlacedStop[] = [];
@@ -824,7 +900,7 @@ export class GenerateRoteiroUseCase {
       // coverage.
       let placed: { gap: DayGap; at: NonNullable<ReturnType<typeof fitInGap>> } | null = null;
       for (const gap of gaps) {
-        const at = fitInGap(gap, { lat: coverage.lat, lng: coverage.lng }, serviceMs, busy);
+        const at = fitInGap(gap, { lat: coverage.lat, lng: coverage.lng }, serviceMs, busy, travel);
         if (at && (!placed || at.addedSeconds < placed.at.addedSeconds)) placed = { gap, at };
       }
       if (placed) {
@@ -899,7 +975,7 @@ export class GenerateRoteiroUseCase {
         const point = { lat: candidate.lat, lng: candidate.lng };
 
         for (const gap of gaps) {
-          const placement = fitInGap(gap, point, serviceMs, busy);
+          const placement = fitInGap(gap, point, serviceMs, busy, travel);
           if (!placement) continue;
           const quotaMultiplier = (remainingQuota[candidate.bucket] ?? 0) > 0 ? 1 : 0.35;
           const cost = placement.addedSeconds + serviceMs / 1000;
@@ -946,6 +1022,49 @@ export class GenerateRoteiroUseCase {
   }
 
   /**
+   * Real drive times where Mapbox can supply them, estimates everywhere else.
+   *
+   * Never throws. A generation that fails because a third-party API is
+   * unreachable is worse than one carrying honest estimates — the rep is
+   * usually in a car, which is exactly where the connection is worst.
+   */
+  private async resolveTravel(
+    origin: RoteiroPoint,
+    fixedPoints: FixedPoint[],
+    candidates: RoteiroCandidate[],
+    notices: RoteiroNotice[],
+  ): Promise<{ travel: TravelFn; travelSource: "MAPBOX" | "ESTIMATED" }> {
+    if (!this.deps.travel) return { travel: estimatedTravelSeconds, travelSource: "ESTIMATED" };
+
+    // The rep and their commitments first: those pairs are costed on every
+    // candidate, so they are the last thing that should be dropped to the cap.
+    const points: RoteiroPoint[] = [
+      origin,
+      ...fixedPoints.map((p) => ({ lat: p.lat, lng: p.lng })),
+      ...candidates.map((c) => ({ lat: c.lat, lng: c.lng })),
+    ].slice(0, MATRIX_MAX_COORDINATES);
+
+    try {
+      const durations = await this.deps.travel.durations(points);
+      if (!durations) {
+        notices.push({
+          code: "TRAVEL_ESTIMATED",
+          message: "Tempos de deslocamento estimados — rota real indisponível agora.",
+        });
+        return { travel: estimatedTravelSeconds, travelSource: "ESTIMATED" };
+      }
+      return { travel: matrixTravelFn(points, durations), travelSource: "MAPBOX" };
+    } catch {
+      // Deliberately swallowed and reported rather than propagated: see above.
+      notices.push({
+        code: "TRAVEL_ESTIMATED",
+        message: "Tempos de deslocamento estimados — rota real indisponível agora.",
+      });
+      return { travel: estimatedTravelSeconds, travelSource: "ESTIMATED" };
+    }
+  }
+
+  /**
    * Re-orders each gap's stops onto the shortest route through it, then
    * re-times them.
    *
@@ -965,6 +1084,7 @@ export class GenerateRoteiroUseCase {
     gaps: DayGap[],
     params: RoteiroParams,
     busy: BusyInterval[],
+    travel: TravelFn,
   ): PlacedStop[] {
     const result: PlacedStop[] = [];
 
@@ -976,6 +1096,7 @@ export class GenerateRoteiroUseCase {
         gap.from,
         gap.to,
         inGap.map((stop) => ({ ...stop, lat: stop.candidate.lat, lng: stop.candidate.lng })),
+        travel,
       );
 
       let cursor: RoteiroPoint = gap.from;
@@ -988,10 +1109,10 @@ export class GenerateRoteiroUseCase {
             policy?.forceRemote ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
           ) * 60_000;
         const point = { lat: stop.candidate.lat, lng: stop.candidate.lng };
-        const travel = estimatedTravelSeconds(cursor, point);
-        const startsAt = pushPastBusy(clock + travel * 1000, serviceMs, busy);
+        const drive = travel(cursor, point);
+        const startsAt = pushPastBusy(clock + drive * 1000, serviceMs, busy);
         const endsAt = startsAt + serviceMs;
-        const outbound = gap.to === null ? 0 : estimatedTravelSeconds(point, gap.to);
+        const outbound = gap.to === null ? 0 : travel(point, gap.to);
         if (endsAt + outbound * 1000 > gap.endsAt) continue;
 
         result.push({
@@ -1000,7 +1121,7 @@ export class GenerateRoteiroUseCase {
           gapIndex: gap.index,
           startsAt: new Date(startsAt),
           endsAt: new Date(endsAt),
-          travelSeconds: travel,
+          travelSeconds: drive,
         });
         cursor = point;
         clock = endsAt;
