@@ -10,7 +10,7 @@ const _weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 /// and the next far more often than they jump to an arbitrary date, and a strip
 /// makes that one tap. The year sits inline where it changes, so scrolling past
 /// December says so without a separate control.
-class AgendaMonthStrip extends StatelessWidget {
+class AgendaMonthStrip extends StatefulWidget {
   const AgendaMonthStrip({
     super.key,
     required this.selected,
@@ -23,6 +23,43 @@ class AgendaMonthStrip extends StatelessWidget {
   final ValueChanged<DateTime> onSelected;
   final int monthsBefore;
   final int monthsAfter;
+
+  @override
+  State<AgendaMonthStrip> createState() => _AgendaMonthStripState();
+}
+
+class _AgendaMonthStripState extends State<AgendaMonthStrip> {
+  final _controller = ScrollController();
+  bool _centred = false;
+
+  DateTime get selected => widget.selected;
+  ValueChanged<DateTime> get onSelected => widget.onSelected;
+  int get monthsBefore => widget.monthsBefore;
+  int get monthsAfter => widget.monthsAfter;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Brings the month being shown into view.
+  ///
+  /// The strip starts six months back, so without this it opened on February
+  /// while the grid below showed August — the one control that says which month
+  /// you are looking at was the one place the answer was missing.
+  void _centreOnSelected(int index) {
+    if (_centred) return;
+    _centred = true;
+    // Chips are near enough uniform; the goal is "visible", not pixel-exact.
+    const extent = 68.0 + 8.0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_controller.hasClients) return;
+      _controller.jumpTo(
+        (index * extent - 80).clamp(0.0, _controller.position.maxScrollExtent),
+      );
+    });
+  }
 
   static const _short = [
     'Jan',
@@ -48,9 +85,16 @@ class AgendaMonthStrip extends StatelessWidget {
       (i) => DateTime(first.year, first.month + i),
     );
 
+    _centreOnSelected(
+      months.indexWhere(
+        (month) => month.year == selected.year && month.month == selected.month,
+      ),
+    );
+
     return SizedBox(
       height: 52,
       child: ListView.separated(
+        controller: _controller,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: months.length,

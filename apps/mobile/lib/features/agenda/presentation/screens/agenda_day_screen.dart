@@ -142,9 +142,23 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
                     : null,
                 onOccurrenceTap: (occurrence) {
                   final interactionId = occurrence.interaction?.id;
-                  // Personal blocks have no interaction to open.
-                  if (interactionId == null) return;
-                  InteractionDetailRoute(id: interactionId).push(context);
+                  if (interactionId != null) {
+                    InteractionDetailRoute(id: interactionId).push(context);
+                    return;
+                  }
+                  // A personal block has no interaction, but it is still the
+                  // rep's own event. Returning silently made the tap a dead
+                  // one — nothing opened and nothing explained why.
+                  //
+                  // Only on their own agenda: editing someone else's block
+                  // would write to their calendar, which is theirs alone —
+                  // the same rule that hides the create controls above.
+                  if (!canCreate) return;
+                  AgendaOccurrenceEditRoute(
+                    id: occurrence.calendarId,
+                    recurrenceKey: occurrence.recurrenceKey,
+                    $extra: occurrence,
+                  ).push(context);
                 },
               ),
             ),
