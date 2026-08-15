@@ -299,9 +299,15 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       const [updated] = await tx.update(interactions).set({
         status: "COMPLETED",
         actualStartedAt,
-        // The rep pressed the button, so somebody saw this end (§15.6.2).
-        // Everything that closes a visit without a witness must set INFERRED.
-        durationSource: "MEASURED" as const,
+        // §15.6.2 — MEASURED only when both ends were witnessed.
+        //
+        // A correction reconstructs the start from the schedule, or from a
+        // millisecond before the end when even that is missing. Nobody saw it.
+        // Labelling that MEASURED would feed the planned length straight back
+        // into the median that is supposed to replace the plan — the exact
+        // circularity duration_source exists to prevent, arriving through the
+        // one path where the numbers look entirely reasonable.
+        durationSource: corrected ? ("INFERRED" as const) : ("MEASURED" as const),
         actualEndedAt: input.completedAt,
         correctedAt: corrected ? input.completedAt : null,
         correctedByUserId: corrected ? input.actorUserId : null,
@@ -356,7 +362,10 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         join calendar c on c.id = i.calendar_id
         join users u on u.id = i.agent_user_id
         where i.status = 'IN_PROGRESS'
-          and i.modality = 'IN_PERSON'
+          -- Not restricted to IN_PERSON. Arrival-based closing is, because only
+          -- an in-person arrival proves the rep left somewhere (§15.6.6-6) — but
+          -- a call has no arrival to close it and no explicit end anybody can be
+          -- relied on to press, so without this it stays IN_PROGRESS forever.
           and i.actual_started_at is not null
           -- Cheap prefilter: the close is never earlier than start + the
           -- minimum, so anything newer than that cannot be due yet. Without it

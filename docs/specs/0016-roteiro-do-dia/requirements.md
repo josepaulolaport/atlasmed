@@ -1833,6 +1833,24 @@ The third is worth more than it looks: it feeds the §4.3.1 coverage rotation
 directly, so a rep answering it is scheduling their own next visit.
 
 
+### 15.6.4a Two defects the audit found in the capture code itself
+
+**A correction is not a measurement.** Completing a `NOT_COMPLETED` visit
+reconstructs the start from the schedule — or from a millisecond before the end
+when even that is missing — and the code stamped the result `MEASURED`. With a
+`scheduledStartsAt` that yields exactly the **planned** length, labelled as
+observed, which is precisely the circularity `duration_source` was introduced to
+prevent, arriving by the one path where the numbers look entirely reasonable.
+Corrections are now `INFERRED`. Verified: a corrected visit reports 60 minutes —
+the planned length — and contributes nothing to the median.
+
+**A phone call had no closer at all.** Both closers filtered `IN_PERSON`, so a
+started call stayed `IN_PROGRESS` for ever while the spec claimed it "carries its
+own end". Arrival-based closing stays in-person only — that asymmetry is
+deliberate (§15.6.6-6) — but the workday-end job now closes calls too, since a
+call has no arrival to end it and no explicit press anyone can be relied on to
+make. Verified: a call left running a day earlier is closed `INFERRED`.
+
 ### 15.6.5 Push and geofence — accelerators, not the mechanism
 
 Neither exists today. `firebase_messaging` is absent, there is no device-token
