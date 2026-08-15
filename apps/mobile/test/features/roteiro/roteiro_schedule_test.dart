@@ -165,10 +165,7 @@ void main() {
       );
 
       expect(schedule.hasWarnings, isTrue);
-      expect(
-        schedule.warnings.any((w) => w.message.contains('19:00')),
-        isTrue,
-      );
+      expect(schedule.warnings.any((w) => w.message.contains('19:00')), isTrue);
     });
 
     test('says nothing when the day still fits', () {
