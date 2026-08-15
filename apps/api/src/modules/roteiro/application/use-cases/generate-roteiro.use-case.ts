@@ -809,6 +809,9 @@ export class GenerateRoteiroUseCase {
       })),
       reachBoundKm,
       travelSource,
+      // The day's capacity, not what was filled. The client draws the shortfall
+      // as empty slots, which is how a rep sees there is room left.
+      slotCount: limit,
       params,
       usingDefaultParams,
       notices,

@@ -310,6 +310,7 @@ class Roteiro {
     required this.stops,
     required this.fixedPoints,
     required this.notices,
+    this.slotCount = 5,
     required this.driveSeconds,
     required this.serviceMinutes,
     this.endsAt,
@@ -337,6 +338,9 @@ class Roteiro {
           .whereType<Map>()
           .map((e) => RoteiroNotice.fromJson(e.cast<String, dynamic>()))
           .toList(),
+      slotCount:
+          (json['slotCount'] as num?)?.toInt() ??
+          ((json['stops'] as List?)?.length ?? 0).clamp(1, 12),
       driveSeconds: (totals['driveSeconds'] as num?)?.toInt() ?? 0,
       serviceMinutes: (totals['serviceMinutes'] as num?)?.toInt() ?? 0,
       endsAt: DateTime.tryParse(totals['endsAt'] as String? ?? '')?.toLocal(),
@@ -361,6 +365,10 @@ class Roteiro {
   final int driveSeconds;
   final int serviceMinutes;
   final DateTime? endsAt;
+
+  /// How many suggestion slots the day has — the engine's daily limit, not the
+  /// number it managed to fill. The difference is what an empty slot shows.
+  final int slotCount;
 
   bool get isEstimated => travelSource == 'ESTIMATED';
   bool get isAnchored => reachMode == 'ANCORA';

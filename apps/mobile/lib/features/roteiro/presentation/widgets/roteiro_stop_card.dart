@@ -16,6 +16,7 @@ class RoteiroStopCard extends StatelessWidget {
     required this.stop,
     required this.estimatedTravel,
     this.onTap,
+    this.onRemove,
   });
 
   final RoteiroStop stop;
@@ -23,6 +24,11 @@ class RoteiroStopCard extends StatelessWidget {
   /// P1 has no Matrix call, so travel is a straight-line estimate and says so.
   final bool estimatedTravel;
   final VoidCallback? onTap;
+
+  /// An explicit control rather than swipe-to-dismiss. Dismissible removes the
+  /// widget synchronously and asserts if the list has not changed with it,
+  /// which is what a re-plan cannot promise.
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +109,17 @@ class RoteiroStopCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onRemove != null)
+                    IconButton(
+                      tooltip: 'Remover do roteiro',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.gray400,
+                      ),
+                      onPressed: onRemove,
+                    ),
                 ],
               ),
               const SizedBox(height: 10),

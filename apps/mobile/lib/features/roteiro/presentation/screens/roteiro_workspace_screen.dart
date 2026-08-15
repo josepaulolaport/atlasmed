@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/rote
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_day_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/add_clinic_sheet.dart';
-import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_stop_card.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_slot_list.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_timeline.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -252,29 +252,13 @@ class _RoteiroWorkspaceScreenState
             else if (_view == _View.dia && roteiro.fixedPoints.isNotEmpty)
               RoteiroTimeline(roteiro: roteiro)
             else
-              ...roteiro.stops.map(
-                (stop) => Dismissible(
-                  key: ValueKey(stop.facilityVerticalProfileId),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20, bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.red50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      color: AppColors.redDark,
-                    ),
-                  ),
-                  onDismissed: (_) =>
-                      notifier.remove(stop.facilityVerticalProfileId),
-                  child: RoteiroStopCard(
-                    stop: stop,
-                    estimatedTravel: roteiro.isEstimated,
-                  ),
-                ),
+              RoteiroSlotList(
+                roteiro: roteiro,
+                visibleStops: notifier.visibleStops(roteiro),
+                slotCount: roteiro.slotCount,
+                onRemove: (stop) =>
+                    notifier.remove(stop.facilityVerticalProfileId),
+                onFillEmpty: () => _add(state, notifier),
               ),
           ],
         ),

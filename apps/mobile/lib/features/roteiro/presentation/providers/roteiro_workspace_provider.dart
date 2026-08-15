@@ -145,15 +145,24 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
     }
   }
 
-  /// Drops a stop and re-plans. The freed time is refilled by the engine, not
-  /// left as a hole.
-  Future<void> remove(int facilityVerticalProfileId) async {
+  /// Drops a stop, leaving its slot visibly empty.
+  ///
+  /// Deliberately does **not** re-plan. A rep removing three clinics in a row
+  /// would otherwise trigger three regenerations, each reshuffling the list
+  /// under their thumb — and the slate they were reading would change between
+  /// the decision and the tap. The empty slot stays until they ask for a new
+  /// plan, which is what the regenerate control is for.
+  void remove(int facilityVerticalProfileId) {
     state = state.copyWith(
       excluded: {...state.excluded, facilityVerticalProfileId},
       included: {...state.included}..remove(facilityVerticalProfileId),
     );
-    await generate();
   }
+
+  /// Suggestions the rep has not pulled out of the slate.
+  List<RoteiroStop> visibleStops(Roteiro roteiro) => roteiro.stops
+      .where((s) => !state.excluded.contains(s.facilityVerticalProfileId))
+      .toList();
 
   /// Adds a clinic the rep named. It goes in ahead of the ranking.
   Future<void> add(int facilityVerticalProfileId) async {

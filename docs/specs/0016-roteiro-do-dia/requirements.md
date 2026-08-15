@@ -1483,6 +1483,101 @@ makes it useful after confirmation as well as before.
 
 ---
 
+## 15.5 Amendment 2026-08-15 — learning from rejection, and CNES as an extra
+
+### 15.5.1 The slate is a set of slots
+
+The workspace shows the day's **capacity**, not just what the engine found: every row is one of
+three things, in time order.
+
+| row | meaning |
+|---|---|
+| **Já na sua agenda** | a booked interaction. Context, not a suggestion; changed in the calendar |
+| **Sugestão** | a generated stop, removable |
+| **Vaga livre** | capacity the engine could not fill, or the rep emptied |
+
+A list of only what was found hides the two facts a rep most needs while planning — how much of the
+day is already spoken for, and how much room is left. With slots visible, *"drop this and give me
+something else"* is an obvious move rather than a guess.
+
+**Removing no longer re-plans immediately.** A rep dropping three clinics in a row would otherwise
+fire three regenerations, each reshuffling the list under their thumb, so the slate they were
+reading changes between the decision and the tap. The slot goes empty and stays empty until they
+ask for a new plan.
+
+### 15.5.2 Rejection is evidence, and different rejections mean different things
+
+`roteiro_stop_rejections` exists and nothing reads it. It should feed generation — but a single
+"penalise what they removed" rule would be wrong, because the reasons are not comparable:
+
+| reason | what it is actually evidence *of* | where it should go |
+|---|---|---|
+| `FECHADA` | the clinic is gone | Não Conformidade (§9); stop suggesting it at all |
+| `NAO_E_MEU_CLIENTE` | the **assignment** is wrong | manager's attention, not the merit score |
+| `JA_VISITEI` | our **visit data** is missing | flags a gap in `interactions`, not a bad clinic |
+| `MUITO_LONGE` | the **reach parameters** are wrong for this rep | τ / radius, per rep |
+| `SEM_INTERESSE` | a genuine commercial fact about the clinic | merit penalty |
+| *(none given)* | weak — could be any of the above | small, fast-decaying penalty |
+
+So the design is **routing, not scoring**. Only `SEM_INTERESSE` and an unexplained removal touch
+merit; everything else is a defect report about data we hold, and treating it as "this clinic is
+bad" would bury the actual problem under a score adjustment.
+
+**The merit half:**
+
+```
+rejection_penalty = Σ over rejections of  weight(reason) × decay(age)
+decay(age)        = 0.5 ^ (age_days / REJECTION_HALFLIFE_DAYS)     default 90
+```
+
+Summed rather than latched, because **repetition is the signal**: one removal is a shrug, three is
+a fact. Decayed, because a clinic rejected two quarters ago should not be condemned forever —
+staffing changes, a new orthopaedist arrives, the reason expires.
+
+⚠️ **The coverage slot must be immune to it.** Otherwise the loop closes on itself: a clinic nobody
+has visited gets rejected, is penalised, stops being suggested, stays unvisited. The book would rot
+fastest exactly where it is least known, which is the failure §4.3.1 exists to prevent.
+
+**Rejections are per (rep, clinic), not global.** One rep's "not my client" is another's account.
+
+### 15.5.3 CNES is an extra, never a dependency
+
+Measured on the production clone today:
+
+| | profiles |
+|---|---|
+| in the book | 1 442 |
+| join `registry.facilities` | 1 442 |
+| have **any** staff row | 1 226 |
+| have an orthopaedist | 1 172 |
+
+**216 profiles — 15 % — have no staff row at all**, and the query currently reads
+`coalesce(o.n, 0)`. A facility CNES knows nothing about is scored identically to one CNES knows has
+zero orthopaedists. Those are completely different claims and the engine cannot tell them apart.
+
+This is the exact shape of the risk: a failed or partial load does not announce itself, it just
+quietly makes clinics look worthless. Three defences, none of which require trusting the load:
+
+**1. Absent is not zero.** No staff row → capacity is *unknown*, scored at a neutral mid-band like
+`headroom_unknown`, and the card says *"capacidade não conhecida"* rather than implying we checked.
+A clinic we know nothing about must stay reachable — the same argument that keeps unsurveyed
+clinics scoring 0.40 on headroom (§4.2b).
+
+**2. A coverage floor, checked per generation.** If fewer than `MIN_REGISTRY_COVERAGE` (default
+60 %) of a rep's candidates carry staff data, the capacity component is **down-weighted
+proportionally** and its weight redistributed across the components that do have data — and a
+notice says so. A load that half-failed then degrades the ranking gracefully instead of silently
+ranking most of the book as empty.
+
+**3. Freshness is visible.** `ingestion.cnes_runs` records when the registry was last loaded. A
+registry older than a competence or two is a fact ops should see, not something the engine absorbs.
+
+The principle, stated so it survives the next person: **CNES may only ever *raise* confidence in a
+clinic, never lower it.** Its absence means we do not know, and not knowing is a reason to look —
+which is what a rep's visit is for.
+
+---
+
 ## 16. Deferred
 
 ### 16.1 Trip planning for geographically spread books
