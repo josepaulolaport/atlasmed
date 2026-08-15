@@ -101,15 +101,18 @@ class FakeRepository implements RoteiroRepository {
     if (this.options.minBoundKm && input.reachBoundKm < this.options.minBoundKm) return [];
     const byMerit = [...this.candidates].sort((a, b) => b.meritScore - a.meritScore);
     const top = byMerit.slice(0, input.limit);
+    const requested = byMerit.filter(
+      (c) => input.includeProfileIds.includes(c.facilityVerticalProfileId) && !top.includes(c),
+    );
     const overdue = byMerit
-      .filter((c) => c.coverageOverdue && !top.includes(c))
+      .filter((c) => c.coverageOverdue && !top.includes(c) && !requested.includes(c))
       .sort((a, b) => {
         const at = a.lastSuggestedAt?.getTime() ?? -Infinity;
         const bt = b.lastSuggestedAt?.getTime() ?? -Infinity;
         return at - bt;
       })
       .slice(0, 5);
-    return [...top, ...overdue];
+    return [...top, ...requested, ...overdue];
   }
 }
 
@@ -398,6 +401,72 @@ describe("GenerateRoteiroUseCase", () => {
         stop.plannedEndsAt.getTime() > new Date("2026-08-17T13:00:00.000Z").getTime();
       expect(overlaps).toBe(false);
     }
+  });
+
+  it("starts a future day at the first booked visit when no origin is given", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 })], {
+      located: [
+        {
+          facilityId: 55,
+          facilityVerticalProfileId: 77,
+          facilityName: "Primeira",
+          lat: -23.6,
+          lng: -46.7,
+        },
+      ],
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: "2026-08-17T12:00:00.000Z",
+            endsAt: "2026-08-17T13:00:00.000Z",
+            interaction: { facilityId: 55, modality: "IN_PERSON" },
+          },
+        ],
+      },
+    });
+
+    const result = await useCase.execute({ ...baseInput(), origin: undefined });
+
+    expect(result.origin).toEqual({ lat: -23.6, lng: -46.7 });
+  });
+
+  it("refuses a day with no origin and nothing booked, rather than guessing", async () => {
+    // A plan built from an inferred position produces drive times that look
+    // exactly as trustworthy as real ones (§4.1).
+    const repository = new FakeRepository([candidate({ id: 1 })]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    await expect(
+      useCase.execute({ ...baseInput(), origin: undefined }),
+    ).rejects.toThrow(/começa o dia/);
+  });
+
+  it("refills the slot when a clinic is removed, rather than returning a shorter day", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ excludeProfileIds: [1, 2] }));
+
+    expect(result.stops).toHaveLength(5);
+    expect(repository.calls[0]?.excludeProfileIds).toEqual([1, 2]);
+  });
+
+  it("places a clinic the rep asked for, ahead of the ranking", async () => {
+    const wanted = candidate({ id: 99, meritScore: 0.01, facilityName: "Pedida" });
+    const repository = new FakeRepository([
+      ...Array.from({ length: 20 }, (_, i) => candidate({ id: i + 1, meritScore: 0.9 })),
+      wanted,
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ includeProfileIds: [99] }));
+
+    expect(result.stops.map((s) => s.candidate.facilityName)).toContain("Pedida");
   });
 
   it("refuses to plan another rep's day", async () => {

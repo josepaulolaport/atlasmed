@@ -133,10 +133,45 @@ describe("roteiro HTTP", () => {
     expect(input.timeZone).toBe("America/Sao_Paulo");
   });
 
-  it("rejects a request with no origin — there is no fallback position", async () => {
-    const { app } = build();
+  it("accepts a request with no origin — the day's first booking is the fallback", async () => {
+    // Live GPS answers "where am I", which says nothing about tomorrow. The
+    // engine resolves the origin from the schedule and refuses only when the
+    // day has nothing booked to start from (§15.4.1).
+    const { app, captured } = build();
 
     const response = await app.handle(post("/roteiros", { verticalId: 1 }));
+
+    expect(response.status).toBe(200);
+    expect((captured.generate[0] as { origin?: unknown }).origin).toBeUndefined();
+  });
+
+  it("plans the day it was given, not today", async () => {
+    const { app, captured } = build();
+
+    await app.handle(post("/roteiros", { ...body, scopeDate: "2026-09-01" }));
+
+    expect((captured.generate[0] as { today: string }).today).toBe("2026-09-01");
+  });
+
+  it("carries the rep's removals and additions through", async () => {
+    const { app, captured } = build();
+
+    await app.handle(
+      post("/roteiros", { ...body, excludeProfileIds: [7, 8], includeProfileIds: [42] }),
+    );
+
+    const input = captured.generate[0] as {
+      excludeProfileIds: number[];
+      includeProfileIds: number[];
+    };
+    expect(input.excludeProfileIds).toEqual([7, 8]);
+    expect(input.includeProfileIds).toEqual([42]);
+  });
+
+  it("rejects a malformed scopeDate", async () => {
+    const { app } = build();
+
+    const response = await app.handle(post("/roteiros", { ...body, scopeDate: "01/09/2026" }));
 
     expect(response.status).toBe(400);
   });

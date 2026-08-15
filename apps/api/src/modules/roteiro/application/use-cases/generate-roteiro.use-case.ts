@@ -185,6 +185,24 @@ interface BusyInterval {
   endsAt: number;
 }
 
+/**
+ * A day other than today, with nothing booked to start from.
+ *
+ * Deliberately an error rather than a guess: §4.1's measured finding is that an
+ * inferred origin lands in empty space, and a plan built from a position nobody
+ * confirmed produces drive times that look exactly as trustworthy as real ones.
+ */
+export class RoteiroOriginRequiredError extends AppError {
+  constructor(scopeDate: string) {
+    super(
+      "ROTEIRO_ORIGIN_REQUIRED",
+      400,
+      "Escolha de onde você começa o dia — não há visita agendada para partir.",
+      { scopeDate },
+    );
+  }
+}
+
 /** The agent has regenerated too many times today (§7.4). */
 export class RoteiroQuotaExceededError extends AppError {
   constructor(max: number) {
@@ -209,8 +227,27 @@ export interface GenerateRoteiroInput {
   /** Whose day. Defaults to the actor; a manager may target a rep they manage. */
   subjectUserId?: number;
   verticalId: number;
-  origin: RoteiroPoint;
+  /**
+   * Where the day starts.
+   *
+   * Optional now that a roteiro can plan a day other than today: live GPS
+   * answers "where am I", which says nothing about tomorrow. When it is absent
+   * the engine falls back to the day's first booked in-person visit, and when
+   * the day has none it refuses rather than guessing (§15.4.1).
+   */
+  origin?: RoteiroPoint;
   limit?: number;
+  /**
+   * Clinics the rep took out of the slate. Excluded from the candidate set
+   * entirely rather than filtered afterwards, so regenerating fills the freed
+   * slot with the next best clinic instead of returning a shorter day.
+   */
+  excludeProfileIds?: number[];
+  /**
+   * Clinics the rep added by hand. Forced into the slate ahead of the merit
+   * ranking — a rep who names a clinic has a reason the engine does not have.
+   */
+  includeProfileIds?: number[];
   /**
    * Persist the result as a DRAFT. `POST /roteiros` does; `/preview` does not,
    * so exploring anchors never disturbs the rep's live plan for the day.
@@ -593,12 +630,26 @@ export class GenerateRoteiroUseCase {
     // around them, a clear day is a plain circle around the rep.
     const reachMode: RoteiroReachMode = fixedPoints.length > 0 ? "ANCORA" : "LIVRE";
 
+    /**
+     * The day's starting point: what the rep sent, or where their first booked
+     * visit is. Resolved here rather than at the edge because only the schedule
+     * knows the fallback, and only the schedule has been read by this point.
+     */
+    const origin: RoteiroPoint =
+      input.origin ??
+      (fixedPoints[0] === undefined
+        ? (() => {
+            throw new RoteiroOriginRequiredError(input.today);
+          })()
+        : { lat: fixedPoints[0].lat, lng: fixedPoints[0].lng });
+
     const { candidates, reachBoundKm, expanded } = await this.reach({
       input,
       subjectUserId,
       params,
       reachMode,
       fixedPoints,
+      origin,
       limit,
     });
 
@@ -621,7 +672,7 @@ export class GenerateRoteiroUseCase {
 
     const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
     const gaps = buildGaps({
-      origin: input.origin,
+      origin,
       fixedPoints,
       from: Math.max(input.now.getTime(), this.atLocalTime(input.today, params.workdayStart, timeZone).getTime()),
       dayEnd: dayEnd.getTime(),
@@ -637,14 +688,23 @@ export class GenerateRoteiroUseCase {
      * ordering — and asking Mapbox each time would be both slow and expensive.
      */
     const { travel, travelSource } = await this.resolveTravel(
-      input.origin,
+      origin,
       fixedPoints,
       candidates,
       notices,
     );
 
     const selected = this.reorder(
-      this.select({ candidates, limit, params, notices, gaps, busy, travel }),
+      this.select({
+        candidates,
+        limit,
+        params,
+        notices,
+        gaps,
+        busy,
+        travel,
+        includeProfileIds: input.includeProfileIds ?? [],
+      }),
       gaps,
       params,
       busy,
@@ -702,7 +762,7 @@ export class GenerateRoteiroUseCase {
           createdByUserId: input.actor.userId,
           verticalId: input.verticalId,
           scopeDate: input.today,
-          origin: input.origin,
+          origin,
           reachMode,
           anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
           reachBoundKm,
@@ -733,7 +793,7 @@ export class GenerateRoteiroUseCase {
       subjectUserId,
       verticalId: input.verticalId,
       scopeDate: input.today,
-      origin: input.origin,
+      origin,
       reachMode,
       anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
       // Coordinates included: the timeline and the P2 map both have to draw
@@ -891,6 +951,7 @@ export class GenerateRoteiroUseCase {
     params: RoteiroParams;
     reachMode: RoteiroReachMode;
     fixedPoints: FixedPoint[];
+    origin: RoteiroPoint;
     limit: number;
   }) {
     const base =
@@ -904,9 +965,11 @@ export class GenerateRoteiroUseCase {
       candidates = await this.deps.repository.scoreCandidates({
         userId: args.subjectUserId,
         verticalId: args.input.verticalId,
-        origin: args.input.origin,
+        origin: args.origin,
         reachMode: args.reachMode,
         fixedPoints: args.fixedPoints,
+        excludeProfileIds: args.input.excludeProfileIds ?? [],
+        includeProfileIds: args.input.includeProfileIds ?? [],
         reachBoundKm,
         params: args.params,
         today: args.input.today,
@@ -934,8 +997,9 @@ export class GenerateRoteiroUseCase {
     gaps: DayGap[];
     busy: BusyInterval[];
     travel: TravelFn;
+    includeProfileIds: number[];
   }) {
-    const { candidates, limit, params, notices, gaps, busy, travel } = args;
+    const { candidates, limit, params, notices, gaps, busy, travel, includeProfileIds } = args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
     const chosen: PlacedStop[] = [];
@@ -944,6 +1008,45 @@ export class GenerateRoteiroUseCase {
     // the rep's calendar; the engine plans around them rather than proposing
     // them back. They shape the route through §4.1 reachability and the §4.5
     // cost model, not through the slate.
+
+    /**
+     * Clinics the rep asked for, placed before anything the engine chose.
+     *
+     * A rep naming a clinic knows something the engine does not — a call they
+     * took, a doctor expecting them. So it goes in on their say-so, not on
+     * merit, and only fails if the day genuinely cannot hold it.
+     */
+    for (const profileId of includeProfileIds) {
+      if (chosen.length >= limit) break;
+      const wanted = candidates.find((c) => c.facilityVerticalProfileId === profileId);
+      if (!wanted || taken.has(profileId)) continue;
+      const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
+      let placed: { gap: DayGap; at: NonNullable<ReturnType<typeof fitInGap>> } | null = null;
+      for (const gap of gaps) {
+        const at = fitInGap(gap, { lat: wanted.lat, lng: wanted.lng }, serviceMs, busy, travel);
+        if (at && (!placed || at.addedSeconds < placed.at.addedSeconds)) placed = { gap, at };
+      }
+      if (!placed) {
+        notices.push({
+          code: "REQUESTED_DOES_NOT_FIT",
+          facilityVerticalProfileId: profileId,
+          message: `${wanted.facilityName} não cabe no dia — remova outra parada para incluí-la.`,
+        });
+        continue;
+      }
+      taken.add(profileId);
+      chosen.push({
+        candidate: wanted,
+        isCoverageSlot: false,
+        gapIndex: placed.gap.index,
+        startsAt: new Date(placed.at.startsAt),
+        endsAt: new Date(placed.at.endsAt),
+        travelSeconds: placed.at.travelSeconds,
+      });
+      quotas[wanted.bucket] = Math.max(0, quotas[wanted.bucket] - 1);
+      placed.gap.cursor = { lat: wanted.lat, lng: wanted.lng };
+      placed.gap.clock = placed.at.endsAt;
+    }
 
     // §4.3.1 — one reserved slot for the clinic longest without a commitment.
     const coverage = candidates

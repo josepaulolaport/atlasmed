@@ -23,6 +23,36 @@ export interface RoteiroHttpUseCases {
  * and P2 spends a paid Mapbox Matrix call. A GET invites prefetchers, retries
  * and browser caches to run it, and a cached slate is a stale slate.
  */
+/**
+ * Shared by preview and persist — the workspace regenerates constantly and both
+ * paths must accept exactly the same controls, or an edit would behave one way
+ * while drafting and another on save.
+ */
+const generationBody = t.Object({
+  verticalId: t.Number({ minimum: 1 }),
+  /**
+   * Optional: absent means the day's first booked in-person visit is the
+   * starting point, and a day with no booking is refused rather than guessed
+   * (§15.4.1).
+   */
+  origin: t.Optional(
+    t.Object({
+      lat: t.Number({ minimum: -90, maximum: 90 }),
+      lng: t.Number({ minimum: -180, maximum: 180 }),
+    }),
+  ),
+  /** The day being planned, `YYYY-MM-DD`. Omitted means today. */
+  scopeDate: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" })),
+  /** Whose day. Omitted means the caller's own. */
+  subjectUserId: t.Optional(t.Number({ minimum: 1 })),
+  limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
+  /** Clinics the rep removed; the freed slot is refilled, not left empty. */
+  excludeProfileIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { maxItems: 50 })),
+  /** Clinics the rep added by hand, placed ahead of the merit ranking. */
+  includeProfileIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { maxItems: 12 })),
+  timeZone: t.Optional(t.String({ minLength: 1 })),
+});
+
 export const roteiroRoute = (
   useCases: RoteiroHttpUseCases = roteiroUseCases,
   authPlugin: typeof auth = auth,
@@ -47,9 +77,11 @@ export const roteiroRoute = (
           // Live GPS only — there is deliberately no stored or averaged
           // fallback (§4.1). A centroid of a scattered book lands in empty
           // space, and two of five reps have nothing within 120 km of theirs.
-          origin: { lat: body.origin.lat, lng: body.origin.lng },
+          origin: body.origin ? { lat: body.origin.lat, lng: body.origin.lng } : undefined,
           limit: body.limit,
-          today: localCivilDate(now, body.timeZone),
+          excludeProfileIds: body.excludeProfileIds,
+          includeProfileIds: body.includeProfileIds,
+          today: body.scopeDate ?? localCivilDate(now, body.timeZone),
           now,
           timeZone: body.timeZone,
         } as never);
@@ -64,17 +96,7 @@ export const roteiroRoute = (
           tags: ["Roteiro"],
           security: [{ bearerAuth: [] }],
         },
-        body: t.Object({
-          verticalId: t.Number({ minimum: 1 }),
-          origin: t.Object({
-            lat: t.Number({ minimum: -90, maximum: 90 }),
-            lng: t.Number({ minimum: -180, maximum: 180 }),
-          }),
-          /** Whose day. Omitted means the caller's own. */
-          subjectUserId: t.Optional(t.Number({ minimum: 1 })),
-          limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
-          timeZone: t.Optional(t.String({ minLength: 1 })),
-        }),
+        body: generationBody,
       },
     )
     .post(
@@ -91,10 +113,12 @@ export const roteiroRoute = (
           scope,
           subjectUserId: body.subjectUserId,
           verticalId: body.verticalId,
-          origin: { lat: body.origin.lat, lng: body.origin.lng },
+          origin: body.origin ? { lat: body.origin.lat, lng: body.origin.lng } : undefined,
           limit: body.limit,
+          excludeProfileIds: body.excludeProfileIds,
+          includeProfileIds: body.includeProfileIds,
           persist: true,
-          today: localCivilDate(now, body.timeZone),
+          today: body.scopeDate ?? localCivilDate(now, body.timeZone),
           now,
           timeZone: body.timeZone,
         } as never);
@@ -108,16 +132,7 @@ export const roteiroRoute = (
           tags: ["Roteiro"],
           security: [{ bearerAuth: [] }],
         },
-        body: t.Object({
-          verticalId: t.Number({ minimum: 1 }),
-          origin: t.Object({
-            lat: t.Number({ minimum: -90, maximum: 90 }),
-            lng: t.Number({ minimum: -180, maximum: 180 }),
-          }),
-          subjectUserId: t.Optional(t.Number({ minimum: 1 })),
-          limit: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
-          timeZone: t.Optional(t.String({ minLength: 1 })),
-        }),
+        body: generationBody,
       },
     )
     .post(

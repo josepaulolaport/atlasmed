@@ -121,6 +121,19 @@ export interface ScoreCandidatesInput {
    * committed to driving.
    */
   fixedPoints: FixedPoint[];
+  /**
+   * Clinics the rep removed from the slate. Excluded from the candidate set
+   * rather than filtered after scoring, so the freed slot is refilled with the
+   * next best clinic instead of leaving a shorter day.
+   */
+  excludeProfileIds: number[];
+  /**
+   * Clinics the rep asked for. Kept in the shortlist **regardless of merit** —
+   * a requested clinic is usually low-scoring, which is exactly why the rep had
+   * to ask, and a merit-ordered cut would drop it before selection saw it.
+   * Same failure the coverage slot has.
+   */
+  includeProfileIds: number[];
   /** Radius (LIVRE) or detour budget (ANCORA), kilometres. */
   reachBoundKm: number;
   params: RoteiroParams;

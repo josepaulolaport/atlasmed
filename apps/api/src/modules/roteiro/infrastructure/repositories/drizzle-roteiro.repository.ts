@@ -407,6 +407,11 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
                 (${JSON.stringify(params.unitTypePolicy)}::jsonb -> coalesce(ut.name, '') ->> 'eligible')::boolean,
                 (${JSON.stringify(params.unitTypePolicy)}::jsonb -> '*' ->> 'eligible')::boolean,
                 true) = true
+          ${
+            input.excludeProfileIds.length > 0
+              ? sql`and p.id not in ${input.excludeProfileIds}`
+              : sql``
+          }
           -- Already committed for this window.
           and not exists (
             select 1 from interactions i
@@ -553,6 +558,11 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       -- sees it, and the reserved slot silently stays empty forever.
       where w.merit_rank <= ${input.limit}
          or w.coverage_rank <= ${COVERAGE_SHORTLIST_DEPTH}
+         ${
+           input.includeProfileIds.length > 0
+             ? sql`or w.profile_id in ${input.includeProfileIds}`
+             : sql``
+         }
       order by w.merit desc
     `);
 
