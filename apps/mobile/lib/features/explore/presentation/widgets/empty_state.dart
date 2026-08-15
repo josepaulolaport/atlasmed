@@ -24,8 +24,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final constrained = query.trim().isNotEmpty || hasActiveFilters;
-    final title = query.isNotEmpty
+    final searching = query.trim().isNotEmpty;
+    final title = searching
         ? 'Nada encontrado para "$query"'
         : hasActiveFilters
         ? 'Nenhum resultado com estes filtros'
@@ -35,16 +35,26 @@ class EmptyState extends StatelessWidget {
             _ => 'Nenhum resultado',
           };
 
-    final subtitle = constrained
-        ? 'Tente outra busca ou limpe os filtros para ampliar os resultados.'
-        : switch (kind) {
-            'facility-doctor' =>
-              'Toque em + no canto inferior para buscar e associar médicos a esta clínica.',
-            'facility-admin' =>
-              'Toque em + no canto inferior para buscar e associar profissionais a esta clínica.',
-            'doctor' => 'Nenhum médico encontrado.',
-            _ => 'Nenhuma clínica encontrada.',
-          };
+    // Only mention filters when there are filters.
+    //
+    // Every search used to end in "tente outra busca ou limpe os filtros",
+    // including on surfaces that have no filters at all — the CNES lookup has
+    // a search field and nothing else, so it asked the rep to clear something
+    // that does not exist there.
+    final subtitle = switch ((searching, hasActiveFilters)) {
+      (true, true) =>
+        'Tente outro termo ou limpe os filtros para ampliar os resultados.',
+      (true, false) => 'Tente outro termo.',
+      (false, true) => 'Ajuste ou limpe os filtros para ampliar os resultados.',
+      (false, false) => switch (kind) {
+        'facility-doctor' =>
+          'Toque em + no canto inferior para buscar e associar médicos a esta clínica.',
+        'facility-admin' =>
+          'Toque em + no canto inferior para buscar e associar profissionais a esta clínica.',
+        'doctor' => 'Nenhum médico encontrado.',
+        _ => 'Nenhuma clínica encontrada.',
+      },
+    };
 
     return Center(
       child: Padding(
@@ -59,10 +69,17 @@ class EmptyState extends StatelessWidget {
                 color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
+              // `person_off` only where the missing thing is a person; a
+              // clinics list with no results was showing a crossed-out person.
               child: Icon(
-                query.isNotEmpty
+                searching || hasActiveFilters
                     ? Icons.search_off_rounded
-                    : Icons.person_off_outlined,
+                    : switch (kind) {
+                        'facility-doctor' ||
+                        'facility-admin' ||
+                        'doctor' => Icons.person_off_outlined,
+                        _ => Icons.local_hospital_outlined,
+                      },
                 size: 32,
                 color: AppColors.gray400,
               ),

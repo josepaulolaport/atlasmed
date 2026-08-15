@@ -329,7 +329,9 @@ class _ClinicFilters extends StatelessWidget {
             }).toList(),
           ),
         ),
-        const _SectionHeader(title: 'Especialidade'),
+        // The field is `clinicalFocusIds`, and the results it filters label it
+        // "foco clínico" on every row.
+        const _SectionHeader(title: 'Foco clínico'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: _SpecialtyNavRow(
@@ -344,8 +346,6 @@ class _ClinicFilters extends StatelessWidget {
             icon: Icons.local_hospital_outlined,
             title: 'Escolher tipos de unidade',
             count: local['unitTypeIds']?.length ?? 0,
-            // Masculine: "1 selecionado", against Especialidade's "1
-            // selecionada".
             selectedWord: 'selecionado',
             onTap: onOpenUnitType,
           ),
@@ -445,9 +445,10 @@ class _SpecialtyNavRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _CatalogNavRow(
     icon: Icons.medical_services_outlined,
-    title: 'Escolher especialidades',
+    title: 'Escolher focos clínicos',
     count: count,
-    selectedWord: 'selecionada',
+    // Masculine, like "tipo de unidade" above: "1 selecionado".
+    selectedWord: 'selecionado',
     onTap: onTap,
   );
 }

@@ -249,9 +249,14 @@ void main() {
     expect(find.text('SITUAÇÃO CADASTRAL'), findsOneWidget);
     expect(find.text('STATUS'), findsNothing);
 
+    // "Foco clínico", not "Especialidade": it filters `clinicalFocusIds`, and
+    // that is what the rows it filters call the field.
+    expect(find.text('FOCO CLÍNICO'), findsOneWidget);
+    expect(find.text('ESPECIALIDADE'), findsNothing);
+
     expect(top('STATUS DE COMPRAS'), lessThan(top('NATUREZA JURÍDICA')));
-    expect(top('NATUREZA JURÍDICA'), lessThan(top('ESPECIALIDADE')));
-    expect(top('ESPECIALIDADE'), lessThan(top('SITUAÇÃO CADASTRAL')));
+    expect(top('NATUREZA JURÍDICA'), lessThan(top('FOCO CLÍNICO')));
+    expect(top('FOCO CLÍNICO'), lessThan(top('SITUAÇÃO CADASTRAL')));
     expect(top('SITUAÇÃO CADASTRAL'), lessThan(top('PERFIL DE COMPRA')));
   });
 
