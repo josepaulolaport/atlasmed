@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/te
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -104,94 +105,135 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
     );
     final state = ref.watch(metricClinicsListProvider(args));
     final notifier = ref.read(metricClinicsListProvider(args).notifier);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(_metricTitles[widget.metric] ?? 'Clínicas'),
-        // The count the card promised, where Explorar's own lists put it.
-        bottom: state.loading
-            ? null
-            : _CountHeader(total: state.total, loaded: state.clinics.length),
+      appBar: AppBar(title: Text(_metricTitles[widget.metric] ?? 'Clínicas')),
+      body: Column(
+        children: [
+          // Explorar's own search bar, with no filter button: the recorte was
+          // already chosen by the card that opened this list, and a second set
+          // of filters here would quietly disagree with it.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+            child: SearchBarWidget(
+              value: state.query,
+              onChanged: notifier.setQuery,
+              hintText: 'Buscar clínica, bairro…',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _CountLabel(
+                total: state.total,
+                loaded: state.clinics.length,
+                loading: state.loading,
+              ),
+            ),
+          ),
+          Expanded(child: _body(state, notifier)),
+        ],
       ),
-      body: RefreshIndicator(
-        color: AppColors.navyBright,
-        backgroundColor: Colors.white,
-        strokeWidth: 2.6,
-        onRefresh: notifier.refresh,
-        child: state.loading
-            ? ListView.builder(
-                itemCount: 8,
-                itemBuilder: (_, _) => const SkeletonRow(),
-              )
-            : state.clinics.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 64),
-                    child: Text(
-                      'Nenhuma clínica neste recorte.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: AppColors.gray500),
+    );
+  }
+
+  Widget _body(
+    MetricClinicsListState state,
+    MetricClinicsListNotifier notifier,
+  ) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return RefreshIndicator(
+      color: AppColors.navyBright,
+      backgroundColor: Colors.white,
+      strokeWidth: 2.6,
+      onRefresh: notifier.refresh,
+      child: state.loading
+          ? ListView.builder(
+              itemCount: 8,
+              itemBuilder: (_, _) => const SkeletonRow(),
+            )
+          : state.clinics.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 64,
+                  ),
+                  child: Text(
+                    // The two empty states are different problems: an empty
+                    // recorte is a fact about the metric, an empty search is a
+                    // fact about what was typed.
+                    state.query.trim().isEmpty
+                        ? 'Nenhuma clínica neste recorte.'
+                        : 'Nenhuma clínica encontrada para “${state.query.trim()}”.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.gray500,
                     ),
                   ),
-                ],
-              )
-            : ExploreResultsList(
-                items: [
-                  for (final clinic in state.clinics)
-                    Left<FacilityEntry, ProfessionalEntry>(clinic),
-                ],
-                hasMore: state.hasMore,
-                isLoadingMore: state.loadingMore,
-                onLoadMore: () => unawaited(notifier.loadMore()),
-                bottomInset: bottomInset,
-                preferredVerticalId: widget.scope.verticalId,
-                clinicTrailingBuilder: widget.manageForUserId == null
-                    ? null
-                    : (clinic) => _DissociateMenu(
-                        memberName: widget.manageForName,
-                        onOpen: () => ClinicDetailRoute(
-                          id: clinic.id,
-                          verticalId: widget.scope.verticalId,
-                        ).push(context),
-                        onDissociate: () => _dissociate(clinic),
-                      ),
-              ),
-      ),
+                ),
+              ],
+            )
+          : ExploreResultsList(
+              items: [
+                for (final clinic in state.clinics)
+                  Left<FacilityEntry, ProfessionalEntry>(clinic),
+              ],
+              hasMore: state.hasMore,
+              isLoadingMore: state.loadingMore,
+              onLoadMore: () => unawaited(notifier.loadMore()),
+              bottomInset: bottomInset,
+              preferredVerticalId: widget.scope.verticalId,
+              clinicTrailingBuilder: widget.manageForUserId == null
+                  ? null
+                  : (clinic) => _DissociateMenu(
+                      memberName: widget.manageForName,
+                      onOpen: () => ClinicDetailRoute(
+                        id: clinic.id,
+                        verticalId: widget.scope.verticalId,
+                      ).push(context),
+                      onDissociate: () => _dissociate(clinic),
+                    ),
+            ),
     );
   }
 }
 
-/// "1423 clínicas" under the title, and how many are loaded while more come.
-class _CountHeader extends StatelessWidget implements PreferredSizeWidget {
-  const _CountHeader({required this.total, required this.loaded});
+/// "1423 clínicas", and how many are loaded while more are coming.
+///
+/// Where Explorar puts its own result count, and reading the same way — this is
+/// the size of the list, which the search narrows. The metric that opened the
+/// list is the card on the screen behind, and it does not move.
+class _CountLabel extends StatelessWidget {
+  const _CountLabel({
+    required this.total,
+    required this.loaded,
+    required this.loading,
+  });
 
   final int total;
   final int loaded;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(26);
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
-    final label = loaded >= total
+    final label = loading
+        ? 'Carregando…'
+        : loaded >= total
         ? '$total clínica${total == 1 ? '' : 's'}'
         : '$loaded de $total clínicas';
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.gray500,
-          ),
-        ),
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: AppColors.gray500,
       ),
     );
   }

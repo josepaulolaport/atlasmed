@@ -121,15 +121,20 @@ class MetricClinicsListState {
     this.clinics = const [],
     this.total = 0,
     this.page = 0,
+    this.query = '',
     this.loading = true,
     this.loadingMore = false,
   });
 
   final List<FacilityEntry> clinics;
+
+  /// How many clinics match — the search included. Not the metric's own count,
+  /// which is the card above and does not move because somebody typed.
   final int total;
 
   /// Highest page fetched; 0 before the first has landed.
   final int page;
+  final String query;
   final bool loading;
   final bool loadingMore;
 
@@ -141,6 +146,7 @@ class MetricClinicsListState {
     List<FacilityEntry>? clinics,
     int? total,
     int? page,
+    String? query,
     bool? loading,
     bool? loadingMore,
   }) {
@@ -148,6 +154,7 @@ class MetricClinicsListState {
       clinics: clinics ?? this.clinics,
       total: total ?? this.total,
       page: page ?? this.page,
+      query: query ?? this.query,
       loading: loading ?? this.loading,
       loadingMore: loadingMore ?? this.loadingMore,
     );
@@ -160,6 +167,7 @@ typedef MetricClinicsFetch =
       required DashboardScopeArgs scope,
       required int page,
       required int limit,
+      String? search,
     });
 
 Future<DashboardClinicPage?> _fetchMetricClinics({
@@ -167,12 +175,14 @@ Future<DashboardClinicPage?> _fetchMetricClinics({
   required DashboardScopeArgs scope,
   required int page,
   required int limit,
+  String? search,
 }) async {
   final repository = metricClinicsRepository(
     metric: metric,
     args: scope,
     page: page,
     limit: limit,
+    search: search,
   );
   try {
     return await repository.currentValueOrResolve();
@@ -200,9 +210,31 @@ class MetricClinicsListNotifier extends StateNotifier<MetricClinicsListState> {
 
   static const pageSize = 25;
 
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> refresh() async {
-    state = const MetricClinicsListState();
+    state = MetricClinicsListState(query: state.query);
     await _load(1);
+  }
+
+  /// Debounced: every keystroke is a request otherwise, and the answers can
+  /// land out of order — the list would settle on whichever query the server
+  /// finished last rather than on what is in the box.
+  void setQuery(String value) {
+    if (value == state.query) return;
+    state = state.copyWith(query: value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      state = state.copyWith(loading: true, clinics: const [], page: 0);
+      unawaited(_load(1));
+    });
   }
 
   /// Guarded on [MetricClinicsListState.loadingMore]: the scroll listener fires
@@ -215,13 +247,18 @@ class MetricClinicsListNotifier extends StateNotifier<MetricClinicsListState> {
   }
 
   Future<void> _load(int page) async {
+    final requestedQuery = state.query;
     final result = await _fetch(
       metric: metric,
       scope: scope,
       page: page,
       limit: pageSize,
+      search: requestedQuery,
     );
     if (!mounted) return;
+    // Dropped if the box moved on while this was in flight: a slow answer to an
+    // old query would otherwise overwrite a fast answer to the current one.
+    if (requestedQuery != state.query) return;
     if (result == null) {
       state = state.copyWith(loading: false, loadingMore: false);
       return;

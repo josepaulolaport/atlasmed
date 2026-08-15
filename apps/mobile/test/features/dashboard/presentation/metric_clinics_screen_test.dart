@@ -50,12 +50,17 @@ DashboardClinicPage pageAt(int page, {int total = 60}) {
   );
 }
 
+/// Every search the fake was asked for, in order.
+final searches = <String?>[];
+
 Future<void> pump(
   WidgetTester tester, {
   int? manageForUserId,
   int total = 60,
   Completer<DashboardClinicPage?>? holdPageTwo,
+  int matches = 2,
 }) async {
+  searches.clear();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -70,9 +75,16 @@ Future<void> pump(
                   required scope,
                   required page,
                   required limit,
+                  search,
                 }) async {
+                  searches.add(search);
                   if (page == 2 && holdPageTwo != null) {
                     return holdPageTwo.future;
+                  }
+                  // A search narrows the set; the server answers with the
+                  // matches and a total that counts only them.
+                  if (search != null && search.trim().isNotEmpty) {
+                    return pageAt(page, total: matches);
                   }
                   return pageAt(page, total: total);
                 },
@@ -94,8 +106,12 @@ Future<void> pump(
 }
 
 Future<void> scrollToBottom(WidgetTester tester) async {
-  await tester.fling(find.byType(ListView), const Offset(0, -6000), 4000);
-  await tester.pumpAndSettle();
+  // Twice: one fling does not clear 25 rows of a list that now sits below a
+  // search bar and a count, and the load-more only fires at the end.
+  for (var i = 0; i < 2; i++) {
+    await tester.fling(find.byType(ListView), const Offset(0, -6000), 5000);
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
@@ -142,24 +158,10 @@ void main() {
     expect(find.byType(ClinicRow), findsWidgets);
   });
 
+  // Appending, the re-entrancy guard and the stale-response drop live in the
+  // notifier and are asserted there — they are invisible from here, since a
+  // list that appended page two twice renders the same as one that did it once.
   group('infinite scroll', () {
-    testWidgets('reaching the end appends the next page to the same list', (
-      tester,
-    ) async {
-      await pump(tester);
-      expect(find.text('Clínica 26'), findsNothing);
-
-      await scrollToBottom(tester);
-
-      // Appended, not swapped: page one's rows are still in the list above.
-      await tester.scrollUntilVisible(
-        find.text('Clínica 26'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Clínica 26'), findsOneWidget);
-    });
-
     testWidgets('a skeleton row holds the place of the page in flight', (
       tester,
     ) async {
@@ -187,6 +189,62 @@ void main() {
 
       expect(find.byType(SkeletonRow), findsNothing);
       expect(find.text('20 clínicas'), findsOneWidget);
+    });
+  });
+
+  group('search', () {
+    Future<void> type(WidgetTester tester, String value) async {
+      await tester.enterText(find.byType(TextField), value);
+      // Past the debounce.
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('narrows the list to what was typed', (tester) async {
+      await pump(tester, matches: 2);
+      expect(find.text('25 de 60 clínicas'), findsOneWidget);
+
+      await type(tester, 'joelho');
+
+      expect(searches.last, 'joelho');
+      expect(find.text('2 clínicas'), findsOneWidget);
+    });
+
+    testWidgets('waits for typing to settle before asking', (tester) async {
+      await pump(tester);
+      final before = searches.length;
+
+      // Four keystrokes in quick succession are one request, not four.
+      for (final value in ['j', 'jo', 'joe', 'joel']) {
+        await tester.enterText(find.byType(TextField), value);
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(searches.length - before, 1);
+      expect(searches.last, 'joel');
+    });
+
+    testWidgets('an empty result says what was searched for', (tester) async {
+      await pump(tester, matches: 0);
+
+      await type(tester, 'nao-existe');
+
+      expect(
+        find.text('Nenhuma clínica encontrada para “nao-existe”.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('clearing the box restores the whole recorte', (tester) async {
+      await pump(tester, matches: 2);
+      await type(tester, 'joelho');
+      expect(find.text('2 clínicas'), findsOneWidget);
+
+      await type(tester, '');
+
+      expect(find.text('25 de 60 clínicas'), findsOneWidget);
     });
   });
 

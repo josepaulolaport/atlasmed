@@ -522,6 +522,15 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
       metric: DashboardMetricKey;
       page: number;
       limit: number;
+      /**
+       * Narrows the list, never the metric.
+       *
+       * The card's number is the answer to "how many clinics are in this
+       * bucket", and typing into the list does not change that — so `total`
+       * here follows the search, while the card above stays put. They are two
+       * different questions that happen to be one tap apart.
+       */
+      search?: string;
     },
   ): Promise<{
     verticalId: number;
@@ -554,6 +563,7 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
     const { rows, total } = await this.deps.repository.listScopedClinics({
       filter: context.filter,
       predicate: metricPredicate(request.metric),
+      search: request.search,
       offset: (request.page - 1) * request.limit,
       limit: request.limit,
     });

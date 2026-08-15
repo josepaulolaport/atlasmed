@@ -11,7 +11,7 @@ import {
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
-import { sql, eq, and, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
+import { sql, eq, and, or, ilike, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
 import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
 /**
@@ -707,11 +707,35 @@ export class DrizzleDashboardRepository {
   async listScopedClinics(input: {
     filter: DashboardProfileFilter;
     predicate?: SQL;
+    /** Free text over name, neighbourhood and city — the list's own search. */
+    search?: string;
     offset: number;
     limit: number;
   }): Promise<{ rows: DashboardClinicRow[]; total: number }> {
     const conditions = profileScopeConditions(input.filter);
     if (input.predicate) conditions.push(input.predicate);
+
+    const search = input.search?.trim();
+    if (search) {
+      /**
+       * Plain ILIKE over name, neighbourhood and city.
+       *
+       * Not `unaccent`: the extension is installed on no database here, and
+       * adding one is a migration rather than a search feature. This matches
+       * what the facility module's own SQL path does, so the two searches miss
+       * on the same input rather than on different ones — Explorar reaches
+       * accent-folded matching through Meilisearch, which this list has no
+       * index for.
+       */
+      const pattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(facilities.displayName, pattern),
+          ilike(facilities.neighborhood, pattern),
+          ilike(municipalities.name, pattern),
+        )!,
+      );
+    }
 
     const rows = await db
       .select({

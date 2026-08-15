@@ -106,11 +106,18 @@ DashboardMetricRepository<DashboardClinicPage> metricClinicsRepository({
   required DashboardScopeArgs args,
   int page = 1,
   int limit = 25,
+  String? search,
 }) => DashboardMetricRepository(
   path: '/dashboard/metrics/$metric/clinics',
   args: args,
   parse: DashboardClinicPage.fromJson,
-  extraQuery: {'page': '$page', 'limit': '$limit'},
+  extraQuery: {
+    'page': '$page',
+    'limit': '$limit',
+    // Omitted rather than sent empty: the key is part of the cache identity,
+    // and "search=" is not the same request as no search at all.
+    if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+  },
 );
 
 /// One member's profile (spec 0015 §4). Scoped server-side to the reader's

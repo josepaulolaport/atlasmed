@@ -238,6 +238,7 @@ const dashboardMetricRoutes = (
         metric,
         page: query.page ?? 1,
         limit: query.limit ?? 25,
+        search: query.search,
       } as never);
     },
     {
@@ -254,6 +255,12 @@ const dashboardMetricRoutes = (
         t.Object({
           page: t.Optional(t.Number({ minimum: 1 })),
           limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+          search: t.Optional(
+            t.String({
+              description:
+                "Narrows the breakdown by clinic name, neighbourhood or city. Narrows the list only — the card's count is the metric, and it does not move because somebody typed.",
+            }),
+          ),
         }),
       ]),
     },
