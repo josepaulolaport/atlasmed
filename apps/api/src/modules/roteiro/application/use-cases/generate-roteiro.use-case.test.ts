@@ -10,6 +10,7 @@ import type {
   RoteiroBucket,
   RoteiroCandidate,
   RoteiroParams,
+  ObservedServiceMinutes,
   RepWorkingHours,
   RoteiroRejectionReason,
   RoteiroRepository,
@@ -52,6 +53,12 @@ function candidate(overrides: Partial<RoteiroCandidate> & { id: number }): Rotei
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.2 / P5 — empty by default, so tests exercise the guessed defaults. */
+  observedServiceMinutes: ObservedServiceMinutes[] = [];
+  async findObservedServiceMinutes(): Promise<ObservedServiceMinutes[]> {
+    return this.observedServiceMinutes;
+  }
+
   /** §15.5.5 — unset by default, so tests exercise the linha fallback. */
   workingHours: RepWorkingHours = {
     workdayStart: null,
@@ -719,6 +726,61 @@ describe("GenerateRoteiroUseCase", () => {
         lunchStart < stop.plannedEndsAt.getTime();
       expect(clashes).toBe(false);
     }
+  });
+
+  it("plans with the measured visit length once enough visits are timed", async () => {
+    // The per-bucket defaults were always a placeholder. Nobody knows how long
+    // a first visit takes until visits are timed (§15.2).
+    const repository = new FakeRepository([
+      candidate({ id: 1, bucket: "PROSPECTAR", meritScore: 0.9 }),
+    ]);
+    repository.observedServiceMinutes = [
+      { bucket: "PROSPECTAR", medianMinutes: 95, sampleSize: 30 },
+    ];
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 1 }));
+
+    // 95 measured, snapped to the slot the calendar will actually keep.
+    expect(result.stops[0]?.serviceMinutes).toBe(120);
+    expect(result.serviceMinutesLearnedFrom).toEqual({ PROSPECTAR: 30 });
+  });
+
+  it("keeps the guess when too few visits have been timed to trust", async () => {
+    // A median of three visits is noise wearing the clothes of evidence, and
+    // the default it would displace is at least a considered guess.
+    const repository = new FakeRepository([
+      candidate({ id: 1, bucket: "PROSPECTAR", meritScore: 0.9 }),
+    ]);
+    repository.observedServiceMinutes = [
+      { bucket: "PROSPECTAR", medianMinutes: 95, sampleSize: 3 },
+    ];
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 1 }));
+
+    expect(result.stops[0]?.serviceMinutes).toBe(60);
+    expect(result.serviceMinutesLearnedFrom).toEqual({});
+  });
+
+  it("learns one bucket without disturbing the others", async () => {
+    const repository = new FakeRepository([
+      candidate({ id: 1, bucket: "MANTER", funnelStage: "PURCHASE_WINDOW", meritScore: 0.9 }),
+      candidate({ id: 2, bucket: "PROSPECTAR", meritScore: 0.89 }),
+    ]);
+    repository.observedServiceMinutes = [
+      { bucket: "PROSPECTAR", medianMinutes: 88, sampleSize: 20 },
+    ];
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 2 }));
+    const byId = new Map(
+      result.stops.map((s) => [s.candidate.facilityVerticalProfileId, s]),
+    );
+
+    expect(byId.get(2)?.serviceMinutes).toBe(90);
+    // MANTER has no measurement, so it keeps its 30-minute default.
+    expect(byId.get(1)?.serviceMinutes).toBe(30);
   });
 
   it("refuses to plan another rep's day", async () => {

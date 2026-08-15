@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ConfirmRoteiroUseCase, type CalendarEventCreator } from "./confirm-roteiro.use-case";
 import type {
+  ObservedServiceMinutes,
   RepWorkingHours,
   RoteiroRejectionReason,
   RoteiroRepository,
@@ -52,6 +53,12 @@ function roteiro(overrides: Partial<StoredRoteiro> = {}): StoredRoteiro {
 }
 
 class FakeRepository implements RoteiroRepository {
+  /** §15.2 / P5 — empty by default, so tests exercise the guessed defaults. */
+  observedServiceMinutes: ObservedServiceMinutes[] = [];
+  async findObservedServiceMinutes(): Promise<ObservedServiceMinutes[]> {
+    return this.observedServiceMinutes;
+  }
+
   /** §15.5.5 — unset by default, so tests exercise the linha fallback. */
   workingHours: RepWorkingHours = {
     workdayStart: null,

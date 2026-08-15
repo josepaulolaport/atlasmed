@@ -1623,6 +1623,26 @@ Still a guess — a better-informed one, and a parameter, so it costs nothing to
 move once outcome capture gives us `actual_started_at`/`actual_ended_at` to fit
 against (§15.2).
 
+**As of P5 the guess steps aside for measurement.** Generation reads the median
+completed visit length per bucket over the last `DURATION_WINDOW_DAYS` (180) and
+uses it wherever the sample reaches `MIN_DURATION_SAMPLE` (12); below that the
+parameter stands, because a median of three visits is noise wearing the clothes
+of evidence and the default it would displace is at least a considered
+judgement. Learned values are snapped to a calendar slot like every other
+duration — a measured 47 minutes becomes the 60 the agenda will actually keep.
+
+Median rather than mean: one four-hour congress day would drag an average and
+quietly lengthen every visit the engine plans. Visits shorter than 5 minutes or
+longer than 4 hours are excluded outright — a forgotten timer and a misfire, and
+both would teach the engine something untrue.
+
+⚠️ **Measured 2026-08-15: nothing has ever been captured.** `visits` is empty and
+all 7 interactions are `SCHEDULED` — no rep has ever pressed *Iniciar interação*.
+The controls exist and work; the app is simply not in anyone's hands yet. So
+every bucket is still running on its guess, `serviceMinutesLearnedFrom` is `{}`,
+and it will stay that way until reps start completing visits. The mechanism is
+in place so that the first twelve completions change the answer by themselves.
+
 **The rep can change it on the card**, because they know which hospital eats two
 hours and we do not. Two things follow from that:
 

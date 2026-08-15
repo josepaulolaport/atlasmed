@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { db } from "../../../../infrastructure/database/db";
 import type {
+  ObservedServiceMinutes,
+  RoteiroBucket,
   RepWorkingHours,
   RoteiroRejectionReason,
   CreateRoteiroInput,
@@ -226,6 +228,51 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       lunchMinutes:
         Number.isFinite(minutes) && minutes >= 0 && minutes <= 240 ? minutes : null,
     };
+  }
+
+  /**
+   * §15.2 / P5 — what visits in this linha have actually taken.
+   *
+   * Median rather than mean: one four-hour congress day would drag an average
+   * and quietly lengthen every visit the engine plans. Bucketed the same way
+   * the engine buckets, so the answer can replace the parameter directly.
+   *
+   * Bounded by `since` because a visit length from two years ago describes a
+   * different book, a different rep and often a different product.
+   */
+  async findObservedServiceMinutes(input: {
+    verticalId: number;
+    since: Date;
+  }): Promise<ObservedServiceMinutes[]> {
+    const rows = await db.execute<Record<string, unknown>>(sql`
+      select
+        case
+          when p.purchase_funnel_stage = 'NEVER_PURCHASED' then 'PROSPECTAR'
+          when p.purchase_funnel_stage in ('CHURN', 'INACTIVE') then 'RECUPERAR'
+          else 'MANTER'
+        end                                                      as bucket,
+        count(*)::int                                            as n,
+        percentile_cont(0.5) within group (
+          order by extract(epoch from (i.actual_ended_at - i.actual_started_at)) / 60
+        )::numeric                                               as median_minutes
+      from interactions i
+      join facility_vertical_profiles p
+        on p.facility_id = i.facility_id and p.vertical_id = ${input.verticalId}
+      where i.actual_started_at is not null
+        and i.actual_ended_at is not null
+        and i.actual_ended_at > i.actual_started_at
+        and i.actual_started_at >= ${input.since.toISOString()}
+        -- A visit that ran past midnight is a forgotten timer, not a long
+        -- meeting, and one that "took" two minutes is a misfire. Both would
+        -- teach the engine something untrue.
+        and extract(epoch from (i.actual_ended_at - i.actual_started_at)) between 300 and 4 * 3600
+      group by 1
+    `);
+    return rows.map((row) => ({
+      bucket: String(row.bucket) as RoteiroBucket,
+      medianMinutes: Number(row.median_minutes),
+      sampleSize: Number(row.n),
+    }));
   }
 
   async createDraft(input: CreateRoteiroInput): Promise<StoredRoteiro> {

@@ -160,6 +160,14 @@ export interface FixedPoint {
   endsAt: Date;
 }
 
+/** Measured visit length for one bucket, and how much it rests on. */
+export interface ObservedServiceMinutes {
+  bucket: RoteiroBucket;
+  /** Median, not mean: one four-hour congress day would drag an average. */
+  medianMinutes: number;
+  sampleSize: number;
+}
+
 export interface RepWorkingHours {
   workdayStart: string | null;
   workdayEnd: string | null;
@@ -280,6 +288,18 @@ export interface RoteiroRepository {
    * one who chose 08:00: only the first should follow the linha when it moves.
    */
   findWorkingHours(userId: number): Promise<RepWorkingHours>;
+
+  /**
+   * How long visits in this linha have actually taken — spec 0016 §15.2, P5.
+   *
+   * Empty until reps start completing visits, which is the whole point: the
+   * per-bucket defaults are a guess and were always meant to be replaced by
+   * measurement rather than by a better guess.
+   */
+  findObservedServiceMinutes(input: {
+    verticalId: number;
+    since: Date;
+  }): Promise<ObservedServiceMinutes[]>;
   /** Live GPS is required, so a rep with no assigned clinics is a real error. */
   /**
    * Persists a DRAFT, superseding any live one for the same (user, day).

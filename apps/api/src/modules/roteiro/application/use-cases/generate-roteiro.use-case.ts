@@ -165,6 +165,19 @@ function toCalendarSlot(minutes: number): number {
  */
 const MIN_REGISTRY_COVERAGE = 0.6;
 
+/**
+ * §15.2 / P5 — how many completed visits a bucket needs before its measured
+ * length replaces the guess.
+ *
+ * Twelve rather than one: a median of three visits is noise wearing the
+ * clothes of evidence, and the default it would displace is at least a
+ * considered guess. Below this the parameter stands.
+ */
+const MIN_DURATION_SAMPLE = 12;
+
+/** How far back a visit still describes how long visits take. */
+const DURATION_WINDOW_DAYS = 180;
+
 /** §4.1 — how far the bound may widen before we give up, and in what steps. */
 const REACH_EXPANSION_STEPS = [1, 2, 4, 8] as const;
 /** Shortlist depth, per §4.5. */
@@ -678,8 +691,35 @@ export class GenerateRoteiroUseCase {
      * following the linha rather than freezing today's default.
      */
     const hours = await this.deps.repository.findWorkingHours(subjectUserId);
+
+    /**
+     * §15.2 / P5 — measured visit lengths replace the guessed ones.
+     *
+     * The per-bucket defaults were always a placeholder: nobody knows how long
+     * a first visit takes until visits are timed. Now that completion records
+     * `actual_started_at`/`actual_ended_at`, the engine prefers what actually
+     * happened — per bucket, and only where enough of it happened.
+     *
+     * Snapped to a calendar slot like every other duration, so a measured 47
+     * minutes becomes the 60 the agenda will actually keep rather than a number
+     * that gets rounded behind the rep.
+     */
+    const observed = await this.deps.repository.findObservedServiceMinutes({
+      verticalId: input.verticalId,
+      since: new Date(input.now.getTime() - DURATION_WINDOW_DAYS * 86_400_000),
+    });
+    const learned = observed.filter((o) => o.sampleSize >= MIN_DURATION_SAMPLE);
+    const byBucket = { ...(linhaParams.serviceMinutes.byBucket ?? {}) };
+    for (const entry of learned) {
+      byBucket[entry.bucket] = toCalendarSlot(entry.medianMinutes);
+    }
+
     const params: RoteiroParams = {
       ...linhaParams,
+      serviceMinutes: {
+        ...linhaParams.serviceMinutes,
+        byBucket,
+      },
       workdayStart: hours.workdayStart ?? linhaParams.workdayStart,
       workdayEnd: hours.workdayEnd ?? linhaParams.workdayEnd,
       lunchStart: hours.lunchStart ?? linhaParams.lunchStart,
@@ -998,6 +1038,12 @@ export class GenerateRoteiroUseCase {
       // about. Below MIN_REGISTRY_COVERAGE the registry has probably failed
       // rather than merely being thin.
       registryCoverage,
+      // §15.2 / P5 — which durations are measured and which are still a guess.
+      // Ops data, not a notice: a rep cannot act on a sample size, and today
+      // every bucket is a guess because no visit has ever been completed.
+      serviceMinutesLearnedFrom: Object.fromEntries(
+        learned.map((entry) => [entry.bucket, entry.sampleSize]),
+      ),
       registryCoverageLow:
         registryCoverage !== null && registryCoverage < MIN_REGISTRY_COVERAGE,
       notices,
