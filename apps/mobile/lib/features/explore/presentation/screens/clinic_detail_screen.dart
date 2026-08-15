@@ -944,7 +944,11 @@ class _ClinicDetailContent extends ConsumerWidget {
                 ),
                 if (payersApplyToLinha) ...[
                   ClinicSectionHeader(
-                    title: 'Fontes Pagadoras',
+                    // Sentence case, like every other header on this page
+                    // ("Potencial de mercado", "Histórico de pedidos",
+                    // "Equipe responsável") and like this section's own
+                    // snackbars, which already said "Fontes pagadoras".
+                    title: 'Fontes pagadoras',
                     trailing: !canMutate
                         ? null
                         : _HeaderLinkButton(
@@ -1106,7 +1110,16 @@ class _ClinicDetailContent extends ConsumerWidget {
                           ),
                         ),
                 ),
-                PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
+                PurchaseRecurrenceSection(
+                  value: detail.purchaseRecurrence,
+                  onScheduleVisit: ref.watch(canCreateCalendarEventProvider)
+                      ? () => openClinicVisitScheduler(
+                          context,
+                          facilityId: detail.id,
+                          facilityName: detail.name,
+                        )
+                      : null,
+                ),
                 if (canSuggest)
                   _ClinicDeactivateButton(
                     clinicId: clinicId,

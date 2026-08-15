@@ -72,10 +72,16 @@ class _ClinicDeactivationSheetBodyState
     extends State<_ClinicDeactivationSheetBody> {
   late final TextEditingController _controller;
 
+  bool get _canSubmit => _controller.text.trim().isNotEmpty;
+
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    // Repaints the button as the reason is typed. Without it the button was
+    // live over an empty field and answered a press by doing nothing at all —
+    // `if (reason.isEmpty) return;` — so the sheet looked broken.
+    _controller.addListener(() => setState(() {}));
   }
 
   @override
@@ -137,12 +143,19 @@ class _ClinicDeactivationSheetBodyState
           ),
           const SizedBox(height: 14),
           TextField(
+            key: const Key('deactivation-reason'),
             controller: _controller,
             autofocus: true,
             maxLines: 4,
             minLines: 3,
+            textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               hintText: 'Motivo da desativação',
+              helperText: 'Obrigatório — quem revisar precisa saber o porquê.',
+              helperStyle: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.gray500,
+              ),
               filled: true,
               fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
@@ -156,14 +169,15 @@ class _ClinicDeactivationSheetBodyState
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () {
-                final reason = _controller.text.trim();
-                if (reason.isEmpty) return;
-                Navigator.of(context).pop(reason);
-              },
+              key: const Key('deactivation-submit'),
+              onPressed: _canSubmit
+                  ? () => Navigator.of(context).pop(_controller.text.trim())
+                  : null,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.error,
+                backgroundColor: AppColors.red,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.gray200,
+                disabledForegroundColor: AppColors.gray400,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

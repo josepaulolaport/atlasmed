@@ -66,10 +66,24 @@ class AppTheme {
   static ThemeData get light => ThemeData(
     useMaterial3: true,
     fontFamily: 'Inter',
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.navyDeep,
-      brightness: Brightness.light,
-    ),
+
+    /// Brand navy as the primary, not the seed's interpretation of it.
+    ///
+    /// `fromSeed` derives a muted, violet-leaning primary from `navyDeep`, and
+    /// that colour is what every unstyled Material control picks up: the
+    /// confirm button in each dialog, `TextButton` labels, checkboxes,
+    /// progress indicators, text selection. Screens that cared said
+    /// `AppColors.navyBright` by hand, so the app has been split between its
+    /// own blue and a mauve that appears wherever nobody overrode it.
+    colorScheme:
+        ColorScheme.fromSeed(
+          seedColor: AppColors.navyDeep,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.navyBright,
+          onPrimary: Colors.white,
+          error: AppColors.error,
+        ),
     scaffoldBackgroundColor: AppColors.background,
 
     /// The house app bar, for every pushed screen that does not ask for
@@ -97,6 +111,32 @@ class AppTheme {
         fontSize: 17,
         fontWeight: FontWeight.w700,
         color: AppColors.gray900,
+      ),
+    ),
+
+    /// The house dialog, for the same reason the app bar above exists.
+    ///
+    /// Every `AlertDialog` in the app — discard a draft, cancel an
+    /// appointment, delete a note, confirm an unassignment — inherited
+    /// Material 3's elevated `surfaceTint`, which washes the sheet mauve and
+    /// tints the confirm button to match. Beside the navy the rest of the app
+    /// paints, they read as a different product interrupting it.
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.cardBg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titleTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: AppColors.gray900,
+      ),
+      contentTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14,
+        height: 1.4,
+        color: AppColors.gray700,
       ),
     ),
   );

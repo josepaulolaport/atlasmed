@@ -159,8 +159,10 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'CEP',
-            value: detail.address?.postalCode,
-            icon: Icons.local_post_office_outlined,
+            value: formatPostalCode(detail.address?.postalCode),
+            // A mailbox, not `local_post_office_outlined` — that glyph is an
+            // envelope, so CEP and E-mail were the same icon two rows apart.
+            icon: Icons.markunread_mailbox_outlined,
             onEdit: null,
             fieldKey: null,
             editable: false,

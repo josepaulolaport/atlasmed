@@ -122,7 +122,10 @@ void main() {
     );
 
     expect(find.text('Nunca'), findsOneWidget);
-    expect(find.text('Agendar visita'), findsNWidgets(2));
+    // Once, on the tile that acts. The timeline used to repeat the same words
+    // in the same blue, so the card offered the action twice and did it never.
+    expect(find.text('Agendar visita'), findsOneWidget);
+    expect(find.text('A definir'), findsOneWidget);
     expect(find.text('Sem histórico'), findsOneWidget);
     expect(find.text('Compras registradas'), findsOneWidget);
     expect(find.text('Após a primeira compra'), findsOneWidget);
@@ -130,6 +133,52 @@ void main() {
     expect(find.text('0 intervalos'), findsNothing);
     expect(find.text('Nunca comprou'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the scheduling tile is an action, and only when allowed', (
+    tester,
+  ) async {
+    var opened = 0;
+    const snapshot = PurchaseRecurrenceSnapshot(
+      intervalDays: 30,
+      sampleSize: 0,
+      source: PurchaseRecurrenceSource.defaultValue,
+      funnelStage: PurchaseFunnelStage.neverPurchased,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PurchaseRecurrenceSection(
+              value: snapshot,
+              onScheduleVisit: () => opened++,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Agendar visita'));
+    await tester.pump();
+    expect(opened, 1);
+
+    // Without the permission there is no callback, so nothing pretends to be
+    // pressable.
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme(),
+        home: const Scaffold(
+          body: SingleChildScrollView(
+            child: PurchaseRecurrenceSection(value: snapshot),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Agendar visita'));
+    await tester.pump();
+    expect(opened, 1);
   });
 
   testWidgets('purchase section preserves the unavailable state', (

@@ -4,9 +4,17 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class PurchaseRecurrenceSection extends StatelessWidget {
-  const PurchaseRecurrenceSection({super.key, required this.value});
+  const PurchaseRecurrenceSection({
+    super.key,
+    required this.value,
+    this.onScheduleVisit,
+  });
 
   final PurchaseRecurrenceSnapshot? value;
+
+  /// Opens the visit scheduler. Null when the viewer cannot create
+  /// appointments, in which case "Agendar visita" is not offered at all.
+  final VoidCallback? onScheduleVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +43,11 @@ class PurchaseRecurrenceSection extends StatelessWidget {
             endIndent: 16,
             color: AppColors.gray200,
           ),
-          _PurchaseMetrics(recurrence: recurrence, presentation: presentation),
+          _PurchaseMetrics(
+            recurrence: recurrence,
+            presentation: presentation,
+            onScheduleVisit: onScheduleVisit,
+          ),
         ],
       ),
     );
@@ -255,11 +267,13 @@ class _PurchasePresentation {
           marker: _TimelineMarkerState.today,
           accentColor: AppColors.navyBright,
         ),
+        // "A definir", not a second "Agendar visita": the same words appeared
+        // twice in one card, both looking like links and neither being one.
+        // The action lives on the "Próximo passo" tile below.
         const _TimelinePointData(
           label: 'Próxima compra',
-          value: 'Agendar visita',
+          value: 'A definir',
           marker: _TimelineMarkerState.next,
-          accentColor: AppColors.navyBright,
         ),
       ];
     }
@@ -582,10 +596,12 @@ class _PurchaseMetrics extends StatelessWidget {
   const _PurchaseMetrics({
     required this.recurrence,
     required this.presentation,
+    this.onScheduleVisit,
   });
 
   final PurchaseRecurrenceSnapshot recurrence;
   final _PurchasePresentation presentation;
+  final VoidCallback? onScheduleVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -619,6 +635,9 @@ class _PurchaseMetrics extends StatelessWidget {
                   label: presentation.timingLabel,
                   value: presentation.timingValue,
                   accentColor: presentation.timingAccentColor,
+                  // "Agendar visita" is the only timing value that names an
+                  // action, and it was a coloured word that did nothing.
+                  onTap: neverPurchased ? onScheduleVisit : null,
                 ),
               ),
             ],
@@ -679,6 +698,7 @@ class _MetricItem extends StatelessWidget {
     required this.label,
     required this.value,
     this.accentColor,
+    this.onTap,
   });
 
   final IconData icon;
@@ -686,9 +706,13 @@ class _MetricItem extends StatelessWidget {
   final String value;
   final Color? accentColor;
 
+  /// Makes the tile an action. Only the "Próximo passo" tile uses it, so that
+  /// "Agendar visita" is something you can press rather than a coloured word.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -723,8 +747,20 @@ class _MetricItem extends StatelessWidget {
               ],
             ),
           ),
+          if (onTap != null)
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.gray400,
+            ),
         ],
       ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: content),
     );
   }
 }

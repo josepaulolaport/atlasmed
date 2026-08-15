@@ -103,7 +103,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         title: const Text(
-          'Fontes Pagadoras',
+          'Fontes pagadoras',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         actions: [
