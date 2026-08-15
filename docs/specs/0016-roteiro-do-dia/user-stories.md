@@ -140,6 +140,34 @@ calendar events again.
 
 ## P3 — It is my plan, not the machine's
 
+### S9b · Trabalhar o roteiro até ficar bom
+**As** Rafael, **I want** a workspace for the day where I can generate, swap, add, remove and
+regenerate before anything becomes real, **so that** the plan is mine rather than the machine's
+first guess.
+
+- Opened from a **specific day** in the agenda, and plans that day (§15.4.1).
+- Generate, edit, regenerate as often as I like; nothing exists until **Salvar**.
+- Saving is what writes the calendar entries and interactions — before it, a discarded draft costs
+  nothing and marks no clinic as covered.
+
+### S9c · Trocar uma visita por uma ligação
+**As** Rafael, **I want** to turn a stop into a phone call, **so that** a day that does not quite
+fit becomes one that does.
+
+- Any stop flips between presencial and remoto; the day re-times around it (§4.4).
+- A remote stop costs no travel, so one 90-minute round trip converted to a call buys back a whole
+  visit.
+- My choice is recorded, because it is evidence about which clinics are worth driving to (§10).
+
+### S9d · Ver o dia no mapa
+**As** Rafael, **I want** to see the day's in-person stops on a map with their order and times,
+**so that** I can sanity-check the plan the way I always have — visually.
+
+- Numbered pins in visiting order, each showing **its order and its time**.
+- Remote stops appear beside the map, never pinned: nobody drives to a call.
+- Available for a planned day *and* a confirmed one — the question "where am I going today" outlives
+  the planning.
+
 ### S10 · Trocar uma sugestão
 **As** Rafael, **I want** to swap any stop, **so that** I stay in charge of my day.
 

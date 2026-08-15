@@ -175,7 +175,7 @@ export interface ScheduleReader {
       startsAt: string;
       endsAt: string;
       /** Present for an INTERACTION; absent for a personal block. */
-      interaction?: { facilityId: number };
+      interaction?: { facilityId: number; modality?: "IN_PERSON" | "REMOTE" };
     }>
   >;
 }
@@ -814,6 +814,7 @@ export class GenerateRoteiroUseCase {
       const facilityIds = [
         ...new Set(
           occurrences
+            .filter((o) => o.interaction?.modality !== "REMOTE")
             .map((o) => o.interaction?.facilityId)
             .filter((id): id is number => typeof id === "number"),
         ),
@@ -830,9 +831,22 @@ export class GenerateRoteiroUseCase {
         busy.push({ startsAt: startsAt.getTime(), endsAt: endsAt.getTime() });
 
         const facilityId = occurrence.interaction?.facilityId;
-        const place = facilityId === undefined ? undefined : byFacility.get(facilityId);
-        // A booked visit at a facility with no coordinates still blocks the
-        // clock; it just cannot anchor the route.
+        /**
+         * **A booked phone call is not somewhere to be.**
+         *
+         * Only an `IN_PERSON` interaction anchors the route. A `REMOTE` one
+         * blocks the clock — the rep is on a call and cannot be selling
+         * elsewhere — but they can take it from anywhere, so treating it as a
+         * fixed point is wrong twice: it drags the reachable set toward a
+         * clinic nobody is driving to, and it reserves travel either side of a
+         * journey that does not happen.
+         *
+         * Same for a visit at a facility with no coordinates: real, but not
+         * placeable.
+         */
+        const isRemote = occurrence.interaction?.modality === "REMOTE";
+        const place =
+          facilityId === undefined || isRemote ? undefined : byFacility.get(facilityId);
         if (place) {
           fixedPoints.push({
             facilityVerticalProfileId: place.facilityVerticalProfileId,

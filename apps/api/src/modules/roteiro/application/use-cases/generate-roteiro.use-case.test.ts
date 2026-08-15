@@ -304,6 +304,78 @@ describe("GenerateRoteiroUseCase", () => {
     expect(repository.calls[0]?.fixedPoints).toHaveLength(1);
   });
 
+  it("does not let a booked phone call anchor the route", async () => {
+    // A rep can take a call from anywhere. It blocks the clock and nothing
+    // else — anchoring on it would drag the reachable set toward a clinic
+    // nobody is driving to and reserve travel for a journey that never happens.
+    const repository = new FakeRepository([candidate({ id: 1 })], {
+      located: [
+        {
+          facilityId: 55,
+          facilityVerticalProfileId: 77,
+          facilityName: 'Ligacao',
+          lat: -23.9,
+          lng: -46.9,
+        },
+      ],
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: "2026-08-17T13:00:00.000Z",
+            endsAt: "2026-08-17T13:30:00.000Z",
+            interaction: { facilityId: 55, modality: "REMOTE" },
+          },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(baseInput());
+
+    expect(result.fixedPoints).toEqual([]);
+    expect(result.reachMode).toBe("LIVRE");
+    // Still busy: nothing is scheduled over the call.
+    for (const stop of result.stops) {
+      const overlaps =
+        stop.plannedStartsAt.getTime() < new Date("2026-08-17T13:30:00.000Z").getTime() &&
+        stop.plannedEndsAt.getTime() > new Date("2026-08-17T13:00:00.000Z").getTime();
+      expect(overlaps).toBe(false);
+    }
+  });
+
+  it("still anchors on a booked in-person visit", async () => {
+    const repository = new FakeRepository([candidate({ id: 1 })], {
+      located: [
+        {
+          facilityId: 55,
+          facilityVerticalProfileId: 77,
+          facilityName: 'Presencial',
+          lat: -23.6,
+          lng: -46.7,
+        },
+      ],
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: "2026-08-17T13:00:00.000Z",
+            endsAt: "2026-08-17T14:00:00.000Z",
+            interaction: { facilityId: 55, modality: "IN_PERSON" },
+          },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(baseInput());
+
+    expect(result.fixedPoints).toHaveLength(1);
+    expect(result.reachMode).toBe("ANCORA");
+  });
+
   it("treats a personal block as busy time, not as somewhere to be", async () => {
     const repository = new FakeRepository([candidate({ id: 1 })]);
     const useCase = new GenerateRoteiroUseCase({

@@ -1385,12 +1385,77 @@ a purchasing model nobody has confirmed.
 
 ### 15.3 Still open
 
+0. **Origin for a day that is not today** (§15.4.1). GPS answers "where am I", which says nothing
+   about tomorrow. Proposed: the day's first booked visit when there is one; otherwise the rep
+   picks. Blocks day-scoped generation.
 1. **Ortho CBO prefix** — which `CO_CBO` values count as orthopaedics for the §0.1 capacity signal
    ([`data-sources.md`](./data-sources.md)). Must be *measured* against the dump, not assumed.
 2. **`PROSPECTAR` eligibility floor** — should a never-purchased clinic with zero orthopaedists and
    no ortho habilitação be a candidate at all, or filtered out before scoring? Answerable only once
    Tier-1 CNES data lands.
 3. **Whether reps want the same clinic twice in a week** across two linhas (see 15.1).
+
+---
+
+## 15.4 Amendment 2026-08-15 — the roteiro is a screen, not a list
+
+Three changes, all from watching the shape of the feature rather than the spec.
+
+### 15.4.1 A roteiro belongs to a day, and gets its own workspace
+
+`/roteiro` generated for *today*, from the rep's position, and showed a list. That is the wrong
+unit. A rep plans **a day** — sometimes today, often tomorrow — and planning is iterative: generate,
+look, swap two, drop one, regenerate, look again. A screen that returns one answer and offers a
+Confirm button does not support the loop the work actually has.
+
+So: **reached from a day**, not from a tab. The agenda's `+` on a given day opens a roteiro
+workspace *for that day*, which owns the whole cycle:
+
+```
+gerar → ver → trocar / adicionar / remover / regerar → …  → salvar
+```
+
+Nothing is real until **Salvar**. Until then it is a draft the rep is free to churn, which is what
+makes the `DRAFT` status and the supersede-on-regenerate rule earn their keep.
+
+Consequences:
+
+- **The day comes from the route**, not from `now`. Planning tomorrow morning tonight is the normal
+  case, not an edge one.
+- **Origin needs a rule for a future day.** Live GPS answers "where am I", which is meaningless for
+  tomorrow. Open question in §15.3: the first booked visit of that day is the natural anchor when
+  one exists, and when it does not the rep has to say. This is the one part of §4.1's
+  "GPS, no fallback" that a day-scoped roteiro reopens.
+- The existing `/roteiro` list view becomes the workspace's default panel rather than a screen.
+
+### 15.4.2 Modality is not decoration — and a booked call is not a place
+
+Already true and now enforced end to end:
+
+- a suggested `REMOTE` stop costs **zero travel** and 30 minutes rather than 60 (§4.4)
+- `unit_type_policy.forceRemote` proposes a whole unit type as calls (§4.2g)
+
+**Fixed 2026-08-15:** a *booked* `REMOTE` interaction was being treated as a fixed point, so the
+engine planned clinics "on the way to" a phone call. Wrong twice — it dragged the reachable set
+toward a clinic nobody was driving to, and reserved travel either side of a journey that never
+happens. A remote booking now blocks the clock and nothing else.
+
+**Still to build:** the rep flipping a single stop between presencial and remoto in the workspace
+(§4.4 allows it, P3 owns it). It is the cheapest way to rescue a day that does not quite fit — one
+90-minute round trip converted to a call buys back a whole visit.
+
+### 15.4.3 Ver dia no mapa
+
+From any day — planned or already confirmed — a map of that day's **in-person** stops.
+
+- numbered pins in visiting order, each carrying **its order and its time**
+- the route between them
+- remote stops listed beside the map, never pinned: nobody drives to a call, and a pin implies a
+  destination
+- reachable from the day view and from the roteiro workspace, showing the same day either way
+
+This is the §8.1 "Mapa" view, now scoped to a day rather than to a generated slate, which is what
+makes it useful after confirmation as well as before.
 
 ---
 
