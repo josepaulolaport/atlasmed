@@ -497,9 +497,28 @@ Quotas scale with N: `slots_bucket = max(1, round(N × ratio_bucket))`, ratios n
 to `MANTER`. At N=1 the buckets rotate across days so a rep on a one-visit-a-day cadence still
 prospects — the rotation cursor lives on `roteiro_params_state`.
 
-### 4.4 Modality — REMOTE is a routing decision, not a label
+### 4.4 Modality — the engine plans driving, and works around calls
 
-Each stop carries a recommended `modality`. It changes the cost model:
+**Roteirização never proposes a call** (user decision, 2026-08-15). Every generated stop is
+`IN_PERSON`. A phone contact is something a rep arranges themselves; the engine's only interest in
+one is the **time it occupies**.
+
+That cuts cleanly in both directions:
+
+- a **booked** `REMOTE` interaction blocks the clock and nothing else — the rep is on a call and
+  cannot be selling elsewhere, but they can take it from anywhere, so it never anchors the route
+  (§15.4.2)
+- the engine never converts a drive into a call to make a day fit. A unit type not worth driving to
+  is switched off with `eligible`, which says what is meant; there is no `forceRemote`
+
+The `modality` column stays on `roteiro_stops` because a stop becomes a real interaction, which has
+a modality regardless, and because a rep may flip one to a call in the workspace (P3). Nothing in
+generation reads it.
+
+<details>
+<summary>Superseded design — modality as a routing decision</summary>
+
+Each stop carried a recommended `modality`, which changed the cost model:
 
 | | travel cost | default service minutes | position in route |
 |---|---|---|---|
@@ -516,8 +535,12 @@ Default recommendation — `REMOTE` when any holds:
 
 The rep may flip any stop's modality; the flip re-times the day and **is recorded** (§10).
 
-Why this earns its place: converting one 90-minute round trip into a 15-minute call buys back an
-entire extra in-person visit. That is the single largest time lever in the feature.
+The argument was that converting a 90-minute round trip into a 15-minute call buys back an entire
+visit. That remains true and is why the P3 manual flip survives — but having the *engine* decide it
+was rejected: a rep who wanted a call would have booked one, and a suggestion that silently becomes
+a phone contact is not the thing they asked for.
+
+</details>
 
 ### 4.4.1 The day is a set of gaps, and they are not interchangeable
 

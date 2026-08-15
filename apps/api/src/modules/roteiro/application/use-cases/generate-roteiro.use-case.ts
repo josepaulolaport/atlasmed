@@ -32,18 +32,18 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
   bucketRatios: { MANTER: 0.2, RECUPERAR: 0.2, PROSPECTAR: 0.6 },
   cooldownDays: { MANTER: 14, RECUPERAR: 21, PROSPECTAR: 30 },
   coverageHorizonDays: { MANTER: 90, RECUPERAR: 180, PROSPECTAR: 180 },
-  serviceMinutes: { IN_PERSON: 45, REMOTE: 15 },
+  serviceMinutes: { IN_PERSON: 45 },
   unitTypePolicy: {
-    "Clinica/Centro de Especialidade": { fit: 1.0, eligible: true, forceRemote: false },
-    "Hospital/Dia - Isolado": { fit: 1.0, eligible: true, forceRemote: false },
-    Policlinica: { fit: 0.55, eligible: true, forceRemote: false },
-    "Consultorio Isolado": { fit: 0.35, eligible: true, forceRemote: false },
-    "Hospital Especializado": { fit: 0.35, eligible: true, forceRemote: false },
+    "Clinica/Centro de Especialidade": { fit: 1.0, eligible: true },
+    "Hospital/Dia - Isolado": { fit: 1.0, eligible: true },
+    Policlinica: { fit: 0.55, eligible: true },
+    "Consultorio Isolado": { fit: 0.35, eligible: true },
+    "Hospital Especializado": { fit: 0.35, eligible: true },
     // Below what conversion alone justifies (3.5% vs a clinic's 9.6%), by
     // commercial decision: a hospital visit costs more of a rep's day in
     // access and gatekeeping, and purchasing is centralised and slower.
-    "Hospital Geral": { fit: 0.15, eligible: true, forceRemote: false },
-    "*": { fit: 0.05, eligible: true, forceRemote: false },
+    "Hospital Geral": { fit: 0.15, eligible: true },
+    "*": { fit: 0.05, eligible: true },
   },
   reachRadiusKm: 60,
   detourBudgetKm: 20,
@@ -656,17 +656,17 @@ export class GenerateRoteiroUseCase {
     const stops: PlannedStop[] = [...selected]
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
       .map((placed, position) => {
-        const policy =
-          params.unitTypePolicy[placed.candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
-        const modality: "IN_PERSON" | "REMOTE" = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
         return {
           candidate: placed.candidate,
           position,
-          modality,
+          // Every suggestion is a visit. Roteirização plans driving; a call is
+          // something the rep arranges themselves, and the engine's only
+          // interest in one is the time it occupies (§4.4).
+          modality: "IN_PERSON" as const,
           modalitySource: "SUGGESTED" as const,
           isCoverageSlot: placed.isCoverageSlot,
           isAnchor: false,
-          travelSecondsFromPrev: modality === "REMOTE" ? null : placed.travelSeconds,
+          travelSecondsFromPrev: placed.travelSeconds,
           serviceMinutes: Math.round(
             (placed.endsAt.getTime() - placed.startsAt.getTime()) / 60_000,
           ),
@@ -960,11 +960,7 @@ export class GenerateRoteiroUseCase {
         return b.meritScore - a.meritScore;
       })[0];
     if (coverage && chosen.length < limit) {
-      const policy = params.unitTypePolicy[coverage.unitType ?? ""] ?? params.unitTypePolicy["*"];
-      const serviceMs =
-        toCalendarSlot(
-          policy?.forceRemote ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
-        ) * 60_000;
+      const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
       // The reserved slot still has to fit somewhere real. If the day cannot
       // hold it, it is not taken — a coverage stop the rep cannot make is not
       // coverage.
@@ -1035,13 +1031,7 @@ export class GenerateRoteiroUseCase {
 
       for (const candidate of candidates) {
         if (taken.has(candidate.facilityVerticalProfileId)) continue;
-        const policy =
-          params.unitTypePolicy[candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
-        const modality = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
-        const serviceMs =
-          toCalendarSlot(
-            modality === "REMOTE" ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
-          ) * 60_000;
+        const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
         const point = { lat: candidate.lat, lng: candidate.lng };
 
         for (const gap of gaps) {
@@ -1172,12 +1162,7 @@ export class GenerateRoteiroUseCase {
       let cursor: RoteiroPoint = gap.from;
       let clock = gap.clockStart;
       for (const stop of ordered) {
-        const policy =
-          params.unitTypePolicy[stop.candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
-        const serviceMs =
-          toCalendarSlot(
-            policy?.forceRemote ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
-          ) * 60_000;
+        const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
         const point = { lat: stop.candidate.lat, lng: stop.candidate.lng };
         const drive = travel(cursor, point);
         const startsAt = pushPastBusy(clock + drive * 1000, serviceMs, busy);

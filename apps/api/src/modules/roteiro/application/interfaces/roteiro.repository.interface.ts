@@ -23,8 +23,12 @@ export interface RoteiroParams {
   bucketRatios: Record<RoteiroBucket, number>;
   cooldownDays: Record<RoteiroBucket, number>;
   coverageHorizonDays: Record<RoteiroBucket, number>;
-  serviceMinutes: { IN_PERSON: number; REMOTE: number };
-  unitTypePolicy: Record<string, { fit: number; eligible: boolean; forceRemote: boolean }>;
+  /**
+   * How long a visit takes. Only in-person: the engine never proposes a call,
+   * so there is no remote duration for it to choose (§4.4).
+   */
+  serviceMinutes: { IN_PERSON: number };
+  unitTypePolicy: Record<string, { fit: number; eligible: boolean }>;
   reachRadiusKm: number;
   detourBudgetKm: number;
   tauSeconds: number;

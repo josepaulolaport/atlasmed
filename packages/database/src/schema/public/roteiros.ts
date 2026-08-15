@@ -249,6 +249,11 @@ export const roteiroStops = pgTable(
      * Reuses `interaction_modality` rather than defining a parallel enum: the
      * stop becomes an interaction on confirm, and two enums meaning the same
      * thing would eventually disagree.
+     *
+     * Always `IN_PERSON` as generated. The column exists because a rep may flip
+     * a stop to a call in the workspace (P3) and because a stop becomes a real
+     * interaction, which has a modality either way — not because the engine
+     * chooses one.
      */
     modality: interactionModalityEnum("modality").notNull(),
     modalitySource: roteiroModalitySourceEnum("modality_source").notNull().default("SUGGESTED"),
