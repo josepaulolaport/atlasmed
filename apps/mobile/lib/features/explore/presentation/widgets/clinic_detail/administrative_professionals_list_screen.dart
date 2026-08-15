@@ -6,7 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_consta
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
@@ -328,7 +328,7 @@ class _AdministrativeProfessionalsListScreenState
   }
 
   Future<void> _openAssociate() async {
-    final created = await showCreateAdminProfessionalSheet(
+    final created = await openCreateAdminProfessionalScreen(
       context,
       facilityId: widget.facilityId,
     );

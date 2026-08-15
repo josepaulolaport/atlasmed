@@ -10,39 +10,51 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// Create or edit an administrative professional.
 ///
 /// Real [facilityId] → `POST` / `PATCH /facilities/:id/administrative-contacts`.
-Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
+///
+/// A pushed screen rather than a bottom sheet. The form is four fields plus a
+/// toggle per role — eight of them today, and the catalogue grows — so the
+/// sheet was already taller than the screen: its title sat under the status bar
+/// and collided with the Dynamic Island, and there was no room left to give it
+/// a safe area without shrinking the form further. A full route has a real app
+/// bar, its own back affordance, and as much height as the content needs.
+Future<AdministrativeProfessional?> openCreateAdminProfessionalScreen(
   BuildContext context, {
   int? facilityId,
   AdministrativeProfessional? existing,
 }) {
-  return showModalBottomSheet<AdministrativeProfessional>(
-    context: context,
-    isScrollControlled: true,
-    useRootNavigator: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => _CreateAdminProfessionalSheet(
-      facilityId: facilityId,
-      existing: existing,
+  return Navigator.of(
+    context,
+    rootNavigator: true,
+  ).push<AdministrativeProfessional>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => CreateAdminProfessionalScreen(
+        facilityId: facilityId,
+        existing: existing,
+      ),
     ),
   );
 }
 
-class _CreateAdminProfessionalSheet extends StatefulWidget {
-  const _CreateAdminProfessionalSheet({this.facilityId, this.existing});
+/// Public so a widget test can mount it without a route.
+@visibleForTesting
+class CreateAdminProfessionalScreen extends StatefulWidget {
+  const CreateAdminProfessionalScreen({
+    super.key,
+    this.facilityId,
+    this.existing,
+  });
 
   final int? facilityId;
   final AdministrativeProfessional? existing;
 
   @override
-  State<_CreateAdminProfessionalSheet> createState() =>
-      _CreateAdminProfessionalSheetState();
+  State<CreateAdminProfessionalScreen> createState() =>
+      _CreateAdminProfessionalScreenState();
 }
 
-class _CreateAdminProfessionalSheetState
-    extends State<_CreateAdminProfessionalSheet> {
+class _CreateAdminProfessionalScreenState
+    extends State<CreateAdminProfessionalScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _roleCtrl;
   late final TextEditingController _phoneCtrl;
@@ -102,36 +114,31 @@ class _CreateAdminProfessionalSheetState
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + bottom),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      // The title lives here now, where the app bar keeps it clear of the
+      // status bar instead of tucking it under the Dynamic Island.
+      appBar: AppBar(
+        title: Text(_isEdit ? 'Editar profissional' : 'Novo profissional'),
+        backgroundColor: Colors.white,
+      ),
+      body: _body(context),
+      // Pinned rather than scrolled past: on a catalogue of eight roles the
+      // button used to sit below the fold, so the form had to be scrolled to
+      // its end before it could be submitted.
+      bottomNavigationBar: _saveBar(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    return SafeArea(
+      bottom: false,
       child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.gray200,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            Text(
-              _isEdit
-                  ? 'Editar profissional administrativo'
-                  : 'Novo profissional administrativo',
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.gray900,
-              ),
-            ),
-            const SizedBox(height: 4),
             Text(
               _isEdit
                   ? 'Atualize os dados e as funções deste contato.'
@@ -177,28 +184,43 @@ class _CreateAdminProfessionalSheetState
                 enabled: !_saving,
                 onChanged: (next) => setState(() => _selectedRoles = next),
               ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: _saving || _loadingCatalog ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navyBright,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(_isEdit ? 'Salvar' : 'Criar perfil'),
-            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _saveBar(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        // Rides above the keyboard, so the button stays reachable while a
+        // field is focused.
+        padding: EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          12 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: FilledButton(
+          onPressed: _saving || _loadingCatalog ? null : _save,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.navyBright,
+            minimumSize: const Size.fromHeight(48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: _saving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(_isEdit ? 'Salvar' : 'Criar perfil'),
         ),
       ),
     );
