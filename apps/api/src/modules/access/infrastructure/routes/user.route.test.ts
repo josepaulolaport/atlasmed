@@ -1,3 +1,5 @@
+import { userPreferencesSchema } from "@atlasmed/access";
+import { userPreferencesBody } from "./user.route";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { Elysia } from "elysia";
 import { ValidationError } from "../../../../shared/errors";
@@ -56,6 +58,22 @@ function buildUserTestRoute() {
       });
     });
 }
+
+describe("PATCH /user/preferences body schema", () => {
+  it("accepts every field the preferences schema does", () => {
+    // Elysia strips anything not named in the route body before zod ever sees
+    // it, so a field present in the domain schema but missing here is dropped
+    // in silence: the request succeeds, the response looks right, and the value
+    // is never stored. That is exactly how working hours were lost, and both
+    // typecheck and the route tests were green while it happened.
+    const routeKeys = Object.keys(userPreferencesBody.properties);
+    const schemaKeys = Object.keys(
+      userPreferencesSchema.parse({}) as Record<string, unknown>,
+    );
+
+    expect([...schemaKeys].sort()).toEqual([...routeKeys].sort());
+  });
+});
 
 describe("userRoute", () => {
   beforeEach(() => {

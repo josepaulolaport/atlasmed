@@ -24,6 +24,7 @@ class RoteiroSlotList extends StatelessWidget {
     required this.onFillEmpty,
     required this.onDurationChanged,
     required this.onTimeChanged,
+    required this.onEditWorkingHours,
   });
 
   final Roteiro roteiro;
@@ -38,6 +39,10 @@ class RoteiroSlotList extends StatelessWidget {
   final VoidCallback onFillEmpty;
   final void Function(RoteiroStop stop, int minutes) onDurationChanged;
   final void Function(RoteiroStop stop, DateTime startsAt) onTimeChanged;
+
+  /// Offered next to the overrun warning. A rep told their day runs past 18:00
+  /// when they actually work until 20:00 needs to fix the hours, not the day.
+  final VoidCallback onEditWorkingHours;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +75,10 @@ class RoteiroSlotList extends StatelessWidget {
         // Above the day, not buried under it: a conflict the rep's own edit
         // created is the first thing they need to see.
         for (final warning in schedule.warnings)
-          _WarningBanner(warning: warning),
+          _WarningBanner(
+            warning: warning,
+            onEditWorkingHours: onEditWorkingHours,
+          ),
         for (final entry in timed) entry.card,
         for (var i = 0; i < empty; i += 1) _EmptySlot(onTap: onFillEmpty),
       ],
@@ -81,9 +89,13 @@ class RoteiroSlotList extends StatelessWidget {
 /// A consequence of the rep's edit that they have to resolve themselves. Never
 /// auto-corrected — only the rep can choose between a clinic and a commitment.
 class _WarningBanner extends StatelessWidget {
-  const _WarningBanner({required this.warning});
+  const _WarningBanner({
+    required this.warning,
+    required this.onEditWorkingHours,
+  });
 
   final RoteiroScheduleWarning warning;
+  final VoidCallback onEditWorkingHours;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -104,9 +116,33 @@ class _WarningBanner extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(
-            warning.message,
-            style: const TextStyle(fontSize: 12, color: AppColors.gray700),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                warning.message,
+                style: const TextStyle(fontSize: 12, color: AppColors.gray700),
+              ),
+              // The fix sits next to the complaint. The bound is a linha
+              // default until the rep says otherwise, so "your day is too
+              // long" is often really "we never asked what your day is".
+              if (warning.kind == RoteiroWarningKind.workdayOverrun)
+                GestureDetector(
+                  onTap: onEditWorkingHours,
+                  child: const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Ajustar meu horário de trabalho',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.navyBright,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ],

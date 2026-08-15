@@ -34,11 +34,20 @@ class ScheduledStop {
   int get durationMinutes => endsAt.difference(startsAt).inMinutes;
 }
 
+/// What kind of problem a warning describes.
+///
+/// Carried so the UI can offer the fix next to the complaint. Only the workday
+/// overrun has one: the others are conflicts the rep resolves by moving things
+/// themselves, and inventing a button for them would be a button that lies.
+enum RoteiroWarningKind { workdayOverrun, calendarConflict, travelSqueeze }
+
 /// Something the rep's edit broke. Surfaced, never silently corrected — the
 /// only person who can decide between a clinic and a commitment is the rep.
 class RoteiroScheduleWarning {
-  const RoteiroScheduleWarning(this.message);
+  const RoteiroScheduleWarning(this.message, {required this.kind});
+
   final String message;
+  final RoteiroWarningKind kind;
 }
 
 class RoteiroSchedule {
@@ -171,6 +180,7 @@ List<RoteiroScheduleWarning> _warnings(
         'O dia agora termina $over min depois das '
         '${_hhmm(workdayEndsAt)} (${_hhmm(last.endsAt)}), o limite usado '
         'para montar o roteiro.',
+        kind: RoteiroWarningKind.workdayOverrun,
       ),
     );
   }
@@ -185,6 +195,7 @@ List<RoteiroScheduleWarning> _warnings(
           RoteiroScheduleWarning(
             '${scheduled.stop.facilityName} agora conflita com '
             '${point.facilityName}, que já está na sua agenda.',
+            kind: RoteiroWarningKind.calendarConflict,
           ),
         );
       }
@@ -202,6 +213,7 @@ List<RoteiroScheduleWarning> _warnings(
         RoteiroScheduleWarning(
           'Não sobra tempo de deslocamento entre '
           '${previous.stop.facilityName} e ${current.stop.facilityName}.',
+          kind: RoteiroWarningKind.travelSqueeze,
         ),
       );
     }

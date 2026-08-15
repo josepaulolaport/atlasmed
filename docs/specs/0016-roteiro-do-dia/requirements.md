@@ -1694,6 +1694,15 @@ omit-when-null rule would make a reset unsayable.
 Malformed stored values are treated as unset. A bad string must not be able to
 make the engine plan a day that does not exist.
 
+**Where the rep sets them.** `Perfil` has no entry point in the app — it was
+hidden alongside `Usuários`, and `app_shell.dart` records what went with it — so
+the row there would have been settable only in theory. The working control is on
+the overrun warning itself: *"Ajustar meu horário de trabalho"*, offered beside
+the complaint. That is the better place regardless. The rep is being told their
+day is too long at exactly the moment they know what their day actually is, and
+saving re-plans rather than merely re-rendering, because the hours are an input
+to selection rather than a display bound.
+
 ---
 
 ## 16. Deferred

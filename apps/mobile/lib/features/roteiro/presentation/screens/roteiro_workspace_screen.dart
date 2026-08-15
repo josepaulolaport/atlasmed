@@ -3,6 +3,9 @@ import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_workspace_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_day_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/widgets/working_hours_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/rejection_reason_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/add_clinic_sheet.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_slot_list.dart';
@@ -141,6 +144,34 @@ class _RoteiroWorkspaceScreenState
   /// they turn the same clinic down: the first removal means "not today" as
   /// often as "not here", and a sheet on every tap becomes something to
   /// dismiss rather than answer.
+  /// The overrun warning's own fix.
+  ///
+  /// Perfil has no entry point in the app today (see `app_shell.dart`), so
+  /// without this the hours would be settable only in theory — and this is the
+  /// better place regardless: the rep is being told their day is too long at
+  /// exactly the moment they know what their day actually is.
+  Future<void> _editWorkingHours(RoteiroWorkspaceNotifier notifier) async {
+    final repo = ref.read(userPreferencesProvider);
+    final current = await repo.currentValueOrResolve();
+    if (current == null || !mounted) return;
+
+    final payload = await showModalBottomSheet<UpdateUserPreferencesPayload>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => WorkingHoursSheet(current: current),
+    );
+    if (payload == null) return;
+
+    await repo.patch(payload);
+    // Re-planned rather than merely re-rendered: the hours are an input to
+    // selection, not a display bound, so the slate itself should change.
+    await notifier.generate();
+  }
+
   Future<void> _remove(
     RoteiroStop stop,
     RoteiroWorkspaceNotifier notifier,
@@ -294,6 +325,7 @@ class _RoteiroWorkspaceScreenState
                   stop.facilityVerticalProfileId,
                   startsAt,
                 ),
+                onEditWorkingHours: () => _editWorkingHours(notifier),
               ),
           ],
         ),

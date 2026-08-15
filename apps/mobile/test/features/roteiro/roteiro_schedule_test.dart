@@ -172,6 +172,9 @@ void main() {
         schedule.warnings.any((w) => w.message.contains('seu horário')),
         isFalse,
       );
+      // Tagged so the UI can offer the fix beside the complaint — the bound is
+      // a linha default until the rep says otherwise.
+      expect(schedule.warnings.first.kind, RoteiroWarningKind.workdayOverrun);
     });
 
     test('says nothing when the day still fits', () {
