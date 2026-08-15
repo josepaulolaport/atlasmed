@@ -130,35 +130,67 @@ Merit must not be polluted by drive time, because the rep is shown *why* a clini
 Scope is enforced through the existing `ScopeContext` / `buildFacilityListScope` path, not
 re-derived here.
 
-#### Reachability — a filter, not a tiebreaker
+#### Reachability — two modes, both anchored on where the rep actually is
 
-**Candidates must be within reach of the origin before merit is considered.**
+**Candidates must be within reach before merit is considered**, and reach is defined by which of
+two questions the rep is asking (user decision, 2026-08-15).
+
+**Mode LIVRE — "what should I do today?"** The rep is somewhere; find work around them.
 
 ```
-ST_DWithin(facility.location, origin, radius)      -- straight-line, PostGIS, cheap
-radius starts at reach_radius_km  (default 60 km)
+ST_DWithin(facility.location, gps, reach_radius_km)
 ```
 
-If the reachable set yields fewer than `4·N` candidates, the radius **expands in steps** —
-60 → 120 → 250 → 500 km — stopping at the first step that clears the bar. The radius actually used
-is returned in `notices`, because "your nearest suggestion is 210 km away" is something the rep must
-be told rather than left to discover from the drive time.
+**Mode ÂNCORA — "I'm already going to clinic X."** The rep will make that drive regardless, so
+everything *along it* and *around the destination* is nearly free. One expression covers both:
+
+```
+dist(gps, C) + dist(C, anchor)  ≤  dist(gps, anchor) + detour_budget_km
+```
+
+That is an **ellipse with the rep and the anchor as its foci**. A clinic directly on the route adds
+almost nothing and is always included; one off to the side is included exactly while the detour it
+costs stays inside the budget. It needs no corridor buffers and no special case for "near the
+destination" — the region around the anchor is already inside the ellipse.
+
+Measured on rep 3's book with a 5.5 km anchor drive: a 5 km budget admits 22 candidates, 10 km → 47,
+20 km → 81, 40 km → 139. `detour_budget_km` defaults to **20** and lives in `roteiro_params`.
+
+In both modes, if the reachable set yields fewer than `4·N` candidates the bound **expands in
+steps** — ×2, ×4, ×8 — stopping at the first step that clears the bar, and **the bound actually used
+is reported**. "Your nearest suggestion is 90 km away" is a fact about the rep's day, not an
+implementation detail.
 
 **This is a correctness fix, not a tuning knob.** §4.5 shortlists the top `K` candidates *by merit*
 and only then asks Mapbox for travel times. On a compact book that is harmless. On a spread one it
-is broken: rep 6's clinics span **seven states and 2 080 km** — São Luís 58, Manaus 43, Belém 42,
-Porto Velho 37, Rio Branco 29 — so a merit-first shortlist can return twenty clinics in Manaus to a
-rep standing in Belém. Every one of them scores well and not one is reachable today. The engine
-would produce a confident, useless slate and burn a Matrix call proving it.
+is broken, and measurably so: with reachability off, a rep standing in **Belém** is offered Porto
+Velho (37 orthopaedists), Parauapebas, São Luís and Manaus — every one scoring well, not one
+reachable that day. With it on, the same query returns six clinics in Belém and Barcarena, all
+within 18 km.
 
 Straight-line first because it is free and Matrix is not; Stage B then refines with real driving
-times and drops anything that does not fit the day.
+times and drops whatever does not fit the day.
 
-> **Deliberately unsolved: the genuinely spread book.** A reachability filter keeps rep 6's daily
-> roteiro honest — it will suggest Belém clinics while they are in Belém — but it does not answer
-> *which city they should fly to next*. That is trip planning, it is a different question, and it is
-> **out of scope** (user decision, 2026-08-15: focus on the day-to-day; suggest clinics nearby or at
-> least doable). See §16.1.
+> **GPS is required, and there is no fallback to a stored or averaged position.**
+>
+> An earlier draft fell back to a base address and then to a centroid of the rep's territories. The
+> centroid idea was measured and is actively harmful: a centroid of scattered geometry lands in
+> **empty space**. Using each rep's own book centroid as origin, reps 5 and 6 have **zero**
+> candidates within 120 km, and rep 6 has **one** within 250 km — their centroid is a point in the
+> middle of the Amazon. Worse, the step-expansion above would have hidden it, growing the radius
+> until something appeared and presenting a 700 km drive as a suggestion.
+>
+> Both modes now start from the rep's live position, so the question does not arise. If GPS is
+> unavailable the feature says so and asks for it, rather than guessing from an average of places
+> the rep is not.
+>
+> **Consequence, accepted:** a roteiro can only be generated for *now*, not for a future day. That
+> follows from the same decision that deferred weekly planning (§4.6) and keeps the feature honest —
+> a plan built from where the rep will hypothetically be is a plan built on a guess.
+
+> **Deliberately unsolved: the genuinely spread book.** Reachability keeps rep 6's day honest — Belém
+> clinics while they are in Belém — but does not answer *which city to fly to next*. That is trip
+> planning, a different question, and out of scope (§16.1).
 
 ### 4.2 Merit components
 
@@ -700,11 +732,12 @@ engine that cannot be scored is a suggestion engine nobody will trust in three m
 
 ### 6.1 Origin
 
-Priority: explicit `origin` in the request (anchor mode) → device GPS (today only) →
-`users.base_location` → centroid of the rep's assigned territories → **error**, with the fix
-(set a base) named in the message.
+**The rep's live GPS position, always.** There is no fallback (§4.1). Without a fix, the generation
+fails with a message naming the permission to grant — a suggestion built from a guessed position is
+worse than no suggestion, because its drive times look just as confident.
 
-`base_location` is set from the profile screen using the existing Mapbox search-box adapter.
+`origin_source` on the roteiro therefore carries only `GPS` or `ANCHOR`; `BASE` and
+`TERRITORY_CENTROID` are removed along with `users.base_location`.
 
 ### 6.2 The limit
 
