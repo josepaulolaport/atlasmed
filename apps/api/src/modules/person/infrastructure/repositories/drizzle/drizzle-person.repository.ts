@@ -1,4 +1,5 @@
 import {
+  facilities,
   healthcareSpecialties,
   personFacilities,
   personHealthcareProfileSpecialties,
@@ -41,16 +42,33 @@ export class DrizzlePersonRepository implements PersonRepository {
 
     if (!row) return null;
 
+    /**
+     * Names, not only ids.
+     *
+     * The response carried `facilityIds` alone, so every consumer that wanted
+     * to *show* where a person works had nothing to show: mobile's
+     * `Professional.clinics` maps a `facilities` array the API never sent, and
+     * the doctor's CLÍNICAS section was permanently empty — including for a
+     * doctor opened from the very clinic they are linked to.
+     *
+     * Deactivated clinics are left out: they are not somewhere anyone can be
+     * visited. `facilityIds` keeps its own shape for existing callers.
+     */
     const facilityRows = await db
-      .select({ facilityId: personFacilities.facilityId })
+      .select({
+        facilityId: personFacilities.facilityId,
+        facilityName: facilities.displayName,
+      })
       .from(personFacilities)
+      .innerJoin(facilities, eq(facilities.id, personFacilities.facilityId))
       .where(
         and(
           eq(personFacilities.personId, personId),
-          isNull(personFacilities.endedAt)
+          isNull(personFacilities.endedAt),
+          isNull(facilities.deactivatedAt)
         )
       )
-      .orderBy(asc(personFacilities.facilityId));
+      .orderBy(asc(facilities.displayName));
 
     return {
       id: row.id,
@@ -67,6 +85,10 @@ export class DrizzlePersonRepository implements PersonRepository {
       languages: row.languages,
       imageUrl: row.imageUrl,
       facilityIds: facilityRows.map((r) => r.facilityId),
+      facilities: facilityRows.map((r) => ({
+        id: r.facilityId,
+        name: r.facilityName,
+      })),
       hasHealthcareProfile: Boolean(row.hasHealthcareProfile),
     };
   }

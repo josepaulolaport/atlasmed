@@ -57,6 +57,15 @@ bool canAssignFacilityConsultant(UserRoleName role) =>
 
 bool canMutateProfessional(UserRoleName role) => canMutateFacility(role);
 
+/// Who owns an agenda they can add to.
+///
+/// Not `canCreateVisit`: a manager may record a visit but reads agendas rather
+/// than keeping one, so the create action stays with admin and rep. This lived
+/// inline in `AgendaScreen`; scheduling now starts from clinic and doctor
+/// detail too, and three copies of the rule drift.
+bool canCreateCalendarEvent(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.rep;
+
 bool canCreateVisit(UserRoleName role) =>
     role == UserRoleName.admin ||
     role == UserRoleName.manager ||

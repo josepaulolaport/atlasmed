@@ -66,6 +66,55 @@ void main() {
     );
   });
 
+  test('a seeded appointment keeps its seed in the URL', () {
+    // The router refreshes on the session, and a refresh rebuilds the matches
+    // from the location alone — anything passed as `extra` is gone by then, and
+    // the editor reopens empty over a form the rep had already filled. So the
+    // clinic travels as query parameters and survives the rebuild.
+    final location = AgendaNewRoute(
+      facilityId: 11,
+      facilityName: 'Centro Reumatologico Botafogo',
+      title: 'Visita · Centro Reumatologico Botafogo',
+    ).location;
+
+    final uri = Uri.parse(location);
+    expect(uri.path, '/agenda/new');
+    expect(uri.queryParameters['facility-id'], '11');
+    expect(
+      uri.queryParameters['facility-name'],
+      'Centro Reumatologico Botafogo',
+    );
+    expect(
+      uri.queryParameters['title'],
+      'Visita · Centro Reumatologico Botafogo',
+    );
+
+    // Opened from the agenda's own "+", it carries nothing.
+    expect(const AgendaNewRoute().location, '/agenda/new');
+
+    // From a doctor: the person travels instead of a clinic, so the editor can
+    // offer that doctor's clinics and nothing else.
+    expect(
+      const AgendaNewRoute(
+        personId: 138,
+        personName: 'Dra. Helena',
+        title: 'Visita · Dra. Helena',
+      ).location,
+      '/agenda/new?title=Visita+%C2%B7+Dra.+Helena&person-id=138'
+      '&person-name=Dra.+Helena',
+    );
+  });
+
+  test('editing an appointment carries enough to find it again', () {
+    // `extra` does not survive a router refresh, so the recurrence key — which
+    // dates the appointment — rides in the URL and the screen can refetch.
+    const key = '2026-08-15T14:30[America/Sao_Paulo]';
+    expect(
+      AgendaEditRoute(id: 5, recurrenceKey: key).location,
+      '/agenda/5/edit?recurrence-key=${Uri.encodeQueryComponent(key)}',
+    );
+  });
+
   test('agenda occurrence edit encodes recurrenceKey', () {
     const key = '2026-08-17T12:00[America/Sao_Paulo]';
     expect(

@@ -27,6 +27,10 @@ function basePerson(overrides?: Partial<PersonRecord>): PersonRecord {
     languages: "pt-BR",
     imageUrl: null,
     facilityIds: [10, 20],
+    facilities: [
+      { id: 10, name: "Clínica Central" },
+      { id: 20, name: "Hospital São Lucas" },
+    ],
     hasHealthcareProfile: true,
     ...overrides,
   };
@@ -83,6 +87,12 @@ describe("GetPersonUseCase", () => {
       languages: "pt-BR",
       imageUrl: null,
       facilityIds: [10, 20],
+      // Named, so a caller can show where the person works instead of holding
+      // ids it cannot resolve.
+      facilities: [
+        { id: 10, name: "Clínica Central" },
+        { id: 20, name: "Hospital São Lucas" },
+      ],
       hasHealthcareProfile: true,
       registrations: [],
       primaryRegistrationDisplay: null,

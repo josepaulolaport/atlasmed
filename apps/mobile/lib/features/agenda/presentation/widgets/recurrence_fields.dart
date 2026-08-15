@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -28,7 +29,8 @@ class RecurrenceFields extends StatelessWidget {
         DropdownButtonFormField<CalendarRecurrence>(
           key: const Key('calendar-recurrence'),
           initialValue: draft.recurrence,
-          decoration: const InputDecoration(labelText: 'Repetição'),
+          decoration: appFieldDecoration(label: 'Repetição'),
+          borderRadius: BorderRadius.circular(12),
           items: CalendarRecurrence.values
               .map(
                 (value) => DropdownMenuItem(
@@ -97,9 +99,9 @@ class RecurrenceFields extends StatelessWidget {
               key: const Key('calendar-recurrence-count'),
               initialValue: draft.recurrenceCount?.toString(),
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Número de ocorrências',
-                hintText: 'Ex.: 6',
+              decoration: appFieldDecoration(
+                label: 'Número de ocorrências',
+                hint: 'Ex.: 6',
               ),
               onChanged: (value) => onCountChanged(int.tryParse(value)),
             ),

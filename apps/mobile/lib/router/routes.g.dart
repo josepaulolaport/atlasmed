@@ -629,28 +629,57 @@ RouteBase get $agendaNewRoute => GoRouteData.$route(
 );
 
 mixin $AgendaNewRoute on GoRouteData {
-  static AgendaNewRoute _fromState(GoRouterState state) =>
-      AgendaNewRoute($extra: state.extra as CalendarEditorPrefill?);
+  static AgendaNewRoute _fromState(GoRouterState state) => AgendaNewRoute(
+    facilityId: _$convertMapValue(
+      'facility-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    facilityName: state.uri.queryParameters['facility-name'],
+    title: state.uri.queryParameters['title'],
+    personId: _$convertMapValue(
+      'person-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    personName: state.uri.queryParameters['person-name'],
+  );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
 
   @override
-  String get location => GoRouteData.$location('/agenda/new');
+  String get location => GoRouteData.$location(
+    '/agenda/new',
+    queryParams: {
+      if (_self.facilityId != null) 'facility-id': _self.facilityId!.toString(),
+      if (_self.facilityName != null) 'facility-name': _self.facilityName,
+      if (_self.title != null) 'title': _self.title,
+      if (_self.personId != null) 'person-id': _self.personId!.toString(),
+      if (_self.personName != null) 'person-name': _self.personName,
+    },
+  );
 
   @override
-  void go(BuildContext context) => context.go(location, extra: _self.$extra);
+  void go(BuildContext context) => context.go(location);
 
   @override
-  Future<T?> push<T>(BuildContext context) =>
-      context.push<T>(location, extra: _self.$extra);
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
   @override
   void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location, extra: _self.$extra);
+      context.pushReplacement(location);
 
   @override
-  void replace(BuildContext context) =>
-      context.replace(location, extra: _self.$extra);
+  void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
 }
 
 RouteBase get $agendaEditRoute => GoRouteData.$route(
@@ -663,6 +692,7 @@ RouteBase get $agendaEditRoute => GoRouteData.$route(
 mixin $AgendaEditRoute on GoRouteData {
   static AgendaEditRoute _fromState(GoRouterState state) => AgendaEditRoute(
     id: int.parse(state.pathParameters['id']!),
+    recurrenceKey: state.uri.queryParameters['recurrence-key'],
     $extra: state.extra as CalendarOccurrence?,
   );
 
@@ -671,6 +701,9 @@ mixin $AgendaEditRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/agenda/${Uri.encodeComponent(_self.id.toString())}/edit',
+    queryParams: {
+      if (_self.recurrenceKey != null) 'recurrence-key': _self.recurrenceKey,
+    },
   );
 
   @override
@@ -772,15 +805,6 @@ mixin $SubjectDashboardRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 RouteBase get $assignClinicRoute => GoRouteData.$route(
