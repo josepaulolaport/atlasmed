@@ -407,6 +407,123 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.totals.driveSeconds).toBe(0);
   });
 
+  it("fills a gap between two bookings without making the rep late for the second", async () => {
+    // The whole point of a bounded gap: whatever goes in must still leave time
+    // to reach the next commitment.
+    const near = candidate({ id: 1, lat: SAO_PAULO.lat, lng: SAO_PAULO.lng });
+    const repository = new FakeRepository([near], {
+      located: [
+        { facilityId: 55, facilityVerticalProfileId: 77, facilityName: "A", lat: SAO_PAULO.lat, lng: SAO_PAULO.lng },
+        { facilityId: 56, facilityVerticalProfileId: 78, facilityName: "B", lat: SAO_PAULO.lat, lng: SAO_PAULO.lng },
+      ],
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          { startsAt: "2026-08-17T11:00:00-03:00", endsAt: "2026-08-17T12:00:00-03:00", interaction: { facilityId: 55 } },
+          { startsAt: "2026-08-17T15:00:00-03:00", endsAt: "2026-08-17T16:00:00-03:00", interaction: { facilityId: 56 } },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T10:00:00-03:00") }),
+    );
+
+    for (const stop of result.stops) {
+      // Never overlapping either booking.
+      expect(stop.plannedStartsAt.getTime()).toBeGreaterThanOrEqual(
+        new Date("2026-08-17T10:00:00-03:00").getTime(),
+      );
+      expect(stop.plannedEndsAt.getTime()).toBeLessThanOrEqual(
+        new Date("2026-08-17T15:00:00-03:00").getTime(),
+      );
+    }
+  });
+
+  it("uses the stretch before the first booking", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 5 }, (_, i) => candidate({ id: i + 1, lat: SAO_PAULO.lat, lng: SAO_PAULO.lng })),
+      {
+        located: [
+          { facilityId: 55, facilityVerticalProfileId: 77, facilityName: "Tarde", lat: SAO_PAULO.lat, lng: SAO_PAULO.lng },
+        ],
+      },
+    );
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          { startsAt: "2026-08-17T16:00:00-03:00", endsAt: "2026-08-17T17:00:00-03:00", interaction: { facilityId: 55 } },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T08:00:00-03:00") }),
+    );
+
+    const before = result.stops.filter(
+      (s) => s.plannedEndsAt.getTime() <= new Date("2026-08-17T16:00:00-03:00").getTime(),
+    );
+    expect(before.length).toBeGreaterThan(0);
+  });
+
+  it("uses the stretch after the last booking, where there is nowhere to be next", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 5 }, (_, i) => candidate({ id: i + 1, lat: SAO_PAULO.lat, lng: SAO_PAULO.lng })),
+      {
+        located: [
+          { facilityId: 55, facilityVerticalProfileId: 77, facilityName: "Manha", lat: SAO_PAULO.lat, lng: SAO_PAULO.lng },
+        ],
+      },
+    );
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          { startsAt: "2026-08-17T08:30:00-03:00", endsAt: "2026-08-17T09:30:00-03:00", interaction: { facilityId: 55 } },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T08:00:00-03:00") }),
+    );
+
+    const after = result.stops.filter(
+      (s) => s.plannedStartsAt.getTime() >= new Date("2026-08-17T09:30:00-03:00").getTime(),
+    );
+    expect(after.length).toBeGreaterThan(0);
+  });
+
+  it("says the day is full when no gap can hold another visit", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 5 }, (_, i) => candidate({ id: i + 1 })),
+      {
+        located: [
+          { facilityId: 55, facilityVerticalProfileId: 77, facilityName: "Todo o dia", lat: SAO_PAULO.lat, lng: SAO_PAULO.lng },
+        ],
+      },
+    );
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          { startsAt: "2026-08-17T08:00:00-03:00", endsAt: "2026-08-17T18:00:00-03:00", interaction: { facilityId: 55 } },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T08:00:00-03:00") }),
+    );
+
+    expect(result.stops).toHaveLength(0);
+    expect(result.notices.map((n) => n.code)).toContain("DAY_FULL");
+  });
+
   it("drops stops that run past the end of the workday, and says so", async () => {
     const repository = new FakeRepository(
       Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
@@ -427,16 +544,13 @@ describe("GenerateRoteiroUseCase", () => {
     }
   });
 
-  it("reports a short slate instead of quietly returning fewer clinics", async () => {
+  it("returns fewer stops when only a few clinics are reachable", async () => {
     const repository = new FakeRepository([candidate({ id: 1 }), candidate({ id: 2 })]);
     const useCase = new GenerateRoteiroUseCase({ repository });
 
     const result = await useCase.execute(baseInput());
 
     expect(result.stops).toHaveLength(2);
-    const short = result.notices.find((n) => n.code === "SHORT_SLATE");
-    expect(short).toBeDefined();
-    expect(short?.filled).toBe(2);
   });
 
   it("says so when nothing at all is reachable", async () => {

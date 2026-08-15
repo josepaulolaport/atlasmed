@@ -519,6 +519,46 @@ The rep may flip any stop's modality; the flip re-times the day and **is recorde
 Why this earns its place: converting one 90-minute round trip into a 15-minute call buys back an
 entire extra in-person visit. That is the single largest time lever in the feature.
 
+### 4.4.1 The day is a set of gaps, and they are not interchangeable
+
+A rep is in one of four situations, and they are one structure — a **gap**, bounded by whatever
+they are already committed to at each end:
+
+| situation | `from` | `to` |
+|---|---|---|
+| free day | GPS | — |
+| before the first booking | GPS | that booking |
+| between two bookings | the earlier | the later |
+| after the last booking | that booking | — |
+
+A gap with a `to` is **bounded at both ends**: anything placed in it must still leave time to reach
+the next commitment, or the rep is late to something they already promised. A gap without one runs
+to the close of the working day and only has to fit going in.
+
+**The cost of a clinic is the detour it adds to that stretch**, not its distance from the rep:
+
+```
+added = travel(cursor → C) + travel(C → next commitment) − travel(cursor → next commitment)
+added = travel(cursor → C)                                    on an open tail
+```
+
+So the same clinic is cheap after the last booking and expensive squeezed between two morning ones.
+That distinction is the whole reason gaps are modelled at all.
+
+> **Replaces a single cursor walking forward from the origin.** The first implementation chose
+> stops in one chain and pushed each past whatever it collided with, which has two failures a rep
+> would notice immediately: a clinic suited to the afternoon leg gets scheduled into the morning,
+> and nothing ever checks that the rep can still reach their next booking on time. Widening a
+> booking's block by its travel — the fix before this one — hid the second symptom without
+> addressing it.
+>
+> Selection and placement are now the same decision: the engine picks the best **(clinic, gap)**
+> pair, so a stop knows where in the day it goes at the moment it is chosen and no later pass can
+> disagree.
+>
+> A candidate that fits no gap is simply not chosen, which is how "the day is already full" and
+> "there is nothing near the 11:00 slot" become the same correctly-handled answer (`DAY_FULL`).
+
 ### 4.5 Stage B — selection and ordering
 
 The objective is **merit per hour**, not shortest route. This is an orienteering problem, so

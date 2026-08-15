@@ -150,6 +150,55 @@ export interface GenerateRoteiroInput {
   timeZone?: string;
 }
 
+/**
+ * A stretch of the day the engine may plan into, bounded by whatever the rep is
+ * already committed to at each end.
+ *
+ * The four situations a rep is actually in are one structure:
+ *
+ * | situation | `from` | `to` |
+ * |---|---|---|
+ * | free day | GPS | — |
+ * | before the first booking | GPS | that booking |
+ * | between two bookings | the earlier | the later |
+ * | after the last booking | that booking | — |
+ *
+ * A gap with a `to` is **bounded at both ends**: anything placed in it has to
+ * leave enough time to reach the next commitment, or the rep arrives late to
+ * something they already promised. A gap without one runs to the end of the
+ * working day and only has to fit going in.
+ *
+ * Modelling it this way is what stops a clinic that suits the afternoon leg
+ * being scheduled into the morning — the failure of a single cursor walking
+ * forward from the origin and pushing past obstacles.
+ */
+interface DayGap {
+  index: number;
+  from: RoteiroPoint;
+  /** Null for the tail: nowhere to be afterwards. */
+  to: RoteiroPoint | null;
+  /** Where the next placement departs from — advances as stops are added. */
+  cursor: RoteiroPoint;
+  /** When the next placement can start — advances as stops are added. */
+  clock: number;
+  /** Hard end: the next commitment's start, or the close of the working day. */
+  endsAt: number;
+}
+
+/**
+ * A chosen clinic, already placed: selection decides *where in the day* a stop
+ * goes at the same time as deciding whether to take it, so there is no second
+ * scheduling pass to disagree with it.
+ */
+interface PlacedStop {
+  candidate: RoteiroCandidate;
+  isCoverageSlot: boolean;
+  gapIndex: number;
+  startsAt: Date;
+  endsAt: Date;
+  travelSeconds: number;
+}
+
 interface PlannedStop {
   candidate: RoteiroCandidate;
   position: number;
@@ -191,6 +240,84 @@ function zoneOffsetMs(at: Date, timeZone: string): number {
     get("second"),
   );
   return at.getTime() - asUtc;
+}
+
+/**
+ * The day split into plannable stretches by the rep's existing commitments.
+ *
+ * Personal blocks are not boundaries — they have no location, so they cannot
+ * bound a leg. They stay in `busy` and are stepped over inside whichever gap
+ * they fall in.
+ */
+function buildGaps(args: {
+  origin: RoteiroPoint;
+  fixedPoints: FixedPoint[];
+  from: number;
+  dayEnd: number;
+}): DayGap[] {
+  const gaps: DayGap[] = [];
+  let cursorPoint = args.origin;
+  let clock = args.from;
+
+  for (const point of args.fixedPoints) {
+    const endsAt = point.startsAt.getTime();
+    if (endsAt > clock) {
+      gaps.push({
+        index: gaps.length,
+        from: cursorPoint,
+        to: { lat: point.lat, lng: point.lng },
+        cursor: cursorPoint,
+        clock,
+        endsAt,
+      });
+    }
+    cursorPoint = { lat: point.lat, lng: point.lng };
+    clock = Math.max(clock, point.endsAt.getTime());
+  }
+
+  if (args.dayEnd > clock) {
+    gaps.push({
+      index: gaps.length,
+      from: cursorPoint,
+      to: null,
+      cursor: cursorPoint,
+      clock,
+      endsAt: args.dayEnd,
+    });
+  }
+  return gaps;
+}
+
+/**
+ * Whether a candidate fits a gap, and what the detour costs.
+ *
+ * The cost is the **added** travel, not the total: going out to a clinic and
+ * back onto the leg, minus the drive that was happening anyway. On the tail
+ * there is no return, so it is simply the drive out — which is why a clinic
+ * far along the last leg is cheap in the afternoon and expensive at 11:00
+ * between two bookings.
+ */
+function fitInGap(
+  gap: DayGap,
+  point: RoteiroPoint,
+  serviceMs: number,
+  busy: BusyInterval[],
+): { startsAt: number; endsAt: number; travelSeconds: number; addedSeconds: number } | null {
+  const inbound = estimatedTravelSeconds(gap.cursor, point);
+  const startsAt = pushPastBusy(gap.clock + inbound * 1000, serviceMs, busy);
+  const endsAt = startsAt + serviceMs;
+
+  const outbound = gap.to === null ? 0 : estimatedTravelSeconds(point, gap.to);
+  // Bounded gaps must still allow the rep to reach the next commitment.
+  if (endsAt + outbound * 1000 > gap.endsAt) return null;
+
+  const direct = gap.to === null ? 0 : estimatedTravelSeconds(gap.cursor, gap.to);
+  return {
+    startsAt,
+    endsAt,
+    travelSeconds: inbound,
+    addedSeconds: Math.max(0, inbound + outbound - direct),
+  };
 }
 
 /** The first start at or after `from` where a `duration` fits between blocks. */
@@ -318,23 +445,39 @@ export class GenerateRoteiroUseCase {
       });
     }
 
-    const selected = this.select({
-      candidates,
-      limit,
-      params,
-      notices,
+    const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
+    const gaps = buildGaps({
       origin: input.origin,
-    });
-    const scheduled = this.schedule({
-      selected,
-      origin: input.origin,
-      params,
-      now: input.now,
-      scopeDate: input.today,
-      timeZone,
-      busy,
       fixedPoints,
+      from: Math.max(input.now.getTime(), this.atLocalTime(input.today, params.workdayStart, timeZone).getTime()),
+      dayEnd: dayEnd.getTime(),
     });
+
+    const selected = this.select({ candidates, limit, params, notices, gaps, busy });
+
+    // Selection placed every stop inside a gap, so ordering is just time order
+    // and there is no second pass that could disagree with it.
+    const stops: PlannedStop[] = [...selected]
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .map((placed, position) => {
+        const policy =
+          params.unitTypePolicy[placed.candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
+        const modality: "IN_PERSON" | "REMOTE" = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
+        return {
+          candidate: placed.candidate,
+          position,
+          modality,
+          modalitySource: "SUGGESTED" as const,
+          isCoverageSlot: placed.isCoverageSlot,
+          isAnchor: false,
+          travelSecondsFromPrev: modality === "REMOTE" ? null : placed.travelSeconds,
+          serviceMinutes: Math.round(
+            (placed.endsAt.getTime() - placed.startsAt.getTime()) / 60_000,
+          ),
+          plannedStartsAt: placed.startsAt,
+          plannedEndsAt: placed.endsAt,
+        };
+      });
 
     /**
      * §4.5 step 6 — the day has an end, and a stop past it is not a plan.
@@ -345,17 +488,15 @@ export class GenerateRoteiroUseCase {
      * stops when five were asked for looks like a thin territory rather than a
      * full day.
      */
-    const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
-    const stops = scheduled.filter((stop) => stop.plannedEndsAt <= dayEnd);
-    if (stops.length < scheduled.length) {
+    if (stops.length < limit && candidates.length > stops.length) {
       notices.push({
         code: "DAY_FULL",
-        requested: scheduled.length,
+        requested: limit,
         scheduled: stops.length,
         message:
           stops.length === 0
             ? "Seu dia já está cheio — não há espaço para novas visitas hoje."
-            : `Couberam ${stops.length} de ${scheduled.length} sugestões antes do fim do expediente.`,
+            : `Couberam ${stops.length} de ${limit} sugestões nos intervalos livres do seu dia.`,
       });
     }
 
@@ -576,12 +717,13 @@ export class GenerateRoteiroUseCase {
     limit: number;
     params: RoteiroParams;
     notices: RoteiroNotice[];
-    origin: RoteiroPoint;
+    gaps: DayGap[];
+    busy: BusyInterval[];
   }) {
-    const { candidates, limit, params, notices, origin } = args;
+    const { candidates, limit, params, notices, gaps, busy } = args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
-    const chosen: { candidate: RoteiroCandidate; isCoverageSlot: boolean; isAnchor: boolean }[] = [];
+    const chosen: PlacedStop[] = [];
 
     // Booked visits are deliberately **not** selected here. They are already in
     // the rep's calendar; the engine plans around them rather than proposing
@@ -603,9 +745,33 @@ export class GenerateRoteiroUseCase {
         return b.meritScore - a.meritScore;
       })[0];
     if (coverage && chosen.length < limit) {
-      taken.add(coverage.facilityVerticalProfileId);
-      chosen.push({ candidate: coverage, isCoverageSlot: true, isAnchor: false });
-      quotas[coverage.bucket] = Math.max(0, quotas[coverage.bucket] - 1);
+      const policy = params.unitTypePolicy[coverage.unitType ?? ""] ?? params.unitTypePolicy["*"];
+      const serviceMs =
+        toCalendarSlot(
+          policy?.forceRemote ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
+        ) * 60_000;
+      // The reserved slot still has to fit somewhere real. If the day cannot
+      // hold it, it is not taken — a coverage stop the rep cannot make is not
+      // coverage.
+      let placed: { gap: DayGap; at: NonNullable<ReturnType<typeof fitInGap>> } | null = null;
+      for (const gap of gaps) {
+        const at = fitInGap(gap, { lat: coverage.lat, lng: coverage.lng }, serviceMs, busy);
+        if (at && (!placed || at.addedSeconds < placed.at.addedSeconds)) placed = { gap, at };
+      }
+      if (placed) {
+        taken.add(coverage.facilityVerticalProfileId);
+        chosen.push({
+          candidate: coverage,
+          isCoverageSlot: true,
+          gapIndex: placed.gap.index,
+          startsAt: new Date(placed.at.startsAt),
+          endsAt: new Date(placed.at.endsAt),
+          travelSeconds: placed.at.travelSeconds,
+        });
+        quotas[coverage.bucket] = Math.max(0, quotas[coverage.bucket] - 1);
+        placed.gap.cursor = { lat: coverage.lat, lng: coverage.lng };
+        placed.gap.clock = placed.at.endsAt;
+      }
     }
 
     /**
@@ -630,32 +796,65 @@ export class GenerateRoteiroUseCase {
      */
     const tau = params.tauSeconds;
     const remainingQuota = { ...quotas };
-    let cursor: RoteiroPoint =
-      chosen.length > 0
-        ? { lat: chosen[chosen.length - 1]!.candidate.lat, lng: chosen[chosen.length - 1]!.candidate.lng }
-        : origin;
 
+    /**
+     * §4.5, applied per gap — pick the best (clinic, gap) pair, not the best
+     * clinic.
+     *
+     *     gain = mérito × quotaMultiplier ÷ (added travel + service + τ)
+     *
+     * "Added travel" is the detour the clinic costs *that stretch of the day*:
+     * out to it and back onto the leg, minus the drive already happening. So a
+     * clinic far down the last leg is cheap after the final booking and
+     * expensive squeezed between two morning ones, which is the distinction a
+     * single forward-walking cursor could not make.
+     *
+     * A candidate that fits no gap is simply not chosen. That is how "his day
+     * is already full" and "there is nothing near his 11:00 slot" become the
+     * same, correctly-handled answer.
+     */
     while (chosen.length < limit) {
-      let best: { candidate: RoteiroCandidate; gain: number } | null = null;
+      let best:
+        | { candidate: RoteiroCandidate; gap: DayGap; placement: NonNullable<ReturnType<typeof fitInGap>>; gain: number }
+        | null = null;
+
       for (const candidate of candidates) {
         if (taken.has(candidate.facilityVerticalProfileId)) continue;
-        const here = { lat: candidate.lat, lng: candidate.lng };
-        const serviceSeconds = params.serviceMinutes.IN_PERSON * 60;
-        const deltaCost = estimatedTravelSeconds(cursor, here) + serviceSeconds;
-        // A filled bucket is not banned, only outbid — otherwise a slate with
-        // nothing left in one bucket would come back short.
-        const quotaMultiplier = (remainingQuota[candidate.bucket] ?? 0) > 0 ? 1 : 0.35;
-        const gain = (candidate.meritScore * quotaMultiplier) / (deltaCost + tau);
-        if (!best || gain > best.gain) best = { candidate, gain };
+        const policy =
+          params.unitTypePolicy[candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
+        const modality = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
+        const serviceMs =
+          toCalendarSlot(
+            modality === "REMOTE" ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
+          ) * 60_000;
+        const point = { lat: candidate.lat, lng: candidate.lng };
+
+        for (const gap of gaps) {
+          const placement = fitInGap(gap, point, serviceMs, busy);
+          if (!placement) continue;
+          const quotaMultiplier = (remainingQuota[candidate.bucket] ?? 0) > 0 ? 1 : 0.35;
+          const cost = placement.addedSeconds + serviceMs / 1000;
+          const gain = (candidate.meritScore * quotaMultiplier) / (cost + tau);
+          if (!best || gain > best.gain) best = { candidate, gap, placement, gain };
+        }
       }
+
       if (!best) break;
       taken.add(best.candidate.facilityVerticalProfileId);
-      chosen.push({ candidate: best.candidate, isCoverageSlot: false, isAnchor: false });
+      chosen.push({
+        candidate: best.candidate,
+        isCoverageSlot: false,
+        gapIndex: best.gap.index,
+        startsAt: new Date(best.placement.startsAt),
+        endsAt: new Date(best.placement.endsAt),
+        travelSeconds: best.placement.travelSeconds,
+      });
       remainingQuota[best.candidate.bucket] = Math.max(
         0,
         (remainingQuota[best.candidate.bucket] ?? 0) - 1,
       );
-      cursor = { lat: best.candidate.lat, lng: best.candidate.lng };
+      best.gap.cursor = { lat: best.candidate.lat, lng: best.candidate.lng };
+      best.gap.clock = best.placement.endsAt;
     }
 
     for (const bucket of ["PROSPECTAR", "MANTER", "RECUPERAR"] as RoteiroBucket[]) {
@@ -674,91 +873,7 @@ export class GenerateRoteiroUseCase {
       }
     }
 
-    if (chosen.length < limit && candidates.length > 0) {
-      notices.push({
-        code: "SHORT_SLATE",
-        requested: limit,
-        filled: chosen.length,
-        message: `Apenas ${chosen.length} de ${limit} clínicas elegíveis ao alcance.`,
-      });
-    }
-
     return chosen;
-  }
-
-  /**
-   * Order and time the day.
-   *
-   * P1 orders by nearest-neighbour from the origin using straight-line
-   * estimates — no Matrix call, no merit-per-hour optimisation. That is P2
-   * (§4.5). The anchor, when present, stays at position 0 because its time was
-   * agreed with the clinic, not chosen by us.
-   */
-  private schedule(args: {
-    selected: { candidate: RoteiroCandidate; isCoverageSlot: boolean; isAnchor: boolean }[];
-    origin: RoteiroPoint;
-    params: RoteiroParams;
-    now: Date;
-    scopeDate: string;
-    timeZone: string;
-    busy: BusyInterval[];
-    fixedPoints: FixedPoint[];
-  }): PlannedStop[] {
-    const { params } = args;
-    // No re-ordering. §4.5 selection appends each stop to the route as it picks
-    // it, so the order is already the one the gain rule paid for.
-    const ordered = [...args.selected];
-
-    const dayStart = this.atLocalTime(args.scopeDate, params.workdayStart, args.timeZone);
-    let clock = new Date(Math.max(args.now.getTime(), dayStart.getTime()));
-    let previous: RoteiroPoint = args.origin;
-
-    return ordered.map((entry, position) => {
-      const policy =
-        params.unitTypePolicy[entry.candidate.unitType ?? ""] ?? params.unitTypePolicy["*"];
-      const modality: "IN_PERSON" | "REMOTE" = policy?.forceRemote ? "REMOTE" : "IN_PERSON";
-      const here = { lat: entry.candidate.lat, lng: entry.candidate.lng };
-      const travelSeconds = modality === "REMOTE" ? null : estimatedTravelSeconds(previous, here);
-      const serviceMinutes = toCalendarSlot(
-        modality === "REMOTE" ? params.serviceMinutes.REMOTE : params.serviceMinutes.IN_PERSON,
-      );
-
-      let startsAt = new Date(clock.getTime() + (travelSeconds ?? 0) * 1000);
-      // Lunch and anything already booked are the same kind of obstacle: push
-      // the stop past whichever it overlaps, repeatedly, since clearing one can
-      // land it inside the next.
-      //
-      // For a booked *visit* the block is widened by the drive to and from it,
-      // so a suggestion never lands in the minutes the rep is actually on the
-      // road. Without that, a stop scheduled right before a booking across town
-      // looks fine on the clock and is impossible in the car.
-      const guarded = args.busy.map((block) => {
-        const point = args.fixedPoints.find(
-          (p) => p.startsAt.getTime() === block.startsAt,
-        );
-        if (!point) return block;
-        const approach = estimatedTravelSeconds(here, { lat: point.lat, lng: point.lng }) * 1000;
-        return { startsAt: block.startsAt - approach, endsAt: block.endsAt + approach };
-      });
-      startsAt = new Date(pushPastBusy(startsAt.getTime(), serviceMinutes * 60_000, guarded));
-      const endsAt = new Date(startsAt.getTime() + serviceMinutes * 60_000);
-
-      clock = endsAt;
-      if (modality === "IN_PERSON") previous = here;
-
-      return {
-        candidate: entry.candidate,
-        position,
-        modality,
-        modalitySource: "SUGGESTED" as const,
-        isCoverageSlot: entry.isCoverageSlot,
-        isAnchor: entry.isAnchor,
-        travelSecondsFromPrev: travelSeconds,
-        serviceMinutes,
-        plannedStartsAt: startsAt,
-        plannedEndsAt: endsAt,
-      };
-    });
   }
 
   /**
