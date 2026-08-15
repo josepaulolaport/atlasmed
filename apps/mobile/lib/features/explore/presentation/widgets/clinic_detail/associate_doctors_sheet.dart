@@ -145,6 +145,38 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
+  /// Doctors the rep un-ticked: linked when the sheet opened, not selected now.
+  ///
+  /// `_selected` starts as the already-associated set, so un-ticking one *is*
+  /// the request to end that affiliation. The sheet used to answer it with a
+  /// snackbar saying "removido" and then do nothing — there was no removal
+  /// branch in `_confirm` at all, and with nothing left ticked the save button
+  /// was disabled outright, so the removal could not even be attempted.
+  ///
+  /// Only doctors we hold a `personFacilityId` for: that id is what the DELETE
+  /// addresses, and a CNES row the roster has never seen has no affiliation to
+  /// end.
+  List<ProfessionalRoster> get _pendingRemovals => _associated
+      .where((d) => !_selected.contains(d.id) && d.personFacilityId != null)
+      .toList(growable: false);
+
+  /// What the button will actually do, rather than always saying "Associar".
+  ///
+  /// A rep who has only un-ticked somebody is about to remove, and a button
+  /// labelled "Associar" is the wrong promise for that.
+  String get _confirmLabel {
+    final additions =
+        _selected.difference(widget.alreadyAssociatedIds).length +
+        _selectedCnesIds.length;
+    final removals = _pendingRemovals.length;
+    if (additions > 0 && removals > 0) {
+      return 'Salvar ($additions +$removals −)';
+    }
+    if (removals > 0) return 'Remover ($removals)';
+    if (additions > 0) return 'Associar ($additions)';
+    return 'Associar';
+  }
+
   bool get _useApi {
     final id = widget.facilityId;
     return id != null && id > 0;
@@ -530,7 +562,13 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _selectionCount == 0 || _saving
+                    // Enabled for a removal-only save too. It was gated on the
+                    // selection count alone, so un-ticking the clinic's only
+                    // doctor left the button greyed out — the rep was told
+                    // "removido" and then given no way to commit it.
+                    onPressed:
+                        (_selectionCount == 0 && _pendingRemovals.isEmpty) ||
+                            _saving
                         ? null
                         : _confirm,
                     style: FilledButton.styleFrom(
@@ -550,11 +588,7 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(
-                            _selectionCount == 0
-                                ? 'Associar'
-                                : 'Associar ($_selectionCount)',
-                          ),
+                        : Text(_confirmLabel),
                   ),
                 ),
               ],
@@ -640,33 +674,23 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
           _cnesLinkedIds.contains(d.id);
       return CheckboxListTile(
         value: selected,
+        // Un-ticking is staged, not done: the removal happens on save, and the
+        // footer button says so ("Remover (1)"). There used to be a four-second
+        // "removido" snackbar with an Undo here, which was wrong twice over —
+        // it announced something that had not happened, and it did not go away
+        // on its own, so it sat over the sheet through everything that
+        // followed. Re-ticking the row is the undo, and it is where the rep is
+        // already looking.
         onChanged: _saving
             ? null
             : (v) {
-                if (v == false && isAssociated) {
-                  setState(() => _selected.remove(d.id));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      duration: const Duration(seconds: 4),
-                      content: Text('${d.name} removido'),
-                      action: SnackBarAction(
-                        label: 'Desfazer',
-                        onPressed: () {
-                          setState(() => _selected.add(d.id));
-                        },
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                } else {
-                  setState(() {
-                    if (v == true) {
-                      _selected.add(d.id);
-                    } else {
-                      _selected.remove(d.id);
-                    }
-                  });
-                }
+                setState(() {
+                  if (v == true) {
+                    _selected.add(d.id);
+                  } else {
+                    _selected.remove(d.id);
+                  }
+                });
               },
         controlAffinity: ListTileControlAffinity.trailing,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -835,7 +859,12 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     final toImport = _cnesUnknownRows
         .where((s) => _selectedCnesIds.contains(s.professionalCnesId))
         .toList(growable: false);
-    if ((chosen.isEmpty && toImport.isEmpty) || !_useApi) return;
+    final toRemove = _pendingRemovals;
+    // Removals count as work. The guard read `chosen.isEmpty && toImport.isEmpty`
+    // and returned, so un-ticking a doctor and pressing save did nothing at all.
+    if ((chosen.isEmpty && toImport.isEmpty && toRemove.isEmpty) || !_useApi) {
+      return;
+    }
     // Everyone the server already counts as linked here, from either source.
     // `alreadyAssociatedIds` alone is the caller's view and can be narrower, and
     // posting an association for someone already associated is a write nobody
@@ -865,6 +894,19 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
       final cnesByPersonId = <int, CnesSuggestion>{
         for (final suggestion in _cnesRows) suggestion.personId!: suggestion,
       };
+      /*
+       * Removals first, and each one before any association.
+       *
+       * A rep who un-ticks A and ticks B is trading one doctor for another; if
+       * the association half runs first and the removal half then fails, the
+       * clinic is left holding both. Ending affiliations first means a failure
+       * leaves it holding neither the removal nor the addition — which is the
+       * state they can see and retry from.
+       */
+      for (final doctor in toRemove) {
+        await repo.endDoctorAffiliation(doctor);
+      }
+
       final associated = <ProfessionalRoster>[];
       for (final doctor in newlySelected) {
         final roleIds = _rolesFor(doctor.id);
@@ -945,12 +987,19 @@ class _AssociateDoctorsSheetState extends State<AssociateDoctorsSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
+      // Ahead of anything queued. Un-ticking shows a four-second "removido"
+      // confirmation, and a failure arriving behind it waits its turn — so the
+      // rep reads "removido" while the removal is the thing that just failed.
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             e is FacilityAssociateException
-                ? (e.message ?? 'Falha ao associar')
-                : 'Falha ao associar médicos',
+                ? (e.message ?? 'Falha ao salvar')
+                // Covers both halves: this save can now end affiliations as
+                // well as create them, and "Falha ao associar" names the wrong
+                // one when it was a removal that failed.
+                : 'Falha ao salvar alterações',
           ),
           behavior: SnackBarBehavior.floating,
         ),

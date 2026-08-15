@@ -13,7 +13,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.da
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctor_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/visit_scheduling.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/professional_notes_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
@@ -265,70 +267,58 @@ class _DoctorDetailContent extends ConsumerWidget {
                 DetailQuickActions(
                   themeColor: detail.primaryColor,
                   actions: [
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.phone_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
+                    // Greyed when the doctor has no number on file, rather than
+                    // live and answering a tap with "não há telefone".
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.phone_rounded,
+                      color: detail.primaryColor,
+                      label: 'Ligar',
+                      url: callUrl(detail.phone),
+                      contactLabel: 'telefone',
+                      launch: launchContactUrl,
+                    ),
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.chat_rounded,
+                      color: detail.primaryColor,
+                      label: 'WhatsApp',
+                      url: whatsappUrl(detail.whatsapp),
+                      contactLabel: 'WhatsApp',
+                      launch: launchContactUrl,
+                    ),
+                    contactQuickAction(
+                      context: context,
+                      icon: Icons.email_rounded,
+                      color: detail.primaryColor,
+                      label: 'E-mail',
+                      url: emailUrl(detail.email),
+                      contactLabel: 'e-mail',
+                      launch: launchContactUrl,
+                    ),
+                    // The editor asks which clinic, offering only the ones this
+                    // doctor works at: the appointment is stored against a
+                    // facility, and a doctor attending at several would
+                    // otherwise be booked at whichever one the code guessed.
+                    if (ref.watch(canCreateCalendarEventProvider))
+                      QuickActionItem(
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
+                          child: Icon(
+                            Icons.event_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('Nova visita'),
+                        onTap: () => openProfessionalVisitScheduler(
+                          context,
+                          personId: doctorId,
+                          personName: detail.name,
                         ),
                       ),
-                      label: const Text('Ligar'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: callUrl(detail.phone),
-                        contactLabel: 'telefone',
-                      ),
-                    ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.chat_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('WhatsApp'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: whatsappUrl(detail.whatsapp),
-                        contactLabel: 'WhatsApp',
-                      ),
-                    ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.email_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('E-mail'),
-                      onTap: () => launchContactUrl(
-                        context,
-                        url: emailUrl(detail.email),
-                        contactLabel: 'e-mail',
-                      ),
-                    ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: detail.primaryColor.createSecondary(),
-                        radius: 18,
-                        child: Icon(
-                          Icons.event_rounded,
-                          size: 18,
-                          color: detail.primaryColor,
-                        ),
-                      ),
-                      label: const Text('Nova visita'),
-                      onTap: null,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

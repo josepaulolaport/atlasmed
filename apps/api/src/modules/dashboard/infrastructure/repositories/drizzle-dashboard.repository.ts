@@ -11,7 +11,9 @@ import {
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
-import { sql, eq, and, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
+import { sql, eq, and, or, ilike, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
+import type { FacilityListSort } from "../../../facility/application/interfaces/facility.repository.interface";
+import { buildFacilityListOrderBy } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
 import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
 /**
@@ -141,6 +143,38 @@ function hasAnyOpenAssignment() {
             facilityVerticalProfiles.id,
           ),
           isNull(facilityVerticalRepAssignments.endedAt),
+        ),
+      ),
+  );
+}
+
+/**
+ * The zone holds at least one clinic the caller's filters let through.
+ *
+ * Without it the território map answered a different question from the numbers
+ * printed under it: geometry came from the linha alone, so filtering Desempenho
+ * to Rio de Janeiro moved "146 clínicas · 214 médicos · 14%" and left the map
+ * showing Amazonas, Pará and Maranhão. One card, two scopes.
+ *
+ * Stated as "contains a clinic in scope" rather than as a translation of each
+ * filter into geography, because that is the one form every filter shares — a
+ * state, a município, a gestor, a rep and a unit type all narrow the clinic set,
+ * and none of them has a boundary of its own to intersect. A zone that ends up
+ * holding nothing simply is not drawn.
+ */
+function holdsAClinicInScope(filter: DashboardProfileFilter) {
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(
+        and(
+          ...profileScopeConditions(filter),
+          sql`ST_Intersects(${territories.boundary}, ${facilities.location})`,
         ),
       ),
   );
@@ -403,7 +437,7 @@ export class DrizzleDashboardRepository {
     }));
   }
 
-  /** Clínicas atribuídas — the denominator every ratio below divides by. */
+  /** The scoped clinic set — the denominator every ratio below divides by. */
   async countProfiles(filter: DashboardProfileFilter): Promise<number> {
     const [row] = await db
       .select({ n: sql<number>`COUNT(*)::int` })
@@ -500,6 +534,33 @@ export class DrizzleDashboardRepository {
       registered: Number(row?.registered ?? 0),
       total: Number(row?.total ?? 0),
     };
+  }
+
+  /**
+   * Clínicas atribuídas — scoped profiles that actually hold an open rep
+   * assignment.
+   *
+   * The card counted the whole scope before, which is the denominator and not
+   * the metric: an admin read "2374 atribuídas" beside "941 sem representante"
+   * on the same screen, and 941 of those 2374 had no rep by the neighbouring
+   * card's own definition. Sharing `hasAnyOpenAssignment` with
+   * [countProfilesWithoutRep] is what makes the pair exhaustive — the two
+   * counts sum to `countProfiles` for any filter, and a test says so.
+   *
+   * A rep sees no change: every clinic in their scope is in it *because* they
+   * are assigned to it, so the extra condition matches everything.
+   */
+  async countProfilesWithRep(filter: DashboardProfileFilter): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(facilityVerticalProfiles)
+      .innerJoin(
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
+      )
+      .where(and(...profileScopeConditions(filter), hasAnyOpenAssignment()));
+
+    return Number(row?.n ?? 0);
   }
 
   /**
@@ -648,11 +709,47 @@ export class DrizzleDashboardRepository {
   async listScopedClinics(input: {
     filter: DashboardProfileFilter;
     predicate?: SQL;
+    /** Free text over name, neighbourhood and city — the list's own search. */
+    search?: string;
+    /**
+     * Explorar's own sort keys, honoured by Explorar's own expression.
+     *
+     * Imported rather than reimplemented: "Nome Z–A" and "Status de compras"
+     * have to mean the same thing in both lists, and the funnel-stage rank and
+     * the nulls-last handling on last purchase are exactly the details a second
+     * copy gets subtly wrong. `distance` is absent on purpose — this list has
+     * no origin, and the sheet hides the option rather than offering a sort
+     * that does nothing.
+     */
+    sort?: FacilityListSort;
+    order?: "asc" | "desc";
     offset: number;
     limit: number;
   }): Promise<{ rows: DashboardClinicRow[]; total: number }> {
     const conditions = profileScopeConditions(input.filter);
     if (input.predicate) conditions.push(input.predicate);
+
+    const search = input.search?.trim();
+    if (search) {
+      /**
+       * Plain ILIKE over name, neighbourhood and city.
+       *
+       * Not `unaccent`: the extension is installed on no database here, and
+       * adding one is a migration rather than a search feature. This matches
+       * what the facility module's own SQL path does, so the two searches miss
+       * on the same input rather than on different ones — Explorar reaches
+       * accent-folded matching through Meilisearch, which this list has no
+       * index for.
+       */
+      const pattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(facilities.displayName, pattern),
+          ilike(facilities.neighborhood, pattern),
+          ilike(municipalities.name, pattern),
+        )!,
+      );
+    }
 
     const rows = await db
       .select({
@@ -684,7 +781,13 @@ export class DrizzleDashboardRepository {
       )
       .innerJoin(states, eq(states.id, facilities.stateId))
       .where(and(...conditions))
-      .orderBy(facilities.displayName, facilities.id)
+      .orderBy(
+        ...buildFacilityListOrderBy({
+          sort: input.sort,
+          order: input.order,
+          verticalIds: [input.filter.verticalId],
+        }),
+      )
       .offset(input.offset)
       .limit(input.limit);
 
@@ -732,6 +835,7 @@ export class DrizzleDashboardRepository {
   async listAssignedTerritoryFeatures(input: {
     userId: number;
     verticalId: number;
+    filter: DashboardProfileFilter;
   }): Promise<DashboardTerritoryFeature[]> {
     const rows = await db
       .select({
@@ -752,6 +856,7 @@ export class DrizzleDashboardRepository {
           // it the card can draw a retired zone the metrics already stopped
           // counting, and the map would disagree with every number beside it.
           eq(territories.isActive, true),
+          holdsAClinicInScope(input.filter),
         ),
       )
       .orderBy(territories.name);
@@ -763,9 +868,10 @@ export class DrizzleDashboardRepository {
     }));
   }
 
-  async listVerticalTerritoryFeatures(
-    verticalId: number,
-  ): Promise<DashboardTerritoryFeature[]> {
+  async listVerticalTerritoryFeatures(input: {
+    verticalId: number;
+    filter: DashboardProfileFilter;
+  }): Promise<DashboardTerritoryFeature[]> {
     const rows = await db
       .select({
         id: territories.id,
@@ -775,9 +881,10 @@ export class DrizzleDashboardRepository {
       .from(territories)
       .where(
         and(
-          eq(territories.verticalId, verticalId),
+          eq(territories.verticalId, input.verticalId),
           eq(territories.isActive, true),
           isNotNull(territories.boundary),
+          holdsAClinicInScope(input.filter),
         ),
       )
       .orderBy(territories.name)

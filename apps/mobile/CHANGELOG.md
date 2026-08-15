@@ -9,6 +9,28 @@ Gerenciado por [Cider](https://cider.sh/).
 
 ---
 
+## [1.4.0+10] — 2026-08-15
+
+### Adicionado
+
+- Favoritos: marcadores por usuário para clínicas e médicos.
+- Desempenho e Equipe: telas de KPIs e gestão de equipe.
+- Pedidos e Produtos ligados ao catálogo e ao banco de dados.
+- Importação de clínicas a partir do registro nacional CNES.
+- Aviso de CPF ausente ou inválido em clínicas CPF.
+- Versão do app exibida dinamicamente nos rodapés.
+
+### Corrigido
+
+- Mapa: ícones de cluster registrados por estilo, não uma vez por app.
+- Desempenho: métrica de clínicas atribuídas corrigida e mapa de território filtrado.
+- Explore e Agenda: busca e filtros consistentes entre as telas.
+- Produtos: tolera colunas de coding nulas.
+
+### Alterado
+
+- Android e iOS voltam a compartilhar a mesma release Shorebird (`1.4.0+10`).
+
 ## [1.2.0+8] — 2026-08-14
 
 ### Alterado

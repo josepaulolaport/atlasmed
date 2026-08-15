@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_r
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/filter_sheet_footer.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
   final String kind;
@@ -196,111 +197,50 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   }
 
   Widget _buildButtons() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() {
-                _local = {};
-                _minimumIntervalController.clear();
-                _maximumIntervalController.clear();
-                _radiusKm = null;
-              }),
-              child: Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.gray200),
-                  color: Colors.white,
-                ),
-                child: const Center(
-                  child: Text(
-                    'Limpar',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray700,
-                    ),
-                  ),
-                ),
+    return FilterSheetFooter(
+      selectedCount: _count,
+      onClear: () => setState(() {
+        _local = {};
+        _minimumIntervalController.clear();
+        _maximumIntervalController.clear();
+        _radiusKm = null;
+      }),
+      onApply: () {
+        final minimum = int.tryParse(_minimumIntervalController.text);
+        final maximum = int.tryParse(_maximumIntervalController.text);
+        if ((minimum != null && (minimum < 1 || minimum > 3650)) ||
+            (maximum != null && (maximum < 1 || maximum > 3650)) ||
+            (minimum != null && maximum != null && minimum > maximum)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Informe intervalos entre 1 e 3650 dias, com mínimo menor ou igual ao máximo.',
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () {
-                final minimum = int.tryParse(_minimumIntervalController.text);
-                final maximum = int.tryParse(_maximumIntervalController.text);
-                if ((minimum != null && (minimum < 1 || minimum > 3650)) ||
-                    (maximum != null && (maximum < 1 || maximum > 3650)) ||
-                    (minimum != null && maximum != null && minimum > maximum)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Informe intervalos entre 1 e 3650 dias, com mínimo menor ou igual ao máximo.',
-                      ),
-                    ),
-                  );
-                  return;
-                }
-                final next = Map<String, List<String>>.from(_local)
-                  ..remove('products');
-                if (widget.hideCommercialStatus) {
-                  next.remove('status');
-                }
-                // UI is bucket-based; drop legacy funnel-stage filter keys.
-                next.remove('purchaseFunnelStage');
-                if (widget.hidePurchaseFunnel) {
-                  next.remove('purchaseBucket');
-                }
-                if (minimum == null) {
-                  next.remove('purchaseIntervalMinDays');
-                } else {
-                  next['purchaseIntervalMinDays'] = [minimum.toString()];
-                }
-                if (maximum == null) {
-                  next.remove('purchaseIntervalMaxDays');
-                } else {
-                  next['purchaseIntervalMaxDays'] = [maximum.toString()];
-                }
-                widget.onApply(next, _radiusKm);
-              },
-              child: Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: AppColors.navyBright,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x4D1e40af),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    'Aplicar${_count > 0 ? ' ($_count)' : ''}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+          );
+          return;
+        }
+        final next = Map<String, List<String>>.from(_local)..remove('products');
+        if (widget.hideCommercialStatus) {
+          next.remove('status');
+        }
+        // UI is bucket-based; drop legacy funnel-stage filter keys.
+        next.remove('purchaseFunnelStage');
+        if (widget.hidePurchaseFunnel) {
+          next.remove('purchaseBucket');
+        }
+        if (minimum == null) {
+          next.remove('purchaseIntervalMinDays');
+        } else {
+          next['purchaseIntervalMinDays'] = [minimum.toString()];
+        }
+        if (maximum == null) {
+          next.remove('purchaseIntervalMaxDays');
+        } else {
+          next['purchaseIntervalMaxDays'] = [maximum.toString()];
+        }
+        widget.onApply(next, _radiusKm);
+      },
     );
   }
 }

@@ -97,6 +97,28 @@ void main() {
     },
   );
 
+  test('prefill seeds clinic, kind and title so only the time is left', () {
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+          kind: CalendarEventKind.interaction,
+          title: 'Visita · Clínica Central',
+        ),
+      ),
+      now: () => DateTime(2026, 8, 3, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.facilityId, 7);
+    expect(notifier.state.draft.facilityName, 'Clínica Central');
+    expect(notifier.state.draft.title, 'Visita · Clínica Central');
+    // Seeded well enough to save without touching the form.
+    expect(notifier.validationErrors, isEmpty);
+  });
+
   test(
     'interaction requires clinic and duration must be a positive multiple of 30',
     () {

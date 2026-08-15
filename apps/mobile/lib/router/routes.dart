@@ -25,7 +25,6 @@ import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/out_
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/assign_clinic_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_member_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_screen.dart';
-import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/facility_drill_down_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/favoritos_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -480,39 +479,84 @@ class ProfileRoute extends GoRouteData with $ProfileRoute {
 
 @TypedGoRoute<AgendaNewRoute>(path: '/agenda/new')
 class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
-  const AgendaNewRoute({this.$extra});
+  const AgendaNewRoute({
+    this.facilityId,
+    this.facilityName,
+    this.title,
+    this.personId,
+    this.personName,
+  });
 
-  final CalendarEditorPrefill? $extra;
+  // Query parameters, not `$extra`.
+  //
+  // The router refreshes on `sessionListenable`, and each refresh rebuilds the
+  // matches from the location alone — `extra` does not survive it. The seeded
+  // draft then arrived as `prefill: null`, a different key for the
+  // `autoDispose.family`, so a form opened from a clinic quietly reverted to
+  // an empty one mid-edit and answered "Informe um título" over a filled
+  // title field. The URL survives the refresh; an object passed beside it
+  // does not.
+  final int? facilityId;
+  final String? facilityName;
+  final String? title;
+
+  /// Set when the visit was started from a professional's page, so the clinic
+  /// field can offer that professional's clinics and nothing else.
+  final int? personId;
+  final String? personName;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
+    final seeded = facilityId != null || title != null || personId != null;
     return AgendaEditorRouteGuard(
-      target: CalendarEditorTarget.creating(prefill: $extra),
+      target: CalendarEditorTarget.creating(
+        prefill: !seeded
+            ? null
+            : CalendarEditorPrefill(
+                // Only interactions carry a clinic; a personal block cannot be
+                // seeded from one.
+                kind: CalendarEventKind.interaction,
+                facilityId: facilityId,
+                facilityName: facilityName,
+                title: title,
+                personId: personId,
+                personName: personName,
+                facilityChoice: facilityId != null
+                    ? CalendarFacilityChoice.fixed
+                    : personId != null
+                    ? CalendarFacilityChoice.professionalClinics
+                    : CalendarFacilityChoice.anyClinic,
+              ),
+      ),
     );
   }
 }
 
 @TypedGoRoute<AgendaEditRoute>(path: '/agenda/:id/edit')
 class AgendaEditRoute extends GoRouteData with $AgendaEditRoute {
-  const AgendaEditRoute({required this.id, this.$extra});
+  const AgendaEditRoute({required this.id, this.recurrenceKey, this.$extra});
 
   final int id;
+
+  /// Which occurrence the user was looking at when they chose to edit the
+  /// series. Not used to address the series — the id does that — but it dates
+  /// the appointment, which is what makes it findable again when `$extra` is
+  /// lost to a router refresh.
+  final String? recurrenceKey;
+
   final CalendarOccurrence? $extra;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    final occurrence = $extra;
-    if (occurrence == null) {
-      return const Scaffold(
-        body: Center(child: Text('Não foi possível abrir este compromisso.')),
-      );
-    }
-    return AgendaEditorRouteGuard(
-      target: CalendarEditorTarget.editingSeries(occurrence),
+    return AgendaOccurrenceEditorGuard(
+      calendarId: id,
+      recurrenceKey: recurrenceKey,
+      mode: CalendarEditorMode.series,
+      occurrence: $extra,
     );
   }
 }
@@ -536,14 +580,11 @@ class AgendaOccurrenceEditRoute extends GoRouteData
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    final occurrence = $extra;
-    if (occurrence == null) {
-      return const Scaffold(
-        body: Center(child: Text('Não foi possível abrir esta ocorrência.')),
-      );
-    }
-    return AgendaEditorRouteGuard(
-      target: CalendarEditorTarget.editingOccurrence(occurrence),
+    return AgendaOccurrenceEditorGuard(
+      calendarId: id,
+      recurrenceKey: recurrenceKey,
+      mode: CalendarEditorMode.occurrence,
+      occurrence: $extra,
     );
   }
 }
@@ -786,56 +827,6 @@ class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
         stateIds: _ids(stateIds),
         municipalityIds: _ids(municipalityIds),
       ),
-    );
-  }
-}
-
-@TypedGoRoute<PurchaseBucketFacilitiesRoute>(
-  path: '/dashboard/facilities/:bucket',
-)
-class PurchaseBucketFacilitiesRoute extends GoRouteData
-    with $PurchaseBucketFacilitiesRoute {
-  const PurchaseBucketFacilitiesRoute({
-    required this.bucket,
-    @TypedQueryParameter(name: 'verticalId') this.verticalId,
-  });
-
-  final String bucket;
-  final int? verticalId;
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return FacilityDrillDownScreen(bucket: bucket, verticalId: verticalId);
-  }
-}
-
-/// Clinics whose CPF is missing or invalid, opened from the Desempenho warning.
-///
-/// Its own route rather than a query parameter on the bucket one: the two are
-/// different slices, and a bucket path segment carrying a CPF status would be
-/// a lie in every deep link and analytics event.
-@TypedGoRoute<CpfIssueFacilitiesRoute>(path: '/dashboard/cpf-issues/:cpfStatus')
-class CpfIssueFacilitiesRoute extends GoRouteData
-    with $CpfIssueFacilitiesRoute {
-  const CpfIssueFacilitiesRoute({
-    required this.cpfStatus,
-    @TypedQueryParameter(name: 'verticalId') this.verticalId,
-  });
-
-  /// `missing` | `invalid`.
-  final String cpfStatus;
-  final int? verticalId;
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return FacilityDrillDownScreen(
-      cpfStatus: cpfStatus,
-      title: cpfStatus == 'invalid' ? 'CPF inválido' : 'Sem CPF cadastrado',
-      verticalId: verticalId,
     );
   }
 }

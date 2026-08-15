@@ -50,12 +50,53 @@ class _EditorRepository implements CalendarMutationRepositoryContract {
   }) async {}
 }
 
+/// The editor now shows the day's own agenda beside the time picker, which
+/// reads through this. Left unfaked it builds a real repository — network in a
+/// test, and a refresh timer still pending at teardown.
+class _EmptyDayRepository implements CalendarRepositoryContract {
+  @override
+  Future<List<CalendarOccurrence>> listCalendar({
+    required DateTime from,
+    required DateTime to,
+    int? ownerUserId,
+  }) async => const [];
+
+  @override
+  Future<List<CalendarAvailabilityInterval>> getAvailability({
+    required DateTime from,
+    required DateTime to,
+    int? ownerUserId,
+  }) async => const [];
+
+  @override
+  Future<InteractionDetail> getInteraction(int id) =>
+      throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> startInteraction(
+    int id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> completeInteraction(
+    int id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  }) => throw UnimplementedError();
+}
+
 Widget _app(
   _EditorRepository repository, {
   CalendarEditorPrefill? prefill,
   CalendarEditorTarget? target,
 }) => ProviderScope(
-  overrides: [calendarMutationRepositoryProvider.overrideWithValue(repository)],
+  overrides: [
+    calendarMutationRepositoryProvider.overrideWithValue(repository),
+    calendarRepositoryProvider.overrideWithValue(_EmptyDayRepository()),
+  ],
   child: MaterialApp(
     theme: AppTheme.light,
     home: CalendarEditorScreen(

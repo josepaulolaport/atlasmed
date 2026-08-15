@@ -53,6 +53,12 @@ function fakeRepository(overrides: Partial<Repo> = {}) {
       seen.push(filter);
       return 6;
     },
+    // Deliberately not 10: the two counts partition the scope, and a fake that
+    // returned the denominator here would pass the very defect this pair had.
+    countProfilesWithRep: async (filter: DashboardProfileFilter) => {
+      seen.push(filter);
+      return 4;
+    },
     countOrders: async () => ({ week: 2, month: 9 }),
     averageShareByDefinition: async () => [
       {
