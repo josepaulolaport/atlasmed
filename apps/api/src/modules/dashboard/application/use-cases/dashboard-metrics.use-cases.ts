@@ -478,12 +478,45 @@ export const PURCHASE_BUCKET_STAGES = {
 } as const;
 
 /**
+ * Turns the ids this module scoped into the payload Explorar's list serialises.
+ *
+ * Implemented by the facility module, injected rather than imported, and
+ * deliberately typed as opaque here: Desempenho decides *which* clinics; what a
+ * clinic looks like on a list row is the facility module's answer, and it
+ * already has one.
+ *
+ * The alternative was teaching this module the fields Explorar shows, which is
+ * how the breakdown came to have a row that only resembled Explorar's — the
+ * same 44px tile and title, and none of the médicos count, foco clínico or
+ * status chips beside them. Two rows for one thing, drifting.
+ */
+export interface DashboardClinicHydrationPort {
+  listByIds(input: {
+    ids: number[];
+    verticalId: number;
+    userId: number;
+  }): Promise<{ id: number }[]>;
+}
+
+/**
  * The per-clinic breakdown behind a metric card (spec 0014 §4.1).
  *
  * Every metric drills into the same shape, so the screen has one breakdown
  * component rather than seven — and each row links to the clinic profile.
+ *
+ * The rows are Explorar's, hydrated through [DashboardClinicHydrationPort]:
+ * a list of clinics reached from Desempenho and the same list reached from
+ * Explorar are the same list, and should not be two designs.
  */
 export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
+  constructor(
+    private readonly listDeps: Dependencies & {
+      hydration: DashboardClinicHydrationPort;
+    },
+  ) {
+    super(listDeps);
+  }
+
   async execute(
     request: DashboardMetricRequest & {
       metric: DashboardMetricKey;
@@ -492,7 +525,7 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
     },
   ): Promise<{
     verticalId: number;
-    data: DashboardClinicRow[];
+    data: { id: number }[];
     total: number;
     page: number;
     limit: number;
@@ -525,9 +558,22 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
       limit: request.limit,
     });
 
+    const ids = rows.map((row) => row.facilityId);
+    const hydrated = await this.listDeps.hydration.listByIds({
+      ids,
+      verticalId: context.verticalId,
+      userId: request.viewerId,
+    });
+
+    // Back into the order this module chose. Hydration is a lookup by id and
+    // says nothing about sequence, so taking its order would re-sort the page
+    // under the reader — and the pager's "26–50 de 146" only means anything if
+    // page 2 holds the 26th to 50th clinic by the same ordering as page 1.
+    const byId = new Map(hydrated.map((row) => [row.id, row]));
+
     return {
       verticalId: context.verticalId,
-      data: rows,
+      data: ids.map((id) => byId.get(id)).filter((row) => row !== undefined),
       total,
       page: request.page,
       limit: request.limit,

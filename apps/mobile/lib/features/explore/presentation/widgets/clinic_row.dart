@@ -8,7 +8,19 @@ class ClinicRow extends StatelessWidget {
   final FacilityEntry clinic;
   final VoidCallback onTap;
 
-  const ClinicRow({super.key, required this.clinic, required this.onTap});
+  /// Optional control at the end of the row.
+  ///
+  /// Explorar passes nothing and keeps the row exactly as it was. Desempenho's
+  /// breakdown uses it for the `⋯` menu it needs on a rep's own caseload — the
+  /// reason it had grown a private copy of this row in the first place.
+  final Widget? trailing;
+
+  const ClinicRow({
+    super.key,
+    required this.clinic,
+    required this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -171,6 +183,7 @@ class ClinicRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
           ],
         ),
       ),

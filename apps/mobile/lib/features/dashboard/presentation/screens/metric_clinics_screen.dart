@@ -3,6 +3,8 @@ import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -54,16 +56,34 @@ class MetricClinicsScreen extends ConsumerStatefulWidget {
 
 class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
   int _page = 1;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Turning a page starts it at the top.
+  ///
+  /// The list kept its offset across a page change, and the only control that
+  /// changes pages sits at the very bottom — so tapping "Próxima" left you
+  /// exactly where you already were, at the end of a list that had silently
+  /// become a different one. On a 25-row page that hid the first sixteen rows
+  /// of every page after the first, and the screen looked like it had simply
+  /// scrolled a little.
+  void _goToPage(int next) {
+    setState(() => _page = next);
+    if (!_scrollController.hasClients) return;
+    _scrollController.jumpTo(0);
+  }
 
   /// Built on first use. A read-only breakdown never mutates anything, and
   /// constructing the client eagerly starts an HTTP stack the screen may have
   /// no use for.
   late final _assignments = ClinicAssignmentRepository();
 
-  Future<void> _dissociate(
-    DashboardClinicRow row,
-    MetricClinicsArgs args,
-  ) async {
+  Future<void> _dissociate(FacilityEntry row, MetricClinicsArgs args) async {
     final reason = await showDialog<UnassignReason>(
       context: context,
       builder: (context) => _DissociateDialog(
@@ -75,7 +95,7 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
 
     try {
       await _assignments.unassign(
-        facilityId: row.facilityId,
+        facilityId: row.id,
         verticalId: widget.scope.verticalId,
         reason: reason,
       );
@@ -138,26 +158,25 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
             }
 
             return ListView.separated(
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: page.data.length + 1,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 if (index == page.data.length) {
-                  return _Pager(
-                    page: page,
-                    onChanged: (next) => setState(() => _page = next),
-                  );
+                  return _Pager(page: page, onChanged: _goToPage);
                 }
-                return _ClinicTile(
-                  row: page.data[index],
+                final clinic = page.data[index];
+                return _BreakdownRow(
+                  clinic: clinic,
                   verticalId: widget.scope.verticalId,
                   manageForName: widget.manageForUserId == null
                       ? null
                       : widget.manageForName,
                   onDissociate: widget.manageForUserId == null
                       ? null
-                      : () => _dissociate(page.data[index], args),
+                      : () => _dissociate(clinic, args),
                 );
               },
             );
@@ -168,167 +187,60 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
   }
 }
 
-class _ClinicTile extends StatelessWidget {
-  const _ClinicTile({
-    required this.row,
+/// Explorar's clinic row, with the one control this screen adds to it.
+///
+/// This used to be a private re-implementation of [ClinicRow] — same 44px tile,
+/// same 15/w600 title, and none of the médicos count, foco clínico chips or
+/// status chips that make Explorar's row what it is. Two rows for one thing,
+/// and the copy quietly fell behind. A clinic list reached from Desempenho is
+/// the same list reached from Explorar, so it is now literally the same widget.
+class _BreakdownRow extends StatelessWidget {
+  const _BreakdownRow({
+    required this.clinic,
     required this.verticalId,
     this.manageForName,
     this.onDissociate,
   });
 
-  final DashboardClinicRow row;
+  final FacilityEntry clinic;
   final int verticalId;
   final String? manageForName;
   final VoidCallback? onDissociate;
 
-  /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
-  /// the same bordered row, 44px rounded icon tile, 15/w600 title and icon-led
-  /// meta. Two lists of clinics in one app should not look like they came from
-  /// different products.
   @override
   Widget build(BuildContext context) {
-    void open() => ClinicDetailRoute(
-      id: row.facilityId,
-      verticalId: verticalId,
-    ).push(context);
+    void open() =>
+        ClinicDetailRoute(id: clinic.id, verticalId: verticalId).push(context);
 
-    return InkWell(
+    return ClinicRow(
+      clinic: clinic,
       onTap: open,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.blue100, AppColors.blueLight],
+      // An overflow menu rather than a swipe: discoverable, and it does not
+      // fight the list's own scrolling.
+      trailing: onDissociate == null
+          ? null
+          : PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_horiz_rounded,
+                size: 20,
+                color: AppColors.gray500,
+              ),
+              onSelected: (value) {
+                if (value == 'open') open();
+                if (value == 'dissociate') onDissociate!();
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'open', child: Text('Ver clínica')),
+                PopupMenuItem(
+                  value: 'dissociate',
+                  child: Text(
+                    manageForName == null
+                        ? 'Desassociar'
+                        : 'Desassociar de $manageForName',
+                  ),
                 ),
-              ),
-              child: const Icon(
-                Icons.local_hospital_rounded,
-                size: 22,
-                color: AppColors.navyBright,
-              ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    row.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (row.locationLabel.isNotEmpty)
-                        _RowMeta(
-                          icon: Icons.place_outlined,
-                          text: row.locationLabel,
-                        ),
-                      if (row.repName != null)
-                        _RowMeta(
-                          icon: Icons.person_outline_rounded,
-                          text: row.repName!,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // An overflow menu rather than a swipe: discoverable, and it does
-            // not fight the list's own scrolling.
-            if (onDissociate == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.gray500,
-                ),
-              )
-            else
-              PopupMenuButton<String>(
-                icon: const Icon(
-                  Icons.more_horiz_rounded,
-                  size: 20,
-                  color: AppColors.gray500,
-                ),
-                onSelected: (value) {
-                  if (value == 'open') open();
-                  if (value == 'dissociate') onDissociate!();
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'open',
-                    child: Text('Ver clínica'),
-                  ),
-                  PopupMenuItem(
-                    value: 'dissociate',
-                    child: Text(
-                      manageForName == null
-                          ? 'Desassociar'
-                          : 'Desassociar de $manageForName',
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One icon-led fact under a clinic's name — the shape Explorar's rows use.
-class _RowMeta extends StatelessWidget {
-  const _RowMeta({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 11, color: AppColors.gray500),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: AppColors.gray500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -427,7 +339,11 @@ class _Pager extends StatelessWidget {
             child: const Text('Anterior'),
           ),
           Text(
-            '${page.data.length} de ${page.total}',
+            // The range, not the page size. It read "25 de 146" on page one and
+            // "25 de 146" on page two, so the one control that says where you
+            // are said the same thing everywhere — and on a 146-clinic list
+            // the only way to tell pages apart was to recognise the names.
+            '${page.firstRowNumber}–${page.lastRowNumber} de ${page.total}',
             style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
           ),
           TextButton(

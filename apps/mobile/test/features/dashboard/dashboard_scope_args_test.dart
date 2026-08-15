@@ -201,6 +201,47 @@ void main() {
     });
   });
 
+  group('DashboardClinicPage position', () {
+    DashboardClinicPage pageOf({required int page, required int rows}) {
+      return DashboardClinicPage.fromJson({
+        // Explorar's clinic payload — the breakdown returns the same rows the
+        // Explorar list does, so they decode through the same DTO.
+        'data': [
+          for (var i = 0; i < rows; i++)
+            {'id': i + 1, 'name': 'Clínica ${i + 1}', 'city': 'Niterói'},
+        ],
+        'total': 146,
+        'page': page,
+        'limit': 25,
+      });
+    }
+
+    test('reports where the page sits, not how long it is', () {
+      // The pager printed `data.length`, which is 25 on every full page — so
+      // "25 de 146" was the label on page one, page two and page five alike.
+      final first = pageOf(page: 1, rows: 25);
+      final second = pageOf(page: 2, rows: 25);
+
+      expect('${first.firstRowNumber}–${first.lastRowNumber}', '1–25');
+      expect('${second.firstRowNumber}–${second.lastRowNumber}', '26–50');
+    });
+
+    test('the short last page ends on the total', () {
+      final last = pageOf(page: 6, rows: 21);
+
+      expect(last.firstRowNumber, 126);
+      expect(last.lastRowNumber, 146);
+      expect(last.hasMore, isFalse);
+    });
+
+    test('an empty page counts from zero rather than claiming a row', () {
+      final empty = pageOf(page: 1, rows: 0);
+
+      expect(empty.firstRowNumber, 0);
+      expect(empty.lastRowNumber, 0);
+    });
+  });
+
   group('dashboardScopeArgsProvider', () {
     /// Regression: the subject used to live in a global `StateProvider` that
     /// the pushed subject screen wrote to on mount and nothing reset on pop.
