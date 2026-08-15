@@ -248,23 +248,6 @@ export function isRegistrationIdentityConflict(error: unknown): boolean {
   return false;
 }
 
-const KEY_SEPARATOR = " ";
-
-/** Composite map key for one person at one establishment. */
-function pairKeyOf(facilityCnesId: string, professionalCnesId: string): string {
-  return `${facilityCnesId}${KEY_SEPARATOR}${professionalCnesId}`;
-}
-
-/** Composite map key for one council registration slot: council + UF. */
-function registrationKeyOf(councilCnesId: string, stateCode: string): string {
-  return `${councilCnesId}${KEY_SEPARATOR}${stateCode}`;
-}
-
-function splitPairKey(key: string): [string, string] {
-  const at = key.indexOf(KEY_SEPARATOR);
-  return [key.slice(0, at), key.slice(at + KEY_SEPARATOR.length)];
-}
-
 /** CNES writes booleans as `S`/`N`. */
 function toBool(value: string | undefined): boolean | null {
   const v = clean(value).toUpperCase();
@@ -907,13 +890,9 @@ export async function loadRegistryFromCsv(
   // as the base grows, and why moving this accumulation into SQL is the next
   // step rather than this one.
 
-  /** facilityCnesId → set of professional SUS ids. */
-  const staffByFacility = new Map<string, Set<string>>();
-  /** {@link pairKeyOf} → the CBO codes that person holds at that establishment. */
-  const cbosByPair = new Map<string, Set<string>>();
-  /** SUS id → {@link registrationKeyOf} → registration number. */
-  const registrationsBySus = new Map<string, Map<string, string>>();
   const susIds = new Set<string>();
+  /** Only for the scan log; the roster itself is derived in SQL below. */
+  const facilitiesWithStaff = new Set<string>();
 
   const scopedUnitCodes = [...cnesIdByUnitCode.keys()];
   /*
@@ -949,42 +928,13 @@ export async function loadRegistryFromCsv(
     const facilityCnesId = cnesIdByUnitCode.get(r.unit_code);
     if (facilityCnesId === undefined) continue;
 
-    const sus = r.professional_sus_id;
-    const council = r.council_code;
-    const uf = r.registration_uf;
-    const number = r.registration_number;
-    // Captured for display; no longer decides who is imported.
-    const cbo = clean(r.occupation_code ?? "");
-
-    susIds.add(sus);
-
-    let staff = staffByFacility.get(facilityCnesId);
-    if (!staff) {
-      staff = new Set();
-      staffByFacility.set(facilityCnesId, staff);
-    }
-    staff.add(sus);
-
-    const pairKey = pairKeyOf(facilityCnesId, sus);
-    let cbos = cbosByPair.get(pairKey);
-    if (!cbos) {
-      cbos = new Set();
-      cbosByPair.set(pairKey, cbos);
-    }
-    if (cbo) cbos.add(cbo);
-
-    let regs = registrationsBySus.get(sus);
-    if (!regs) {
-      regs = new Map();
-      registrationsBySus.set(sus, regs);
-    }
-    // Dual-UF registrations are legitimate and become two rows.
-    regs.set(registrationKeyOf(council, uf), number);
+    susIds.add(r.professional_sus_id);
+    facilitiesWithStaff.add(facilityCnesId);
   }
   result.professionalsSeen = susIds.size;
   log("carga scanned", {
     professionals: susIds.size,
-    facilitiesWithStaff: staffByFacility.size,
+    facilitiesWithStaff: facilitiesWithStaff.size,
   });
 
   // ── Step 4 — Professionals: never deleted, attributes refreshed ───────────
@@ -1072,207 +1022,169 @@ export async function loadRegistryFromCsv(
     orphaned: result.professionalsOrphaned,
   });
 
-  // ── Step 5 — Registrations: absolute identity, keep-first on conflict ─────
-
-  const conflictSamples: string[] = [];
-  const registrationRows: (typeof registryProfessionalRegistrations.$inferInsert)[] = [];
-  for (const [sus, regs] of registrationsBySus) {
-    if (!foundSus.has(sus)) continue;
-    for (const [key, registrationNumber] of regs) {
-      const [councilCnesId, stateCode] = splitPairKey(key);
-      registrationRows.push({
-        professionalCnesId: sus,
-        councilCnesId,
-        stateCode,
-        registrationNumber,
-      });
-    }
-  }
-
-  /*
-   * Drop rows this load would make collide with each other before Postgres sees
-   * them, keeping the first claimant exactly as the per-row path did.
-   *
-   * The identity guard `(council, UF, number)` cannot be named as a conflict
-   * target — the statement already targets `(professional, council, UF)` — so
-   * two rows in one batch claiming the same CRM abort the whole statement. The
-   * fallback then retried all 1 000 rows one at a time, and because conflicts
-   * are spread through the file that degraded almost every batch to per-row: a
-   * measured 8 rows/s against 125 724 rows, over four hours, on an activity
-   * with a two-hour timeout.
-   */
-  const identityOwner = new Map<string, string>();
-  const dedupedRegistrationRows: typeof registrationRows = [];
-  for (const row of registrationRows) {
-    const identity = `${row.councilCnesId}${KEY_SEPARATOR}${row.stateCode}${KEY_SEPARATOR}${row.registrationNumber}`;
-    const owner = identityOwner.get(identity);
-    if (owner === undefined) {
-      identityOwner.set(identity, row.professionalCnesId);
-      dedupedRegistrationRows.push(row);
-      continue;
-    }
-    if (owner === row.professionalCnesId) continue;
-    result.registrationsConflicted += 1;
-    conflictSamples.push(
-      `${row.councilCnesId}/${row.stateCode}/${row.registrationNumber} claimed by another SUS id (this one: ${row.professionalCnesId})`
-    );
-  }
-
-  for (const part of chunk(dedupedRegistrationRows)) {
-    // Two conflict targets are in play and only one can be named per statement.
-    // `(professional, council, UF)` is the row we own and want refreshed;
-    // `(council, UF, number)` is the global identity guard, whose violation means
-    // a *different* person already claims this CRM. Postgres would abort the
-    // whole batch on the second, so it is caught per-row below rather than
-    // letting one bad row discard 999 good ones.
-    const before = result.registrationsUpserted;
-    try {
-      /*
-       * `where not exists` is what keeps the batch whole.
-       *
-       * A CRM already held in the table by a different SUS id would raise the
-       * identity unique and abort all 1 000 rows with it. Excluding those rows
-       * in the statement leaves only the conflict target the upsert names, so
-       * the batch cannot be aborted by a row it was always going to skip —
-       * and skipping is exactly what the per-row path did, keeping the first
-       * owner rather than moving a doctor's identity onto a stranger.
-       */
-      const written = await db.execute(sql`
-        insert into registry.professional_registrations
-          (professional_cnes_id, council_cnes_id, state_code, registration_number)
-        select v.professional, v.council, v.state, v.number
-          from (values ${sql.join(
-            part.map(
-              (row) =>
-                sql`(${row.professionalCnesId}::text, ${row.councilCnesId}::text, ${row.stateCode}::text, ${row.registrationNumber}::text)`
-            ),
-            sql`, `
-          )}) as v(professional, council, state, number)
-         where not exists (
-           select 1
-             from registry.professional_registrations held
-            where held.council_cnes_id = v.council
-              and held.state_code = v.state
-              and held.registration_number = v.number
-              and held.professional_cnes_id <> v.professional
-         )
-        on conflict (professional_cnes_id, council_cnes_id, state_code)
-        do update set registration_number = excluded.registration_number,
-                      updated_at = now()
-        returning 1
-      `);
-      const affected = Array.isArray(written)
-        ? written.length
-        : ((written as unknown as { count?: number }).count ?? 0);
-      result.registrationsUpserted = before + affected;
-      // The rows the guard held back are the conflicts the counter exists for.
-      result.registrationsConflicted += part.length - affected;
-    } catch {
-      for (const row of part) {
-        try {
-          await db
-            .insert(registryProfessionalRegistrations)
-            .values(row)
-            .onConflictDoUpdate({
-              target: [
-                registryProfessionalRegistrations.professionalCnesId,
-                registryProfessionalRegistrations.councilCnesId,
-                registryProfessionalRegistrations.stateCode,
-              ],
-              set: {
-                registrationNumber: sql`excluded.registration_number`,
-                updatedAt: sql`now()`,
-              },
-            });
-          result.registrationsUpserted += 1;
-        } catch (error) {
-          // Only the global identity unique may be absorbed: this CRM belongs to
-          // another SUS id, so keep the first owner — reassigning would move a
-          // doctor's identity onto a stranger. Anything else (a dropped
-          // connection, a check violation) is a real failure and must not be
-          // laundered into a conflict count that reads as a normal load.
-          if (!isRegistrationIdentityConflict(error)) throw error;
-          result.registrationsConflicted += 1;
-          conflictSamples.push(
-            `${row.councilCnesId}/${row.stateCode}/${row.registrationNumber} claimed by another SUS id (this one: ${row.professionalCnesId})`
-          );
-        }
-      }
-    }
-  }
-  log("registrations upserted", {
-    upserted: result.registrationsUpserted,
-    conflicted: result.registrationsConflicted,
-    cargaRowsWithoutRegistration: result.cargaRowsWithoutRegistration,
-  });
-  if (conflictSamples.length > 0) {
-    // A dropped registration makes its owner unjoinable to `public`; naming a few
-    // is the difference between "the loader is fine" and a data problem someone
-    // can go look at.
-    log("registrations dropped — CRM already held by another SUS id", {
-      count: conflictSamples.length,
-      samples: conflictSamples.slice(0, 20),
-    });
-  }
-
-  // ── Step 6 — Replace the staff snapshot, per scoped facility ──────────────
+  // ── Steps 5-7 — Derive the roster, in one transaction ─────────────────────
   //
-  // One transaction: the roster must never be observable as half-deleted.
+  // Registrations, the staff snapshot and the person bridge are all derivable
+  // from `ingestion.carga_staging` joined to what steps 2-4 already wrote, so
+  // they are computed by the database rather than round-tripped through here.
   //
-  // The delete is scoped to **every facility we operate**, not to the ones that
-  // happen to have staff in this dump. A clinic whose last registered professional
-  // left reports no qualifying carga row at all, so it is absent from
-  // `staffByFacility` — scoping the delete there would skip it and leave the
-  // departed doctor suggested forever.
-  // "Replaced wholesale per scoped facility" means the scope is `public`, which is
-  // also where step 0 got it.
+  // **This is the difference between minutes and hours.** The row-at-a-time
+  // path measured 8 registrations/s against 125 724 rows in production — over
+  // four hours, inside a two-hour activity timeout — because every row was a
+  // network round trip. The same work as set-based SQL took 21 seconds.
+  //
+  // One transaction, because a reader must never see registrations without the
+  // roster they describe, nor a roster half-replaced. The promotion gate runs
+  // inside it and before the deletes, so a refused export rolls back rather
+  // than leaving the registry partly rewritten.
+  //
+  // Every filter the in-memory version applied is preserved as a join:
+  //   - `registry.professionals` — a SUS id absent from `tbDadosProfissionalSus`
+  //     is a bad extract, and the whole person is dropped, vínculo included;
+  //   - `registry.occupations` — an unmapped CBO is counted, not stored;
+  //   - staging itself already excludes rows with an unknown council, a UF that
+  //     is not two characters, or no registration number.
   const scopedCnesIds = [...atlasIdByCnes.keys()];
-  const vinculoRows: (typeof registryFacilityProfessionals.$inferInsert)[] = [];
-  const occupationRowsToInsert: (typeof registryFacilityProfessionalOccupations.$inferInsert)[] =
-    [];
 
-  for (const [facilityCnesId, staff] of staffByFacility) {
-    for (const sus of staff) {
-      if (!foundSus.has(sus)) continue;
-      vinculoRows.push({ facilityCnesId, professionalCnesId: sus });
-      for (const cbo of cbosByPair.get(pairKeyOf(facilityCnesId, sus)) ?? []) {
-        if (!knownOccupations.has(cbo)) {
-          result.occupationsUnmapped += 1;
-          continue;
-        }
-        occupationRowsToInsert.push({
-          facilityCnesId,
-          professionalCnesId: sus,
-          occupationCnesId: cbo,
-        });
-      }
-    }
-  }
+  /** The scoped, staged carga rows every step below derives from. */
+  const stagedScope = sql`
+    from ingestion.carga_staging c
+    join registry.facilities f
+      on f.cnes_unit_code = c.unit_code
+     and f.atlasmed_id is not null
+    join registry.professionals p
+      on p.cnes_id = c.professional_sus_id
+   where c.reference_year = ${referenceYear}
+     and c.reference_month = ${referenceMonth}
+     and c.unit_code = any(string_to_array(${scopedUnitCodeList}, chr(1)))
+  `;
 
-  /**
-   * The gate runs here, not after: past this point the old roster is gone.
-   *
-   * A thin export — a partial publication, a column that changed meaning, a
-   * scope query that returned less than it should — loads without error and
-   * silently empties every clinic's suggestions. Nothing about that looks like a
-   * failure from the outside, which is why it has to be refused before the
-   * delete rather than noticed afterwards.
-   */
-  if (options.beforePromote) {
-    await options.beforePromote({
-      scopedFacilities: result.scopedFacilities,
-      facilitiesUpserted: result.facilitiesUpserted,
-      professionals: result.professionalsUpserted,
-      registrations: result.registrationsUpserted,
-      vinculos: vinculoRows.length,
-      occupationLinks: occupationRowsToInsert.length,
-    });
-  }
+  const [planned] = (await db.execute(sql`
+    select
+      (select count(*) from (
+         select distinct f.cnes_id, c.professional_sus_id ${stagedScope}
+       ) v)::int as vinculos,
+      (select count(*) from (
+         select distinct f.cnes_id, c.professional_sus_id, c.occupation_code
+           ${stagedScope}
+            and c.occupation_code is not null
+            and exists (select 1 from registry.occupations o
+                         where o.cnes_id = c.occupation_code)
+       ) o)::int as occupation_links,
+      (select count(*) from (
+         select distinct c.professional_sus_id, c.occupation_code
+           ${stagedScope}
+            and c.occupation_code is not null
+            and not exists (select 1 from registry.occupations o
+                             where o.cnes_id = c.occupation_code)
+       ) u)::int as unmapped_cbos
+  `)) as unknown as { vinculos: number; occupation_links: number; unmapped_cbos: number }[];
+
+  result.occupationsUnmapped = Number(planned?.unmapped_cbos ?? 0);
 
   await db.transaction(async (tx) => {
+    /*
+     * Two dedups, and both are load-bearing.
+     *
+     * `distinct on (professional, council, UF)` satisfies the conflict target —
+     * Postgres refuses to update the same row twice in one command, and one
+     * person can appear on many carga rows. `distinct on (council, UF, number)`
+     * then satisfies the global identity unique, which cannot be named as a
+     * second target. Ordering makes both choices deterministic rather than
+     * whatever the scan happened to yield.
+     *
+     * `not exists` drops identities another SUS id already holds: keep the
+     * first owner, because reassigning would move a doctor's identity onto a
+     * stranger.
+     */
+    const written = await tx.execute(sql`
+      insert into registry.professional_registrations
+        (professional_cnes_id, council_cnes_id, state_code, registration_number)
+      select v.professional_sus_id, v.council_code, v.registration_uf,
+             v.registration_number
+        from (
+          select distinct on (o.council_code, o.registration_uf, o.registration_number)
+                 o.professional_sus_id, o.council_code, o.registration_uf,
+                 o.registration_number
+            from (
+              select distinct on (c.professional_sus_id, c.council_code, c.registration_uf)
+                     c.professional_sus_id, c.council_code, c.registration_uf,
+                     c.registration_number
+                ${stagedScope}
+               order by c.professional_sus_id, c.council_code, c.registration_uf,
+                        c.registration_number
+            ) o
+           order by o.council_code, o.registration_uf, o.registration_number,
+                    o.professional_sus_id
+        ) v
+       where not exists (
+         select 1 from registry.professional_registrations held
+          where held.council_cnes_id = v.council_code
+            and held.state_code = v.registration_uf
+            and held.registration_number = v.registration_number
+            and held.professional_cnes_id <> v.professional_sus_id
+       )
+      on conflict (professional_cnes_id, council_cnes_id, state_code)
+      do update set registration_number = excluded.registration_number,
+                    updated_at = now()
+      returning 1
+    `);
+    result.registrationsUpserted = Array.isArray(written)
+      ? written.length
+      : ((written as unknown as { count?: number }).count ?? 0);
+
+    /*
+     * Counted after the conflict-target dedup and before the identity dedup.
+     *
+     * The first collapses one person's repeated carga rows, which is not a
+     * conflict and must not be reported as one. The second drops a claim on a
+     * CRM another SUS id owns, which is exactly what the counter is for — so
+     * the difference between this and what was written is the number of
+     * registrations the identity guard refused.
+     */
+    const [claimable] = (await tx.execute(sql`
+      select count(*)::int as n from (
+        select distinct on (c.professional_sus_id, c.council_code, c.registration_uf)
+               c.professional_sus_id
+          ${stagedScope}
+         order by c.professional_sus_id, c.council_code, c.registration_uf,
+                  c.registration_number
+      ) x
+    `)) as unknown as { n: number }[];
+    result.registrationsConflicted =
+      Number(claimable?.n ?? 0) - result.registrationsUpserted;
+
+    /**
+     * The gate runs here, not after: past this point the old roster is gone.
+     *
+     * A thin export — a partial publication, a column that changed meaning, a
+     * scope query that returned less than it should — loads without error and
+     * silently empties every clinic's suggestions. Nothing about that looks
+     * like a failure from the outside, which is why it has to be refused before
+     * the delete rather than noticed afterwards. Inside the transaction, so a
+     * refusal takes the registrations with it.
+     */
+    if (options.beforePromote) {
+      await options.beforePromote({
+        scopedFacilities: result.scopedFacilities,
+        facilitiesUpserted: result.facilitiesUpserted,
+        professionals: result.professionalsUpserted,
+        registrations: result.registrationsUpserted,
+        vinculos: Number(planned?.vinculos ?? 0),
+        occupationLinks: Number(planned?.occupation_links ?? 0),
+      });
+    }
+
+    /*
+     * The delete is scoped to **every facility we operate**, not to the ones
+     * that happen to have staff in this dump. A clinic whose last registered
+     * professional left reports no qualifying carga row at all, so scoping the
+     * delete to the dump would skip it and leave the departed doctor suggested
+     * forever.
+     */
     for (const part of chunk(scopedCnesIds)) {
-      // Occupations cascade from the vínculo, but deleting them explicitly keeps
-      // the order independent of the FK's ON DELETE rule.
+      // Occupations cascade from the vínculo, but deleting them explicitly
+      // keeps the order independent of the FK's ON DELETE rule.
       await tx
         .delete(registryFacilityProfessionalOccupations)
         .where(inArray(registryFacilityProfessionalOccupations.facilityCnesId, part));
@@ -1280,31 +1192,52 @@ export async function loadRegistryFromCsv(
         .delete(registryFacilityProfessionals)
         .where(inArray(registryFacilityProfessionals.facilityCnesId, part));
     }
-    for (const part of chunk(vinculoRows)) {
-      await tx.insert(registryFacilityProfessionals).values(part).onConflictDoNothing();
-    }
-    for (const part of chunk(occupationRowsToInsert)) {
-      await tx
-        .insert(registryFacilityProfessionalOccupations)
-        .values(part)
-        .onConflictDoNothing();
-    }
+
+    const vinculos = await tx.execute(sql`
+      insert into registry.facility_professionals (facility_cnes_id, professional_cnes_id)
+      select distinct f.cnes_id, c.professional_sus_id ${stagedScope}
+      on conflict do nothing
+      returning 1
+    `);
+    result.vinculos = Array.isArray(vinculos)
+      ? vinculos.length
+      : ((vinculos as unknown as { count?: number }).count ?? 0);
+
+    const occupations = await tx.execute(sql`
+      insert into registry.facility_professional_occupations
+        (facility_cnes_id, professional_cnes_id, occupation_cnes_id)
+      select distinct f.cnes_id, c.professional_sus_id, c.occupation_code
+        ${stagedScope}
+         and c.occupation_code is not null
+         and exists (select 1 from registry.occupations o
+                      where o.cnes_id = c.occupation_code)
+      on conflict do nothing
+      returning 1
+    `);
+    result.occupationLinks = Array.isArray(occupations)
+      ? occupations.length
+      : ((occupations as unknown as { count?: number }).count ?? 0);
+
+    // Bridging reads the registrations written above, so it belongs to the same
+    // transaction: a reader must never see one without the other.
+    const bridged = await bridgeByRegistration(tx);
+    result.professionalsBridged = bridged.linked;
+    result.professionalsBridgeAmbiguous = bridged.ambiguous;
   });
-  result.vinculos = vinculoRows.length;
-  result.occupationLinks = occupationRowsToInsert.length;
+
+  log("registrations upserted", {
+    upserted: result.registrationsUpserted,
+    conflicted: result.registrationsConflicted,
+    cargaRowsWithoutRegistration: result.cargaRowsWithoutRegistration,
+  });
   log("staff snapshot replaced", {
     vinculos: result.vinculos,
     occupations: result.occupationLinks,
     unmappedCbos: result.occupationsUnmapped,
   });
-
-  // ── Step 7 — Bridge registry professionals to the people we already hold ───
-  const bridged = await bridgeByRegistration(db);
-  result.professionalsBridged = bridged.linked;
-  result.professionalsBridgeAmbiguous = bridged.ambiguous;
   log("registry professionals bridged to persons", {
-    linked: bridged.linked,
-    ambiguous: bridged.ambiguous,
+    linked: result.professionalsBridged,
+    ambiguous: result.professionalsBridgeAmbiguous,
   });
 
   return result;
