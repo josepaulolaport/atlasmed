@@ -1,7 +1,9 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_facility_selector.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/recurrence_fields.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,23 @@ class CalendarEditorScreen extends ConsumerStatefulWidget {
 class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
   late final TextEditingController _titleController;
   bool _showValidation = false;
+
+  /// The error sits at the bottom of a scrolling form, so a failed save looked
+  /// like nothing had happened at all until you scrolled down to find it.
+  final _errorKey = GlobalKey();
+
+  void _revealError() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _errorKey.currentContext;
+      if (context == null) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignment: 0.2,
+      );
+    });
+  }
 
   /// Editing an existing appointment never re-asks for the clinic — the series
   /// owns it — so only a new one takes its behaviour from the entry point.
@@ -89,37 +108,31 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                         children: [
                           _Section(
                             title: 'Compromisso',
+                            icon: Icons.handshake_outlined,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 if (widget.target.mode !=
-                                    CalendarEditorMode.occurrence)
-                                  SegmentedButton<CalendarEventKind>(
-                                    segments: const [
-                                      ButtonSegment(
-                                        value: CalendarEventKind.interaction,
-                                        icon: Icon(Icons.handshake_outlined),
-                                        label: Text('Interação'),
-                                      ),
-                                      ButtonSegment(
-                                        value: CalendarEventKind.personalBlock,
-                                        icon: Icon(Icons.block_rounded),
-                                        label: Text('Bloqueio pessoal'),
-                                      ),
-                                    ],
-                                    selected: {draft.kind},
-                                    onSelectionChanged: (selected) =>
-                                        notifier.setKind(selected.single),
+                                    CalendarEditorMode.occurrence) ...[
+                                  _KindToggle(
+                                    value: draft.kind,
+                                    onChanged: notifier.setKind,
                                   ),
-                                const SizedBox(height: 16),
+                                  const SizedBox(height: 18),
+                                ],
                                 TextField(
                                   key: const Key('calendar-title'),
                                   controller: _titleController,
                                   textCapitalization:
                                       TextCapitalization.sentences,
-                                  decoration: InputDecoration(
-                                    labelText: 'Título',
-                                    hintText:
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.gray900,
+                                  ),
+                                  decoration: appFieldDecoration(
+                                    label: 'Título',
+                                    hint:
                                         draft.kind ==
                                             CalendarEventKind.interaction
                                         ? 'Ex.: Interação de acompanhamento'
@@ -148,9 +161,10 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                   const SizedBox(height: 16),
                                   DropdownButtonFormField<CalendarModality>(
                                     initialValue: draft.modality,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Modalidade',
+                                    decoration: appFieldDecoration(
+                                      label: 'Modalidade',
                                     ),
+                                    borderRadius: BorderRadius.circular(12),
                                     items: const [
                                       DropdownMenuItem(
                                         value: CalendarModality.inPerson,
@@ -174,45 +188,46 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                           const SizedBox(height: 16),
                           _Section(
                             title: 'Data e horário',
+                            icon: Icons.schedule_rounded,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final compact = constraints.maxWidth < 480;
-                                    final dateButton = OutlinedButton.icon(
-                                      key: const Key('calendar-date'),
-                                      icon: const Icon(Icons.event_rounded),
-                                      label: Text(_formatDate(draft.startsAt)),
-                                      onPressed: () =>
-                                          _pickDate(draft.startsAt, notifier),
-                                    );
-                                    final timeButton = OutlinedButton.icon(
-                                      key: const Key('calendar-time'),
-                                      icon: const Icon(Icons.schedule_rounded),
-                                      label: Text(_formatTime(draft.startsAt)),
-                                      onPressed: () =>
-                                          _pickTime(draft.startsAt, notifier),
-                                    );
-                                    if (compact) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          dateButton,
-                                          const SizedBox(height: 10),
-                                          timeButton,
-                                        ],
-                                      );
-                                    }
-                                    return Row(
-                                      children: [
-                                        Expanded(child: dateButton),
-                                        const SizedBox(width: 12),
-                                        Expanded(child: timeButton),
-                                      ],
-                                    );
-                                  },
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _PickerTile(
+                                        fieldKey: const Key('calendar-date'),
+                                        icon: Icons.event_rounded,
+                                        label: 'Data',
+                                        value: _formatDate(draft.startsAt),
+                                        onTap: () =>
+                                            _pickDate(draft.startsAt, notifier),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: _PickerTile(
+                                        fieldKey: const Key('calendar-time'),
+                                        icon: Icons.access_time_rounded,
+                                        label: 'Início',
+                                        value: _formatTime(draft.startsAt),
+                                        onTap: () =>
+                                            _pickTime(draft.startsAt, notifier),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                // The day's own agenda, so the time is chosen
+                                // against what is already booked instead of
+                                // discovering the clash on save.
+                                DaySchedulePicker(
+                                  day: draft.startsAt,
+                                  durationMinutes: draft.durationMinutes,
+                                  selectedStartsAt: draft.startsAt,
+                                  excludeOccurrenceId:
+                                      widget.target.occurrence?.occurrenceId,
+                                  onPick: (slot) => notifier.setStartsAt(slot),
                                 ),
                                 const SizedBox(height: 16),
                                 DropdownButtonFormField<int>(
@@ -223,10 +238,11 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                       )
                                       ? draft.durationMinutes
                                       : null,
-                                  decoration: InputDecoration(
-                                    labelText: 'Duração',
+                                  decoration: appFieldDecoration(
+                                    label: 'Duração',
                                     errorText: errors['durationMinutes'],
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
                                   hint: Text(
                                     '${draft.durationMinutes} minutos',
                                   ),
@@ -244,13 +260,25 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                     }
                                   },
                                 ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Fuso horário: ${draft.timeZone}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.gray600,
-                                  ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.public_rounded,
+                                      size: 13,
+                                      color: AppColors.gray400,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Fuso horário: ${draft.timeZone}',
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: AppColors.gray500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -260,6 +288,7 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                             const SizedBox(height: 16),
                             _Section(
                               title: 'Repetição',
+                              icon: Icons.event_repeat_rounded,
                               child: RecurrenceFields(
                                 draft: draft,
                                 onRecurrenceChanged: notifier.setRecurrence,
@@ -274,21 +303,39 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                             Semantics(
                               liveRegion: true,
                               child: Container(
-                                key: const Key('calendar-editor-error'),
+                                key: _errorKey,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: AppColors.red50,
                                   borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.red100),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      state.errorMessage!,
-                                      style: const TextStyle(
-                                        color: AppColors.redDark,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    Row(
+                                      key: const Key('calendar-editor-error'),
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(
+                                          Icons.error_outline_rounded,
+                                          size: 18,
+                                          color: AppColors.redDark,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            state.errorMessage!,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              height: 1.35,
+                                              color: AppColors.redDark,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     if (state.canRetry) ...[
                                       const SizedBox(height: 8),
@@ -344,16 +391,31 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                       constraints: const BoxConstraints(maxWidth: 720),
                       child: SizedBox(
                         width: double.infinity,
+                        height: 52,
                         child: FilledButton.icon(
                           onPressed: state.isSubmitting ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.navyBright,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.gray300,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           icon: state.isSubmitting
                               ? const SizedBox.square(
                                   dimension: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.check_rounded),
+                              : const Icon(Icons.check_rounded, size: 20),
                           label: Text(
                             state.isSubmitting
                                 ? 'Salvando…'
@@ -378,7 +440,13 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
   Future<void> _submit() async {
     final notifier = ref.read(calendarEditorProvider(widget.target).notifier);
     setState(() => _showValidation = true);
-    if (await notifier.submit() && mounted) _finish();
+    if (await notifier.submit() && mounted) {
+      _finish();
+      return;
+    }
+    // Failed. The reason is rendered at the foot of the form, so bring it into
+    // view instead of leaving the screen looking inert.
+    if (mounted) _revealError();
   }
 
   void _finish() {
@@ -498,32 +566,224 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
   }
 }
 
+/// The house card: white, hairline border, soft shadow, an icon chip beside the
+/// title — the same shell the clinic and doctor sections use.
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
+  const _Section({
+    required this.title,
+    required this.child,
+    required this.icon,
+  });
+
   final String title;
   final Widget child;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
     decoration: BoxDecoration(
       color: AppColors.cardBg,
-      border: Border.all(color: AppColors.gray200),
-      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.surfaceSecondary),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.gray900.withValues(alpha: 0.03),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: AppColors.gray900,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.blue50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 15, color: AppColors.navyBright),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         child,
       ],
+    ),
+  );
+}
+
+/// Date and start time, as tappable tiles rather than outlined buttons that
+/// read as secondary actions when they are in fact the two main fields.
+class _PickerTile extends StatelessWidget {
+  const _PickerTile({
+    required this.fieldKey,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final Key fieldKey;
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.surfaceTertiary,
+    borderRadius: BorderRadius.circular(12),
+    child: InkWell(
+      key: fieldKey,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.surfaceSecondary),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.navyBright),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Interação vs bloqueio pessoal. `SegmentedButton` wrapped its labels onto two
+/// lines at phone width and drew Material's own mauve selection; this says the
+/// same thing in the app's own blue and fits.
+class _KindToggle extends StatelessWidget {
+  const _KindToggle({required this.value, required this.onChanged});
+
+  final CalendarEventKind value;
+  final ValueChanged<CalendarEventKind> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceTertiary,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.surfaceSecondary),
+    ),
+    child: Row(
+      children: [
+        _KindOption(
+          icon: Icons.handshake_outlined,
+          label: 'Interação',
+          selected: value == CalendarEventKind.interaction,
+          onTap: () => onChanged(CalendarEventKind.interaction),
+        ),
+        const SizedBox(width: 4),
+        _KindOption(
+          icon: Icons.block_rounded,
+          label: 'Bloqueio pessoal',
+          selected: value == CalendarEventKind.personalBlock,
+          onTap: () => onChanged(CalendarEventKind.personalBlock),
+        ),
+      ],
+    ),
+  );
+}
+
+class _KindOption extends StatelessWidget {
+  const _KindOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.navyBright : Colors.transparent,
+        borderRadius: BorderRadius.circular(9),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(9),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: selected ? Colors.white : AppColors.gray500,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? Colors.white : AppColors.gray700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }

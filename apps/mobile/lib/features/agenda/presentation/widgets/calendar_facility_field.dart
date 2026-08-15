@@ -1,7 +1,9 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -72,12 +74,16 @@ class _CalendarFacilityFieldState extends ConsumerState<CalendarFacilityField> {
         TextField(
           key: const Key('calendar-facility'),
           controller: _controller,
-          decoration: InputDecoration(
-            labelText: 'Clínica',
-            hintText: 'Buscar por nome',
+          decoration: appFieldDecoration(
+            label: 'Clínica',
+            hint: 'Buscar por nome',
             errorText: widget.errorText,
             suffixIcon: widget.selected == null
-                ? const Icon(Icons.search_rounded)
+                ? const Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: AppColors.gray400,
+                  )
                 : IconButton(
                     tooltip: 'Limpar clínica',
                     onPressed: () {
@@ -85,7 +91,7 @@ class _CalendarFacilityFieldState extends ConsumerState<CalendarFacilityField> {
                       setState(() => _query = '');
                       widget.onChanged(null);
                     },
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_rounded, size: 18),
                   ),
           ),
           onChanged: (value) {

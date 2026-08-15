@@ -1,6 +1,8 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_facility_field.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_detail_providers.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -182,8 +184,9 @@ class _ProfessionalClinicDropdown extends StatelessWidget {
       key: const Key('calendar-facility-professional'),
       initialValue: current?.id,
       isExpanded: true,
-      decoration: InputDecoration(
-        labelText: 'Clínica',
+      borderRadius: BorderRadius.circular(12),
+      decoration: appFieldDecoration(
+        label: 'Clínica',
         errorText: errorText,
         helperText: 'Onde este médico atende',
       ),
@@ -215,7 +218,14 @@ class _FacilityPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InputDecorator(
-    decoration: InputDecoration(labelText: label, helperText: helperText),
+    decoration: appFieldDecoration(label: label, helperText: helperText),
+    // Already-settled, so it reads as a stated fact rather than an empty field
+    // waiting to be filled.
+    baseStyle: const TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: AppColors.gray900,
+    ),
     child: child,
   );
 }
