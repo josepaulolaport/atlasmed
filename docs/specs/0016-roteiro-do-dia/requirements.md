@@ -542,9 +542,24 @@ We use **Matrix** for the numbers and select ourselves.
 5. 2-opt improvement over the chosen stops (exact enough at N ≤ 8).
 
 6. Feasibility: Σ drive + Σ service must fit
-      workday window  −  existing calendar commitments (conflict.service.ts)
-      −  lunch block.
+      workday window  −  existing calendar commitments  −  lunch block.
    Stops that do not fit are dropped from the tail and reported, never silently truncated.
+
+   **Existing commitments are read through `GetCalendarAvailabilityUseCase`**, so recurring
+   events expand by the calendar's own rules — a weekly block falling today is busy today, and
+   re-deriving that here would be a second expansion to keep in sync. Lunch is just another
+   entry in the same list; a stop is pushed past whichever block it overlaps, repeatedly,
+   because clearing one can land it inside the next.
+
+   Skipping this produces a plan that **cannot be confirmed**: §7.3 refuses to shift a rep's
+   times, so every stop overlapping something already booked returns a 409. A slate that fails
+   at the moment of acceptance is worse than a shorter one.
+
+   ⚠️ **Travel to and from existing commitments is not yet accounted for.** A visit already
+   booked in a distant bairro blocks its own hour but not the driving either side, so a stop
+   scheduled immediately before or after it can be optimistic. Fixing it properly means
+   treating booked visits as fixed points in the route rather than only in the clock — the
+   multi-anchor generalisation of §4.5, and P2 work.
 ```
 
 **τ, and what it means.** τ = 900s says: a clinic reachable with no detour is worth the same as one

@@ -94,6 +94,29 @@ const REACH_EXPANSION_STEPS = [1, 2, 4, 8] as const;
 /** Shortlist depth, per §4.5. */
 const SHORTLIST_FACTOR = 4;
 
+/**
+ * The agent's existing commitments for the day, as busy intervals.
+ *
+ * A port rather than a calendar import so generation stays unit-testable, and
+ * backed by `GetCalendarAvailabilityUseCase` so recurring events expand the
+ * same way they do everywhere else — a weekly block occurring today is busy
+ * today, and re-deriving that here would be a second expansion to keep in sync.
+ */
+export interface BusyBlockReader {
+  execute(input: {
+    actor: { userId: number; roleName: string };
+    scope: ScopeContext;
+    ownerUserId?: number;
+    from: Date;
+    to: Date;
+  }): Promise<Array<{ startsAt: string; endsAt: string }>>;
+}
+
+interface BusyInterval {
+  startsAt: number;
+  endsAt: number;
+}
+
 export interface RoteiroNotice {
   code: string;
   message: string;
@@ -164,6 +187,21 @@ function zoneOffsetMs(at: Date, timeZone: string): number {
   return at.getTime() - asUtc;
 }
 
+/** The first start at or after `from` where a `duration` fits between blocks. */
+function pushPastBusy(from: number, duration: number, busy: BusyInterval[]): number {
+  let candidate = from;
+  // Blocks are sorted, but clearing one can push into a later one, so keep
+  // sweeping until a pass changes nothing.
+  for (let guard = 0; guard < busy.length + 1; guard += 1) {
+    const clash = busy.find(
+      (block) => candidate < block.endsAt && candidate + duration > block.startsAt,
+    );
+    if (!clash) return candidate;
+    candidate = clash.endsAt;
+  }
+  return candidate;
+}
+
 function haversineKm(a: RoteiroPoint, b: RoteiroPoint): number {
   const R = 6371;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -201,7 +239,9 @@ export function bucketQuotas(limit: number, ratios: Record<RoteiroBucket, number
 }
 
 export class GenerateRoteiroUseCase {
-  constructor(private readonly deps: { repository: RoteiroRepository }) {}
+  constructor(
+    private readonly deps: { repository: RoteiroRepository; busy?: BusyBlockReader },
+  ) {}
 
   async execute(input: GenerateRoteiroInput) {
     const subjectUserId = input.subjectUserId ?? input.actor.userId;
@@ -270,13 +310,16 @@ export class GenerateRoteiroUseCase {
       anchorProfileId,
       origin: input.origin,
     });
+    const timeZone = input.timeZone ?? APP_TIME_ZONE;
+    const busy = await this.loadBusy(input, subjectUserId, timeZone, params, notices);
     const stops = this.schedule({
       selected,
       origin: input.origin,
       params,
       now: input.now,
       scopeDate: input.today,
-      timeZone: input.timeZone ?? APP_TIME_ZONE,
+      timeZone,
+      busy,
     });
 
     const persisted = input.persist
@@ -331,6 +374,61 @@ export class GenerateRoteiroUseCase {
         endsAt: stops.at(-1)?.plannedEndsAt ?? null,
       },
     };
+  }
+
+  /**
+   * The agent's day as it already stands, so the roteiro is planned into the
+   * gaps rather than over the top of it.
+   *
+   * Without this the engine produces a plan that looks fine and **cannot be
+   * confirmed**: confirm refuses to shift a rep's times (§7.3), so every stop
+   * overlapping an existing commitment comes back a 409. A plan that fails at
+   * the moment of acceptance is worse than a shorter one.
+   */
+  private async loadBusy(
+    input: GenerateRoteiroInput,
+    subjectUserId: number,
+    timeZone: string,
+    params: RoteiroParams,
+    notices: RoteiroNotice[],
+  ): Promise<BusyInterval[]> {
+    const dayStart = this.atLocalTime(input.today, params.workdayStart, timeZone);
+    const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
+    const blocks: BusyInterval[] = [];
+
+    if (this.deps.busy) {
+      const existing = await this.deps.busy.execute({
+        actor: input.actor,
+        scope: input.scope,
+        ownerUserId: subjectUserId,
+        from: dayStart,
+        to: dayEnd,
+      });
+      for (const block of existing) {
+        blocks.push({
+          startsAt: new Date(block.startsAt).getTime(),
+          endsAt: new Date(block.endsAt).getTime(),
+        });
+      }
+      if (existing.length > 0) {
+        notices.push({
+          code: "EXISTING_COMMITMENTS",
+          count: existing.length,
+          message:
+            existing.length === 1
+              ? "Você já tem 1 compromisso hoje — o roteiro foi planejado ao redor dele."
+              : `Você já tem ${existing.length} compromissos hoje — o roteiro foi planejado ao redor deles.`,
+        });
+      }
+    }
+
+    const lunchStart = this.atLocalTime(input.today, params.lunchStart, timeZone);
+    blocks.push({
+      startsAt: lunchStart.getTime(),
+      endsAt: lunchStart.getTime() + params.lunchMinutes * 60_000,
+    });
+
+    return blocks.sort((a, b) => a.startsAt - b.startsAt);
   }
 
   /**
@@ -549,6 +647,7 @@ export class GenerateRoteiroUseCase {
     now: Date;
     scopeDate: string;
     timeZone: string;
+    busy: BusyInterval[];
   }): PlannedStop[] {
     const { params } = args;
     const anchored = args.selected.filter((s) => s.isAnchor);
@@ -560,8 +659,6 @@ export class GenerateRoteiroUseCase {
     const ordered = [...anchored, ...remaining];
 
     const dayStart = this.atLocalTime(args.scopeDate, params.workdayStart, args.timeZone);
-    const lunchStart = this.atLocalTime(args.scopeDate, params.lunchStart, args.timeZone);
-    const lunchEnd = new Date(lunchStart.getTime() + params.lunchMinutes * 60_000);
     let clock = new Date(Math.max(args.now.getTime(), dayStart.getTime()));
     let previous: RoteiroPoint = args.origin;
 
@@ -576,10 +673,10 @@ export class GenerateRoteiroUseCase {
       );
 
       let startsAt = new Date(clock.getTime() + (travelSeconds ?? 0) * 1000);
-      // Never schedule through lunch: push the whole stop past it.
-      if (startsAt < lunchEnd && startsAt.getTime() + serviceMinutes * 60_000 > lunchStart.getTime()) {
-        startsAt = lunchEnd;
-      }
+      // Lunch and anything already in the agent's calendar are the same kind of
+      // obstacle: a stop is pushed past whichever it overlaps, repeatedly,
+      // because clearing one block can land it inside the next.
+      startsAt = new Date(pushPastBusy(startsAt.getTime(), serviceMinutes * 60_000, args.busy));
       const endsAt = new Date(startsAt.getTime() + serviceMinutes * 60_000);
 
       clock = endsAt;

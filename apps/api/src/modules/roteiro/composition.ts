@@ -1,5 +1,8 @@
 import { DrizzleRoteiroRepository } from "./infrastructure/repositories/drizzle-roteiro.repository";
-import { GenerateRoteiroUseCase } from "./application/use-cases/generate-roteiro.use-case";
+import {
+  GenerateRoteiroUseCase,
+  type BusyBlockReader,
+} from "./application/use-cases/generate-roteiro.use-case";
 import {
   ConfirmRoteiroUseCase,
   type CalendarEventCreator,
@@ -9,7 +12,13 @@ import { calendarUseCases } from "../calendar/composition";
 const repository = new DrizzleRoteiroRepository();
 
 export const roteiroUseCases = {
-  generate: () => new GenerateRoteiroUseCase({ repository }),
+  generate: () =>
+    new GenerateRoteiroUseCase({
+      repository,
+      // The agent's existing commitments, expanded through the calendar's own
+      // recurrence rules rather than re-derived here.
+      busy: calendarUseCases.availability() as unknown as BusyBlockReader,
+    }),
   confirm: () =>
     new ConfirmRoteiroUseCase({
       repository,
