@@ -152,7 +152,7 @@ void main() {
       expect(schedule.warnings.first.message, contains('deslocamento'));
     });
 
-    test('warns when an edit pushes the day past the rep\'s closing time', () {
+    test('warns when an edit pushes the day past the planning bound', () {
       // The engine never plans past it. The rep can, by lengthening a visit,
       // and a day that quietly runs to 18:28 is not a plan anyone can keep.
       final stops = [_stop(id: 1, hour: 16), _stop(id: 2, hour: 17)];
@@ -166,6 +166,12 @@ void main() {
 
       expect(schedule.hasWarnings, isTrue);
       expect(schedule.warnings.any((w) => w.message.contains('19:00')), isTrue);
+      // Never called "your hours": the bound is per linha, has no row today,
+      // and no rep has ever set it. Claiming it is theirs invents a preference.
+      expect(
+        schedule.warnings.any((w) => w.message.contains('seu horário')),
+        isFalse,
+      );
     });
 
     test('says nothing when the day still fits', () {

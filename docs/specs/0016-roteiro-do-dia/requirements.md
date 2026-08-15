@@ -1655,6 +1655,24 @@ undo the rep's own edit in front of them.
 
 ---
 
+### 15.5.5 The workday is not the rep's yet
+
+`roteiro_params.workday_start` / `workday_end` are keyed by **linha, not by
+user**, and the table has no row today — so every rep in every territory is
+planned against the same hardcoded 08:00–18:00 from `DEFAULT_ROTEIRO_PARAMS`.
+
+That is fine as a planning bound and wrong as a claim. Nothing user-facing may
+call it *"seu horário"*: it is not the rep's, nobody chose it, and the first rep
+who works until 20:00 would correctly stop believing anything the warning says.
+Until working hours are per rep, the copy names the bound rather than
+attributing it — *"depois das 18:00, o limite usado para montar o roteiro"*.
+
+**Deferred, not designed away.** Reps do not all work the same hours, and a rep
+who starts at 06:00 is being planned two hours short of their day, every day.
+Per-rep hours belong on the user, not on the linha.
+
+---
+
 ## 16. Deferred
 
 ### 16.1 Trip planning for geographically spread books

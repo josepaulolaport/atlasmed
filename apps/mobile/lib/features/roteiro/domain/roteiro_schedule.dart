@@ -154,6 +154,13 @@ List<RoteiroScheduleWarning> _warnings(
   // The engine never plans past the end of the workday. The rep can, by
   // lengthening a visit — and a day that quietly runs to 18:28 is not a plan
   // anyone can keep, so it is said rather than absorbed.
+  //
+  // Deliberately **not** phrased as "your hours". The bound comes from
+  // `roteiro_params.workday_end`, which is per *linha* and today has no row at
+  // all, so every rep is planned against the same hardcoded 18:00. Calling that
+  // the rep's own schedule would invent a preference nobody ever set — and the
+  // first rep who works until 20:00 would rightly stop believing the warning.
+  // Named for what it is until working hours are actually per rep (§16).
   final last = result.isEmpty ? null : result.last;
   if (workdayEndsAt != null &&
       last != null &&
@@ -161,8 +168,9 @@ List<RoteiroScheduleWarning> _warnings(
     final over = last.endsAt.difference(workdayEndsAt).inMinutes;
     warnings.add(
       RoteiroScheduleWarning(
-        'O dia agora termina $over min depois do seu horário '
-        '(${_hhmm(last.endsAt)} contra ${_hhmm(workdayEndsAt)}).',
+        'O dia agora termina $over min depois das '
+        '${_hhmm(workdayEndsAt)} (${_hhmm(last.endsAt)}), o limite usado '
+        'para montar o roteiro.',
       ),
     );
   }
