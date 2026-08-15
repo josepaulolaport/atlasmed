@@ -85,22 +85,6 @@ DashboardMetricRepository<DashboardRatioMetric> cadastroCompletionRepository(
   parse: DashboardRatioMetric.cadastroFromJson,
 );
 
-DashboardMetricRepository<DashboardOrdersMetric> ordersRepository(
-  DashboardScopeArgs args,
-) => DashboardMetricRepository(
-  path: '/dashboard/metrics/orders',
-  args: args,
-  parse: DashboardOrdersMetric.fromJson,
-);
-
-DashboardMetricRepository<DashboardPenetrationMetric> penetrationRepository(
-  DashboardScopeArgs args,
-) => DashboardMetricRepository(
-  path: '/dashboard/metrics/penetration',
-  args: args,
-  parse: DashboardPenetrationMetric.fromJson,
-);
-
 DashboardMetricRepository<DashboardCountMetric> unassignedClinicsRepository(
   DashboardScopeArgs args,
 ) => DashboardMetricRepository(

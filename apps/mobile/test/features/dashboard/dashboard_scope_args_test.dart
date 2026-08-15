@@ -175,40 +175,15 @@ void main() {
       expect(metric.denominator, 0);
     });
 
-    test('a null mean share stays null, beside the clinics counted', () {
-      final metric = DashboardPenetrationMetric.fromJson({
-        'denominator': 200,
-        'metrics': [
-          {
-            'definitionId': 1,
-            'key': 'ampolas_mes',
-            'label': 'Ampolas/mês',
-            'meanShare': null,
-            'clinicsCounted': 0,
-          },
-        ],
-      });
-
-      expect(metric.denominator, 200);
-      expect(metric.metrics.single.meanShare, isNull);
-      expect(metric.metrics.single.clinicsCounted, 0);
-    });
-
     test('numeric strings from the API decode as numbers', () {
-      final metric = DashboardPenetrationMetric.fromJson({
+      // Postgres `numeric` reaches the client as a string, not a JSON number.
+      final metric = DashboardRatioMetric.coverageFromJson({
+        'covered': 3,
         'denominator': 10,
-        'metrics': [
-          {
-            'definitionId': 1,
-            'key': 'ampolas_mes',
-            'label': 'Ampolas/mês',
-            'meanShare': '0.42500000',
-            'clinicsCounted': 3,
-          },
-        ],
+        'percent': '0.42500000',
       });
 
-      expect(metric.metrics.single.meanShare, closeTo(0.425, 1e-9));
+      expect(metric.percent, closeTo(0.425, 1e-9));
     });
 
     test('a member with no calculable metric decodes as null, not 0', () {

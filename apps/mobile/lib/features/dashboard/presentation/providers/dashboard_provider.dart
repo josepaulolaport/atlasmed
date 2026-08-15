@@ -100,12 +100,6 @@ final cpfIssuesMetricProvider = _metricFamily<DashboardCpfIssues>(
 final cadastroCompletionMetricProvider = _metricFamily<DashboardRatioMetric>(
   cadastroCompletionRepository,
 );
-final ordersMetricProvider = _metricFamily<DashboardOrdersMetric>(
-  ordersRepository,
-);
-final penetrationMetricProvider = _metricFamily<DashboardPenetrationMetric>(
-  penetrationRepository,
-);
 final unassignedClinicsMetricProvider = _metricFamily<DashboardCountMetric>(
   unassignedClinicsRepository,
 );
