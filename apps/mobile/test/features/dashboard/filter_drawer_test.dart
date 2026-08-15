@@ -1,14 +1,16 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/filter_drawer.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/filter_sheet_footer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// The filter drawer's layout while a selection is being built.
+/// The Desempenho filter drawer.
 ///
-/// "Limpar" used to be rendered only once something was selected, so the first
-/// tick inserted a button into the header and pushed every row below it down by
-/// that button's height. The option under the finger moved, and a second quick
-/// tap landed on its neighbour.
+/// "Limpar" used to be a text link in the header, rendered only once something
+/// was selected — so the first tick inserted a button above the list and pushed
+/// every row down by its height. It now sits in the shared footer beside the
+/// button it undoes, which is both where Explorar puts it and where it cannot
+/// move anything.
 
 const _options = [
   FilterOption(id: 1, label: 'Acre'),
@@ -38,27 +40,31 @@ void main() {
     await tester.pumpAndSettle();
     final after = tester.getTopLeft(find.text('Rio de Janeiro'));
 
-    expect(
-      after.dy,
-      before.dy,
-      reason: 'the header must not grow on selection',
-    );
+    expect(after.dy, before.dy, reason: 'nothing above the list may grow');
   });
 
-  testWidgets('Limpar holds its space but does nothing while empty', (
+  testWidgets('uses the same footer as Explorar rather than its own', (
     tester,
   ) async {
+    // Two filter surfaces in one app should not be told apart by their buttons.
     await pumpDrawer(tester);
 
-    // Present in the tree from the start — that is what keeps the layout still.
+    expect(find.byType(FilterSheetFooter), findsOneWidget);
     expect(find.text('Limpar'), findsOneWidget);
+    expect(find.text('Aplicar'), findsOneWidget);
+  });
 
-    // ...and invisible until there is something to clear.
-    final visibility = tester.widget<Visibility>(
-      find.ancestor(of: find.text('Limpar'), matching: find.byType(Visibility)),
-    );
-    expect(visibility.visible, isFalse);
-    expect(visibility.maintainSize, isTrue);
+  testWidgets('the apply button counts what is selected', (tester) async {
+    await pumpDrawer(tester);
+    expect(find.text('Aplicar'), findsOneWidget);
+
+    await tester.tap(find.text('Acre'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aplicar (1)'), findsOneWidget);
+
+    await tester.tap(find.text('Rio de Janeiro'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aplicar (2)'), findsOneWidget);
   });
 
   testWidgets('Limpar drops the selection it was given', (tester) async {
@@ -72,6 +78,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Aplicar'), findsOneWidget);
+  });
+
+  testWidgets('Limpar is present but inert while nothing is chosen', (
+    tester,
+  ) async {
+    // Present, so it holds its space; inert, so it cannot claim to have done
+    // something. Greyed rather than hidden.
+    await pumpDrawer(tester);
+
+    final footer = tester.widget<FilterSheetFooter>(
+      find.byType(FilterSheetFooter),
+    );
+    expect(footer.selectedCount, 0);
+    expect(find.text('Limpar'), findsOneWidget);
   });
 
   testWidgets('the search narrows the list without losing the ticks', (
