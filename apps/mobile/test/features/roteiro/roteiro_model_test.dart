@@ -305,6 +305,39 @@ void main() {
       expect(roteiro.fixedPoints.single.lat, -23.6);
     });
 
+    test('keeps the coordinates the map needs to plot a stop', () {
+      final roteiro = Roteiro.fromJson({
+        'stops': [
+          {
+            'position': 0,
+            'modality': 'IN_PERSON',
+            'candidate': {
+              'facilityName': 'Inst Cohen',
+              'lat': -23.55,
+              'lng': -46.63,
+            },
+          },
+        ],
+      });
+
+      expect(roteiro.stops.single.lat, -23.55);
+      expect(roteiro.stops.single.lng, -46.63);
+    });
+
+    test('a stop with no coordinates is readable but not plottable', () {
+      final roteiro = Roteiro.fromJson({
+        'stops': [
+          {
+            'position': 0,
+            'candidate': {'facilityName': 'Sem coordenada'},
+          },
+        ],
+      });
+
+      expect(roteiro.stops.single.facilityName, 'Sem coordenada');
+      expect(roteiro.stops.single.lat, isNull);
+    });
+
     test('a clear day has no fixed points', () {
       final roteiro = Roteiro.fromJson({'stops': const []});
       expect(roteiro.fixedPoints, isEmpty);

@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_stop_card.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_day_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_timeline.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -54,7 +55,21 @@ class _RoteiroScreenState extends ConsumerState<RoteiroScreen> {
     final roteiro = state.roteiro;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Roteiro do dia')),
+      appBar: AppBar(
+        title: const Text('Roteiro do dia'),
+        actions: [
+          if (roteiro != null && roteiro.stops.isNotEmpty)
+            IconButton(
+              tooltip: 'Ver dia no mapa',
+              icon: const Icon(Icons.map_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => RoteiroDayMapScreen(roteiro: roteiro),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (verticalId == null) return;

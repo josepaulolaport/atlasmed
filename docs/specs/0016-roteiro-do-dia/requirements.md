@@ -1408,9 +1408,6 @@ a purchasing model nobody has confirmed.
 
 ### 15.3 Still open
 
-0. **Origin for a day that is not today** (§15.4.1). GPS answers "where am I", which says nothing
-   about tomorrow. Proposed: the day's first booked visit when there is one; otherwise the rep
-   picks. Blocks day-scoped generation.
 1. **Ortho CBO prefix** — which `CO_CBO` values count as orthopaedics for the §0.1 capacity signal
    ([`data-sources.md`](./data-sources.md)). Must be *measured* against the dump, not assumed.
 2. **`PROSPECTAR` eligibility floor** — should a never-purchased clinic with zero orthopaedists and
@@ -1445,10 +1442,14 @@ Consequences:
 
 - **The day comes from the route**, not from `now`. Planning tomorrow morning tonight is the normal
   case, not an edge one.
-- **Origin needs a rule for a future day.** Live GPS answers "where am I", which is meaningless for
-  tomorrow. Open question in §15.3: the first booked visit of that day is the natural anchor when
-  one exists, and when it does not the rep has to say. This is the one part of §4.1's
-  "GPS, no fallback" that a day-scoped roteiro reopens.
+- **Origin for a future day** (decided 2026-08-15). Today still uses live GPS. For any other day:
+  the **first booked in-person visit** of that day, because that is where the rep will actually be;
+  and when the day has none, the **rep picks** a starting point.
+
+  Nothing is inferred. This keeps §4.1's rule intact in spirit — a roteiro is never planned from a
+  position nobody has confirmed — and the measured reason stands: a centroid of a scattered book
+  lands in empty space, with two of five reps having nothing within 120 km of theirs. The cost is
+  one extra step on an empty day, which is precisely the day where guessing wrong does most damage.
 - The existing `/roteiro` list view becomes the workspace's default panel rather than a screen.
 
 ### 15.4.2 Modality is not decoration — and a booked call is not a place

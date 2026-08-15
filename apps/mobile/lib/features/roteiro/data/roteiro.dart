@@ -72,6 +72,8 @@ class RoteiroStop {
     this.unitType,
     this.travelSecondsFromPrev,
     this.straightLineKm,
+    this.lat,
+    this.lng,
   });
 
   factory RoteiroStop.fromJson(Map<String, dynamic> json) {
@@ -94,6 +96,8 @@ class RoteiroStop {
       serviceMinutes: (json['serviceMinutes'] as num?)?.toInt() ?? 0,
       travelSecondsFromPrev: (json['travelSecondsFromPrev'] as num?)?.toInt(),
       straightLineKm: (candidate['straightLineKm'] as num?)?.toDouble(),
+      lat: (candidate['lat'] as num?)?.toDouble(),
+      lng: (candidate['lng'] as num?)?.toDouble(),
       plannedStartsAt:
           DateTime.tryParse(
             json['plannedStartsAt'] as String? ?? '',
@@ -132,6 +136,11 @@ class RoteiroStop {
   final int serviceMinutes;
   final int? travelSecondsFromPrev;
   final double? straightLineKm;
+
+  /// Where the clinic is. Needed to draw the day on a map (§15.4.3); the API
+  /// has always sent these and the client used to drop them.
+  final double? lat;
+  final double? lng;
   final DateTime plannedStartsAt;
   final DateTime plannedEndsAt;
   final bool isCoverageSlot;
