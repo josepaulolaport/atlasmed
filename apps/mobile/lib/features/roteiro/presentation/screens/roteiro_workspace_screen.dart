@@ -254,11 +254,19 @@ class _RoteiroWorkspaceScreenState
             else
               RoteiroSlotList(
                 roteiro: roteiro,
-                visibleStops: notifier.visibleStops(roteiro),
+                schedule: notifier.scheduleFor(roteiro),
                 slotCount: roteiro.slotCount,
                 onRemove: (stop) =>
                     notifier.remove(stop.facilityVerticalProfileId),
                 onFillEmpty: () => _add(state, notifier),
+                onDurationChanged: (stop, minutes) => notifier.setDuration(
+                  stop.facilityVerticalProfileId,
+                  minutes,
+                ),
+                onTimeChanged: (stop, startsAt) => notifier.setStartTime(
+                  stop.facilityVerticalProfileId,
+                  startsAt,
+                ),
               ),
           ],
         ),

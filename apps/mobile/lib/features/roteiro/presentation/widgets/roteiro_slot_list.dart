@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/domain/roteiro_schedule.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/widgets/roteiro_stop_card.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -17,40 +18,48 @@ class RoteiroSlotList extends StatelessWidget {
   const RoteiroSlotList({
     super.key,
     required this.roteiro,
-    required this.visibleStops,
+    required this.schedule,
     required this.slotCount,
     required this.onRemove,
     required this.onFillEmpty,
+    required this.onDurationChanged,
+    required this.onTimeChanged,
   });
 
   final Roteiro roteiro;
 
-  /// Suggestions the rep has not pulled out.
-  final List<RoteiroStop> visibleStops;
+  /// The suggestions the rep has kept, at the times their edits put them.
+  final RoteiroSchedule schedule;
 
   /// How many suggestion slots the day has — the configured daily limit.
   final int slotCount;
 
   final ValueChanged<RoteiroStop> onRemove;
   final VoidCallback onFillEmpty;
+  final void Function(RoteiroStop stop, int minutes) onDurationChanged;
+  final void Function(RoteiroStop stop, DateTime startsAt) onTimeChanged;
 
   @override
   Widget build(BuildContext context) {
     final booked = roteiro.fixedPoints;
-    final empty = (slotCount - visibleStops.length).clamp(0, slotCount);
+    final empty = (slotCount - schedule.stops.length).clamp(0, slotCount);
 
     // Committed and suggested interleaved in time order, so the day reads the
     // way it will actually happen rather than as two separate lists.
     final timed = <({DateTime at, Widget card})>[
       for (final point in booked)
         (at: point.startsAt, card: _BookedCard(point: point)),
-      for (final stop in visibleStops)
+      for (final scheduled in schedule.stops)
         (
-          at: stop.plannedStartsAt,
+          at: scheduled.startsAt,
           card: RoteiroStopCard(
-            stop: stop,
+            scheduled: scheduled,
             estimatedTravel: roteiro.isEstimated,
-            onRemove: () => onRemove(stop),
+            onRemove: () => onRemove(scheduled.stop),
+            onDurationChanged: (minutes) =>
+                onDurationChanged(scheduled.stop, minutes),
+            onTimeChanged: (startsAt) =>
+                onTimeChanged(scheduled.stop, startsAt),
           ),
         ),
     ]..sort((a, b) => a.at.compareTo(b.at));
@@ -58,11 +67,51 @@ class RoteiroSlotList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Above the day, not buried under it: a conflict the rep's own edit
+        // created is the first thing they need to see.
+        for (final warning in schedule.warnings)
+          _WarningBanner(warning: warning),
         for (final entry in timed) entry.card,
         for (var i = 0; i < empty; i += 1) _EmptySlot(onTap: onFillEmpty),
       ],
     );
   }
+}
+
+/// A consequence of the rep's edit that they have to resolve themselves. Never
+/// auto-corrected — only the rep can choose between a clinic and a commitment.
+class _WarningBanner extends StatelessWidget {
+  const _WarningBanner({required this.warning});
+
+  final RoteiroScheduleWarning warning;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppColors.amber.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: AppColors.amber.withValues(alpha: 0.35)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.warning_amber_rounded,
+          size: 16,
+          color: AppColors.amber,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            warning.message,
+            style: const TextStyle(fontSize: 12, color: AppColors.gray700),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Something the rep already has. Not a suggestion, and not removable here —

@@ -51,8 +51,46 @@ const generationBody = t.Object({
   excludeProfileIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { maxItems: 50 })),
   /** Clinics the rep added by hand, placed ahead of the merit ranking. */
   includeProfileIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { maxItems: 12 })),
+  /**
+   * How long the rep says a given clinic takes, `{ [profileId]: minutes }`.
+   * Planned with, not applied afterwards — duration is the denominator of the
+   * gain a stop is chosen on, so a wrong one displaces a clinic that fitted.
+   */
+  durationOverrides: t.Optional(
+    t.Record(t.String(), t.Number({ minimum: 15, maximum: 480 }), { additionalProperties: false }),
+  ),
+  /**
+   * Times the rep pinned a clinic to, `{ [profileId]: ISO instant }`. A pinned
+   * clinic is planned as a commitment, not a suggestion.
+   */
+  startOverrides: t.Optional(
+    t.Record(t.String(), t.String({ format: "date-time" }), { additionalProperties: false }),
+  ),
   timeZone: t.Optional(t.String({ minLength: 1 })),
 });
+
+/** Elysia gives record keys as strings; the engine keys by profile id. */
+const toStartOverrides = (raw?: Record<string, string>): Record<number, Date> | undefined => {
+  if (!raw) return undefined;
+  const out: Record<number, Date> = {};
+  for (const [key, iso] of Object.entries(raw)) {
+    const id = Number(key);
+    const at = new Date(iso);
+    if (Number.isInteger(id) && id > 0 && !Number.isNaN(at.getTime())) out[id] = at;
+  }
+  return out;
+};
+
+
+const toDurationOverrides = (raw?: Record<string, number>): Record<number, number> | undefined => {
+  if (!raw) return undefined;
+  const out: Record<number, number> = {};
+  for (const [key, minutes] of Object.entries(raw)) {
+    const id = Number(key);
+    if (Number.isInteger(id) && id > 0) out[id] = minutes;
+  }
+  return out;
+};
 
 export const roteiroRoute = (
   useCases: RoteiroHttpUseCases = roteiroUseCases,
@@ -82,6 +120,8 @@ export const roteiroRoute = (
           limit: body.limit,
           excludeProfileIds: body.excludeProfileIds,
           includeProfileIds: body.includeProfileIds,
+          durationOverrides: toDurationOverrides(body.durationOverrides),
+          startOverrides: toStartOverrides(body.startOverrides),
           today: body.scopeDate ?? localCivilDate(now, body.timeZone),
           now,
           timeZone: body.timeZone,
@@ -118,6 +158,8 @@ export const roteiroRoute = (
           limit: body.limit,
           excludeProfileIds: body.excludeProfileIds,
           includeProfileIds: body.includeProfileIds,
+          durationOverrides: toDurationOverrides(body.durationOverrides),
+          startOverrides: toStartOverrides(body.startOverrides),
           persist: true,
           today: body.scopeDate ?? localCivilDate(now, body.timeZone),
           now,

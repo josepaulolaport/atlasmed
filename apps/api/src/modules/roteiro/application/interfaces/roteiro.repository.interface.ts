@@ -27,7 +27,24 @@ export interface RoteiroParams {
    * How long a visit takes. Only in-person: the engine never proposes a call,
    * so there is no remote duration for it to choose (§4.4).
    */
-  serviceMinutes: { IN_PERSON: number };
+  /**
+   * How long a visit takes, in minutes.
+   *
+   * Per bucket, because one number for every clinic is plainly wrong: a
+   * check-in at an account the rep knows is not a first visit to a hospital
+   * they have never entered. `IN_PERSON` is the fallback and keeps rows written
+   * before `byBucket` existed valid.
+   *
+   * Multiples of 30 by construction — the calendar rounds up to its slot
+   * (§7.3), so a 45 stored here is a 60 lived, and showing 45 to the rep would
+   * be a lie about their own day. Still a guess until outcome capture gives us
+   * `actual_started_at`/`actual_ended_at` to fit against (§15.2); it is a
+   * parameter so it costs nothing to move.
+   */
+  serviceMinutes: {
+    IN_PERSON: number;
+    byBucket?: Partial<Record<RoteiroBucket, number>>;
+  };
   unitTypePolicy: Record<string, { fit: number; eligible: boolean }>;
   reachRadiusKm: number;
   detourBudgetKm: number;

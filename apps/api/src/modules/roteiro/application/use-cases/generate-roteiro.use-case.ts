@@ -32,7 +32,17 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
   bucketRatios: { MANTER: 0.2, RECUPERAR: 0.2, PROSPECTAR: 0.6 },
   cooldownDays: { MANTER: 14, RECUPERAR: 21, PROSPECTAR: 30 },
   coverageHorizonDays: { MANTER: 90, RECUPERAR: 180, PROSPECTAR: 180 },
-  serviceMinutes: { IN_PERSON: 45 },
+  serviceMinutes: {
+    IN_PERSON: 60,
+    // A guess, but a better-informed one than a single number. Maintaining an
+    // account the rep already has is a short call-in; a first visit means
+    // reception, a wait and an introduction to someone who has never met us,
+    // and a recovery visit has to re-open a conversation that lapsed.
+    //
+    // All multiples of 30 because the calendar rounds up to its slot: the old
+    // flat 45 was already living as a 60 in every rep's day.
+    byBucket: { MANTER: 30, RECUPERAR: 60, PROSPECTAR: 60 },
+  },
   unitTypePolicy: {
     "Clinica/Centro de Especialidade": { fit: 1.0, eligible: true },
     "Hospital/Dia - Isolado": { fit: 1.0, eligible: true },
@@ -114,6 +124,23 @@ const MATRIX_MAX_COORDINATES = 25;
  * and is a change to an invariant every other interaction already relies on.
  */
 const CALENDAR_SLOT_MINUTES = 30;
+
+/**
+ * How long this clinic takes: what the rep said, else the bucket default, else
+ * the flat fallback — snapped up to a calendar slot in one place so no caller
+ * can plan a duration the calendar will silently change (§7.3).
+ */
+function serviceMsFor(
+  candidate: { facilityVerticalProfileId: number; bucket: RoteiroBucket },
+  params: RoteiroParams,
+  overrides: Record<number, number>,
+): number {
+  const minutes =
+    overrides[candidate.facilityVerticalProfileId] ??
+    params.serviceMinutes.byBucket?.[candidate.bucket] ??
+    params.serviceMinutes.IN_PERSON;
+  return toCalendarSlot(minutes) * 60_000;
+}
 
 function toCalendarSlot(minutes: number): number {
   return Math.max(
@@ -249,6 +276,26 @@ export interface GenerateRoteiroInput {
    */
   includeProfileIds?: number[];
   /**
+   * How long the rep says a particular clinic takes, keyed by profile id.
+   *
+   * Fed into planning rather than applied to the result, because duration is
+   * not cosmetic: it is the denominator of the gain a stop is chosen on
+   * (§4.5) and it decides what else fits the gap. A two-hour hospital the
+   * engine believes is one hour does not just display wrong — it displaces a
+   * clinic that would have fitted.
+   */
+  durationOverrides?: Record<number, number>;
+  /**
+   * Times the rep pinned a clinic to, keyed by profile id.
+   *
+   * A pinned stop stops being a suggestion and becomes a **commitment**: it is
+   * fed in as a fixed point, exactly like a booked visit, so the gaps split
+   * around it, reachability anchors on it and re-ordering cannot move it. That
+   * is what the rep meant — they did not ask the engine to consider 14:00, they
+   * said they will be there at 14:00.
+   */
+  startOverrides?: Record<number, Date>;
+  /**
    * Persist the result as a DRAFT. `POST /roteiros` does; `/preview` does not,
    * so exploring anchors never disturbs the rep's live plan for the day.
    */
@@ -308,6 +355,13 @@ interface PlacedStop {
   startsAt: Date;
   endsAt: Date;
   travelSeconds: number;
+}
+
+/** A clinic the rep put at a time, before it becomes a fixed point. */
+interface PinnedStop {
+  candidate: RoteiroCandidate;
+  startsAt: Date;
+  endsAt: Date;
 }
 
 interface PlannedStop {
@@ -671,6 +725,50 @@ export class GenerateRoteiroUseCase {
       });
     }
 
+    /**
+     * Clinics the rep pinned to a time, promoted to commitments.
+     *
+     * Done here rather than inside selection because a pinned stop is not a
+     * choice the engine gets to make. Once it is a fixed point every other part
+     * of the day — the gaps, the anchoring, the ordering — treats it the way it
+     * treats a booked visit, and none of them can quietly move it.
+     *
+     * After reachability on purpose: the shortlist is already drawn, and a pin
+     * should not narrow the search that produced the clinic being pinned.
+     */
+    const pinned: PinnedStop[] = [];
+    for (const [key, startsAt] of Object.entries(input.startOverrides ?? {})) {
+      const profileId = Number(key);
+      const candidate = candidates.find((c) => c.facilityVerticalProfileId === profileId);
+      if (!candidate) {
+        notices.push({
+          code: "PINNED_NOT_AVAILABLE",
+          facilityVerticalProfileId: profileId,
+          message: "Uma clínica com horário fixado saiu da sua carteira e foi removida do dia.",
+        });
+        continue;
+      }
+      const serviceMs = serviceMsFor(candidate, params, input.durationOverrides ?? {});
+      pinned.push({ candidate, startsAt, endsAt: new Date(startsAt.getTime() + serviceMs) });
+    }
+    for (const pin of pinned) {
+      fixedPoints.push({
+        facilityVerticalProfileId: pin.candidate.facilityVerticalProfileId,
+        facilityId: pin.candidate.facilityId,
+        facilityName: pin.candidate.facilityName,
+        lat: pin.candidate.lat,
+        lng: pin.candidate.lng,
+        startsAt: pin.startsAt,
+        endsAt: pin.endsAt,
+      });
+      busy.push({ startsAt: pin.startsAt.getTime(), endsAt: pin.endsAt.getTime() });
+    }
+    if (pinned.length > 0) {
+      fixedPoints.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+      busy.sort((a, b) => a.startsAt - b.startsAt);
+    }
+    const pinnedIds = new Set(pinned.map((p) => p.candidate.facilityVerticalProfileId));
+
     const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
     const gaps = buildGaps({
       origin,
@@ -697,24 +795,43 @@ export class GenerateRoteiroUseCase {
 
     const selected = this.reorder(
       this.select({
-        candidates,
-        limit,
+        // A pinned clinic is already in the day. Leaving it selectable would
+        // put it there twice.
+        candidates: candidates.filter(
+          (c) => !pinnedIds.has(c.facilityVerticalProfileId),
+        ),
+        limit: Math.max(0, limit - pinned.length),
         params,
         notices,
         gaps,
         busy,
         travel,
         includeProfileIds: input.includeProfileIds ?? [],
+        durationOverrides: input.durationOverrides ?? {},
       }),
       gaps,
       params,
       busy,
       travel,
+      input.durationOverrides ?? {},
     );
 
     // Selection placed every stop inside a gap, so ordering is just time order
     // and there is no second pass that could disagree with it.
-    const stops: PlannedStop[] = [...selected]
+    const stops: PlannedStop[] = [
+      ...selected,
+      ...pinned.map((pin) => ({
+        candidate: pin.candidate,
+        isCoverageSlot: false,
+        gapIndex: -1,
+        startsAt: pin.startsAt,
+        endsAt: pin.endsAt,
+        // The rep chose the time, so the drive to it is whatever it is —
+        // claiming a travel leg the route never planned would be a number we
+        // made up.
+        travelSeconds: 0,
+      })),
+    ]
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
       .map((placed, position) => {
         return {
@@ -726,8 +843,11 @@ export class GenerateRoteiroUseCase {
           modality: "IN_PERSON" as const,
           modalitySource: "SUGGESTED" as const,
           isCoverageSlot: placed.isCoverageSlot,
-          isAnchor: false,
-          travelSecondsFromPrev: placed.travelSeconds,
+          // A pinned stop is the rep's commitment, and the card says so.
+          isAnchor: placed.gapIndex === -1,
+          // Null, not zero: the route never planned a leg to a stop the rep
+          // placed by hand, and "0 min de deslocamento" would be a claim.
+          travelSecondsFromPrev: placed.gapIndex === -1 ? null : placed.travelSeconds,
           serviceMinutes: Math.round(
             (placed.endsAt.getTime() - placed.startsAt.getTime()) / 60_000,
           ),
@@ -799,7 +919,16 @@ export class GenerateRoteiroUseCase {
       anchorProfileId: fixedPoints[0]?.facilityVerticalProfileId ?? null,
       // Coordinates included: the timeline and the P2 map both have to draw
       // the day as one sequence, and a booked visit is part of that sequence.
-      fixedPoints: fixedPoints.map((point) => ({
+      // Pinned clinics are fixed points to the engine but suggestions to the
+      // rep — they are in `stops`, and echoing them here too would draw each
+      // one twice.
+      fixedPoints: fixedPoints
+        .filter(
+          (point) =>
+            point.facilityVerticalProfileId === null ||
+            !pinnedIds.has(point.facilityVerticalProfileId),
+        )
+        .map((point) => ({
         facilityId: point.facilityId,
         facilityName: point.facilityName,
         lat: point.lat,
@@ -974,7 +1103,14 @@ export class GenerateRoteiroUseCase {
         reachMode: args.reachMode,
         fixedPoints: args.fixedPoints,
         excludeProfileIds: args.input.excludeProfileIds ?? [],
-        includeProfileIds: args.input.includeProfileIds ?? [],
+        // Pinned clinics ride the same union: they have to be in the shortlist
+        // for the engine to know where they are, and a pinned clinic is exactly
+        // as likely as a requested one to be low-merit — which is why the rep
+        // had to say so.
+        includeProfileIds: [
+          ...(args.input.includeProfileIds ?? []),
+          ...Object.keys(args.input.startOverrides ?? {}).map(Number),
+        ],
         reachBoundKm,
         params: args.params,
         today: args.input.today,
@@ -1003,8 +1139,10 @@ export class GenerateRoteiroUseCase {
     busy: BusyInterval[];
     travel: TravelFn;
     includeProfileIds: number[];
+    durationOverrides: Record<number, number>;
   }) {
-    const { candidates, limit, params, notices, gaps, busy, travel, includeProfileIds } = args;
+    const { candidates, limit, params, notices, gaps, busy, travel, includeProfileIds, durationOverrides } =
+      args;
     const quotas = bucketQuotas(limit, params.bucketRatios);
     const taken = new Set<number>();
     const chosen: PlacedStop[] = [];
@@ -1025,7 +1163,7 @@ export class GenerateRoteiroUseCase {
       if (chosen.length >= limit) break;
       const wanted = candidates.find((c) => c.facilityVerticalProfileId === profileId);
       if (!wanted || taken.has(profileId)) continue;
-      const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
+      const serviceMs = serviceMsFor(wanted, params, durationOverrides);
       let placed: { gap: DayGap; at: NonNullable<ReturnType<typeof fitInGap>> } | null = null;
       for (const gap of gaps) {
         const at = fitInGap(gap, { lat: wanted.lat, lng: wanted.lng }, serviceMs, busy, travel);
@@ -1068,7 +1206,7 @@ export class GenerateRoteiroUseCase {
         return b.meritScore - a.meritScore;
       })[0];
     if (coverage && chosen.length < limit) {
-      const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
+      const serviceMs = serviceMsFor(coverage, params, durationOverrides);
       // The reserved slot still has to fit somewhere real. If the day cannot
       // hold it, it is not taken — a coverage stop the rep cannot make is not
       // coverage.
@@ -1139,7 +1277,7 @@ export class GenerateRoteiroUseCase {
 
       for (const candidate of candidates) {
         if (taken.has(candidate.facilityVerticalProfileId)) continue;
-        const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
+        const serviceMs = serviceMsFor(candidate, params, durationOverrides);
         const point = { lat: candidate.lat, lng: candidate.lng };
 
         for (const gap of gaps) {
@@ -1263,6 +1401,7 @@ export class GenerateRoteiroUseCase {
     params: RoteiroParams,
     busy: BusyInterval[],
     travel: TravelFn,
+    durationOverrides: Record<number, number>,
   ): PlacedStop[] {
     const result: PlacedStop[] = [];
 
@@ -1280,7 +1419,7 @@ export class GenerateRoteiroUseCase {
       let cursor: RoteiroPoint = gap.from;
       let clock = gap.clockStart;
       for (const stop of ordered) {
-        const serviceMs = toCalendarSlot(params.serviceMinutes.IN_PERSON) * 60_000;
+        const serviceMs = serviceMsFor(stop.candidate, params, durationOverrides);
         const point = { lat: stop.candidate.lat, lng: stop.candidate.lng };
         const drive = travel(cursor, point);
         const startsAt = pushPastBusy(clock + drive * 1000, serviceMs, busy);

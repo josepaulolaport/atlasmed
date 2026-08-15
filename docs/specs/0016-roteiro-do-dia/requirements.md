@@ -1576,6 +1576,53 @@ The principle, stated so it survives the next person: **CNES may only ever *rais
 clinic, never lower it.** Its absence means we do not know, and not knowing is a reason to look —
 which is what a rep's visit is for.
 
+### 15.5.4 A visit does not take 45 minutes
+
+It never did. The flat `serviceMinutes.IN_PERSON = 45` was also a lie about
+itself: the calendar rounds up to its 30-minute slot (§7.3), so every 45 was
+lived as a 60. Now per bucket, and every value a whole slot so the number the rep
+reads is the number their agenda keeps:
+
+| bucket | minutes | why |
+|---|---|---|
+| `MANTER` | 30 | a call-in at an account the rep already has |
+| `RECUPERAR` | 60 | a lapsed conversation has to be re-opened |
+| `PROSPECTAR` | 60 | reception, a wait, an introduction to a stranger |
+
+Still a guess — a better-informed one, and a parameter, so it costs nothing to
+move once outcome capture gives us `actual_started_at`/`actual_ended_at` to fit
+against (§15.2).
+
+**The rep can change it on the card**, because they know which hospital eats two
+hours and we do not. Two things follow from that:
+
+**1. The override is planned with, not applied afterwards.** Duration is the
+denominator of the gain a stop is chosen on (§4.5) and it decides what else fits
+the gap. A two-hour hospital the engine believes is one hour does not merely
+display wrong — it displaces a clinic that would have fitted. So
+`durationOverrides` goes into generation, and survives a regeneration: a rep who
+has told us once should not have to tell us again.
+
+**2. An edit moves the day, in the direction it was made.** Lengthen a visit and
+everything after it moves back by the same amount; shorten one and the day pulls
+forward and closes the hole. Move a stop later and what follows follows; move it
+earlier and what comes before it comes earlier too — the time has to come from
+somewhere.
+
+The ripple is local and immediate. It carries the travel legs rather than
+recomputing them, because the rep changed *when*, not *where*: the order is
+unchanged, so the driving is unchanged. Anything that would change the route has
+to go back to the engine, which is what regenerating is for. Conflicts it creates
+— with a booked commitment, or with the drive between two stops — are **shown,
+never silently corrected**. Only the rep can choose between a clinic and a
+commitment.
+
+**A pinned time is a commitment, not a preference.** A rep who sets 14:00 has not
+asked the engine to consider 14:00. So `startOverrides` are fed in as fixed
+points, exactly like booked visits: the gaps split around them, and neither
+selection nor re-ordering can move them. Without this the save's re-plan would
+undo the rep's own edit in front of them.
+
 ---
 
 ## 16. Deferred

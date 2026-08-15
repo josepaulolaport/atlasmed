@@ -494,6 +494,92 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.stops.map((s) => s.candidate.facilityName)).toContain("Pedida");
   });
 
+  it("gives a maintenance call-in less of the day than a first visit", async () => {
+    // One duration for every clinic is plainly wrong, and the difference is not
+    // cosmetic: it is the denominator of the gain a stop is chosen on.
+    const repository = new FakeRepository([
+      candidate({ id: 1, bucket: "MANTER", funnelStage: "PURCHASE_WINDOW", meritScore: 0.9 }),
+      candidate({ id: 2, bucket: "PROSPECTAR", meritScore: 0.89 }),
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(baseInput({ limit: 2 }));
+    const byId = new Map(result.stops.map((s) => [s.candidate.facilityVerticalProfileId, s]));
+
+    expect(byId.get(1)?.serviceMinutes).toBe(30);
+    expect(byId.get(2)?.serviceMinutes).toBe(60);
+  });
+
+  it("plans with the duration the rep gave, not the bucket default", async () => {
+    const repository = new FakeRepository([candidate({ id: 1, meritScore: 0.9 })]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(
+      baseInput({ limit: 1, durationOverrides: { 1: 120 } }),
+    );
+
+    expect(result.stops[0]?.serviceMinutes).toBe(120);
+  });
+
+  it("rounds a duration up to a calendar slot rather than shifting it later", async () => {
+    // The calendar only holds multiples of 30 (§7.3). Snapping here means the
+    // rep sees the number their agenda will actually keep.
+    const repository = new FakeRepository([candidate({ id: 1, meritScore: 0.9 })]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(
+      baseInput({ limit: 1, durationOverrides: { 1: 40 } }),
+    );
+
+    expect(result.stops[0]?.serviceMinutes).toBe(60);
+  });
+
+  it("keeps a clinic the rep pinned at exactly the time they pinned it to", async () => {
+    const at = new Date("2026-08-17T14:00:00-03:00");
+    const repository = new FakeRepository([
+      candidate({ id: 1, meritScore: 0.99 }),
+      candidate({ id: 2, meritScore: 0.98 }),
+      candidate({ id: 42, meritScore: 0.01, facilityName: "Fixada" }),
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(
+      baseInput({ limit: 3, startOverrides: { 42: at } }),
+    );
+
+    const pinnedStop = result.stops.find((s) => s.candidate.facilityName === "Fixada");
+    expect(pinnedStop).toBeDefined();
+    expect(pinnedStop?.plannedStartsAt.getTime()).toBe(at.getTime());
+    // The rep committed to it, so it is not a suggestion the route may move.
+    expect(pinnedStop?.isAnchor).toBe(true);
+    // And it is not also echoed as a booked visit — that would draw it twice.
+    expect(result.fixedPoints.some((p) => p.facilityName === "Fixada")).toBe(false);
+  });
+
+  it("plans the rest of the day around a pinned time instead of over it", async () => {
+    const at = new Date("2026-08-17T14:00:00-03:00");
+    const repository = new FakeRepository([
+      ...Array.from({ length: 6 }, (_, i) => candidate({ id: i + 1, meritScore: 0.9 })),
+      candidate({ id: 42, meritScore: 0.01, facilityName: "Fixada" }),
+    ]);
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(
+      baseInput({ limit: 5, startOverrides: { 42: at } }),
+    );
+    const pinnedStop = result.stops.find((s) => s.candidate.facilityName === "Fixada")!;
+
+    for (const stop of result.stops) {
+      if (stop.candidate.facilityName === "Fixada") continue;
+      const clashes =
+        stop.plannedStartsAt.getTime() < pinnedStop.plannedEndsAt.getTime() &&
+        pinnedStop.plannedStartsAt.getTime() < stop.plannedEndsAt.getTime();
+      expect(clashes).toBe(false);
+    }
+    // The pin takes one of the five slots rather than being added on top.
+    expect(result.stops.length).toBeLessThanOrEqual(5);
+  });
+
   it("refuses to plan another rep's day", async () => {
     const repository = new FakeRepository([candidate({ id: 1 })]);
     const useCase = new GenerateRoteiroUseCase({ repository });

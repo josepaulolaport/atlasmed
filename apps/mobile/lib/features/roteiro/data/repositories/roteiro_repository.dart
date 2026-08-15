@@ -45,6 +45,8 @@ class RoteiroRepository extends Repository<String>
     int? subjectUserId,
     List<int> excludeProfileIds = const [],
     List<int> includeProfileIds = const [],
+    Map<int, int> durationOverrides = const {},
+    Map<int, DateTime> startOverrides = const {},
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -65,6 +67,21 @@ class RoteiroRepository extends Repository<String>
             'excludeProfileIds': excludeProfileIds,
           if (includeProfileIds.isNotEmpty)
             'includeProfileIds': includeProfileIds,
+          // Sent to the engine rather than applied to its answer: how long a
+          // visit takes is the denominator of the gain a stop is chosen on, so
+          // a two-hour hospital planned as one hour displaces a clinic that
+          // would have fitted.
+          if (durationOverrides.isNotEmpty)
+            'durationOverrides': durationOverrides.map(
+              (id, minutes) => MapEntry('$id', minutes),
+            ),
+          // A pinned time is planned as a commitment, so it survives the
+          // re-plan a save performs. Without this the rep would watch their own
+          // edit get undone by the engine.
+          if (startOverrides.isNotEmpty)
+            'startOverrides': startOverrides.map(
+              (id, at) => MapEntry('$id', at.toUtc().toIso8601String()),
+            ),
         },
       ),
     );
@@ -116,6 +133,8 @@ class RoteiroRepository extends Repository<String>
     int? limit,
     List<int> excludeProfileIds = const [],
     List<int> includeProfileIds = const [],
+    Map<int, int> durationOverrides = const {},
+    Map<int, DateTime> startOverrides = const {},
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -135,6 +154,21 @@ class RoteiroRepository extends Repository<String>
             'excludeProfileIds': excludeProfileIds,
           if (includeProfileIds.isNotEmpty)
             'includeProfileIds': includeProfileIds,
+          // Sent to the engine rather than applied to its answer: how long a
+          // visit takes is the denominator of the gain a stop is chosen on, so
+          // a two-hour hospital planned as one hour displaces a clinic that
+          // would have fitted.
+          if (durationOverrides.isNotEmpty)
+            'durationOverrides': durationOverrides.map(
+              (id, minutes) => MapEntry('$id', minutes),
+            ),
+          // A pinned time is planned as a commitment, so it survives the
+          // re-plan a save performs. Without this the rep would watch their own
+          // edit get undone by the engine.
+          if (startOverrides.isNotEmpty)
+            'startOverrides': startOverrides.map(
+              (id, at) => MapEntry('$id', at.toUtc().toIso8601String()),
+            ),
         },
       ),
     );

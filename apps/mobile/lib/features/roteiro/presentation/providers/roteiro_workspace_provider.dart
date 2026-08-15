@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/location/data/location_service.dart
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/data/repositories/roteiro_repository.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/domain/roteiro_schedule.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/presentation/providers/roteiro_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,6 +39,8 @@ class RoteiroWorkspaceState {
     this.blocker,
     this.excluded = const {},
     this.included = const {},
+    this.durations = const {},
+    this.startTimes = const {},
   });
 
   final Roteiro? roteiro;
@@ -55,7 +58,19 @@ class RoteiroWorkspaceState {
   final Set<int> excluded;
   final Set<int> included;
 
-  bool get dirty => excluded.isNotEmpty || included.isNotEmpty;
+  /// How long the rep says a clinic takes, and when they want to be there.
+  ///
+  /// Kept keyed by clinic rather than by position so an edit survives a
+  /// regeneration: a rep who has told us a hospital eats two hours should not
+  /// have to tell us again every time they reshuffle the day.
+  final Map<int, int> durations;
+  final Map<int, DateTime> startTimes;
+
+  bool get dirty =>
+      excluded.isNotEmpty ||
+      included.isNotEmpty ||
+      durations.isNotEmpty ||
+      startTimes.isNotEmpty;
 
   RoteiroWorkspaceState copyWith({
     Roteiro? roteiro,
@@ -66,6 +81,8 @@ class RoteiroWorkspaceState {
     RoteiroBlocker? blocker,
     Set<int>? excluded,
     Set<int>? included,
+    Map<int, int>? durations,
+    Map<int, DateTime>? startTimes,
     bool clearError = false,
     bool clearBlocker = false,
   }) => RoteiroWorkspaceState(
@@ -77,6 +94,8 @@ class RoteiroWorkspaceState {
     blocker: clearBlocker ? null : (blocker ?? this.blocker),
     excluded: excluded ?? this.excluded,
     included: included ?? this.included,
+    durations: durations ?? this.durations,
+    startTimes: startTimes ?? this.startTimes,
   );
 }
 
@@ -138,6 +157,8 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
         longitude: lng,
         excludeProfileIds: state.excluded.toList(),
         includeProfileIds: state.included.toList(),
+        durationOverrides: state.durations,
+        startOverrides: state.startTimes,
       );
       state = state.copyWith(roteiro: roteiro, loading: false);
     } catch (error) {
@@ -159,6 +180,33 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
     );
   }
 
+  /// Sets how long a visit takes, and moves the day around it.
+  ///
+  /// Local and immediate — the rep sees the consequence before deciding
+  /// whether it is what they wanted. It only reaches the engine when they
+  /// regenerate or save, because until then nothing about the route changed.
+  void setDuration(int facilityVerticalProfileId, int minutes) {
+    state = state.copyWith(
+      durations: {...state.durations, facilityVerticalProfileId: minutes},
+    );
+  }
+
+  /// Moves a visit, taking the day with it in the direction it went.
+  void setStartTime(int facilityVerticalProfileId, DateTime startsAt) {
+    state = state.copyWith(
+      startTimes: {...state.startTimes, facilityVerticalProfileId: startsAt},
+    );
+  }
+
+  /// The day as the rep has it now — the engine's plan with their edits
+  /// rippled through it.
+  RoteiroSchedule scheduleFor(Roteiro roteiro) => buildSchedule(
+    stops: visibleStops(roteiro),
+    fixedPoints: roteiro.fixedPoints,
+    durationOverrides: state.durations,
+    startOverrides: state.startTimes,
+  );
+
   /// Suggestions the rep has not pulled out of the slate.
   List<RoteiroStop> visibleStops(Roteiro roteiro) => roteiro.stops
       .where((s) => !state.excluded.contains(s.facilityVerticalProfileId))
@@ -175,7 +223,12 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
 
   /// Throws the rep's edits away and asks for a clean plan.
   Future<void> reset() async {
-    state = state.copyWith(excluded: const {}, included: const {});
+    state = state.copyWith(
+      excluded: const {},
+      included: const {},
+      durations: const {},
+      startTimes: const {},
+    );
     await generate();
   }
 
@@ -200,6 +253,8 @@ class RoteiroWorkspaceNotifier extends StateNotifier<RoteiroWorkspaceState>
         longitude: lng,
         excludeProfileIds: state.excluded.toList(),
         includeProfileIds: state.included.toList(),
+        durationOverrides: state.durations,
+        startOverrides: state.startTimes,
       );
       state = state.copyWith(roteiro: saved, saving: false, saved: true);
       return true;

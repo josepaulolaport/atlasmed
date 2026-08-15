@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/domain/roteiro_schedule.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -13,13 +14,17 @@ String _hhmm(DateTime at) =>
 class RoteiroStopCard extends StatelessWidget {
   const RoteiroStopCard({
     super.key,
-    required this.stop,
+    required this.scheduled,
     required this.estimatedTravel,
     this.onTap,
     this.onRemove,
+    this.onDurationChanged,
+    this.onTimeChanged,
   });
 
-  final RoteiroStop stop;
+  final ScheduledStop scheduled;
+
+  RoteiroStop get stop => scheduled.stop;
 
   /// P1 has no Matrix call, so travel is a straight-line estimate and says so.
   final bool estimatedTravel;
@@ -29,6 +34,13 @@ class RoteiroStopCard extends StatelessWidget {
   /// widget synchronously and asserts if the list has not changed with it,
   /// which is what a re-plan cannot promise.
   final VoidCallback? onRemove;
+
+  /// Editable on the card itself, not behind a detail screen. A flat duration
+  /// for every clinic is plainly wrong — a first visit to a hospital is not a
+  /// check-in at an account the rep knows — and the rep is the only one who
+  /// knows which is which until outcome capture can measure it (§15.2).
+  final ValueChanged<int>? onDurationChanged;
+  final ValueChanged<DateTime>? onTimeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +103,7 @@ class RoteiroStopCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           [
-                            '${_hhmm(stop.plannedStartsAt)}–${_hhmm(stop.plannedEndsAt)}',
+                            '${_hhmm(scheduled.startsAt)}–${_hhmm(scheduled.endsAt)}',
                             // Bairro first — it is what tells two branches of
                             // the same chain apart on screen.
                             if (stop.neighborhood != null)
@@ -122,6 +134,20 @@ class RoteiroStopCard extends StatelessWidget {
                     ),
                 ],
               ),
+              if (scheduled.shifted)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: _ShiftedNote(),
+                ),
+              if (onDurationChanged != null || onTimeChanged != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _TimeControls(
+                    scheduled: scheduled,
+                    onDurationChanged: onDurationChanged,
+                    onTimeChanged: onTimeChanged,
+                  ),
+                ),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 6,
@@ -177,6 +203,179 @@ class RoteiroStopCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Says why a time the rep did not touch has changed.
+///
+/// Without it the ripple looks like the app losing the plan. A rep who
+/// lengthened one visit needs to see that the two after it moved, before they
+/// leave the screen believing the old times.
+class _ShiftedNote extends StatelessWidget {
+  const _ShiftedNote();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: const [
+      Icon(Icons.swap_vert, size: 13, color: AppColors.amber),
+      SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          'Horário ajustado pela sua alteração',
+          style: TextStyle(fontSize: 11, color: AppColors.amber),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Duration and start time, one tap each.
+class _TimeControls extends StatelessWidget {
+  const _TimeControls({
+    required this.scheduled,
+    required this.onDurationChanged,
+    required this.onTimeChanged,
+  });
+
+  final ScheduledStop scheduled;
+  final ValueChanged<int>? onDurationChanged;
+  final ValueChanged<DateTime>? onTimeChanged;
+
+  Future<void> _pickDuration(BuildContext context) async {
+    final chosen = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
+              child: Text(
+                'Quanto tempo nesta clínica?',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.gray900,
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'As visitas seguintes se ajustam ao que você escolher.',
+                style: TextStyle(fontSize: 12, color: AppColors.gray500),
+              ),
+            ),
+            for (final minutes in kRoteiroDurationChoices)
+              ListTile(
+                dense: true,
+                title: Text(_durationLabel(minutes)),
+                trailing: minutes == scheduled.durationMinutes
+                    ? const Icon(
+                        Icons.check,
+                        size: 18,
+                        color: AppColors.navyBright,
+                      )
+                    : null,
+                onTap: () => Navigator.of(sheetContext).pop(minutes),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) onDurationChanged?.call(chosen);
+  }
+
+  Future<void> _pickTime(BuildContext context) async {
+    final chosen = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(scheduled.startsAt),
+      helpText: 'Começar a visita às',
+    );
+    if (chosen == null) return;
+    final day = scheduled.startsAt;
+    onTimeChanged?.call(
+      DateTime(day.year, day.month, day.day, chosen.hour, chosen.minute),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      if (onTimeChanged != null)
+        _ControlChip(
+          icon: Icons.schedule,
+          label: _hhmm(scheduled.startsAt),
+          onTap: () => _pickTime(context),
+        ),
+      if (onTimeChanged != null && onDurationChanged != null)
+        const SizedBox(width: 8),
+      if (onDurationChanged != null)
+        _ControlChip(
+          icon: Icons.hourglass_empty,
+          label: _durationLabel(scheduled.durationMinutes),
+          onTap: () => _pickDuration(context),
+        ),
+    ],
+  );
+}
+
+String _durationLabel(int minutes) {
+  if (minutes < 60) return '$minutes min';
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  return rest == 0
+      ? '${hours}h'
+      : '${hours}h${rest.toString().padLeft(2, '0')}';
+}
+
+class _ControlChip extends StatelessWidget {
+  const _ControlChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.gray300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.gray600),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray700,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 14,
+            color: AppColors.gray400,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PositionBadge extends StatelessWidget {
