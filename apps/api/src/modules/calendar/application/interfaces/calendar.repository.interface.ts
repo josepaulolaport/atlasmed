@@ -131,6 +131,8 @@ export interface CalendarRepository {
    * last year does not lend their old employer's permissions to anybody.
    */
   listPersonFacilityIds(personId: number): Promise<number[]>;
+  /** The owner's own end of day, `hh:mm`, or null for the linha default. */
+  findWorkdayEnd(userId: number): Promise<string | null>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;
   update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null>;
   replaceUntouchedInteractions(input: { calendarId: number; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean>;

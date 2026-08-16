@@ -1,6 +1,7 @@
 import type { Role, ScopeContext } from "@atlasmed/access";
 import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError, CalendarConflictError, CalendarVersionConflictError } from "../../../../shared/errors";
 import type { CalendarEventRecord, CalendarInteractionRecord, CalendarOverrideRecord, CalendarRepository, InteractionModality } from "../interfaces/calendar.repository.interface";
+import { missedAfter } from "../../../interactions/application/services/day-window";
 import { findCalendarConflicts, type CalendarConflictEntry } from "../services/conflict.service";
 import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, mapCalendarRecurrenceKey, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
 
@@ -305,6 +306,9 @@ export class ListCalendarUseCase {
     const managerView = input.actor.roleName === "MANAGER" && owner !== input.actor.userId;
     const events = await this.deps.repository.listByOwner(owner, { from: input.from, to: input.to });
     const now = this.deps.now?.() ?? new Date();
+    // Whose day this is, so "missed" follows their hours rather than a default
+    // nobody chose (§15.5.5).
+    const ownerWorkdayEnd = await this.deps.repository.findWorkdayEnd(owner);
     const rows: CalendarOccurrenceDto[] = [];
     for (const event of events) {
       const occurrences = effectiveOccurrences(event, input.from, input.to);
@@ -321,7 +325,13 @@ export class ListCalendarUseCase {
         if (event.kind === "INTERACTION" && (!interaction || (managerView && !input.scope.isGlobal
           && (interaction.facilityId === null || !input.scope.facilityIds.includes(interaction.facilityId))))) continue;
         if (interaction?.status === "CANCELLED") continue;
-        const effectiveInteractionStatus = interaction?.status === "SCHEDULED" && occurrence.endsAt <= now
+        // The **same rule** the interactions module uses (§15.7.7): a visit is
+        // missed once the rep's working day is over, not when its own window
+        // closes. This is the copy the agenda and the day card read, and it
+        // disagreeing with the one the server enforces is what offered a
+        // "Cheguei" the server then refused.
+        const effectiveInteractionStatus = interaction?.status === "SCHEDULED"
+          && missedAfter({ occurrenceEndsAt: occurrence.endsAt, timeZone: event.timeZone, workdayEnd: ownerWorkdayEnd }) <= now
           ? "NOT_COMPLETED"
           : interaction?.status;
         rows.push({ id: `${event.id}:${occurrence.recurrenceKey}`, calendarId: event.id, recurrenceKey: occurrence.recurrenceKey,

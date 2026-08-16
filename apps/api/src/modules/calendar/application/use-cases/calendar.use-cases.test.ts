@@ -69,6 +69,10 @@ class FakeCalendarRepository implements CalendarRepository {
   personFacilities = new Map<number, number[]>();
 
   async listPersonFacilityIds(personId: number) { return this.personFacilities.get(personId) ?? []; }
+
+  /** The owner's end of day; null keeps the linha default. */
+  workdayEnd: string | null = null;
+  async findWorkdayEnd() { return this.workdayEnd; }
   async listByOwner(ownerUserId: number, _range?: { from: Date; to: Date }) { return this.events.filter((event) => event.ownerUserId === ownerUserId && event.status !== "CANCELLED"); }
   async findById(id: number) { return this.events.find((event) => event.id === id) ?? null; }
   async ensureInteractionsForOccurrences(calendarId: number, recurrenceKeys: string[]) {
@@ -334,7 +338,9 @@ describe("Calendar application use cases", () => {
         startsAt: new Date("2026-08-03T11:00:00Z"), endsAt: new Date("2026-08-03T12:00:00Z"), status: "ACTIVE", reason: null, version: 2 }],
     })];
 
-    const [result] = await new ListCalendarUseCase({ repository, now: () => new Date("2026-08-03T12:00:00.001Z") }).execute({
+    // Past 18:00 UTC — the rep's day is over, so the moved occurrence is a
+    // miss rather than something they can still walk into.
+    const [result] = await new ListCalendarUseCase({ repository, now: () => new Date("2026-08-03T18:00:00.001Z") }).execute({
       actor: { userId: 1, roleName: "REP" }, scope: repScope,
       from: new Date("2026-08-03T00:00:00Z"), to: new Date("2026-08-04T00:00:00Z"),
     });
@@ -348,16 +354,23 @@ describe("Calendar application use cases", () => {
     expect(repository.events[0]?.interactions[0]?.status).toBe("SCHEDULED");
   });
 
-  it("derives NOT_COMPLETED when an interaction ends exactly at now", async () => {
+  it("keeps a visit whose window has passed startable until the day is over", async () => {
+    // The list DTO is what the day card and the grid read, so this rule has to
+    // be the same one the server enforces on `start` — the two disagreeing is
+    // what offered a "Cheguei" that answered 409 (§15.7.7).
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({ kind: "INTERACTION", interactions: [{
       id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 1,
     }] })];
-    const [result] = await new ListCalendarUseCase({ repository, now: () => new Date("2026-08-03T10:00:00.000Z") }).execute({
+    const list = (at: string) => new ListCalendarUseCase({ repository, now: () => new Date(at) }).execute({
       actor: { userId: 1, roleName: "REP" }, scope: repScope,
       from: new Date("2026-08-03T00:00:00Z"), to: new Date("2026-08-04T00:00:00Z"),
     });
-    expect(result?.interaction?.status).toBe("NOT_COMPLETED");
+
+    // 09:00–10:00 UTC, read at 10:00 — still today's visit.
+    expect((await list("2026-08-03T10:00:00.000Z"))[0]?.interaction?.status).toBe("SCHEDULED");
+    // Past 18:00, the rep's day is done and it is a miss.
+    expect((await list("2026-08-03T18:00:00.001Z"))[0]?.interaction?.status).toBe("NOT_COMPLETED");
   });
 
   it("returns occupied active intervals without work-hour restrictions", async () => {

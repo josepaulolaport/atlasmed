@@ -221,6 +221,12 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       .where(and(eq(personFacilities.personId, personId), isNull(personFacilities.endedAt)));
     return rows.map((row) => row.facilityId);
   }
+  async findWorkdayEnd(userId: number): Promise<string | null> {
+    const [row] = await this.database.select({
+      workdayEnd: sql<string | null>`${users.metadata} -> 'preferences' ->> 'workdayEnd'`,
+    }).from(users).where(eq(users.id, userId)).limit(1);
+    return row?.workdayEnd ?? null;
+  }
   async create(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
     const [row] = await this.database.insert(calendar).values(input.event).returning();
     if (!row) throw new DatabaseError("create calendar event");
