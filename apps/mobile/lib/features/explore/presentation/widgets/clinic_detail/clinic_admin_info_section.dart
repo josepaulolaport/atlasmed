@@ -6,7 +6,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_address_suggestion_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_clinical_focuses.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_tax_id_type_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
@@ -192,6 +194,21 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
         ];
 
+    // Focos clínicos, appended after the suggestion-backed rows.
+    //
+    // Not one of them: it is applied straight away rather than proposed, so it
+    // carries no fieldKey and no suggestion target, and it is deliberately not
+    // gated on `canSuggest` — that permission is about proposing changes for
+    // review, which this is not.
+    final orderedFocuses = ClinicalFocusLabels.prioritize(
+      detail.clinicalFocuses,
+    );
+    final focusLabel = orderedFocuses.isEmpty
+        ? null
+        : orderedFocuses
+              .map((f) => ClinicalFocusLabels.formatName(f.name))
+              .join(' · ');
+
     return ClinicDetailCard(
       padding: EdgeInsets.zero,
       child: ClipRRect(
@@ -225,13 +242,28 @@ class ClinicAdminInfoSection extends ConsumerWidget {
                 value: fields[i].value,
                 icon: fields[i].icon,
                 onEdit: canSuggest ? fields[i].onEdit : null,
-                showDivider: i < fields.length - 1,
+                // The focus row now follows, so the last suggestion row keeps
+                // its hairline instead of closing the card.
+                showDivider: true,
                 fieldKey: fields[i].fieldKey,
                 showEditButton: canSuggest && fields[i].editable,
                 suggestionTarget: canSuggest && fields[i].editable
                     ? suggestionTarget
                     : null,
               ),
+            EditableFieldRow(
+              key: const Key('admin-clinical-focuses'),
+              label: 'Focos clínicos',
+              value: focusLabel,
+              // Not medical_services_outlined: RESPONSÁVEL already uses it a
+              // few rows up, and two identical icons on one card read as the
+              // same kind of field.
+              icon: Icons.healing_outlined,
+              onEdit: () =>
+                  showClinicalFocusEditor(context, ref, detail: detail),
+              emptyActionLabel: '+ Adicionar',
+              showDivider: false,
+            ),
           ],
         ),
       ),
