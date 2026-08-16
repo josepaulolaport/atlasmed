@@ -19,10 +19,21 @@ cd apps/mobile && fvm flutter run -d <iPhone 17 udid> \
   --dart-define=API_BASE_URL=http://localhost:3021
 ```
 
-`apps/api/.env` points at `atlasmed_scratch` on `localhost:5434` — a clone with
-the real book (1442 profiles, 1131 orders). Safe to migrate and seed. The
-simulator's fixed GPS is Rio, which matches rep 2 (Adriana Oliveira, 146
-clinics); rep 4's book is Paraná and will read as out of range from there.
+`apps/api/.env` points at `atlasmed_scratch` on `localhost:5434`. The simulator's
+fixed GPS is Rio, which matched rep 2 (Adriana Oliveira, 146 clinics); rep 4's
+book is Paraná and will read as out of range from there.
+
+⚠️ **`atlasmed_scratch` was emptied mid-session on 2026-08-15** — it went from a
+clone of the real book (~400 MB) to 22 MB with every table at zero rows, and its
+schema rolled back behind this branch's migrations (`duration_source` gone).
+Nothing in this worktree did it. `db:migrate` then fails on a pre-existing
+schema and `db:push` needs an interactive rename prompt, so the database needs
+restoring from a fresh clone before the app is useful against it again.
+
+For a Postgres check that does not depend on that, `atlasmed_empty` is one of
+the three names `db:push` accepts as disposable. Drop it, create it, enable
+`postgis` and `pg_trgm` first (push fails on `type "geometry" does not exist`
+otherwise), then `ATLASMED_ALLOW_DB_PUSH=1 … bun run db:push`.
 
 **Verify SQL against Postgres, not only in unit tests.** Six defects this
 session were invisible to `bun test` and `tsc` and only appeared against a real
@@ -113,9 +124,12 @@ device: 10:00 stored, picker and speed dial both followed it.
 
 ### 4. Not built at all (§15.6.5, §15.6.7)
 
-- **"Cheguei" on the clinic page.** Reps improvise; a system that can only
-  record its own suggestions will under-count real work and then conclude reps
-  are not visiting.
+- ~~**"Cheguei" on the clinic page.**~~ Done. `POST /interactions/arrivals`
+  creates the calendar row and the interaction together, already started, and
+  closes whatever the rep left open through the same `visitsClosedByArrival`
+  rule. It does not run the conflict check: arriving somewhere is a fact, and
+  refusing to record it because the rep's own calendar disagrees is the failure
+  the spec describes. Verified against Postgres.
 - **Offline stamping.** The server stamps `startedAt: now` at receipt, so a
   start queued without signal records the moment the queue drained. **P6 is a
   correctness dependency of P5, not a convenience.** Until it exists, offline
