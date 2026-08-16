@@ -33,6 +33,18 @@ class _CadastrosReviewListScreenState
         .firstWhere((f) => f.$2 == apiStatus, orElse: () => _filters.first)
         .$1;
 
+    // Was `'submissão' + 'ões'`, so anything above one read "2 submissãoões".
+    // Null on an empty queue: the body's empty state says that, and the two
+    // used to say it at once in different words.
+    final countLabel = queueAsync.when(
+      data: (queue) => queue.isEmpty
+          ? null
+          : '${queue.length} '
+                '${queue.length == 1 ? 'submissão' : 'submissões'}',
+      loading: () => 'Carregando…',
+      error: (_, _) => 'Falha ao carregar a fila',
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Cadastros'),
@@ -57,20 +69,16 @@ class _CadastrosReviewListScreenState
                         color: AppColors.navyDeep,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      queueAsync.when(
-                        data: (queue) => queue.isEmpty
-                            ? 'Nenhuma submissão neste filtro'
-                            : '${queue.length} submissão${queue.length == 1 ? '' : 'ões'}',
-                        loading: () => 'Carregando…',
-                        error: (_, _) => 'Falha ao carregar a fila',
+                    if (countLabel != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        countLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.gray500,
+                        ),
                       ),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.gray500,
-                      ),
-                    ),
+                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 36,
@@ -105,15 +113,35 @@ class _CadastrosReviewListScreenState
                           child: ReviewListSkeleton(),
                         ),
                       ],
-                      error: (error, _) => [
+                      error: (_, _) => [
                         Padding(
                           padding: const EdgeInsets.only(top: 48),
                           child: Column(
                             children: [
-                              Text(
-                                error.toString(),
+                              const Icon(
+                                Icons.cloud_off_rounded,
+                                size: 30,
+                                color: AppColors.gray400,
+                              ),
+                              const SizedBox(height: 12),
+                              // The raw exception was printed here — a stack
+                              // trace's worth of internals in place of a
+                              // sentence anyone can act on.
+                              const Text(
+                                'Não foi possível carregar a fila',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.gray900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Verifique a conexão e tente de novo.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
                                   color: AppColors.gray500,
                                 ),
                               ),
@@ -128,20 +156,7 @@ class _CadastrosReviewListScreenState
                       ],
                       data: (queue) {
                         if (queue.isEmpty) {
-                          return [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 48),
-                              child: Center(
-                                child: Text(
-                                  'Nenhum cadastro neste filtro',
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    color: AppColors.gray400,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ];
+                          return [_QueueEmptyState(label: selectedLabel)];
                         }
                         return [
                           for (final (i, item) in queue.indexed) ...[
@@ -162,6 +177,64 @@ class _CadastrosReviewListScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// An empty queue, in the shape the rest of the app's empty states use.
+///
+/// It was a single grey line, and the header said the same thing again in
+/// different words directly above the chips — "Nenhuma submissão neste filtro"
+/// and "Nenhum cadastro neste filtro" on screen at once.
+class _QueueEmptyState extends StatelessWidget {
+  const _QueueEmptyState({required this.label});
+
+  /// The chip in effect, so the message says which queue is empty.
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.surfaceSecondary),
+            ),
+            child: const Icon(
+              Icons.fact_check_outlined,
+              size: 32,
+              color: AppColors.navyDeep,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            switch (label) {
+              'Em análise' => 'Nada para revisar',
+              'Aprovados' => 'Nenhum cadastro aprovado',
+              _ => 'Nenhum cadastro rejeitado',
+            },
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.gray800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label == 'Em análise'
+                ? 'Os documentos enviados pelos representantes aparecem aqui.'
+                : 'Os cadastros que você revisar aparecem aqui.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
+          ),
+        ],
       ),
     );
   }
