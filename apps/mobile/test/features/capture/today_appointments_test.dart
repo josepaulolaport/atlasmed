@@ -9,6 +9,8 @@ CalendarOccurrence _visit({
   String status = 'SCHEDULED',
   int id = 1,
   bool personalBlock = false,
+  DateTime? actualStartedAt,
+  DateTime? actualEndedAt,
 }) => CalendarOccurrence.fromJson({
   'id': '$id:key-$hour',
   'calendarId': id,
@@ -24,62 +26,66 @@ CalendarOccurrence _visit({
   'version': 1,
   'canMutate': true,
   if (!personalBlock)
-    'interaction': {'id': id, 'facilityId': 9, 'status': status, 'version': 3},
+    'interaction': {
+      'id': id,
+      'facilityId': 9,
+      'status': status,
+      'version': 3,
+      if (actualStartedAt != null)
+        'actualStartedAt': actualStartedAt.toUtc().toIso8601String(),
+      if (actualEndedAt != null)
+        'actualEndedAt': actualEndedAt.toUtc().toIso8601String(),
+    },
 });
 
 void main() {
-  group('appointmentsStillAhead', () {
-    test('drops what has already been recorded', () {
-      // A card still listing this morning's finished visit at five in the
-      // afternoon is noise.
-      final rows = appointmentsStillAhead([
+  group('appointmentsForTheDay', () {
+    test('keeps what has already been recorded', () {
+      // It used to drop them, so a visit vanished from the card the moment the
+      // rep closed it — the thing they had just done disappearing reads as a
+      // record that failed. A day is also something you look back at.
+      final rows = appointmentsForTheDay([
         _visit(hour: 9, status: 'COMPLETED', id: 1),
         _visit(hour: 16, id: 2),
-      ], _now);
+      ]);
 
-      expect(rows.map((r) => r.interaction!.id), [2]);
+      expect(rows.map((r) => r.interaction!.id), [1, 2]);
     });
 
-    test('keeps a visit in progress whatever the clock says', () {
-      // It is the one the rep is standing in, and the only one they can end.
-      final rows = appointmentsStillAhead([
-        _visit(hour: 9, status: 'IN_PROGRESS', id: 1),
-      ], _now);
-
-      expect(rows, hasLength(1));
-    });
-
-    test('drops a visit whose window has closed unstarted', () {
-      // It is not ahead any more; the overdue job will call it NOT_COMPLETED.
-      final rows = appointmentsStillAhead([_visit(hour: 9, id: 1)], _now);
-
-      expect(rows, isEmpty);
-    });
-
-    test('drops a cancelled visit', () {
-      final rows = appointmentsStillAhead([
-        _visit(hour: 16, status: 'CANCELLED', id: 1),
-      ], _now);
-
-      expect(rows, isEmpty);
-    });
-
-    test('keeps a personal block that still occupies the day', () {
+    test('keeps a personal block that occupies the day', () {
       // It carries no interaction and offers no action, but it is why the rep
-      // has less time left than they think.
-      final rows = appointmentsStillAhead([
+      // has less time than they think.
+      final rows = appointmentsForTheDay([
         _visit(hour: 16, id: 1, personalBlock: true),
-      ], _now);
+      ]);
 
       expect(rows, hasLength(1));
       expect(rows.single.interaction, isNull);
     });
 
-    test('reads top to bottom in the order the day happens', () {
-      final rows = appointmentsStillAhead([
+    test('reads in the order the day happens', () {
+      final rows = appointmentsForTheDay([
         _visit(hour: 18, id: 2),
         _visit(hour: 16, id: 1),
-      ], _now);
+      ]);
+
+      expect(rows.map((r) => r.interaction!.id), [1, 2]);
+    });
+
+    test('orders a started visit by when it actually started', () {
+      // A visit booked for 16:00 that the rep walked into at 09:10 belongs
+      // where it happened. Sorting by the plan would put it after a 10:00 one
+      // it in fact preceded.
+      final rows = appointmentsForTheDay([
+        _visit(hour: 10, id: 2),
+        _visit(
+          hour: 16,
+          id: 1,
+          status: 'COMPLETED',
+          actualStartedAt: DateTime(2026, 8, 16, 9, 10),
+          actualEndedAt: DateTime(2026, 8, 16, 9, 45),
+        ),
+      ]);
 
       expect(rows.map((r) => r.interaction!.id), [1, 2]);
     });

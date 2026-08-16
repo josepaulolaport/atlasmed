@@ -1,3 +1,5 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
@@ -8,20 +10,23 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// What is left of today, and the one press that records it.
+/// The whole of today, in the order it happens, and the one press that records
+/// it.
 ///
-/// Desempenho is the screen a rep opens every morning, and until now it only
-/// answered questions about the past. This answers "what am I doing next", and
-/// lets them say they have arrived without going to find the clinic's profile
-/// first — the planned path had no entry point of its own.
+/// It used to list only what was **still ahead**, which meant a visit vanished
+/// from the card the moment it was closed — the rep pressed Encerrar and the
+/// thing they had just done disappeared, as though the record had failed. A day
+/// is also something a rep looks back at ("what time did I leave that clinic?"),
+/// and the answer was on a different screen.
 ///
-/// Deliberately only what is **ahead plus in progress**: a card still listing
-/// this morning's finished visit at five in the afternoon is noise, and the
-/// count of what is done belongs in the day's own summary rather than here.
+/// So: everything, scrolled sideways, each stop showing the hour it started on
+/// the left and the hour it ended on the right. Finished stops show the hours
+/// that were **measured**; the rest show what is planned (§15.6.3 — the plan is
+/// not the record). The one in progress says so and stays first in the eye.
 class TodayAppointmentsCard extends ConsumerWidget {
   const TodayAppointmentsCard({super.key, this.now});
 
-  /// Injected so "still ahead" is testable.
+  /// Injected so "in progress" and the ordering are testable.
   final DateTime? now;
 
   @override
@@ -40,12 +45,10 @@ class TodayAppointmentsCard extends ConsumerWidget {
     // place that admits the press is still waiting is the agenda's day screen.
     final waiting = ref.watch(captureQueueProvider).pending > 0;
 
-    final all = agenda.valueOrNull ?? const <CalendarOccurrence>[];
-    if (all.isEmpty && !waiting) return const SizedBox.shrink();
-
-    final upcoming = appointmentsStillAhead(all, at);
-    final doneCount = all.length - upcoming.length;
-    if (upcoming.isEmpty && !waiting) return const SizedBox.shrink();
+    final stops = appointmentsForTheDay(
+      agenda.valueOrNull ?? const <CalendarOccurrence>[],
+    );
+    if (stops.isEmpty && !waiting) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -89,154 +92,288 @@ class TodayAppointmentsCard extends ConsumerWidget {
             ),
           ),
           const PendingCapturesBanner(rounded: true),
-          for (final occurrence in upcoming)
-            _AppointmentRow(occurrence: occurrence),
-          if (doneCount > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Text(
-                doneCount == 1
-                    ? '1 visita já registrada hoje'
-                    : '$doneCount visitas já registradas hoje',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.gray500,
-                ),
+          if (stops.isNotEmpty)
+            SizedBox(
+              height: 132,
+              child: ListView.separated(
+                key: const Key('today-appointments-strip'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                itemCount: stops.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _StopCard(occurrence: stops[index], now: at),
               ),
-            )
-          else
-            const SizedBox(height: 8),
+            ),
         ],
       ),
     );
   }
 }
 
-/// Today's visits that still need the rep — ahead of [now], or already running.
+/// Everything on the day, earliest first.
 ///
-/// A visit in progress stays whatever the clock says: it is the one the rep is
-/// standing in, and it is the only one that can be ended.
-List<CalendarOccurrence> appointmentsStillAhead(
-  List<CalendarOccurrence> all,
-  DateTime now,
-) {
-  final rows =
-      all
-          .where((item) {
-            final status = item.interaction?.status;
-            if (status == InteractionStatus.inProgress) return true;
-            if (status == InteractionStatus.completed) return false;
-            if (status == InteractionStatus.cancelled) return false;
-            return item.endsAt.toLocal().isAfter(now);
-          })
-          .toList(growable: false)
-        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-  return rows;
+/// Cancelled occurrences never reach the client, so what arrives is what
+/// happened or is going to. Sorted by when each stop actually *started* where
+/// that is known, so the strip reads in the order the rep lived it rather than
+/// the order it was booked.
+List<CalendarOccurrence> appointmentsForTheDay(List<CalendarOccurrence> all) =>
+    all.toList(growable: false)
+      ..sort((a, b) => _startOf(a).compareTo(_startOf(b)));
+
+DateTime _startOf(CalendarOccurrence occurrence) =>
+    occurrence.interaction?.actualStartedAt ?? occurrence.startsAt;
+
+/// The measured end where there is one, the planned end otherwise.
+DateTime _endOf(CalendarOccurrence occurrence) =>
+    occurrence.interaction?.actualEndedAt ?? occurrence.endsAt;
+
+String _hhmm(DateTime value) {
+  final local = value.toLocal();
+  return '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
 }
 
-class _AppointmentRow extends ConsumerWidget {
-  const _AppointmentRow({required this.occurrence});
+class _StopCard extends ConsumerWidget {
+  const _StopCard({required this.occurrence, required this.now});
 
   final CalendarOccurrence occurrence;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final start = occurrence.startsAt.toLocal();
-    final running =
-        occurrence.interaction?.status == InteractionStatus.inProgress;
-    final interactionId = occurrence.interaction?.id;
-    final name = occurrence.facility?.name ?? occurrence.title;
+    final interaction = occurrence.interaction;
+    final status = interaction?.status;
+    final running = status == InteractionStatus.inProgress;
+    final done = status == InteractionStatus.completed;
+    final block = interaction == null;
+    final name =
+        occurrence.facility?.name ??
+        interaction?.person?.name ??
+        occurrence.title;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
-      child: Row(
+    final accent = running
+        ? AppColors.green
+        : done
+        ? AppColors.gray400
+        : AppColors.navyBright;
+
+    return Container(
+      width: 208,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      decoration: BoxDecoration(
+        // The running stop is tinted, not merely labelled: it is the one the
+        // rep is standing in and the only one they can end.
+        color: running ? AppColors.green.withValues(alpha: 0.06) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: running ? AppColors.green : AppColors.surfaceSecondary,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 46,
+          Row(
+            children: [
+              Text(
+                _hhmm(_startOf(occurrence)),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Divider(color: accent.withValues(alpha: 0.35)),
+                ),
+              ),
+              // While a visit is running there is no end to show — inventing
+              // one would be the plan pretending to be the record.
+              Text(
+                running ? '—' : _hhmm(_endOf(occurrence)),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: running ? accent : AppColors.gray600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Expanded(
             child: Text(
-              '${start.hour.toString().padLeft(2, '0')}:'
-              '${start.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: running ? AppColors.green : AppColors.gray700,
-                fontFeatures: const [FontFeature.tabularFigures()],
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
               ),
             ),
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray900,
-                  ),
-                ),
-                if (running)
-                  const Text(
-                    'em andamento',
-                    style: TextStyle(fontSize: 11, color: AppColors.green),
-                  ),
-              ],
-            ),
+          _StopFooter(
+            occurrence: occurrence,
+            running: running,
+            done: done,
+            block: block,
+            name: name,
+            now: now,
           ),
-          // A personal block has nothing to record; it is here because it
-          // occupies the rep's day, not because it is a visit.
-          if (interactionId != null)
-            _RowAction(
-              running: running,
-              onPressed: () async {
-                final done = running
-                    ? await finishPlannedVisit(
-                        context,
-                        ref,
-                        interactionId: interactionId,
-                        expectedVersion: occurrence.interaction!.version,
-                        facilityName: name,
-                      )
-                    : await startPlannedVisit(
-                        context,
-                        ref,
-                        interactionId: interactionId,
-                        expectedVersion: occurrence.interaction!.version,
-                        facilityName: name,
-                      );
-                if (done && context.mounted) {
-                  ref.invalidate(agendaProvider);
-                }
-              },
-            ),
         ],
       ),
     );
   }
 }
 
-class _RowAction extends StatelessWidget {
-  const _RowAction({required this.running, required this.onPressed});
+class _StopFooter extends ConsumerWidget {
+  const _StopFooter({
+    required this.occurrence,
+    required this.running,
+    required this.done,
+    required this.block,
+    required this.name,
+    required this.now,
+  });
 
+  final CalendarOccurrence occurrence;
   final bool running;
-  final VoidCallback onPressed;
+  final bool done;
+  final bool block;
+  final String name;
+  final DateTime now;
 
   @override
-  Widget build(BuildContext context) => TextButton.icon(
-    key: Key(running ? 'today-finish' : 'today-cheguei'),
-    onPressed: onPressed,
-    icon: Icon(
-      running ? Icons.stop_circle_outlined : Icons.where_to_vote_rounded,
-      size: 16,
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (running) {
+      return _Action(
+        label: 'Encerrar',
+        icon: Icons.stop_circle_outlined,
+        colour: AppColors.gray700,
+        semanticKey: const Key('today-finish'),
+        onPressed: () => _record(context, ref, finish: true),
+      );
+    }
+    if (done) {
+      return const _Tag(
+        icon: Icons.check_circle_outline_rounded,
+        label: 'Concluído',
+        colour: AppColors.gray500,
+      );
+    }
+    // A personal block has nothing to record; it is here because it occupies
+    // the rep's day, not because it is a visit.
+    if (block) {
+      return const _Tag(
+        icon: Icons.block_rounded,
+        label: 'Bloqueio',
+        colour: AppColors.gray500,
+      );
+    }
+    // Missed and still open: the day moved past it and nobody said what
+    // happened. The press is the same one, so it stays offered.
+    final late = occurrence.endsAt.toLocal().isBefore(now);
+    return _Action(
+      label: _startLabel(occurrence),
+      icon: _startsWithArrival(occurrence)
+          ? Icons.where_to_vote_rounded
+          : Icons.play_circle_outline_rounded,
+      colour: late ? AppColors.amber : AppColors.green,
+      semanticKey: const Key('today-cheguei'),
+      onPressed: () => _record(context, ref, finish: false),
+    );
+  }
+
+  Future<void> _record(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool finish,
+  }) async {
+    final interaction = occurrence.interaction;
+    if (interaction == null) return;
+    final atFacility = _startsWithArrival(occurrence);
+    final recorded = finish
+        ? await finishPlannedVisit(
+            context,
+            ref,
+            interactionId: interaction.id,
+            expectedVersion: interaction.version,
+            facilityName: name,
+            atFacility: atFacility,
+          )
+        : await startPlannedVisit(
+            context,
+            ref,
+            interactionId: interaction.id,
+            expectedVersion: interaction.version,
+            facilityName: name,
+            atFacility: atFacility,
+          );
+    if (recorded && context.mounted) ref.invalidate(agendaProvider);
+  }
+}
+
+/// "Cheguei" only where there is somewhere to arrive at (§15.7.5).
+bool _startsWithArrival(CalendarOccurrence occurrence) =>
+    occurrence.interaction?.facilityId != null &&
+    occurrence.interaction?.modality != CalendarModality.remote;
+
+String _startLabel(CalendarOccurrence occurrence) =>
+    _startsWithArrival(occurrence) ? 'Cheguei' : 'Iniciar';
+
+class _Action extends StatelessWidget {
+  const _Action({
+    required this.label,
+    required this.icon,
+    required this.colour,
+    required this.onPressed,
+    required this.semanticKey,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color colour;
+  final VoidCallback onPressed;
+  final Key semanticKey;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton.icon(
+      key: semanticKey,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        foregroundColor: colour,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
     ),
-    label: Text(running ? 'Encerrar' : 'Cheguei'),
-    style: TextButton.styleFrom(
-      foregroundColor: running ? AppColors.gray700 : AppColors.green,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      visualDensity: VisualDensity.compact,
+  );
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({required this.icon, required this.label, required this.colour});
+
+  final IconData icon;
+  final String label;
+  final Color colour;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Icon(icon, size: 14, color: colour),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontSize: 12, color: colour)),
+      ],
     ),
   );
 }

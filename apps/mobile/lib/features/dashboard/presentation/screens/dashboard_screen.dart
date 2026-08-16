@@ -164,18 +164,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Above the donut: it is the only card here asking the rep to do
               // something, and it renders nothing when there is nothing to do.
               _CpfWarningSection(scope: scope),
-              // What is left of today, and the press that records it. Above
-              // the charts because this is the only card here about the next
-              // hour rather than the last quarter, and it renders nothing when
-              // the day is done.
-              const TodayAppointmentsCard(),
-              const SizedBox(height: 12),
               // The two cards that were already here keep the top of the
               // screen: this is the view reps open every day, and spec 0014
               // added metrics to it rather than replacing what they read first.
               _DonutSection(scope: scope),
               const SizedBox(height: 12),
               _TerritorySection(scope: scope),
+              const SizedBox(height: 12),
+              // Today's own stops, under the map: the map says where the book
+              // is, this says where the rep is in the day. It renders nothing
+              // when the day is empty.
+              const TodayAppointmentsCard(),
               const SizedBox(height: 12),
               _MetricGrid(scope: scope, canSeeUnassigned: canSeeUnassigned),
             ],
