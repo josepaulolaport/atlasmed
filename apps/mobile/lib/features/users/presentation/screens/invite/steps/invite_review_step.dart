@@ -44,8 +44,15 @@ class InviteReviewStep extends StatelessWidget {
               const SizedBox(height: 12),
               _ReviewRow(label: 'Nome', value: '$firstName $lastName'),
               _ReviewRow(label: 'Nascimento', value: formatDate(birthDate)),
-              _ReviewRow(label: 'Email', value: email),
-              _ReviewRow(label: 'Telefone', value: phone, isLast: true),
+              _ReviewRow(
+                label: 'E-mail',
+                value: email.trim().isEmpty ? '—' : email,
+              ),
+              _ReviewRow(
+                label: 'Telefone',
+                value: phone.trim().isEmpty ? '—' : phone,
+                isLast: true,
+              ),
             ],
           ),
         ),

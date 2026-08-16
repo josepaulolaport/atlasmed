@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/repositories/users_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,17 @@ class EditUserAssignmentsScreen extends ConsumerStatefulWidget {
 class _EditUserAssignmentsScreenState
     extends ConsumerState<EditUserAssignmentsScreen> {
   final Map<int, InviteVerticalAssignment> _verticalAssignments = {};
+
+  /// Sectors the admin unchecked in this session, kept whole.
+  ///
+  /// Unchecking used to drop the assignment on the floor, so re-checking it
+  /// built a bare one with no manager and no territories — the toggle was not
+  /// reversible even before saving, and the loss only showed up after.
+  final Map<int, InviteVerticalAssignment> _detached = {};
+
+  /// What was loaded, so back can tell an edited screen from an untouched one.
+  Set<int>? _initialIds;
+
   User? _user;
   bool _loading = true;
   bool _submitting = false;
@@ -32,6 +44,13 @@ class _EditUserAssignmentsScreenState
 
   List<InviteVerticalAssignment> get _orderedAssignments =>
       _verticalAssignments.values.toList(growable: false);
+
+  bool get _isDirty {
+    final initial = _initialIds;
+    if (initial == null) return false;
+    final current = _verticalAssignments.keys.toSet();
+    return current.length != initial.length || !current.containsAll(initial);
+  }
 
   @override
   void initState() {
@@ -61,6 +80,8 @@ class _EditUserAssignmentsScreenState
               (a) => MapEntry(a.verticalId, a),
             ),
           );
+        _detached.clear();
+        _initialIds = _verticalAssignments.keys.toSet();
         _loading = false;
         _loadError = null;
       });
@@ -105,40 +126,49 @@ class _EditUserAssignmentsScreenState
 
     final sectorsAsync = ref.watch(verticalOptionsProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      _user == null
-                          ? 'Gerenciar linhas comerciais'
-                          : 'Linhas · ${_user!.displayName}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+    // canPop stays false and _handleBack decides: the chips change state
+    // through setState, but keeping the two in sync here costs nothing and
+    // _handleBack pops straight through when nothing was touched.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: _handleBack,
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
                         color: AppColors.gray900,
                       ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        _user == null
+                            ? 'Gerenciar linhas comerciais'
+                            : 'Linhas · ${_user!.displayName}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: _buildBody(sectorsAsync)),
-          ],
+              Expanded(child: _buildBody(sectorsAsync)),
+            ],
+          ),
         ),
       ),
     );
@@ -149,10 +179,38 @@ class _EditUserAssignmentsScreenState
       return const Center(child: CircularProgressIndicator());
     }
     if (_loadError != null || _user == null) {
-      return const Center(
-        child: Text(
-          'Não foi possível carregar as linhas comerciais.',
-          style: TextStyle(color: AppColors.gray500),
+      // A missing user and a dropped connection are not the same problem, and
+      // the screen offered no way out of either.
+      final notFound = _loadError is StateError;
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                notFound
+                    ? 'Usuário não encontrado.'
+                    : 'Não foi possível carregar as linhas comerciais.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.gray500),
+              ),
+              if (!notFound) ...[
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  key: const Key('assignments-retry'),
+                  onPressed: () {
+                    setState(() {
+                      _loading = true;
+                      _loadError = null;
+                    });
+                    _load();
+                  },
+                  child: const Text('Tentar de novo'),
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }
@@ -208,21 +266,7 @@ class _EditUserAssignmentsScreenState
               return FilterChip(
                 label: Text(sector.name),
                 selected: selected,
-                onSelected: (value) {
-                  setState(() {
-                    if (value) {
-                      _verticalAssignments.putIfAbsent(
-                        sector.id,
-                        () => InviteVerticalAssignment(
-                          verticalId: sector.id,
-                          verticalName: sector.name,
-                        ),
-                      );
-                    } else {
-                      _verticalAssignments.remove(sector.id);
-                    }
-                  });
-                },
+                onSelected: (value) => _toggleSector(sector, value),
                 selectedColor: AppColors.navyDeep.withValues(alpha: 0.12),
                 checkmarkColor: AppColors.navyDeep,
                 labelStyle: TextStyle(
@@ -266,6 +310,113 @@ class _EditUserAssignmentsScreenState
     );
   }
 
+  Future<void> _toggleSector(VerticalOption sector, bool selected) async {
+    if (selected) {
+      setState(() {
+        // Prefer what this sector had before it was unchecked. Rebuilding a
+        // bare assignment here is what silently dropped the manager and the
+        // territories on an off-then-on toggle.
+        final restored = _detached.remove(sector.id);
+        _verticalAssignments[sector.id] =
+            restored ??
+            InviteVerticalAssignment(
+              verticalId: sector.id,
+              verticalName: sector.name,
+            );
+      });
+      return;
+    }
+
+    final existing = _verticalAssignments[sector.id];
+    if (existing != null && _carriesWork(existing)) {
+      final confirmed = await _confirmRemoval(sector.name, existing);
+      if (confirmed != true || !mounted) return;
+    }
+
+    setState(() {
+      final removed = _verticalAssignments.remove(sector.id);
+      if (removed != null) _detached[sector.id] = removed;
+    });
+  }
+
+  /// Whether unchecking this sector would throw away more than membership.
+  bool _carriesWork(InviteVerticalAssignment assignment) =>
+      assignment.territories.isNotEmpty ||
+      assignment.managerName != null ||
+      assignment.newPatch != null;
+
+  /// Saving after unchecking a sector wipes its manager and its territories,
+  /// and nothing said so — the chip looked like a filter.
+  Future<bool?> _confirmRemoval(
+    String sectorName,
+    InviteVerticalAssignment assignment,
+  ) {
+    final territoryCount = assignment.territories.length;
+    final losses = <String>[
+      if (assignment.managerName != null) 'o gerente',
+      if (territoryCount == 1)
+        'o território'
+      else if (territoryCount > 1)
+        'os $territoryCount territórios',
+    ];
+
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remover $sectorName?'),
+        content: Text(
+          losses.isEmpty
+              ? 'Ao salvar, esta linha comercial sai do usuário.'
+              : 'Ao salvar, ${losses.join(' e ')} desta linha '
+                    'também ${losses.length == 1 ? 'sai' : 'saem'} do usuário. '
+                    'Para devolver depois será preciso atribuir de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('assignments-remove-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Back dropped every toggle without a word.
+  Future<void> _handleBack() async {
+    if (!_isDirty) {
+      context.pop();
+      return;
+    }
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Descartar alterações?'),
+        content: const Text('As linhas que você mudou não foram salvas.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            key: const Key('assignments-discard'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) {
+      context.pop();
+    }
+  }
+
   Future<void> _submit() async {
     setState(() => _submitting = true);
     try {
@@ -279,11 +430,15 @@ class _EditUserAssignmentsScreenState
         );
         context.pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível salvar as linhas comerciais.'),
+          SnackBar(
+            content: Text(
+              error is UsersApiException && error.statusCode == 403
+                  ? 'Você não pode alterar as linhas deste usuário.'
+                  : 'Não foi possível salvar as linhas comerciais.',
+            ),
           ),
         );
       }

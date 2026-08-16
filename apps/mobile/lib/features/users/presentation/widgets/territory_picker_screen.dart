@@ -13,6 +13,32 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+/// Whether the confirm button has any work to do.
+///
+/// It used to stay enabled with nothing picked and pop an empty list, under a
+/// label — "Selecionar zona", "Selecionar zonas" — that reads as an
+/// instruction rather than a commit. Clearing on purpose is still allowed: a
+/// picker opened with something already selected keeps the button live so the
+/// selection can be emptied.
+bool territoryPickerCanConfirm({
+  required int selectedCount,
+  required bool hadInitialSelection,
+}) => selectedCount > 0 || hadInitialSelection;
+
+/// The confirm button's label, which has to match what pressing it does.
+String territoryPickerConfirmLabel({
+  required int selectedCount,
+  required bool hadInitialSelection,
+  required bool singleSelect,
+}) {
+  if (selectedCount == 0) {
+    if (hadInitialSelection) return 'Remover seleção';
+    return singleSelect ? 'Selecione uma zona' : 'Selecione no mapa';
+  }
+  if (singleSelect) return 'Confirmar zona';
+  return 'Confirmar ($selectedCount)';
+}
+
 /// Map picker modes for invite / assignment flows.
 enum TerritoryPickerMode {
   /// REP invite — single parent manager zone (occupied OK).
@@ -270,8 +296,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
             if (_isRepScoped)
               _ManagerScopeBanner(
                 loading: _loading,
-                managerName: scope?.managerName,
-                territoryName: scope?.managerTerritoryName,
+                zoneName: scope?.managerTerritoryName,
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -335,22 +360,10 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                       backgroundColor: AppColors.navyDeep,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: _loading
+                    onPressed: _loading || !_canConfirm
                         ? null
                         : () => Navigator.of(context).pop(_selectedTerritories),
-                    child: Text(
-                      widget.mode == TerritoryPickerMode.repParentZone
-                          ? (selectedCount == 0
-                                ? 'Selecionar zona'
-                                : 'Confirmar zona')
-                          : widget.mode == TerritoryPickerMode.managerEmptyZones
-                          ? (selectedCount == 0
-                                ? 'Selecionar zonas'
-                                : 'Confirmar ($selectedCount)')
-                          : (selectedCount == 0
-                                ? 'Confirmar seleção'
-                                : 'Confirmar ($selectedCount)'),
-                    ),
+                    child: Text(_confirmLabel(selectedCount)),
                   ),
                 ),
               ),
@@ -360,6 +373,17 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       ),
     );
   }
+
+  bool get _canConfirm => territoryPickerCanConfirm(
+    selectedCount: _selectedIds.length,
+    hadInitialSelection: widget.initiallySelectedIds.isNotEmpty,
+  );
+
+  String _confirmLabel(int selectedCount) => territoryPickerConfirmLabel(
+    selectedCount: selectedCount,
+    hadInitialSelection: widget.initiallySelectedIds.isNotEmpty,
+    singleSelect: widget.singleSelect,
+  );
 
   Widget _buildMapBody(String token) {
     if (_loading) {
@@ -710,19 +734,25 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       Point(coordinates: Position(coordinate.longitude, coordinate.latitude));
 }
 
+/// Names the manager zone the free patches sit inside.
+///
+/// It used to take a `managerName` and a `territoryName`, but the picker
+/// builds its scope from a zone lookup and had nothing else to put in the
+/// first one — so it passed the zone's name twice and the banner stacked the
+/// same string over "Área: " plus the same string again. Worse, the zone is
+/// not always among the options the picker loads, and the empty string it
+/// fell back to slipped past the `?? 'Gerente'` guard and rendered a blank
+/// bold line.
 class _ManagerScopeBanner extends StatelessWidget {
-  const _ManagerScopeBanner({
-    required this.loading,
-    this.managerName,
-    this.territoryName,
-  });
+  const _ManagerScopeBanner({required this.loading, this.zoneName});
 
   final bool loading;
-  final String? managerName;
-  final String? territoryName;
+  final String? zoneName;
 
   @override
   Widget build(BuildContext context) {
+    final name = zoneName?.trim();
+    final hasName = name != null && name.isNotEmpty;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -754,7 +784,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        managerName ?? 'Gerente',
+                        hasName ? name : 'Área do gerente',
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -762,11 +792,9 @@ class _ManagerScopeBanner extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        territoryName == null
-                            ? 'Selecione um patch dentro da área deste gerente'
-                            : 'Área: $territoryName',
-                        style: const TextStyle(
+                      const Text(
+                        'Escolha as áreas livres dentro desta zona.',
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.gray700,
                         ),

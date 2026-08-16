@@ -745,18 +745,26 @@ class _VerticalAssignmentCardState
                             ),
                           ),
                         ),
-                        if (assignment.managerZoneId != null) ...[
-                          TextButton(
-                            key: const Key('assignment-change-manager'),
-                            onPressed: _busy ? null : _pickZone,
-                            style: TextButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                            ),
-                            child: const Text('Alterar'),
+                        // Always offered, because the case that most needs it
+                        // is the one that used to hide it. A rep can have a
+                        // manager on record and still no zone, and then the
+                        // row led to the manager's profile, "Editar" under
+                        // Territórios answered "Selecione a zona do gerente
+                        // primeiro", and nothing on the screen could set one.
+                        TextButton(
+                          key: const Key('assignment-change-manager'),
+                          onPressed: _busy ? null : _pickZone,
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
+                          child: Text(
+                            assignment.managerZoneId == null
+                                ? 'Definir'
+                                : 'Alterar',
+                          ),
+                        ),
+                        if (assignment.managerZoneId != null)
                           // Still the only way to leave a rep with no manager
                           // at all, which is a different act from swapping one.
                           IconButton(
@@ -768,15 +776,9 @@ class _VerticalAssignmentCardState
                               size: 18,
                               color: AppColors.gray400,
                             ),
-                          ),
-                        ] else
-                          const Padding(
-                            padding: EdgeInsets.only(right: 8),
-                            child: Icon(
-                              Icons.chevron_right_rounded,
-                              color: AppColors.gray400,
-                            ),
-                          ),
+                          )
+                        else
+                          const SizedBox(width: 8),
                       ],
                     ),
                   ),

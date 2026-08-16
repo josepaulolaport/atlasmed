@@ -84,6 +84,17 @@ class _PatchBlock extends StatelessWidget {
               color: AppColors.gray900,
             ),
           ),
+          if (assignment.managerZoneId == null) ...[
+            // Both buttons below go dead without a zone, and nothing said so —
+            // the step just sat there with two greyed controls and an empty
+            // placeholder.
+            const SizedBox(height: 8),
+            const Text(
+              'Escolha a zona do gerente no passo anterior para liberar as '
+              'áreas desta linha.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.amberDark),
+            ),
+          ],
           const SizedBox(height: 14),
           Row(
             children: [
