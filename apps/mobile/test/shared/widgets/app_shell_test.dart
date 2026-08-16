@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,58 +33,6 @@ void main() {
       // `/profile`, `/territories` and `/users` were pinned here too. None are
       // in this list any more — their drawer entries are hidden — and branches
       // 10, 4 and 5 are guarded by the router rather than by these items.
-    });
-  });
-
-  group('BranchHistory', () {
-    test('nothing to go back to until a branch is left', () {
-      final history = BranchHistory();
-      expect(history.canGoBack, isFalse);
-      expect(history.pop(), isNull);
-    });
-
-    test('remembers the branch it came from', () {
-      final history = BranchHistory();
-      history.push(leaving: 0, entering: 11);
-
-      expect(history.canGoBack, isTrue);
-      expect(history.pop(), 0);
-      expect(history.canGoBack, isFalse);
-    });
-
-    test('re-selecting the open branch is not a move', () {
-      // Otherwise tapping Equipe while already on Equipe would make "back"
-      // return to Equipe, which is the one destination it cannot usefully have.
-      final history = BranchHistory();
-      history.push(leaving: 11, entering: 11);
-
-      expect(history.canGoBack, isFalse);
-    });
-
-    test('walks back in the order visited', () {
-      final history = BranchHistory();
-      history.push(leaving: 0, entering: 1);
-      history.push(leaving: 1, entering: 11);
-
-      expect(history.pop(), 1);
-      expect(history.pop(), 0);
-      expect(history.pop(), isNull);
-    });
-
-    test('forgets the oldest rather than growing without bound', () {
-      final history = BranchHistory();
-      for (var i = 0; i <= BranchHistory.maxEntries; i++) {
-        history.push(leaving: i, entering: i + 1);
-      }
-
-      // The first entry is gone; the most recent is still the next step back.
-      expect(history.pop(), BranchHistory.maxEntries);
-      final remaining = <int>[];
-      for (var next = history.pop(); next != null; next = history.pop()) {
-        remaining.add(next);
-      }
-      expect(remaining.length, BranchHistory.maxEntries - 1);
-      expect(remaining.contains(0), isFalse);
     });
   });
 
@@ -126,6 +75,44 @@ void main() {
         isEmpty,
       );
     });
+  });
+
+  testWidgets('a section header carries no back control, ever', (tester) async {
+    // A section is a destination, not a step: you arrive from the drawer and
+    // leave the same way.
+    //
+    // This bar used to hold two back controls between them. One appeared once
+    // you had switched sections, so the same header meant different things
+    // before and after any drawer use. The other was the leading button
+    // itself, which turned into a back arrow whenever the bar was used outside
+    // the shell. Both are gone, and pushed screens use SubscreenAppBar.
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(appBar: AtlasAppBar(page: 'Cadastros')),
+      ),
+    );
+
+    expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsNothing);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    // The leading control is the menu whether or not a shell is above it.
+    expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+  });
+
+  testWidgets('a pushed screen gets a back arrow and its own title', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          appBar: const SubscreenAppBar(title: 'Campos de potencial'),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('subscreen-back')), findsOneWidget);
+    expect(find.text('Campos de potencial'), findsOneWidget);
+    // None of the shell's furniture: no breadcrumb, no menu.
+    expect(find.text('ATLASMED'), findsNothing);
   });
 
   testWidgets('drawer remains scrollable on compact height and large text', (

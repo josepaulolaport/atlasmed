@@ -5,8 +5,8 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Detail for one field-change suggestion.
@@ -36,7 +36,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
-        appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+        appBar: const SubscreenAppBar(title: 'Não conformidade'),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
@@ -98,7 +98,7 @@ class _DetailMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      appBar: const SubscreenAppBar(title: 'Não conformidade'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
@@ -135,7 +135,7 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      appBar: const SubscreenAppBar(title: 'Não conformidade'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(

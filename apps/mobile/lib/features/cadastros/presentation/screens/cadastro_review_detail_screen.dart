@@ -6,8 +6,8 @@ import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_mode
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 
 /// Review one Cadastro submission: clinic snapshot + document + decide.
 class CadastroReviewDetailScreen extends ConsumerWidget {
@@ -24,7 +24,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     // button under it, and then quietly become the document.
     if (submissionAsync.isLoading) {
       return const Scaffold(
-        appBar: AtlasAppBar(page: 'Cadastros', compact: true),
+        appBar: SubscreenAppBar(title: 'Cadastro'),
         backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
@@ -33,7 +33,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     final submission = submissionAsync.valueOrNull;
     if (submission == null) {
       return Scaffold(
-        appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+        appBar: const SubscreenAppBar(title: 'Cadastro'),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
@@ -65,7 +65,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+      appBar: const SubscreenAppBar(title: 'Cadastro'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Stub screen for Apresentações section.
@@ -11,7 +11,7 @@ class PresentationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Apresentações'),
+      appBar: const SubscreenAppBar(title: 'Apresentações'),
       body: SafeArea(
         child: Column(
           children: [
