@@ -47,7 +47,6 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   );
 
   MapboxMap? _map;
-  PointAnnotationManager? _pins;
   late MapCoordinate _pin;
   late bool _placed;
   bool _mapUnavailable = false;
@@ -60,21 +59,12 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
     MapboxOptions.setAccessToken(AppConfig.mapboxAccessToken);
   }
 
-  Future<void> _drawPin() async {
-    final pins = _pins;
-    if (pins == null) return;
-    await pins.deleteAll();
-    if (!_placed) return;
-    await pins.create(
-      PointAnnotationOptions(
-        geometry: Point(coordinates: Position(_pin.longitude, _pin.latitude)),
-        iconImage: 'marker-15',
-        iconSize: 2.2,
-        iconColor: AppColors.navyBright.toARGB32(),
-      ),
-    );
-  }
-
+  /// Tapping recentres, and the pin is drawn by Flutter over the middle.
+  ///
+  /// A `PointAnnotation` was the obvious way and it drew nothing: the icon
+  /// names that ship with the older Streets sprite are not in Standard's, so
+  /// the annotation existed with no image. Painting the marker ourselves also
+  /// removes the guesswork about which sprite a style happens to carry.
   void _onMapTap(MapContentGestureContext context) {
     final position = context.point.coordinates;
     setState(() {
@@ -84,8 +74,15 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
       );
       _placed = true;
     });
-    _drawPin();
+    _map?.easeTo(
+      CameraOptions(
+        center: Point(coordinates: Position(_pin.longitude, _pin.latitude)),
+      ),
+      MapAnimationOptions(duration: 220),
+    );
   }
+
+  MapboxMap? _mapboxMapOrNull() => _map;
 
   @override
   Widget build(BuildContext context) {
@@ -129,33 +126,37 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
                       style: TextStyle(color: AppColors.gray500),
                     ),
                   )
-                : MapWidget(
-                    key: const ValueKey('facility-pin-picker'),
-                    styleUri: MapboxStyles.STANDARD,
-                    viewport: CameraViewportState(
-                      center: Point(
-                        coordinates: Position(_pin.longitude, _pin.latitude),
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      MapWidget(
+                        key: const ValueKey('facility-pin-picker'),
+                        styleUri: MapboxStyles.STANDARD,
+                        viewport: CameraViewportState(
+                          center: Point(
+                            coordinates: Position(
+                              _pin.longitude,
+                              _pin.latitude,
+                            ),
+                          ),
+                          zoom: widget.initial == null ? 10 : 16,
+                        ),
+                        onMapCreated: (map) {
+                          _map = map;
+                          map.scaleBar.updateSettings(
+                            ScaleBarSettings(enabled: false),
+                          );
+                        },
+                        onStyleLoadedListener: (_) =>
+                            useFlatProjection(_mapboxMapOrNull()),
+                        onMapLoadErrorListener: (_) =>
+                            setState(() => _mapUnavailable = true),
+                        // ignore: deprecated_member_use
+                        onTapListener: _onMapTap,
                       ),
-                      zoom: widget.initial == null ? 10 : 16,
-                    ),
-                    onMapCreated: (map) {
-                      _map = map;
-                      map.scaleBar.updateSettings(
-                        ScaleBarSettings(enabled: false),
-                      );
-                    },
-                    onStyleLoadedListener: (_) async {
-                      await useFlatProjection(_map);
-                      final map = _map;
-                      if (map == null) return;
-                      _pins = await map.annotations
-                          .createPointAnnotationManager();
-                      await _drawPin();
-                    },
-                    onMapLoadErrorListener: (_) =>
-                        setState(() => _mapUnavailable = true),
-                    // ignore: deprecated_member_use
-                    onTapListener: _onMapTap,
+                      if (_placed)
+                        const IgnorePointer(child: Center(child: _PinMarker())),
+                    ],
                   ),
           ),
           SafeArea(
@@ -350,7 +351,6 @@ class _MiniMap extends StatefulWidget {
 
 class _MiniMapState extends State<_MiniMap> {
   MapboxMap? _map;
-  PointAnnotationManager? _pins;
   bool _unavailable = false;
 
   @override
@@ -362,10 +362,7 @@ class _MiniMapState extends State<_MiniMap> {
   @override
   void didUpdateWidget(_MiniMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.point != widget.point) {
-      _recentre();
-      _draw();
-    }
+    if (oldWidget.point != widget.point) _recentre();
   }
 
   Future<void> _recentre() async {
@@ -375,22 +372,6 @@ class _MiniMapState extends State<_MiniMap> {
           coordinates: Position(widget.point.longitude, widget.point.latitude),
         ),
         zoom: 15,
-      ),
-    );
-  }
-
-  Future<void> _draw() async {
-    final pins = _pins;
-    if (pins == null) return;
-    await pins.deleteAll();
-    await pins.create(
-      PointAnnotationOptions(
-        geometry: Point(
-          coordinates: Position(widget.point.longitude, widget.point.latitude),
-        ),
-        iconImage: 'marker-15',
-        iconSize: 2,
-        iconColor: AppColors.navyBright.toARGB32(),
       ),
     );
   }
@@ -424,21 +405,42 @@ class _MiniMapState extends State<_MiniMap> {
               map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
               map.compass.updateSettings(CompassSettings(enabled: false));
             },
-            onStyleLoadedListener: (_) async {
-              await useFlatProjection(_map);
-              final map = _map;
-              if (map == null) return;
-              _pins = await map.annotations.createPointAnnotationManager();
-              await _draw();
-            },
+            onStyleLoadedListener: (_) => useFlatProjection(_map),
             onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
           ),
         ),
+        // The map is always centred on the point, so the marker belongs at the
+        // centre — drawn here rather than as an annotation, because Standard's
+        // sprite does not carry the icon names the older styles do and the
+        // annotation rendered as nothing at all.
+        const IgnorePointer(child: Center(child: _PinMarker())),
         Material(
           color: Colors.transparent,
           child: InkWell(onTap: widget.onTap),
         ),
       ],
+    );
+  }
+}
+
+/// The marker itself. Offset upward by half its height so the tip, not the
+/// middle of the circle, sits on the coordinate.
+class _PinMarker extends StatelessWidget {
+  const _PinMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: const Offset(0, -14),
+      child: const Icon(
+        Icons.location_on,
+        size: 34,
+        color: AppColors.navyBright,
+        shadows: [
+          Shadow(color: Colors.white, blurRadius: 3),
+          Shadow(color: Color(0x40000000), blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
@@ -37,6 +39,24 @@ class RecordingClient extends RepositoryHttpClient {
   Map<String, dynamic> bodyEndingWith(String suffix) =>
       requests.firstWhere((r) => r.url.path.endsWith(suffix)).body
           as Map<String, dynamic>;
+}
+
+/// Answers everything at once except one path, which it leaves pending until
+/// the test completes it — the only way to observe an in-flight state.
+class _HoldingClient extends RecordingClient {
+  _HoldingClient(super.handler, this.heldPath, this.held);
+
+  final String heldPath;
+  final Completer<RepositoryHttpResponse> held;
+
+  @override
+  Future<RepositoryHttpResponse> call({
+    required RepositoryHttpRequest request,
+  }) {
+    requests.add(request);
+    if (request.url.path.endsWith(heldPath)) return held.future;
+    return Future.value(handler(request));
+  }
 }
 
 class MemoryCacheStorage extends RepositoryCacheStorage {
@@ -277,6 +297,65 @@ void main() {
     // And it says what importing without one costs, since importing without one
     // is allowed.
     expect(find.textContaining('sem território'), findsOneWidget);
+  });
+
+  testWidgets('cannot import while the address is still being derived', (
+    tester,
+  ) async {
+    /*
+     * Found by tapping too fast on the simulator: confirming a moved pin and
+     * importing straight away sent the new coordinates with the old address —
+     * the pair spec 0009 decision 4 exists to keep together, split by a request
+     * that had not come back yet.
+     */
+    // The geocode call is held open, because the state only exists while a
+    // request is in flight and a fake that answers instantly never shows it.
+    final held = Completer<RepositoryHttpResponse>();
+    // The no-coordinates preview, so the card draws its placeholder rather than
+    // a platform map view that will not lay out under the test binding.
+    final client = _HoldingClient(
+      (request) {
+        if (request.url.path.contains('/cnes-candidates/9990001')) {
+          // Needs a street, or "Usar endereço" is disabled and there is
+          // nothing to hold open.
+          return _json({
+            ..._preview(requiresLocation: true),
+            'streetAddress': 'Rua Visconde de Piraja',
+            'streetNumber': '550',
+          });
+        }
+        return handler(request);
+      },
+      '/geocode',
+      held,
+    );
+    await _pump(tester, client: client);
+
+    await tester.tap(find.byKey(const ValueKey('cnes-candidate-9990001')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+
+    // "Usar endereço" puts the screen in the same in-flight state a confirmed
+    // pin does, and is reachable without driving a platform map view.
+    final useAddress = find.byKey(const Key('facility-location-use-address'));
+    await tester.ensureVisible(useAddress);
+    await tester.pumpAndSettle();
+    await tester.tap(useAddress);
+    await tester.pump();
+
+    final heldSubmit = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('cnes-import-submit')),
+    );
+    expect(heldSubmit.onPressed, isNull);
+
+    held.complete(_json({'point': null}));
+    await tester.pumpAndSettle();
+
+    // And live again once the answer is in.
+    final freed = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('cnes-import-submit')),
+    );
+    expect(freed.onPressed, isNotNull);
   });
 
   testWidgets('offers the map rather than asking for coordinates', (

@@ -450,15 +450,27 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     );
     if (picked == null || !mounted) return;
 
-    setState(() => _point = picked);
+    // Marked busy across the lookup, and the submit button reads the same flag.
+    // Confirming a pin and importing straight away used to send the new
+    // coordinates with the old address — the pair spec 0009 decision 4 exists
+    // to keep together, split by a request that had not come back yet.
+    setState(() {
+      _point = picked;
+      _geocoding = true;
+    });
 
     try {
       final described = await widget.repository.reverseGeocode(
         latitude: picked.latitude,
         longitude: picked.longitude,
       );
-      if (!mounted || described == null || described.isEmpty) return;
+      if (!mounted) return;
+      if (described == null || described.isEmpty) {
+        setState(() => _geocoding = false);
+        return;
+      }
       setState(() {
+        _geocoding = false;
         _pinAddress = described.fullAddress;
         if (described.streetAddress != null) {
           _street.text = described.streetAddress!;
@@ -476,6 +488,7 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     } on CnesFacilityImportException {
       // The pin is authoritative and it is already set. A failed lookup leaves
       // the address as typed rather than blocking the move.
+      if (mounted) setState(() => _geocoding = false);
     }
   }
 
@@ -546,7 +559,9 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
                   height: 48,
                   child: FilledButton(
                     key: const ValueKey('cnes-import-submit'),
-                    onPressed: _submitting ? null : _submit,
+                    // Also off while a pin is being described: importing then
+                    // would send the new coordinates with the old address.
+                    onPressed: _submitting || _geocoding ? null : _submit,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.navyBright,
                       shape: RoundedRectangleBorder(
