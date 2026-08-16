@@ -12,6 +12,8 @@ import {
   startCnesRunActivity as startCnesRunActivityImpl,
 } from "./cnes-ingestion.activities";
 import {
+  claimMetricSnapshotWindow as claimMetricSnapshotWindowImpl,
+  commitMetricSnapshotWindow as commitMetricSnapshotWindowImpl,
   logMetricSnapshotLifecycle as logMetricSnapshotLifecycleImpl,
   recalculateMetricSnapshotsBatch as recalculateMetricSnapshotsBatchImpl,
 } from "./metric-snapshot.activities";
@@ -33,6 +35,16 @@ import {
 export const recalculatePurchaseRecurrenceBatch = wrapActivity(
   "recalculatePurchaseRecurrenceBatch",
   recalculatePurchaseRecurrenceBatchImpl
+);
+
+export const claimMetricSnapshotWindow = wrapActivity(
+  "claimMetricSnapshotWindow",
+  claimMetricSnapshotWindowImpl
+);
+
+export const commitMetricSnapshotWindow = wrapActivity(
+  "commitMetricSnapshotWindow",
+  commitMetricSnapshotWindowImpl
 );
 
 export const claimPurchaseRecurrenceWindow = wrapActivity(

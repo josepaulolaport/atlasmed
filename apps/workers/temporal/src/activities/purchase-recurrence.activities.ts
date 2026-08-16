@@ -6,8 +6,8 @@ import {
   facilityVerticalRepAssignments,
   municipalities,
   orders,
-  purchaseRecurrenceWatermark,
   states,
+  RECONCILE_WATERMARKS,
   type Database,
 } from "@atlasmed/database";
 import { ApplicationFailure } from "@temporalio/activity";
@@ -20,6 +20,12 @@ import {
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Meilisearch } from "meilisearch";
 import { getDb } from "../infrastructure/db";
+import {
+  commitCoveredUntil,
+  planReconcileWindow,
+  readCoveredUntil,
+  type ReconcileWindowPlan,
+} from "../infrastructure/reconcile-watermark";
 import { logger } from "../logger";
 import {
   FACILITY_DOCUMENT_COLUMNS,
@@ -153,50 +159,6 @@ export function snapshotEquals(
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 const PURCHASE_DATE_LIMIT = 13;
-const WATERMARK_ROW_ID = 1;
-
-/** The lookback used before a watermark exists — twice the schedule interval. */
-export const DEFAULT_RECONCILE_LOOKBACK_HOURS = 2;
-
-/**
- * Past this, re-cover everything instead of widening the window.
- *
- * A worker down for a day leaves a watermark far enough behind that the
- * incremental query stops being the cheap one, and a very wide window is also
- * the case where being slow matters most. Sweeping is bounded work with the same
- * outcome.
- */
-export const MAX_RECONCILE_WINDOW_HOURS = 24;
-
-export function planReconcileWindow(input: {
-  coveredUntil: string | null;
-  until: string;
-  lookbackHours?: number;
-  maxWindowHours?: number;
-}): { since: string; fullSweep: boolean } {
-  const until = Date.parse(input.until);
-  const lookbackHours = input.lookbackHours ?? DEFAULT_RECONCILE_LOOKBACK_HOURS;
-  const maxWindowHours = input.maxWindowHours ?? MAX_RECONCILE_WINDOW_HOURS;
-  const fallback = new Date(until - lookbackHours * 3_600_000).toISOString();
-
-  if (input.coveredUntil === null) return { since: fallback, fullSweep: false };
-
-  const covered = Date.parse(input.coveredUntil);
-  // A watermark ahead of this run means a later run already committed — take the
-  // fallback rather than an empty or inverted window.
-  if (!Number.isFinite(covered) || covered >= until) {
-    return { since: fallback, fullSweep: false };
-  }
-  if (until - covered > maxWindowHours * 3_600_000) {
-    return { since: new Date(covered).toISOString(), fullSweep: true };
-  }
-  // Never *narrower* than the fallback: overlap is free and cheap, and it covers
-  // an order committed just after a run read its window.
-  return {
-    since: covered < Date.parse(fallback) ? new Date(covered).toISOString() : fallback,
-    fullSweep: false,
-  };
-}
 
 function groupBy<T>(items: T[], key: (item: T) => number): Map<number, T[]> {
   const groups = new Map<number, T[]>();
@@ -370,28 +332,15 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
   }
 
   async readCoveredUntil(): Promise<string | null> {
-    const [row] = await this.database
-      .select({ coveredUntil: purchaseRecurrenceWatermark.coveredUntil })
-      .from(purchaseRecurrenceWatermark)
-      .where(eq(purchaseRecurrenceWatermark.id, WATERMARK_ROW_ID))
-      .limit(1);
-    return row?.coveredUntil ? row.coveredUntil.toISOString() : null;
+    return readCoveredUntil(this.database, RECONCILE_WATERMARKS.purchaseRecurrence);
   }
 
   async commitCoveredUntil(until: string): Promise<void> {
-    const coveredUntil = new Date(until);
-    await this.database
-      .insert(purchaseRecurrenceWatermark)
-      .values({ id: WATERMARK_ROW_ID, coveredUntil })
-      .onConflictDoUpdate({
-        target: purchaseRecurrenceWatermark.id,
-        // Never backwards. The hourly reconcile and the daily sweep both commit,
-        // and the sweep can finish after an hourly run that started later.
-        set: {
-          coveredUntil: sql`greatest(${purchaseRecurrenceWatermark.coveredUntil}, excluded.covered_until)`,
-          updatedAt: new Date(),
-        },
-      });
+    return commitCoveredUntil(
+      this.database,
+      RECONCILE_WATERMARKS.purchaseRecurrence,
+      until,
+    );
   }
 
   async recalculateFacilities(facilityIds: number[], today: string): Promise<Array<{
@@ -778,10 +727,7 @@ export interface ReconcileWindowInput {
   until: string;
 }
 
-export interface ReconcileWindowPlan {
-  since: string;
-  fullSweep: boolean;
-}
+export type { ReconcileWindowPlan };
 
 export function createClaimReconcileWindowActivity(dependencies: {
   store: Pick<PurchaseRecurrenceStore, "readCoveredUntil">;

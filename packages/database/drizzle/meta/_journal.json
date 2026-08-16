@@ -824,15 +824,8 @@
     {
       "idx": 117,
       "version": "7",
-      "when": 1786842472899,
-      "tag": "0117_purchase_recurrence_watermark",
-      "breakpoints": true
-    },
-    {
-      "idx": 118,
-      "version": "7",
-      "when": 1786843113615,
-      "tag": "0118_invalidated_snapshot_index",
+      "when": 1786844056135,
+      "tag": "0117_reconcile_watermark_and_invalidated_snapshots",
       "breakpoints": true
     }
   ]

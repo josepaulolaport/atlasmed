@@ -55,7 +55,8 @@ importer clears the timestamp on the profile an order moved away from.
 
 ## The watermark
 
-`ops.purchase_recurrence_watermark` — one row, `id = 1`.
+`ops.reconcile_watermark`, row `name = 'purchase_recurrence'`. The metric
+snapshot reconciler keeps its own row in the same table.
 
 `covered_until` advances only after a run **completes**, so a failed or
 abandoned window is re-covered rather than stepped over. It never moves
@@ -63,8 +64,8 @@ backwards. If it falls more than 24 hours behind, the next run escalates to a
 full sweep instead of widening the window.
 
 ```sql
-select covered_until, now() - covered_until as behind
-from ops.purchase_recurrence_watermark;
+select name, covered_until, now() - covered_until as behind
+from ops.reconcile_watermark;
 ```
 
 More than a couple of hours behind means the hourly reconcile is not completing.

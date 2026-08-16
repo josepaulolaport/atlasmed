@@ -13,26 +13,37 @@ import { sql } from "drizzle-orm";
 export const opsSchema = pgSchema("ops");
 
 /**
- * How far the purchase-recurrence reconciler has actually covered.
+ * How far each hourly reconciler has actually covered.
  *
- * The reconcile window used to be a fixed two-hour lookback from each run's own
- * start. With overlap policy `SKIP` that silently loses data: a run that takes
- * three hours causes the next two firings to be skipped, and the run that does
- * fire looks back two hours from *itself*, so the hour between the end of the
- * long run's window and the start of its own is covered by nobody. The only
- * repair was the daily sweep, which the same overrun could also skip.
+ * Both reconcilers took their window as a fixed two-hour lookback from the run's
+ * own start. With overlap policy `SKIP` that silently loses data: a run that
+ * takes three hours causes the next two firings to be skipped, and the run that
+ * does fire looks back two hours from *itself*, so the hours between the end of
+ * the long run's window and the start of its own are covered by nobody. The only
+ * repair was the daily sweep — which, for the purchase funnel, the same overrun
+ * could also skip.
  *
- * One row (`id = 1`). `covered_until` advances only after a run finishes, so a
- * failed or abandoned run re-covers its window rather than stepping over it.
+ * One row per reconciler, keyed by `name`. `covered_until` advances only after a
+ * run finishes, so a failed or abandoned run re-covers its window rather than
+ * stepping over it, and it never moves backwards.
  */
-export const purchaseRecurrenceWatermark = opsSchema.table(
-  "purchase_recurrence_watermark",
+export const reconcileWatermark = opsSchema.table(
+  "reconcile_watermark",
   {
-    id: integer("id").primaryKey().default(1),
+    name: text("name").primaryKey(),
     coveredUntil: timestamp("covered_until", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
 );
+
+/** The reconcilers that keep a watermark. */
+export const RECONCILE_WATERMARKS = {
+  purchaseRecurrence: "purchase_recurrence",
+  metricSnapshot: "metric_snapshot",
+} as const;
+
+export type ReconcileWatermarkName =
+  (typeof RECONCILE_WATERMARKS)[keyof typeof RECONCILE_WATERMARKS];
 
 /** One digest row per Emultec order-import run (Temporal or CLI). */
 export const emultecOrderImportRuns = opsSchema.table(

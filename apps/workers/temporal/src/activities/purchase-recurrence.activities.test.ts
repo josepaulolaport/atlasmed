@@ -2,7 +2,6 @@ import { describe, expect, mock, test } from "bun:test";
 import {
   createPurchaseRecurrenceBatchActivity,
   normalizePostgresDate,
-  planReconcileWindow,
   selectReconcileFacilityIds,
   snapshotEquals,
   type PurchaseRecurrenceStore,
@@ -229,47 +228,3 @@ describe("purchase recurrence batch processing", () => {
   });
 });
 
-describe("reconcile window planning", () => {
-  const until = "2026-07-22T00:00:00.000Z";
-
-  test("falls back to the two-hour lookback before the first watermark", () => {
-    expect(planReconcileWindow({ coveredUntil: null, until })).toEqual({
-      since: "2026-07-21T22:00:00.000Z",
-      fullSweep: false,
-    });
-  });
-
-  /**
-   * The gap this exists to close. A run that overran left later firings skipped,
-   * and the next run that fired looked back two hours from *itself* — so the
-   * hours in between were covered by nobody and only the daily sweep repaired
-   * them.
-   */
-  test("reaches back to wherever the last completed run actually got to", () => {
-    expect(planReconcileWindow({
-      coveredUntil: "2026-07-21T18:00:00.000Z",
-      until,
-    })).toEqual({ since: "2026-07-21T18:00:00.000Z", fullSweep: false });
-  });
-
-  test("never narrows below the lookback, so a just-committed order is not missed", () => {
-    expect(planReconcileWindow({
-      coveredUntil: "2026-07-21T23:50:00.000Z",
-      until,
-    })).toEqual({ since: "2026-07-21T22:00:00.000Z", fullSweep: false });
-  });
-
-  test("sweeps instead of widening the window past a day", () => {
-    expect(planReconcileWindow({
-      coveredUntil: "2026-07-19T00:00:00.000Z",
-      until,
-    })).toEqual({ since: "2026-07-19T00:00:00.000Z", fullSweep: true });
-  });
-
-  test("ignores a watermark from the future rather than inverting the window", () => {
-    expect(planReconcileWindow({
-      coveredUntil: "2026-07-23T00:00:00.000Z",
-      until,
-    })).toEqual({ since: "2026-07-21T22:00:00.000Z", fullSweep: false });
-  });
-});

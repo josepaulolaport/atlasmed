@@ -7,8 +7,9 @@ import {
   facilityVerticalProfiles,
   municipalities,
   orders,
-  purchaseRecurrenceWatermark,
+  reconcileWatermark,
   states,
+  RECONCILE_WATERMARKS,
 } from "@atlasmed/database";
 import { eq, sql } from "drizzle-orm";
 import {
@@ -17,6 +18,10 @@ import {
   withRollback,
   type Tx,
 } from "../test-utils/db-harness";
+import {
+  commitCoveredUntil,
+  readCoveredUntil,
+} from "../infrastructure/reconcile-watermark";
 import { DrizzlePurchaseRecurrenceStore } from "./purchase-recurrence.activities";
 
 /**
@@ -271,14 +276,14 @@ describe.skipIf(!dbUp)("purchase recurrence recalculation (database)", () => {
 describe.skipIf(!dbUp)("reconcile watermark (database)", () => {
   test("reads back nothing before any run has completed", async () => {
     await withRollback(async (tx) => {
-      await tx.delete(purchaseRecurrenceWatermark);
+      await tx.delete(reconcileWatermark);
       expect(await storeOn(tx).readCoveredUntil()).toBeNull();
     });
   });
 
   test("records how far a completed run covered", async () => {
     await withRollback(async (tx) => {
-      await tx.delete(purchaseRecurrenceWatermark);
+      await tx.delete(reconcileWatermark);
       const store = storeOn(tx);
 
       await store.commitCoveredUntil("2026-08-15T10:00:00.000Z");
@@ -294,9 +299,32 @@ describe.skipIf(!dbUp)("reconcile watermark (database)", () => {
    * same statement running out of order is how a watermark ends up ahead of what
    * was actually covered, so it is pinned in one direction.
    */
+  /**
+   * One table, one row per reconciler. The purchase funnel and the metric
+   * snapshots run on different schedules and would corrupt each other's
+   * coverage if they shared a row — each would step over windows the other
+   * covered and neither would ever notice.
+   */
+  test("keeps each reconciler's coverage to itself", async () => {
+    await withRollback(async (tx) => {
+      await tx.delete(reconcileWatermark);
+
+      await commitCoveredUntil(
+        tx as never,
+        RECONCILE_WATERMARKS.metricSnapshot,
+        "2026-08-15T23:00:00.000Z",
+      );
+
+      // The funnel's own watermark is untouched by the other reconciler's.
+      expect(await storeOn(tx).readCoveredUntil()).toBeNull();
+      expect(await readCoveredUntil(tx as never, RECONCILE_WATERMARKS.metricSnapshot))
+        .toBe("2026-08-15T23:00:00.000Z");
+    });
+  });
+
   test("never moves backwards, whatever order the runs commit in", async () => {
     await withRollback(async (tx) => {
-      await tx.delete(purchaseRecurrenceWatermark);
+      await tx.delete(reconcileWatermark);
       const store = storeOn(tx);
 
       await store.commitCoveredUntil("2026-08-15T10:00:00.000Z");

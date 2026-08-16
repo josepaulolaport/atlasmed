@@ -1,5 +1,5 @@
 {
-  "id": "683c287e-7087-40c8-ae80-b67d2c2409ff",
+  "id": "cbb80eef-b98a-4aff-a860-ffd678c3549d",
   "prevId": "ef491ffc-9c8a-4ea1-9f5c-fca51f216846",
   "version": "7",
   "dialect": "postgresql",
@@ -5323,6 +5323,22 @@
           ],
           "isUnique": false,
           "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"next_purchase_funnel_transition_date\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "facility_vertical_profiles_invalidated_snapshot_idx": {
+          "name": "facility_vertical_profiles_invalidated_snapshot_idx",
+          "columns": [
+            {
+              "expression": "facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"purchase_recurrence_calculated_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -12763,16 +12779,15 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "ops.purchase_recurrence_watermark": {
-      "name": "purchase_recurrence_watermark",
+    "ops.reconcile_watermark": {
+      "name": "reconcile_watermark",
       "schema": "ops",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
+        "name": {
+          "name": "name",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": 1
+          "notNull": true
         },
         "covered_until": {
           "name": "covered_until",

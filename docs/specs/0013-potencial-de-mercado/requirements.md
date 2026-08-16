@@ -533,6 +533,21 @@ and the watermark query selects exactly the profiles where nothing happened — 
 Without a full pass a quiet clinic's number freezes at whatever the window said when it was last
 touched.
 
+**The watermark is stored, not derived from the run's own clock** (2026-08-15). It was
+`start - 2h`, which is not a watermark: overlap policy on the hourly schedule is `SKIP`, so a run
+that overruns causes the next firings to be skipped, and the run that does fire looks back two hours
+from *itself* — leaving the hours in between covered by nobody. The nightly pass does not repair
+that. It visits every profile, but it recomputes from **current** state, so an order change that has
+since aged out of the rolling 90-day window is simply gone, and `differed` will not report it either
+because there is nothing left to differ against.
+
+`ops.reconcile_watermark`, row `name = 'metric_snapshot'`, advances only after a run completes and
+never moves backwards. A failed or abandoned run re-covers its window. The purchase-recurrence
+reconciler keeps its own row in the same table; `claimMetricSnapshotWindow` logs
+`facility_metric_snapshot.window_planned` and `commitMetricSnapshotWindow` logs
+`facility_metric_snapshot.window_committed`, so a run that plans a window and never commits one did
+not finish.
+
 #### Unlinking a product leaves its rows dormant
 
 `theirs` joins `product_potential_links`, so unlinking a product from a metric stops its recorded
