@@ -316,6 +316,7 @@ class CalendarInteractionContext extends Equatable {
     this.person,
     this.agentUserId,
     this.modality,
+    this.missReason,
     this.version = 0,
     this.actualStartedAt,
     this.actualEndedAt,
@@ -330,6 +331,11 @@ class CalendarInteractionContext extends Equatable {
   final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
+
+  /// Why the rep said a planned visit did not happen (§15.7.7). Null when the
+  /// day simply ended without them saying — which is a different thing, and the
+  /// card says so differently.
+  final InteractionMissReason? missReason;
 
   /// What the visit *was*, against a plan that stays what it was meant to be
   /// (§15.6.3). Both null until the rep starts; the end arrives on close.
@@ -357,6 +363,7 @@ class CalendarInteractionContext extends Equatable {
             ? null
             : _enumFromApi(CalendarModality.values, json['modality']),
         status: _enumFromApi(InteractionStatus.values, json['status']),
+        missReason: _missReasonFromApi(json['missReason']),
         version: (json['version'] as num?)?.toInt() ?? 0,
         actualStartedAt: _parseUtcOrNull(json['actualStartedAt']),
         actualEndedAt: _parseUtcOrNull(json['actualEndedAt']),
@@ -370,6 +377,7 @@ class CalendarInteractionContext extends Equatable {
     agentUserId,
     modality,
     status,
+    missReason,
     version,
     actualStartedAt,
     actualEndedAt,
@@ -504,6 +512,14 @@ enum InteractionFollowUp {
   const InteractionFollowUp(this.wire, this.label);
   final String wire;
   final String label;
+}
+
+InteractionMissReason? _missReasonFromApi(Object? value) {
+  if (value is! String) return null;
+  for (final reason in InteractionMissReason.values) {
+    if (reason.wire == value) return reason;
+  }
+  return null;
 }
 
 InteractionOutcome? _outcomeFromApi(Object? value) {

@@ -22,7 +22,7 @@ function mapOverride(row: typeof calendarOccurrenceOverrides.$inferSelect): Cale
 function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount = 0,
   lifecycle: { eventCount?: number } = {}, person: { id: number; name: string } | null = null): CalendarInteractionRecord {
   return { id: row.id, recurrenceKey: row.recurrenceKey, facilityId: row.facilityId,
-    personId: row.personId, person, modality: row.modality,
+    personId: row.personId, person, modality: row.modality, missReason: row.missReason,
     status: row.status, cancelledAt: row.cancelledAt, cancelledByUserId: row.cancelledByUserId,
     cancellationReason: row.cancellationReason, visitId: row.visitId, linkedOrderCount, version: row.version,
     actualStartedAt: row.actualStartedAt, actualEndedAt: row.actualEndedAt,

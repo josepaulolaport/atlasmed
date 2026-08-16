@@ -59,7 +59,7 @@ export interface CalendarOccurrenceDto {
    * hours and the rep's afternoon reads as full.
    */
   interaction?: { id: number; facilityId: number | null; person: { id: number; name: string } | null;
-    modality: InteractionModality; status: string; version: number;
+    modality: InteractionModality; status: string; version: number; missReason: string | null;
     actualStartedAt: string | null; actualEndedAt: string | null };
 }
 
@@ -350,6 +350,7 @@ export class ListCalendarUseCase {
           ...(interaction ? { interaction: { id: interaction.id, facilityId: interaction.facilityId,
             person: interaction.person ?? null, modality: interaction.modality,
             status: effectiveInteractionStatus!, version: interaction.version,
+            missReason: interaction.missReason ?? null,
             actualStartedAt: interaction.actualStartedAt?.toISOString() ?? null,
             actualEndedAt: interaction.actualEndedAt?.toISOString() ?? null } } : {}) });
         if (rows.length > MAX_RESULTS) throw new ValidationError([{ field: "range", message: `Calendar result exceeds ${MAX_RESULTS} occurrences` }]);

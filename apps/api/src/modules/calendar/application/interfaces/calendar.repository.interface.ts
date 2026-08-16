@@ -33,6 +33,8 @@ export interface CalendarInteractionRecord {
   person?: { id: number; name: string } | null;
   modality: InteractionModality;
   status: InteractionStatus;
+  /** Why a planned visit did not happen, when the rep said (§15.7.7). */
+  missReason?: string | null;
   cancelledAt?: Date | null;
   cancelledByUserId?: number | null;
   cancellationReason?: string | null;

@@ -100,7 +100,7 @@ class TodayAppointmentsCard extends ConsumerWidget {
             _RunningLateBanner(late: late),
           if (stops.isNotEmpty)
             SizedBox(
-              height: 132,
+              height: 134,
               child: ListView.separated(
                 key: const Key('today-appointments-strip'),
                 scrollDirection: Axis.horizontal,
@@ -246,7 +246,10 @@ class _StopCard extends ConsumerWidget {
         : AppColors.navyBright;
 
     return Container(
-      width: 208,
+      // Wide enough for the two actions a late stop carries — Cheguei *and*
+      // Não fui. At 208 they overflowed by three pixels, which the simulator
+      // showed and no test could.
+      width: 236,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
         // The running stop is tinted, not merely labelled: it is the one the
@@ -385,11 +388,38 @@ class _StopFooter extends ConsumerWidget {
         colour: AppColors.gray500,
       );
     }
+    // Declared missed. It keeps its Cheguei — the rep may still turn up, and
+    // §15.7.7 lets a missed visit reopen — but the card leads with what they
+    // already said rather than pretending the question is still open.
+    final missed = occurrence.interaction?.status == InteractionStatus.notCompleted;
+    if (missed) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: _Tag(
+              icon: Icons.event_busy_outlined,
+              label: occurrence.interaction?.missReason?.label ?? 'Não realizada',
+              colour: AppColors.amber,
+            ),
+          ),
+          _Action(
+            label: _startLabel(occurrence),
+            icon: Icons.where_to_vote_rounded,
+            colour: AppColors.gray600,
+            semanticKey: const Key('today-cheguei'),
+            onPressed: () => _record(context, ref, finish: false),
+          ),
+        ],
+      );
+    }
+
     // Still to do. Past its window it turns amber but keeps the same press —
     // the rep can walk in late and the visit is measured (§15.7.7) — and gains
     // the other half of the truth: they might not be going at all.
     final late = occurrence.endsAt.toLocal().isBefore(now);
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _Action(
           label: _startLabel(occurrence),
@@ -498,7 +528,7 @@ class _Action extends StatelessWidget {
       label: Text(label),
       style: TextButton.styleFrom(
         foregroundColor: colour,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         visualDensity: VisualDensity.compact,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
