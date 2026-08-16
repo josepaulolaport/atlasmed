@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
@@ -389,44 +390,24 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
   Future<void> _linkProduct() async {
     try {
       final families = await widget.catalog.getFamilies();
+      // Already-linked products are excluded, not merely shown. Offering one
+      // means offering an action the API rejects — `product_potential_links` is
+      // unique per (product, vertical) — and the admin cannot tell from the
+      // picker which of these they already added.
+      final linkedIds = {for (final p in _linked) p.productId};
       final products = [
         for (final f in families)
           for (final v in f.variants)
-            if (v.verticalIds.contains(widget.definition.verticalId)) v,
+            if (v.verticalIds.contains(widget.definition.verticalId) &&
+                !linkedIds.contains(v.id))
+              v,
       ];
       if (!mounted) return;
       final picked = await showModalBottomSheet<int>(
         context: context,
         isScrollControlled: true,
-        builder: (ctx) => SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(ctx).height * 0.7,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Vincular produto',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final p = products[index];
-                      return ListTile(
-                        title: Text(p.name),
-                        subtitle: Text(p.code),
-                        onTap: () => Navigator.pop(ctx, p.id),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _LinkProductSheet(products: products),
       );
       if (picked == null) return;
       await widget.repo.linkProduct(
@@ -734,6 +715,140 @@ class _DerivedBrandRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The "vincular produto" picker.
+///
+/// Searchable, because the list is every product in the metric's linha and the
+/// admin arrives knowing which one they want. It used to be an unsearchable
+/// `ListView` of `ListTile`s in a square-cornered sheet — the only sheet in the
+/// panel without a grabber, a 17px title or a way out other than the system
+/// back gesture.
+class _LinkProductSheet extends StatefulWidget {
+  const _LinkProductSheet({required this.products});
+
+  final List<CatalogVariant> products;
+
+  @override
+  State<_LinkProductSheet> createState() => _LinkProductSheetState();
+}
+
+class _LinkProductSheetState extends State<_LinkProductSheet> {
+  final _controller = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    final products = query.isEmpty
+        ? widget.products
+        : widget.products
+              .where(
+                (p) =>
+                    p.name.toLowerCase().contains(query) ||
+                    p.code.toLowerCase().contains(query),
+              )
+              .toList();
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        height: MediaQuery.sizeOf(context).height * 0.75,
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 6),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.gray200,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 8, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Vincular produto',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            CatalogSearchBar(
+              controller: _controller,
+              hintText: 'Buscar produto…',
+              onChanged: (value) => setState(() => _query = value),
+            ),
+            Expanded(
+              child: products.isEmpty
+                  ? (_query.trim().isNotEmpty
+                        ? CatalogEmptyState.noResults(
+                            query: _query.trim(),
+                            onClear: () => setState(() {
+                              _query = '';
+                              _controller.clear();
+                            }),
+                          )
+                        : const CatalogEmptyState(
+                            icon: Icons.check_circle_outline_rounded,
+                            title: 'Nada a vincular',
+                            subtitle:
+                                'Todos os produtos desta linha já contam para '
+                                'esta métrica.',
+                          ))
+                  : ListView.separated(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      itemCount: products.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return CatalogListRow(
+                          leading: const CatalogRowIcon(
+                            icon: Icons.medical_services_outlined,
+                            tinted: true,
+                          ),
+                          title: product.name,
+                          subtitle: product.code,
+                          onTap: () => Navigator.pop(context, product.id),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
