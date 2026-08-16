@@ -11,6 +11,16 @@ import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'calendar_models.dart';
 
+/// When the device says something happened, as an offset ISO-8601 instant.
+///
+/// Spec 0016 §15.6.6-4: the server used to stamp receipt time, so anything sent
+/// from a clinic with no signal recorded the moment the queue drained rather
+/// than the moment it happened. The server accepts this within bounds — not in
+/// the future, not more than a day old — and falls back to its own clock when
+/// it is absent.
+String clientInstant([DateTime? at]) =>
+    (at ?? DateTime.now()).toUtc().toIso8601String();
+
 abstract interface class CalendarRepositoryContract {
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
@@ -279,7 +289,14 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         url: _baseUri.replace(path: '/api/v1/interactions/$id/start'),
         method: RepositoryHttpMethod.post,
         headers: {'Idempotency-Key': idempotencyKey},
-        body: {'expectedVersion': expectedVersion},
+        // §15.6.6-4: the moment the rep pressed, not the moment the request
+        // arrived. A start queued in a clinic with no signal used to be
+        // stamped when connectivity returned, and every duration computed
+        // from it was fiction.
+        body: {
+          'expectedVersion': expectedVersion,
+          'startedAt': clientInstant(),
+        },
       ),
     );
     return _interactionFromResponse(response);
@@ -299,6 +316,9 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         headers: {'Idempotency-Key': idempotencyKey},
         body: {
           'expectedVersion': expectedVersion,
+          // The end is the device's too: waiting for signal would otherwise
+          // inflate the duration by however long the wait was.
+          'completedAt': clientInstant(),
           if (correctionReason != null && correctionReason.trim().isNotEmpty)
             'correctionReason': correctionReason.trim(),
         },
@@ -345,7 +365,11 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         url: _baseUri.replace(path: '/api/v1/interactions/arrivals'),
         method: RepositoryHttpMethod.post,
         headers: {'Idempotency-Key': idempotencyKey},
-        body: {'facilityId': facilityId, 'timeZone': timeZone},
+        body: {
+          'facilityId': facilityId,
+          'timeZone': timeZone,
+          'startedAt': clientInstant(),
+        },
       ),
     );
     return _interactionFromResponse(response);

@@ -15,8 +15,12 @@ export interface InteractionHttpUseCases {
   recordArrival(): Executable;
 }
 
-const commandSchema = z.object({ expectedVersion: z.number().int().nonnegative() });
-const completeSchema = commandSchema.extend({ correctionReason: z.string().trim().min(1).optional() });
+// §15.6.6-4 — the device says when, because the server saying when is a lie
+// whenever the request waited for signal. Optional: a client that has not been
+// taught to stamp still behaves exactly as before.
+const clientInstant = z.string().datetime({ offset: true }).optional();
+const commandSchema = z.object({ expectedVersion: z.number().int().nonnegative(), startedAt: clientInstant });
+const completeSchema = z.object({ expectedVersion: z.number().int().nonnegative(), correctionReason: z.string().trim().min(1).optional(), completedAt: clientInstant });
 // No expectedVersion: answering a question is not a state transition, and a
 // visit closed for the rep by an arrival or by the job will already have moved
 // on from whatever version their screen was holding.
@@ -31,6 +35,7 @@ const outcomeSchema = z.object({
 const arrivalSchema = z.object({
   facilityId: z.number().int().positive(),
   timeZone: z.string().trim().min(1),
+  startedAt: clientInstant,
 });
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -64,14 +69,14 @@ export function createInteractionRoutes(useCases: InteractionHttpUseCases = inte
     .post("/interactions/:id/start", async (ctx) => useCases.start().execute({ ...(await context(ctx)), id: ctx.params.id,
       idempotencyKey: commandKey(ctx.request.headers), ...parse(commandSchema, ctx.body) }), {
       params: interactionIdParams,
-      body: t.Object({ expectedVersion: t.Number() }),
+      body: t.Object({ expectedVersion: t.Number(), startedAt: t.Optional(t.String()) }),
       detail: { summary: "Start interaction", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
   const complete = new Elysia().use(authPlugin).use(requirePermission("update", "INTERACTION", { resourceIdParam: "id" }))
     .post("/interactions/:id/complete", async (ctx) => useCases.complete().execute({ ...(await context(ctx)), id: ctx.params.id,
       idempotencyKey: commandKey(ctx.request.headers), ...parse(completeSchema, ctx.body) }), {
       params: interactionIdParams,
-      body: t.Object({ expectedVersion: t.Number(), correctionReason: t.Optional(t.String()) }),
+      body: t.Object({ expectedVersion: t.Number(), correctionReason: t.Optional(t.String()), completedAt: t.Optional(t.String()) }),
       detail: { summary: "Complete interaction", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
   // §15.6.4 — the two questions. Its own route because most visits are closed
@@ -95,7 +100,7 @@ export function createInteractionRoutes(useCases: InteractionHttpUseCases = inte
   const arrival = new Elysia().use(authPlugin).use(requirePermission("create", "INTERACTION"))
     .post("/interactions/arrivals", async (ctx) => useCases.recordArrival().execute({ ...(await context(ctx)),
       idempotencyKey: commandKey(ctx.request.headers), ...parse(arrivalSchema, ctx.body) }), {
-      body: t.Object({ facilityId: t.Number({ minimum: 1 }), timeZone: t.String() }),
+      body: t.Object({ facilityId: t.Number({ minimum: 1 }), timeZone: t.String(), startedAt: t.Optional(t.String()) }),
       detail: { summary: "Record arriving at a clinic", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
   return new Elysia().use(get).use(start).use(complete).use(outcome).use(arrival);

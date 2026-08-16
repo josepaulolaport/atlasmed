@@ -1,6 +1,7 @@
 import { assertResourceInScope, type Role, type ScopeContext } from "@atlasmed/access";
 import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { calendarLocalAnchorAt, calendarOccurrenceFromRecurrenceKey } from "../../../calendar/application/services/recurrence.service";
+import { resolveClientInstant } from "../services/client-clock";
 import type {
   InteractionDetailRecord,
   InteractionRepository,
@@ -127,8 +128,11 @@ export class GetInteractionUseCase {
 
 export class StartInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string }) {
+  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; startedAt?: string }) {
     const now = this.deps.now?.() ?? new Date();
+    // §15.6.6-4: the device says when the rep arrived; receipt time is only a
+    // fallback for a client that has not been taught to stamp.
+    const startedAt = resolveClientInstant({ claimed: input.startedAt, now, field: "startedAt" });
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });
     if (replay) {
       assertOwner(replay, input.actor, input.scope);
@@ -142,7 +146,7 @@ export class StartInteractionUseCase {
     if (status !== "SCHEDULED") throw new InteractionTransitionError(status, "IN_PROGRESS");
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     const result = await this.deps.repository.start({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
-      idempotencyKey: input.idempotencyKey, startedAt: now });
+      idempotencyKey: input.idempotencyKey, startedAt });
     if (!result) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     return toDto(result.interaction, input.actor, now);
   }
@@ -169,8 +173,12 @@ export class RecordArrivalUseCase {
     actor: InteractionActor;
     scope: ScopeContext;
     idempotencyKey: string;
+    startedAt?: string;
   }) {
     const now = this.deps.now?.() ?? new Date();
+    // Stamped on the device: a rep who walks into a basement clinic and presses
+    // Cheguei should not have the visit begin when they walk back out.
+    const startedAt = resolveClientInstant({ claimed: input.startedAt, now, field: "startedAt" });
     const replay = await this.deps.repository.findArrival({ agentUserId: input.actor.userId, idempotencyKey: input.idempotencyKey });
     if (replay) return toDto(replay, input.actor, now);
 
@@ -182,7 +190,7 @@ export class RecordArrivalUseCase {
     const facility = await this.deps.repository.findFacilitySummary(input.facilityId);
     if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
 
-    const anchor = calendarLocalAnchorAt(now, input.timeZone);
+    const anchor = calendarLocalAnchorAt(startedAt, input.timeZone);
     const record = await this.deps.repository.recordArrival({
       facilityId: input.facilityId,
       agentUserId: input.actor.userId,
@@ -191,7 +199,7 @@ export class RecordArrivalUseCase {
       ...anchor,
       recurrenceKey: `${anchor.anchorLocalDate}T${anchor.anchorLocalTime}[${input.timeZone}]`,
       durationMinutes: ARRIVAL_PLACEHOLDER_MINUTES,
-      startedAt: now,
+      startedAt,
       idempotencyKey: input.idempotencyKey,
     });
     return toDto(record, input.actor, now);
@@ -203,8 +211,11 @@ const ARRIVAL_PLACEHOLDER_MINUTES = 60;
 
 export class CompleteInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; correctionReason?: string }) {
+  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; correctionReason?: string; completedAt?: string }) {
     const now = this.deps.now?.() ?? new Date();
+    // The end is stamped by the device too: a completion that waits for signal
+    // would otherwise inflate the duration by however long the wait was.
+    const completedAt = resolveClientInstant({ claimed: input.completedAt, now, field: "completedAt" });
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "complete", idempotencyKey: input.idempotencyKey });
     if (replay) {
       assertOwner(replay, input.actor, input.scope);
@@ -221,9 +232,9 @@ export class CompleteInteractionUseCase {
       throw new ValidationError([{ field: "correctionReason", message: "correctionReason is required when correcting a missed interaction" }]);
     }
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
-    const scheduledStartsAt = occurrence.startsAt < now ? occurrence.startsAt : new Date(now.getTime() - 1);
+    const scheduledStartsAt = occurrence.startsAt < completedAt ? occurrence.startsAt : new Date(completedAt.getTime() - 1);
     const result = await this.deps.repository.complete({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
-      idempotencyKey: input.idempotencyKey, completedAt: now,
+      idempotencyKey: input.idempotencyKey, completedAt,
       ...(status === "NOT_COMPLETED" ? { scheduledStartsAt } : {}),
       ...(record.status === "SCHEDULED" && status === "NOT_COMPLETED" ? { persistEffectiveMissed: true } : {}),
       ...(correctionReason ? { correctionReason } : {}) });
