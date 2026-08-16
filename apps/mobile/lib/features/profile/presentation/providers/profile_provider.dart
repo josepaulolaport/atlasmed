@@ -7,7 +7,6 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_preferences_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 
 String _regionLabel(UserAssignments? assignments) {
   if (assignments == null) return 'Sem território definido';
@@ -94,16 +93,9 @@ String _initials(String name) {
 String workingHoursSummary(UserPreferences prefs) {
   final start = prefs.workdayStart;
   final end = prefs.workdayEnd;
-  // The lunch break is part of the answer: the engine blocks it out of the day,
-  // so a rep reading this row needs to see whether it is reserved at all.
-  final lunch = (prefs.lunchMinutes ?? 0) > 0
-      ? ' · almoço ${formatDurationLabel(prefs.lunchMinutes!)}'
-      : '';
-  if (start == null && end == null) {
-    return 'Padrão da linha · 08:00–18:00$lunch';
-  }
+  if (start == null && end == null) return 'Padrão da linha · 08:00–18:00';
   return '${start ?? "08:00"}–${end ?? "18:00"}'
-      '${start == null || end == null ? " (parcial)" : ""}$lunch';
+      '${start == null || end == null ? " (parcial)" : ""}';
 }
 
 /// The rep's stored preferences, so the screen can build rows that need them.

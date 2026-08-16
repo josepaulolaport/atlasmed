@@ -483,8 +483,6 @@ export const roteiroParams = pgTable(
       .default("0.400"),
     workdayStart: time("workday_start").notNull().default("08:00"),
     workdayEnd: time("workday_end").notNull().default("18:00"),
-    lunchStart: time("lunch_start").notNull().default("12:00"),
-    lunchMinutes: smallint("lunch_minutes").notNull().default(60),
     maxGenerationsPerDay: smallint("max_generations_per_day").notNull().default(20),
     updatedByUserId: bigint("updated_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
@@ -515,7 +513,6 @@ export const roteiroParams = pgTable(
       "roteiro_params_capacity_unknown_range_check",
       sql`${t.capacityUnknown} >= 0 and ${t.capacityUnknown} <= 1`,
     ),
-    check("roteiro_params_lunch_minutes_non_negative_check", sql`${t.lunchMinutes} >= 0`),
     check("roteiro_params_workday_order_check", sql`${t.workdayEnd} > ${t.workdayStart}`),
     check(
       "roteiro_params_max_generations_positive_check",

@@ -67,8 +67,6 @@ export const DEFAULT_ROTEIRO_PARAMS: Omit<RoteiroParams, "verticalId"> = {
   capacityUnknown: 0.4,
   workdayStart: "08:00",
   workdayEnd: "18:00",
-  lunchStart: "12:00",
-  lunchMinutes: 60,
   maxGenerationsPerDay: 20,
 };
 
@@ -722,8 +720,6 @@ export class GenerateRoteiroUseCase {
       },
       workdayStart: hours.workdayStart ?? linhaParams.workdayStart,
       workdayEnd: hours.workdayEnd ?? linhaParams.workdayEnd,
-      lunchStart: hours.lunchStart ?? linhaParams.lunchStart,
-      lunchMinutes: hours.lunchMinutes ?? linhaParams.lunchMinutes,
     };
 
     const limit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
@@ -1177,12 +1173,13 @@ export class GenerateRoteiroUseCase {
       }
     }
 
-    const lunchStart = this.atLocalTime(input.today, params.lunchStart, timeZone);
-    busy.push({
-      startsAt: lunchStart.getTime(),
-      endsAt: lunchStart.getTime() + params.lunchMinutes * 60_000,
-    });
-
+    // Lunch is not a parameter. It is a personal block on the rep's calendar,
+    // and the loop above already blocked it out with everything else they have
+    // committed to — every occurrence lands in `busy`, and one with no facility
+    // holds the clock without anchoring the route, which is exactly a lunch
+    // break. A preference could only ever say one time for every day; a block
+    // can be moved when a morning overruns, dropped on a day they eat on the
+    // road, and — unlike a preference — actually seen on the agenda.
     return { fixedPoints, busy: busy.sort((a, b) => a.startsAt - b.startsAt) };
   }
 

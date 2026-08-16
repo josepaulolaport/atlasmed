@@ -22,6 +22,105 @@ function isoDates(occurrences: ReturnType<typeof expandCalendarOccurrences>) {
   return occurrences.map((occurrence) => occurrence.startsAt.toISOString());
 }
 
+describe("WEEKDAYS expansion", () => {
+  // 2026-01-15 is a Thursday.
+  const localDates = (occurrences: ReturnType<typeof expandCalendarOccurrences>) =>
+    occurrences.map((o) => o.localOccurrence.slice(0, 10));
+
+  it("skips the weekend and picks up on Monday", () => {
+    const occurrences = expandCalendarOccurrences(
+      rule({ recurrence: "WEEKDAYS" }),
+      { from: new Date("2026-01-15T00:00:00Z"), to: new Date("2026-01-22T00:00:00Z") },
+    );
+
+    expect(localDates(occurrences)).toEqual([
+      "2026-01-15", // Thu
+      "2026-01-16", // Fri
+      "2026-01-19", // Mon — 17th and 18th are the weekend
+      "2026-01-20",
+      "2026-01-21",
+    ]);
+  });
+
+  it("counts occurrences in weekdays, not in days", () => {
+    // Five occurrences from a Thursday reach the following Wednesday.
+    const occurrences = expandCalendarOccurrences(
+      rule({ recurrence: "WEEKDAYS", recurrenceCount: 5 }),
+      { from: new Date("2026-01-01T00:00:00Z"), to: new Date("2026-03-01T00:00:00Z") },
+    );
+
+    expect(localDates(occurrences)).toEqual([
+      "2026-01-15",
+      "2026-01-16",
+      "2026-01-19",
+      "2026-01-20",
+      "2026-01-21",
+    ]);
+  });
+
+  it("starts on the Monday when the anchor lands on a weekend", () => {
+    // A rep can draw a block on a Saturday and ask for it every weekday. Every
+    // other recurrence has occurrence zero on the anchor date; this is the one
+    // that cannot.
+    const occurrences = expandCalendarOccurrences(
+      rule({ anchorLocalDate: "2026-01-17", recurrence: "WEEKDAYS" }), // Saturday
+      { from: new Date("2026-01-17T00:00:00Z"), to: new Date("2026-01-21T00:00:00Z") },
+    );
+
+    expect(localDates(occurrences)).toEqual([
+      "2026-01-19",
+      "2026-01-20",
+    ]);
+  });
+
+  it("expands a window that starts months after the anchor", () => {
+    // The window is found by estimate-then-walk, and the two estimates lean in
+    // opposite directions on purpose. A range far from the anchor is where a
+    // lean in the wrong direction shows up as missing or duplicated days.
+    const occurrences = expandCalendarOccurrences(
+      rule({ recurrence: "WEEKDAYS" }),
+      { from: new Date("2026-06-01T00:00:00Z"), to: new Date("2026-06-08T00:00:00Z") },
+    );
+
+    expect(localDates(occurrences)).toEqual([
+      "2026-06-01", // Mon
+      "2026-06-02",
+      "2026-06-03",
+      "2026-06-04",
+      "2026-06-05", // Fri
+    ]);
+  });
+
+  it("honours an until date", () => {
+    const occurrences = expandCalendarOccurrences(
+      rule({ recurrence: "WEEKDAYS", recurrenceUntil: "2026-01-19" }),
+      { from: new Date("2026-01-01T00:00:00Z"), to: new Date("2026-02-01T00:00:00Z") },
+    );
+
+    expect(localDates(occurrences)).toEqual([
+      "2026-01-15",
+      "2026-01-16",
+      "2026-01-19",
+    ]);
+  });
+
+  it("never lands on a Saturday or Sunday, over a long run", () => {
+    const occurrences = expandCalendarOccurrences(
+      rule({ recurrence: "WEEKDAYS" }),
+      { from: new Date("2026-01-15T00:00:00Z"), to: new Date("2026-12-31T00:00:00Z") },
+    );
+
+    const weekend = occurrences.filter((o) => {
+      const day = new Date(`${o.localOccurrence.slice(0, 10)}T00:00:00Z`).getUTCDay();
+      return day === 0 || day === 6;
+    });
+
+    expect(weekend).toEqual([]);
+    // 2026-01-15 to 2026-12-30 inclusive is 250 weekdays.
+    expect(occurrences).toHaveLength(250);
+  });
+});
+
 describe("mapCalendarRecurrenceKey", () => {
   it("maps by old occurrence ordinal instead of by materialized row count", () => {
     const oldRule = rule({ recurrence: "DAILY", recurrenceCount: 3 });

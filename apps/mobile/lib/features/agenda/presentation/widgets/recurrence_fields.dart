@@ -136,7 +136,8 @@ class RecurrenceFields extends StatelessWidget {
 /// as two different settings.
 String recurrenceLabel(CalendarRecurrence value) => switch (value) {
   CalendarRecurrence.none => 'Não repetir',
-  CalendarRecurrence.daily => 'Diariamente',
+  CalendarRecurrence.daily => 'Todos os dias',
+  CalendarRecurrence.weekdays => 'De segunda a sexta',
   CalendarRecurrence.weekly => 'Semanalmente',
   CalendarRecurrence.monthly => 'Mensal',
   CalendarRecurrence.yearly => 'Anual',

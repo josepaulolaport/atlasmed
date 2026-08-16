@@ -183,30 +183,8 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
       capacityUnknown: Number(row.capacity_unknown),
       workdayStart: String(row.workday_start),
       workdayEnd: String(row.workday_end),
-      lunchStart: String(row.lunch_start),
-      lunchMinutes: Number(row.lunch_minutes),
       maxGenerationsPerDay: Number(row.max_generations_per_day),
     };
-  }
-
-  /**
-   * How long this rep's lunch is, or null when they have never said.
-   *
-   * Null has to survive, and `Number(null)` is `0`. `->>` yields SQL NULL for a
-   * missing key, which arrives here as `null`, and zero is perfectly finite and
-   * inside the range — so every rep who had never chosen reported a break of no
-   * minutes. `hours.lunchMinutes ?? linhaParams.lunchMinutes` then never fired,
-   * and the linha's own 60-minute default has never applied to anybody: the
-   * engine reserved a zero-width block at midday and planned straight through
-   * it. An explicit zero is still honoured — a rep who works through lunch has
-   * said so.
-   */
-  static parseLunchMinutes(raw: unknown): number | null {
-    if (raw === null || raw === undefined) return null;
-    const minutes = Number(raw);
-    return Number.isFinite(minutes) && minutes >= 0 && minutes <= 240
-      ? minutes
-      : null;
   }
 
   async countAssignedProfiles(input: { userId: number; verticalId: number }): Promise<number> {
@@ -233,9 +211,7 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     const rows = await db.execute<Record<string, unknown>>(sql`
       select
         metadata -> 'preferences' ->> 'workdayStart' as workday_start,
-        metadata -> 'preferences' ->> 'workdayEnd'   as workday_end,
-        metadata -> 'preferences' ->> 'lunchStart'   as lunch_start,
-        metadata -> 'preferences' ->> 'lunchMinutes' as lunch_minutes
+        metadata -> 'preferences' ->> 'workdayEnd'   as workday_end
       from users where id = ${userId}
     `);
     const row = rows[0];
@@ -244,10 +220,6 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     return {
       workdayStart: time(row?.workday_start),
       workdayEnd: time(row?.workday_end),
-      lunchStart: time(row?.lunch_start),
-      lunchMinutes: DrizzleRoteiroRepository.parseLunchMinutes(
-        row?.lunch_minutes,
-      ),
     };
   }
 

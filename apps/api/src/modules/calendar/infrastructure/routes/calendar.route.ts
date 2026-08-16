@@ -23,7 +23,7 @@ const dateRangeSchema = z.object({
 const baseEvent = z.object({
   title: z.string().trim().min(1), startsAt: z.string().datetime({ offset: true }), timeZone: z.string().refine((value) => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "Invalid IANA time zone"),
   durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0, "durationMinutes must be a multiple of 30"),
-  recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"]), recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), recurrenceCount: z.number().int().positive().optional(),
+  recurrence: z.enum(["NONE", "DAILY", "WEEKDAYS", "WEEKLY", "MONTHLY", "YEARLY"]), recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), recurrenceCount: z.number().int().positive().optional(),
 }).refine((value) => !(value.recurrenceUntil && value.recurrenceCount), { path: ["recurrenceUntil"], message: "recurrenceUntil and recurrenceCount are mutually exclusive" });
 const createSchema = z.discriminatedUnion("kind", [
   baseEvent.extend({ kind: z.literal("INTERACTION"), facilityId: z.number().int().positive(), modality: z.enum(["IN_PERSON", "REMOTE"]) }),
@@ -31,7 +31,7 @@ const createSchema = z.discriminatedUnion("kind", [
 ]);
 const expectedVersionSchema = z.number().int().nonnegative();
 const updateSchema = z.object({ expectedVersion: expectedVersionSchema, title: z.string().trim().min(1).optional(), startsAt: z.string().datetime({ offset: true }).optional(),
-  timeZone: z.string().refine(validTimeZone, "Invalid IANA time zone").optional(), durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0, "durationMinutes must be a multiple of 30").optional(), recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
+  timeZone: z.string().refine(validTimeZone, "Invalid IANA time zone").optional(), durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0, "durationMinutes must be a multiple of 30").optional(), recurrence: z.enum(["NONE", "DAILY", "WEEKDAYS", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
   recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), recurrenceCount: z.number().int().positive().nullable().optional() })
   .superRefine((value, ctx) => {
     if (value.recurrenceUntil && value.recurrenceCount) ctx.addIssue({ code: "custom", path: ["recurrenceUntil"], message: "recurrenceUntil and recurrenceCount are mutually exclusive" });
@@ -58,7 +58,7 @@ async function context(input: any) {
 }
 
 const dateRangeType = t.Object({ from: t.String(), to: t.String(), ownerUserId: t.Optional(t.Number({ minimum: 1 })) });
-const createType = t.Object({ kind: t.Union([t.Literal("INTERACTION"), t.Literal("PERSONAL_BLOCK")]), title: t.String(), facilityId: t.Optional(t.Number({ minimum: 1 })), modality: t.Optional(t.Union([t.Literal("IN_PERSON"), t.Literal("REMOTE")])), startsAt: t.String(), timeZone: t.String(), durationMinutes: t.Number(), recurrence: t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")]), recurrenceUntil: t.Optional(t.String()), recurrenceCount: t.Optional(t.Number()) });
+const createType = t.Object({ kind: t.Union([t.Literal("INTERACTION"), t.Literal("PERSONAL_BLOCK")]), title: t.String(), facilityId: t.Optional(t.Number({ minimum: 1 })), modality: t.Optional(t.Union([t.Literal("IN_PERSON"), t.Literal("REMOTE")])), startsAt: t.String(), timeZone: t.String(), durationMinutes: t.Number(), recurrence: t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKDAYS"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")]), recurrenceUntil: t.Optional(t.String()), recurrenceCount: t.Optional(t.Number()) });
 
 export function createCalendarRoutes(useCases: CalendarHttpUseCases = calendarUseCases, authPlugin: any = auth) {
   // Security registry requires the production route to visibly declare `.use(auth)`;
@@ -73,7 +73,7 @@ export function createCalendarRoutes(useCases: CalendarHttpUseCases = calendarUs
     { body: createType, detail: { summary: "Create calendar event", tags: ["Calendar"], security: [{ bearerAuth: [] }] } });
   const update = new Elysia().use(authPlugin).use(requirePermission("update", "CALENDAR", { resourceIdParam: "id" })).patch("/calendar/:id", async (ctx) => {
     const body = parse(updateSchema, ctx.body); const { expectedVersion, ...changes } = body; return useCases.update().execute({ ...(await context(ctx)), id: ctx.params.id, idempotencyKey: commandKey(ctx.request.headers), expectedVersion, changes });
-  }, { params: calendarIdParams, body: t.Object({ expectedVersion: t.Number(), title: t.Optional(t.String()), startsAt: t.Optional(t.String()), timeZone: t.Optional(t.String()), durationMinutes: t.Optional(t.Number()), recurrence: t.Optional(t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")])), recurrenceUntil: t.Optional(t.Nullable(t.String())), recurrenceCount: t.Optional(t.Nullable(t.Number())) }), detail: { summary: "Update calendar series, including untouched materialized interactions", tags: ["Calendar"], security: [{ bearerAuth: [] }] } });
+  }, { params: calendarIdParams, body: t.Object({ expectedVersion: t.Number(), title: t.Optional(t.String()), startsAt: t.Optional(t.String()), timeZone: t.Optional(t.String()), durationMinutes: t.Optional(t.Number()), recurrence: t.Optional(t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKDAYS"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")])), recurrenceUntil: t.Optional(t.Nullable(t.String())), recurrenceCount: t.Optional(t.Nullable(t.Number())) }), detail: { summary: "Update calendar series, including untouched materialized interactions", tags: ["Calendar"], security: [{ bearerAuth: [] }] } });
   const updateOccurrence = new Elysia().use(authPlugin).use(requirePermission("update", "CALENDAR", { resourceIdParam: "id" })).patch("/calendar/:id/occurrences/:recurrenceKey", async (ctx) => useCases.updateOccurrence().execute({ ...(await context(ctx)), id: ctx.params.id, recurrenceKey: decodeURIComponent(ctx.params.recurrenceKey), idempotencyKey: commandKey(ctx.request.headers), ...parse(occurrenceUpdateSchema, ctx.body) }),
     { params: calendarOccurrenceParams, body: t.Object({ expectedVersion: t.Number(), startsAt: t.String(), durationMinutes: t.Number() }), detail: { summary: "Reschedule calendar occurrence", tags: ["Calendar"], security: [{ bearerAuth: [] }] } });
   const cancel = new Elysia().use(authPlugin).use(requirePermission("delete", "CALENDAR", { resourceIdParam: "id" })).delete("/calendar/:id", async (ctx) => useCases.cancel().execute({ ...(await context(ctx)), id: ctx.params.id, idempotencyKey: commandKey(ctx.request.headers), ...parse(cancellationSchema, ctx.body) }),

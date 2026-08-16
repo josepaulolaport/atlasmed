@@ -12,8 +12,6 @@ class UserPreferences extends Equatable {
     required this.smsNotificationsEnabled,
     this.workdayStart,
     this.workdayEnd,
-    this.lunchStart,
-    this.lunchMinutes,
   });
 
   final UserPreferenceTheme theme;
@@ -25,8 +23,6 @@ class UserPreferences extends Equatable {
   /// falls back to the linha's hours rather than freezing today's default.
   final String? workdayStart;
   final String? workdayEnd;
-  final String? lunchStart;
-  final int? lunchMinutes;
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     return UserPreferences(
@@ -42,8 +38,6 @@ class UserPreferences extends Equatable {
           json['smsNotificationsEnabled'] as bool? ?? false,
       workdayStart: json['workdayStart'] as String?,
       workdayEnd: json['workdayEnd'] as String?,
-      lunchStart: json['lunchStart'] as String?,
-      lunchMinutes: (json['lunchMinutes'] as num?)?.toInt(),
     );
   }
 
@@ -58,8 +52,6 @@ class UserPreferences extends Equatable {
     'smsNotificationsEnabled': smsNotificationsEnabled,
     'workdayStart': workdayStart,
     'workdayEnd': workdayEnd,
-    'lunchStart': lunchStart,
-    'lunchMinutes': lunchMinutes,
   };
 
   @override
@@ -70,8 +62,6 @@ class UserPreferences extends Equatable {
     smsNotificationsEnabled,
     workdayStart,
     workdayEnd,
-    lunchStart,
-    lunchMinutes,
   ];
 }
 
@@ -83,8 +73,6 @@ class UpdateUserPreferencesPayload {
     this.smsNotificationsEnabled,
     this.workdayStart,
     this.workdayEnd,
-    this.lunchStart,
-    this.lunchMinutes,
     this.includeWorkingHours = false,
   });
 
@@ -101,8 +89,6 @@ class UpdateUserPreferencesPayload {
   final bool? smsNotificationsEnabled;
   final String? workdayStart;
   final String? workdayEnd;
-  final String? lunchStart;
-  final int? lunchMinutes;
 
   Map<String, dynamic> toJson() => {
     if (theme != null) 'theme': theme!.name,
@@ -115,8 +101,6 @@ class UpdateUserPreferencesPayload {
     if (includeWorkingHours) ...{
       'workdayStart': workdayStart,
       'workdayEnd': workdayEnd,
-      'lunchStart': lunchStart,
-      'lunchMinutes': lunchMinutes,
     },
   };
 }

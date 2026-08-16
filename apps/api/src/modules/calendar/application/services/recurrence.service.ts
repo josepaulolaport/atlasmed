@@ -1,6 +1,7 @@
 export type CalendarRecurrence =
   | "NONE"
   | "DAILY"
+  | "WEEKDAYS"
   | "WEEKLY"
   | "MONTHLY"
   | "YEARLY";
@@ -368,6 +369,28 @@ function parseTime(value: string): Pick<LocalDateTime, "hour" | "minute"> {
   return { hour, minute };
 }
 
+const WEEKDAYS_PER_WEEK = 5;
+
+/** Monday 0 … Friday 4, or undefined at the weekend. */
+function weekdayOrdinal(date: LocalDate): number | undefined {
+  const day = new Date(dateOrdinal(date)).getUTCDay();
+  return day >= 1 && day <= 5 ? day - 1 : undefined;
+}
+
+/**
+ * Where a weekdays series actually begins.
+ *
+ * A rep can draw a block on a Saturday and ask for it every weekday; the first
+ * occurrence is the Monday after, not the Saturday. Every other recurrence has
+ * occurrence zero on the anchor date, and this is the one that cannot.
+ */
+function weekdayAnchor(anchor: LocalDate): LocalDate {
+  const day = new Date(dateOrdinal(anchor)).getUTCDay();
+  if (day === 6) return addDays(anchor, 2);
+  if (day === 0) return addDays(anchor, 1);
+  return anchor;
+}
+
 function occurrenceDate(
   anchor: LocalDate,
   recurrence: CalendarRecurrence,
@@ -378,6 +401,16 @@ function occurrenceDate(
       return anchor;
     case "DAILY":
       return addDays(anchor, index);
+    case "WEEKDAYS": {
+      // Count in weekdays, then convert back to calendar days: five steps
+      // forward is one week later, and Friday + 1 is Monday.
+      const base = weekdayAnchor(anchor);
+      const first = weekdayOrdinal(base) ?? 0;
+      const total = first + index;
+      const weeks = Math.floor(total / WEEKDAYS_PER_WEEK);
+      const dayOfWeek = total % WEEKDAYS_PER_WEEK;
+      return addDays(base, weeks * 7 + (dayOfWeek - first));
+    }
     case "WEEKLY":
       return addDays(anchor, index * 7);
     case "MONTHLY": {
@@ -445,6 +478,14 @@ function lastOccurrenceIndexOnOrBefore(
     case "DAILY":
       estimate = Math.floor((dateOrdinal(until) - dateOrdinal(anchor)) / DAY_MS);
       break;
+    // Deliberately generous: the loop below only ever walks an estimate down,
+    // so overshooting is safe and undershooting would truncate the series.
+    case "WEEKDAYS":
+      estimate =
+        Math.ceil((dateOrdinal(until) - dateOrdinal(anchor)) / (7 * DAY_MS)) *
+          WEEKDAYS_PER_WEEK +
+        WEEKDAYS_PER_WEEK;
+      break;
     case "WEEKLY":
       estimate = Math.floor(
         (dateOrdinal(until) - dateOrdinal(anchor)) / (7 * DAY_MS)
@@ -481,6 +522,19 @@ function occurrenceIndex(
     case "DAILY":
       index = (dateOrdinal(localDate) - dateOrdinal(anchor)) / DAY_MS;
       break;
+    case "WEEKDAYS": {
+      const base = weekdayAnchor(anchor);
+      const first = weekdayOrdinal(base) ?? 0;
+      const target = weekdayOrdinal(localDate);
+      // A Saturday is not the nth weekday of anything.
+      if (target === undefined) return undefined;
+      const weeks = Math.round(
+        (dateOrdinal(localDate) - dateOrdinal(base) - (target - first) * DAY_MS) /
+          (7 * DAY_MS)
+      );
+      index = weeks * WEEKDAYS_PER_WEEK + (target - first);
+      break;
+    }
     case "WEEKLY":
       index = (dateOrdinal(localDate) - dateOrdinal(anchor)) / (7 * DAY_MS);
       break;
@@ -514,6 +568,15 @@ function estimateFirstIndex(
   switch (rule.recurrence) {
     case "DAILY":
       estimate = Math.floor((dateOrdinal(local) - dateOrdinal(anchor)) / DAY_MS);
+      break;
+    // Deliberately conservative, for the mirror-image reason: the caller only
+    // walks this forward, so undershooting costs a few iterations and
+    // overshooting would skip occurrences at the start of the range.
+    case "WEEKDAYS":
+      estimate =
+        Math.floor((dateOrdinal(local) - dateOrdinal(anchor)) / (7 * DAY_MS)) *
+          WEEKDAYS_PER_WEEK -
+        WEEKDAYS_PER_WEEK;
       break;
     case "WEEKLY":
       estimate = Math.floor(

@@ -64,8 +64,6 @@ class FakeRepository implements RoteiroRepository {
   workingHours: RepWorkingHours = {
     workdayStart: null,
     workdayEnd: null,
-    lunchStart: null,
-    lunchMinutes: null,
   };
   async findWorkingHours(): Promise<RepWorkingHours> {
     return this.workingHours;
@@ -687,8 +685,6 @@ describe("GenerateRoteiroUseCase", () => {
     repository.workingHours = {
       workdayStart: null,
       workdayEnd: "14:00",
-      lunchStart: null,
-      lunchMinutes: null,
     };
     const useCase = new GenerateRoteiroUseCase({ repository });
 
@@ -711,22 +707,22 @@ describe("GenerateRoteiroUseCase", () => {
     repository.workingHours = {
       workdayStart: null,
       workdayEnd: "20:00",
-      lunchStart: null,
-      lunchMinutes: null,
     };
     const useCase = new GenerateRoteiroUseCase({ repository });
 
     const result = await useCase.execute(baseInput({ limit: 5 }));
 
-    // The linha's 12:00 lunch still applies: nothing may be scheduled inside it.
-    const lunchStart = new Date("2026-08-17T12:00:00-03:00").getTime();
-    const lunchEnd = lunchStart + 60 * 60_000;
-    for (const stop of result.stops) {
-      const clashes =
-        stop.plannedStartsAt.getTime() < lunchEnd &&
-        lunchStart < stop.plannedEndsAt.getTime();
-      expect(clashes).toBe(false);
-    }
+    // The rep's 20:00 stands, and the linha's 08:00 fills the half they left
+    // alone — so the day runs past the linha's own 18:00 end.
+    expect(result.stops.length).toBeGreaterThan(0);
+    const first = result.stops[0]!;
+    const last = result.stops[result.stops.length - 1]!;
+    expect(first.plannedStartsAt.getTime()).toBeGreaterThanOrEqual(
+      new Date("2026-08-17T08:00:00-03:00").getTime(),
+    );
+    expect(last.plannedEndsAt.getTime()).toBeLessThanOrEqual(
+      new Date("2026-08-17T20:00:00-03:00").getTime(),
+    );
   });
 
   it("plans with the measured visit length once enough visits are timed", async () => {
@@ -1092,7 +1088,51 @@ describe("GenerateRoteiroUseCase", () => {
     expect(result.notices.map((n) => n.code)).toContain("NO_CANDIDATES");
   });
 
-  it("does not schedule a visit through lunch", async () => {
+  it("does not schedule a visit through a lunch block", async () => {
+    // Lunch is a personal block on the rep's own calendar, not a parameter.
+    // It was a pair of preference fields that could only ever say one time for
+    // every day; as a block a rep can move it when a morning overruns, drop it
+    // on a day they eat on the road, and — unlike a preference — see it.
+    //
+    // Nothing in the engine knows it is lunch. A personal block carries no
+    // facility, so it holds the clock without anchoring the route, which is
+    // exactly what a lunch break is.
+    const repository = new FakeRepository(
+      Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const lunchStart = new Date("2026-08-17T12:00:00-03:00");
+    const lunchEnd = new Date("2026-08-17T13:00:00-03:00");
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: lunchStart.toISOString(),
+            endsAt: lunchEnd.toISOString(),
+          },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T11:40:00-03:00") }),
+    );
+
+    expect(result.stops.length).toBeGreaterThan(0);
+    for (const stop of result.stops) {
+      const overlaps =
+        stop.plannedStartsAt.getTime() < lunchEnd.getTime() &&
+        stop.plannedEndsAt.getTime() > lunchStart.getTime();
+      expect(overlaps).toBe(false);
+    }
+  });
+
+  it("plans straight through midday when no lunch block exists", async () => {
+    // The consequence of the rep's own calendar being the only source of truth:
+    // nobody gets a lunch they did not ask for. The linha used to hand every
+    // rep 60 minutes at 12:00 whether or not they wanted it — and a bug meant
+    // it never actually reached anyone, so this is closer to what shipped than
+    // the old default was.
     const repository = new FakeRepository(
       Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
     );
@@ -1102,12 +1142,14 @@ describe("GenerateRoteiroUseCase", () => {
       baseInput({ now: new Date("2026-08-17T11:40:00-03:00") }),
     );
 
-    const lunchStart = new Date("2026-08-17T12:00:00-03:00").getTime();
-    const lunchEnd = new Date("2026-08-17T13:00:00-03:00").getTime();
-    for (const stop of result.stops) {
-      const overlaps =
-        stop.plannedStartsAt.getTime() < lunchEnd && stop.plannedEndsAt.getTime() > lunchStart;
-      expect(overlaps).toBe(false);
-    }
+    const noon = new Date("2026-08-17T12:00:00-03:00").getTime();
+    const one = new Date("2026-08-17T13:00:00-03:00").getTime();
+    const acrossMidday = result.stops.some(
+      (stop) =>
+        stop.plannedStartsAt.getTime() < one &&
+        stop.plannedEndsAt.getTime() > noon,
+    );
+
+    expect(acrossMidday).toBe(true);
   });
 });

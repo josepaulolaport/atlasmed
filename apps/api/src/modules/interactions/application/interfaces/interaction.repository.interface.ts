@@ -42,7 +42,7 @@ export interface InteractionDetailRecord {
     anchorLocalTime: string;
     timeZone: string;
     durationMinutes: number;
-    recurrence: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+    recurrence: "NONE" | "DAILY" | "WEEKDAYS" | "WEEKLY" | "MONTHLY" | "YEARLY";
     recurrenceUntil: string | null;
     recurrenceCount: number | null;
     status: "ACTIVE" | "CANCELLED";

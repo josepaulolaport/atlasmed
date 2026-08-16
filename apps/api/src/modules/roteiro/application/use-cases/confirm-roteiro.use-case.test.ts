@@ -63,8 +63,6 @@ class FakeRepository implements RoteiroRepository {
   workingHours: RepWorkingHours = {
     workdayStart: null,
     workdayEnd: null,
-    lunchStart: null,
-    lunchMinutes: null,
   };
   async findWorkingHours(): Promise<RepWorkingHours> {
     return this.workingHours;

@@ -29,8 +29,6 @@ const userPreferencesShape = z
      */
     workdayStart: z.string().regex(TIME_OF_DAY).nullable().default(null),
     workdayEnd: z.string().regex(TIME_OF_DAY).nullable().default(null),
-    lunchStart: z.string().regex(TIME_OF_DAY).nullable().default(null),
-    lunchMinutes: z.number().int().min(0).max(240).nullable().default(null),
   })
   .strict();
 

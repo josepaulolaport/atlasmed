@@ -869,6 +869,20 @@
       "when": 1786885598025,
       "tag": "0123_roteiro_supersede_after_confirm",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1786903683211,
+      "tag": "0124_calendar_weekdays_recurrence",
+      "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1786904464692,
+      "tag": "0125_drop_roteiro_lunch_params",
+      "breakpoints": true
     }
   ]
 }

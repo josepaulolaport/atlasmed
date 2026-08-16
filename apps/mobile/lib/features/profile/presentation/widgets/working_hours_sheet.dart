@@ -13,6 +13,12 @@ import 'package:flutter/material.dart';
 /// Leaving a field on "padrão da linha" is a real answer, not an empty one: it
 /// keeps following the linha when the linha changes, which is what someone who
 /// has no opinion actually wants.
+///
+/// Lunch is deliberately **not** here. It used to be two preference fields —
+/// a start and a duration — which could only ever say one time for every day,
+/// could not be moved when a morning overran, and were invisible on the
+/// agenda. It is a personal block on the rep's own calendar now, which the
+/// engine already plans around like any other commitment.
 class WorkingHoursSheet extends StatefulWidget {
   const WorkingHoursSheet({super.key, required this.current});
 
@@ -25,20 +31,8 @@ class WorkingHoursSheet extends StatefulWidget {
 class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
   late String? _start = widget.current.workdayStart;
   late String? _end = widget.current.workdayEnd;
-  late String? _lunch = widget.current.lunchStart;
 
-  /// How long lunch lasts, which the roteiro engine blocks out of the day.
-  ///
-  /// The sheet asked when lunch *starts* and never how long it runs, so the
-  /// stored value stayed at whatever it was — zero, for every rep — and the
-  /// engine reserved a lunch of no minutes and planned visits straight through
-  /// it. Asking when it begins without asking how long is the one combination
-  /// that cannot mean anything.
-  late int _lunchMinutes = widget.current.lunchMinutes ?? 0;
-
-  static const _linhaDefaults = (start: '08:00', end: '18:00', lunch: '12:00');
-
-  static const _lunchChoices = [0, 30, 45, 60, 90];
+  static const _linhaDefaults = (start: '08:00', end: '18:00');
 
   Future<void> _pick(
     String? value,
@@ -122,32 +116,13 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               ),
               onClear: _end == null ? null : () => setState(() => _end = null),
             ),
-            _HourRow(
-              label: 'Almoço',
-              value: _lunch,
-              fallback: _linhaDefaults.lunch,
-              onPick: () => _pick(
-                _lunch,
-                _linhaDefaults.lunch,
-                'Começo do almoço',
-                (v) => setState(() => _lunch = v),
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text(
+                'Almoço e outras pausas são bloqueios na sua agenda — '
+                'marque um e o roteiro passa ao redor dele.',
+                style: TextStyle(fontSize: 12, color: AppColors.gray500),
               ),
-              onClear: _lunch == null
-                  ? null
-                  : () => setState(() => _lunch = null),
-            ),
-            _DurationRow(
-              label: 'Duração do almoço',
-              minutes: _lunchMinutes,
-              onPick: () async {
-                final chosen = await showDurationWheelPicker(
-                  context,
-                  initial: _lunchMinutes,
-                  options: _lunchChoices,
-                  subtitle: 'O roteiro não sugere visitas nesse intervalo.',
-                );
-                if (chosen != null) setState(() => _lunchMinutes = chosen);
-              },
             ),
             if (!_ordered)
               const Padding(
@@ -166,8 +141,6 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
                         includeWorkingHours: true,
                         workdayStart: _start,
                         workdayEnd: _end,
-                        lunchStart: _lunch,
-                        lunchMinutes: _lunchMinutes,
                       ),
                     )
                   : null,
@@ -178,49 +151,6 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
       ),
     );
   }
-}
-
-/// How long lunch lasts. Matches `_HourRow`, minus the reset — there is no
-/// linha default to fall back to, so zero is a real answer meaning "no break".
-class _DurationRow extends StatelessWidget {
-  const _DurationRow({
-    required this.label,
-    required this.minutes,
-    required this.onPick,
-  });
-
-  final String label;
-  final int minutes;
-  final VoidCallback onPick;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: AppColors.gray800),
-          ),
-        ),
-        Text(
-          minutes == 0 ? 'Sem pausa' : formatDurationLabel(minutes),
-          style: TextStyle(
-            fontSize: minutes == 0 ? 13 : 14,
-            fontWeight: minutes == 0 ? FontWeight.w400 : FontWeight.w600,
-            color: minutes == 0 ? AppColors.gray500 : AppColors.gray900,
-          ),
-        ),
-        IconButton(
-          tooltip: 'Escolher',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          onPressed: onPick,
-        ),
-      ],
-    ),
-  );
 }
 
 class _HourRow extends StatelessWidget {

@@ -6,7 +6,7 @@ enum CalendarEventKind { interaction, personalBlock }
 
 enum CalendarModality { inPerson, remote }
 
-enum CalendarRecurrence { none, daily, weekly, monthly, yearly }
+enum CalendarRecurrence { none, daily, weekdays, weekly, monthly, yearly }
 
 enum InteractionStatus {
   scheduled,

@@ -81,8 +81,6 @@ export interface RoteiroParams {
   capacityUnknown: number;
   workdayStart: string;
   workdayEnd: string;
-  lunchStart: string;
-  lunchMinutes: number;
   maxGenerationsPerDay: number;
 }
 
@@ -180,8 +178,6 @@ export interface ObservedServiceMinutes {
 export interface RepWorkingHours {
   workdayStart: string | null;
   workdayEnd: string | null;
-  lunchStart: string | null;
-  lunchMinutes: number | null;
 }
 
 export interface ScoreCandidatesInput {

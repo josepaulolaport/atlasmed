@@ -49,8 +49,6 @@ export const userPreferencesBody = t.Object({
   // unsendable — spec 0016 §15.5.5.
   workdayStart: t.Optional(t.Nullable(t.String())),
   workdayEnd: t.Optional(t.Nullable(t.String())),
-  lunchStart: t.Optional(t.Nullable(t.String())),
-  lunchMinutes: t.Optional(t.Nullable(t.Number())),
 });
 
 export const userRoute = new Elysia({

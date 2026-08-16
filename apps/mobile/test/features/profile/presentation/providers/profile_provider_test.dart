@@ -24,7 +24,6 @@ class _MemoryCacheStorage extends RepositoryCacheStorage {
 UserPreferences _prefs({
   String? workdayStart,
   String? workdayEnd,
-  int? lunchMinutes,
 }) => UserPreferences(
   theme: UserPreferenceTheme.system,
   pushNotificationsEnabled: true,
@@ -32,31 +31,17 @@ UserPreferences _prefs({
   smsNotificationsEnabled: false,
   workdayStart: workdayStart,
   workdayEnd: workdayEnd,
-  lunchMinutes: lunchMinutes,
 );
 
 void main() {
   BaseRepository.storage = const _MemoryCacheStorage();
 
   group('workingHoursSummary', () {
-    test('says the lunch break is reserved, and for how long', () {
-      // The engine blocks `lunchMinutes` out of the day, so whether it is
-      // reserved at all belongs on the row the rep reads.
+    test('reads back the hours the rep chose', () {
+      // Lunch is deliberately absent: it is a block on the rep's calendar, not
+      // a preference, so this row is only ever about the ends of the day.
       expect(
-        workingHoursSummary(
-          _prefs(workdayStart: '09:00', workdayEnd: '18:00', lunchMinutes: 60),
-        ),
-        '09:00–18:00 · almoço 1h',
-      );
-    });
-
-    test('stays silent when no lunch is reserved', () {
-      // Zero was every rep's stored value, because the sheet asked when lunch
-      // started and never how long it ran.
-      expect(
-        workingHoursSummary(
-          _prefs(workdayStart: '09:00', workdayEnd: '18:00', lunchMinutes: 0),
-        ),
+        workingHoursSummary(_prefs(workdayStart: '09:00', workdayEnd: '18:00')),
         '09:00–18:00',
       );
     });

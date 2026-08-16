@@ -25,6 +25,10 @@ export const calendarEventKindEnum = pgEnum("calendar_event_kind", [
 export const calendarRecurrenceEnum = pgEnum("calendar_recurrence", [
   "NONE",
   "DAILY",
+  // Monday to Friday. Added for lunch, which a rep sets once and moves when a
+  // day needs it — but a working day is the unit most of a rep's repeating
+  // commitments are measured in, so DAILY was never the right shape for them.
+  "WEEKDAYS",
   "WEEKLY",
   "MONTHLY",
   "YEARLY",

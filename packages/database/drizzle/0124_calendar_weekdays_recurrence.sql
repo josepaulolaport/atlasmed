@@ -1,0 +1,1 @@
+ALTER TYPE "public"."calendar_recurrence" ADD VALUE 'WEEKDAYS' BEFORE 'WEEKLY';
