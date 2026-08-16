@@ -37,31 +37,21 @@ class ProductsProductCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.surfaceSecondary),
-                ),
-                child: const Icon(
-                  Icons.medication_liquid_outlined,
-                  size: 34,
-                  color: AppColors.gray300,
-                ),
-              ),
-              const SizedBox(width: 12),
+              // No thumbnail. `CatalogFamily` has no image field and never
+              // has, so this was a 72pt grey pill icon repeated down the
+              // list — a quarter of the card's width spent on nothing, and
+              // the reason every product name was cut off after one line.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       family.name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14,
+                        height: 1.25,
                         fontWeight: FontWeight.w700,
                         color: AppColors.navyDeep,
                         letterSpacing: -0.1,

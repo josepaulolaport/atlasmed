@@ -125,7 +125,9 @@ void main() {
 
       expect(find.text('Frete'), findsOneWidget);
       expect(find.text('R\$ 1,00'), findsOneWidget);
-      expect(find.text('R\$ 1001,00'), findsOneWidget);
+      // Grouped: one BRL formatter across the app now, and this one used to
+      // print "R$ 1001,00".
+      expect(find.text('R\$ 1.001,00'), findsOneWidget);
     });
 
     testWidgets('says nothing about freight when there is none', (

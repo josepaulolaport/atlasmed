@@ -581,6 +581,49 @@ Future<void> showSortFilterSheet(
   );
 }
 
+/// How the Produtos list is ordered.
+///
+/// The screen's filter button was wired to `() {}` — a control on the busiest
+/// row of the screen that did nothing, while the three other catalog screens
+/// using the same bar all open a real sheet. Their sheet sorts by ICMS
+/// column, which a family list has no notion of; this is the ordering that
+/// list can actually offer, and price is on every card already.
+enum ProductFamilySort {
+  name('Nome (A–Z)'),
+  priceAscending('Menor preço'),
+  priceDescending('Maior preço');
+
+  const ProductFamilySort(this.label);
+
+  final String label;
+}
+
+Future<void> showProductSortSheet(
+  BuildContext context, {
+  required ProductFamilySort current,
+  required ValueChanged<ProductFamilySort> onSelect,
+}) {
+  return showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => _FilterSheetShell(
+      title: 'ORDENAR POR',
+      children: [
+        for (final sort in ProductFamilySort.values)
+          _FilterOptionRow(
+            key: Key('product-sort-${sort.name}'),
+            label: sort.label,
+            selected: current == sort,
+            onTap: () {
+              onSelect(sort);
+              Navigator.pop(sheetContext);
+            },
+          ),
+      ],
+    ),
+  );
+}
+
 /// Shared chrome for the catalog's filter sheets: drag handle, small caps
 /// title, and whatever option rows the caller supplies.
 class _FilterSheetShell extends StatelessWidget {
@@ -642,6 +685,7 @@ class _FilterOptionRow extends StatelessWidget {
   final VoidCallback onTap;
 
   const _FilterOptionRow({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,

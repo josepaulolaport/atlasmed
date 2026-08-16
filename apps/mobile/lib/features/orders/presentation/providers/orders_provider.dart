@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
@@ -19,8 +20,11 @@ OrderStatus _orderStatusFromApi(String status) => orderStatusFromJson(status);
 
 String _formatDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-String formatOrderCurrency(double value) =>
-    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+
+/// Kept as a name the orders screens already call, now over the one BRL
+/// formatter — this rolled its own and lost the thousands separator, so a
+/// five-figure order read "R$ 12500,00".
+String formatOrderCurrency(double value) => brl(value);
 
 /// How many orders one request asks for. The route ceilings this at 100.
 const int ordersPageSize = 20;
