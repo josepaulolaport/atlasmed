@@ -18,7 +18,7 @@ import {
   personFacilityClassifications,
   unitSubtypes,
 } from "@atlasmed/database";
-import { eq, and, isNull, isNotNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
+import { eq, ne, and, isNull, isNotNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { alias as aliasedTable } from "drizzle-orm/pg-core";
 import { expandAddressAbbreviations } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
@@ -1377,7 +1377,11 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         legalDocument: row.legalDocument,
         legalDocumentType: row.legalDocumentType,
         cnesCode: row.cnesCode,
-        deactivatedAt: (row.deactivatedAt ?? new Date()).toISOString(),
+        // The query filters `deactivated_at IS NOT NULL`, so this is never
+        // null. Asserted rather than defaulted: the previous `?? new Date()`
+        // would have quietly reported an impossible row as "deactivated just
+        // now", which reads as fact and is not one.
+        deactivatedAt: row.deactivatedAt!.toISOString(),
         blockedByFacilityId: row.blockedByFacilityId ?? null,
       })),
       total: Number(countRows[0]?.count ?? 0),
@@ -1397,6 +1401,25 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .where(eq(facilities.id, id))
       .limit(1);
     return row ?? null;
+  }
+
+  async findActiveCnpjHolder(input: {
+    legalDocument: string;
+    excludeFacilityId: number;
+  }): Promise<number | null> {
+    const [row] = await db
+      .select({ id: facilities.id })
+      .from(facilities)
+      .where(
+        and(
+          eq(facilities.legalDocument, input.legalDocument),
+          eq(facilities.legalDocumentType, "CNPJ"),
+          isNull(facilities.deactivatedAt),
+          ne(facilities.id, input.excludeFacilityId)
+        )
+      )
+      .limit(1);
+    return row?.id ?? null;
   }
 
   async reactivate(id: number): Promise<FacilityRecord> {

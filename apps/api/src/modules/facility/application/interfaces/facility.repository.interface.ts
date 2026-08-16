@@ -332,6 +332,21 @@ export interface FacilityRepository {
     deactivatedAt: Date | null;
   } | null>;
 
+  /**
+   * The active clinic holding this CNPJ, if any — the one thing that can stop a
+   * reactivation, because `facilities_active_legal_document_cnpj_uidx` is
+   * unique among active rows.
+   *
+   * A direct lookup rather than a search: the first attempt reused
+   * `listDeactivated({ search: cnpj, limit: 1 })` and then picked its own row
+   * out of the result, which silently found nothing whenever any other
+   * deactivated clinic sorted ahead of it.
+   */
+  findActiveCnpjHolder(input: {
+    legalDocument: string;
+    excludeFacilityId: number;
+  }): Promise<number | null>;
+
   reactivate(id: number): Promise<FacilityRecord>;
 
   findIdsByTerritoryIds(territoryIds: number[]): Promise<number[]>;

@@ -688,15 +688,10 @@ export class ReactivateFacilityUseCase {
     }
 
     if (existing.legalDocumentType === "CNPJ" && existing.legalDocument) {
-      const { facilities: sameDocument } =
-        await this.deps.facilityRepository.listDeactivated({
-          search: existing.legalDocument,
-          limit: 1,
-          offset: 0,
-        });
-      const blocker = sameDocument.find(
-        (row) => row.id === existing.id
-      )?.blockedByFacilityId;
+      const blocker = await this.deps.facilityRepository.findActiveCnpjHolder({
+        legalDocument: existing.legalDocument,
+        excludeFacilityId: existing.id,
+      });
       if (blocker) {
         throw new OperationNotAllowedError(
           "reactivate_facility",

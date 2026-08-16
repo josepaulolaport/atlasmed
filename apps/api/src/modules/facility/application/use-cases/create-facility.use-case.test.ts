@@ -149,6 +149,7 @@ function inMemoryRepository(): FacilityRepository & {
     },
     findAllByIds: async () => [],
     listDeactivated: async () => ({ facilities: [], total: 0 }),
+    findActiveCnpjHolder: async () => null,
     findByIdIncludingDeactivated: async () => null,
     registryHasEstablishment: async () => true,
     findById: async (id) => stored.get(id) ?? null,

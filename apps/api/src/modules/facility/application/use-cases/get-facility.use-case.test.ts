@@ -88,6 +88,7 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
   return {
     findAll: async () => ({ facilities: [], total: 0 }),
     listDeactivated: async () => ({ facilities: [], total: 0 }),
+    findActiveCnpjHolder: async () => null,
     findByIdIncludingDeactivated: async () => null,
     findAllByIds: async () => [],
     registryHasEstablishment: async () => true,
