@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
@@ -55,25 +57,54 @@ class _NaoConformidadesListScreenState
     }
   }
 
+  Timer? _hintTimer;
+
+  @override
+  void dispose() {
+    _hintTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _refreshQueue() async {
     ref.invalidate(opsNaoConformidadesProvider(_opsStatus));
     await ref.read(opsNaoConformidadesProvider(_opsStatus).future);
     if (!mounted) return;
     setState(() => _showUpdatedHint = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1600));
-    if (!mounted) return;
-    setState(() => _showUpdatedHint = false);
+    // On a timer rather than awaited: the RefreshIndicator hides its spinner
+    // when this future completes, so awaiting the badge's own lifetime kept
+    // the list spinning for 1.6s after the data had already arrived.
+    _hintTimer?.cancel();
+    _hintTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (mounted) setState(() => _showUpdatedHint = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final asyncQueue = ref.watch(opsNaoConformidadesProvider(_opsStatus));
     final allItems = asyncQueue.valueOrNull;
-    final pendingCount =
-        allItems
-            ?.where((e) => e.status == NaoConformidadeStatus.pending)
-            .length ??
-        0;
+
+    // Counts what the chips are showing. It counted pending regardless of the
+    // filter, so "Aceitas" with five accepted suggestions on screen still read
+    // "Nenhuma sugestão aguardando análise". Null when the count is zero: the
+    // body's empty state says that, and the two said it at once in different
+    // words.
+    final visibleCount = allItems == null
+        ? null
+        : _applyFilter(allItems).length;
+    final countLabel = allItems == null
+        ? 'Carregando sugestões…'
+        : visibleCount == 0
+        ? null
+        : switch (_filter) {
+            'Pendentes' => '$visibleCount aguardando análise',
+            'Aceitas' =>
+              '$visibleCount ${visibleCount == 1 ? 'aceita' : 'aceitas'}',
+            'Rejeitadas' =>
+              '$visibleCount ${visibleCount == 1 ? 'rejeitada' : 'rejeitadas'}',
+            _ =>
+              '$visibleCount ${visibleCount == 1 ? 'sugestão' : 'sugestões'}',
+          };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -109,11 +140,7 @@ class _NaoConformidadesListScreenState
                       children: [
                         Expanded(
                           child: Text(
-                            allItems == null
-                                ? 'Carregando sugestões…'
-                                : pendingCount == 0
-                                ? 'Nenhuma sugestão aguardando análise'
-                                : '$pendingCount aguardando análise',
+                            countLabel ?? '',
                             style: const TextStyle(
                               fontSize: 13,
                               color: AppColors.gray500,
@@ -159,17 +186,14 @@ class _NaoConformidadesListScreenState
                         padding: EdgeInsets.only(top: 8),
                         child: SuggestionListSkeleton(),
                       ),
-                      error: (error, _) => Padding(
+                      error: (_, _) => Padding(
                         padding: const EdgeInsets.only(top: 24),
-                        child: _ErrorState(
-                          message: error.toString(),
-                          onRetry: _refreshQueue,
-                        ),
+                        child: _ErrorState(onRetry: _refreshQueue),
                       ),
                       data: (all) {
                         final queue = _applyFilter(all);
                         if (queue.isEmpty) {
-                          return const _EmptyFilterState();
+                          return _EmptyFilterState(filter: _filter);
                         }
                         return Column(
                           children: [
@@ -228,41 +252,71 @@ class _UpdatedHint extends StatelessWidget {
   }
 }
 
+/// An empty queue, named for the filter that is empty.
+///
+/// It said "Nenhuma sugestão neste filtro" for all four, while the header
+/// above the chips said "Nenhuma sugestão aguardando análise" at the same
+/// time — the same fact twice, in different words, one of them wrong on three
+/// of the four filters. Its second line was "Puxe para baixo para atualizar":
+/// an instruction where the reason should be.
 class _EmptyFilterState extends StatelessWidget {
-  const _EmptyFilterState();
+  const _EmptyFilterState({required this.filter});
+
+  final String filter;
 
   @override
   Widget build(BuildContext context) {
+    final (title, detail) = switch (filter) {
+      'Pendentes' => (
+        'Nada aguardando análise',
+        'As sugestões enviadas pela equipe aparecem aqui.',
+      ),
+      'Aceitas' => (
+        'Nenhuma sugestão aceita',
+        'As sugestões que você aceitar aparecem aqui.',
+      ),
+      'Rejeitadas' => (
+        'Nenhuma sugestão rejeitada',
+        'As sugestões que você rejeitar aparecem aqui.',
+      ),
+      _ => (
+        'Nenhuma sugestão ainda',
+        'As sugestões enviadas pela equipe aparecem aqui.',
+      ),
+    };
+
     return Padding(
       padding: const EdgeInsets.only(top: 40),
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
-              color: AppColors.blueLight,
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.surfaceSecondary),
             ),
             child: const Icon(
               Icons.inbox_outlined,
-              size: 26,
-              color: AppColors.navyBright,
+              size: 32,
+              color: AppColors.navyDeep,
             ),
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Nenhuma sugestão neste filtro',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray700,
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.gray800,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Puxe para baixo para atualizar',
-            style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
+          Text(
+            detail,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
         ],
       ),
@@ -271,9 +325,11 @@ class _EmptyFilterState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({required this.onRetry});
 
-  final String message;
+  /// The raw exception was printed here as the second line.
+  static const message = 'Verifique a conexão e tente de novo.';
+
   final VoidCallback onRetry;
 
   @override
