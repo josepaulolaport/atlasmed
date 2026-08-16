@@ -844,10 +844,21 @@ class CalendarConflict extends Equatable {
   final CalendarConflictInterval candidate;
   final CalendarConflictInterval existing;
 
+  /// Ids are read leniently; the times are what the message is made of.
+  ///
+  /// A conflict on *create* names its candidate `candidate:<idempotency-key>`,
+  /// because the thing being created has no id yet. Demanding a CRM id there
+  /// threw, the throw was caught where the whole error payload is parsed, and
+  /// the conflict list came back empty — so the rep was told "o horário
+  /// solicitado está indisponível" while the server had already said which
+  /// appointment was in the way and when. Reproduced on device.
+  ///
+  /// Lenient, not permissive: a key string still reads as null rather than
+  /// being coerced into an id nothing can look up.
   factory CalendarConflict.fromJson(Map<String, dynamic> json) =>
       CalendarConflict(
         candidate: CalendarConflictInterval(
-          id: readCrmIdOrNull(json['candidateId'], 'candidateId'),
+          id: readCrmIdLoose(json['candidateId']),
           startsAt: DateTime.parse(
             (json['candidateStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -857,7 +868,7 @@ class CalendarConflict extends Equatable {
         ),
         existing: CalendarConflictInterval(
           // CRM calendar/override id only — never occurrence key strings.
-          id: readCrmIdOrNull(json['existingId'], 'existingId'),
+          id: readCrmIdLoose(json['existingId']),
           startsAt: DateTime.parse(
             (json['existingStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),

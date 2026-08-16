@@ -476,6 +476,19 @@ class _CalendarErrorPayload {
   final int? actualVersion;
 }
 
+List<CalendarConflict> _readConflicts(List<dynamic> raw) {
+  final conflicts = <CalendarConflict>[];
+  for (final entry in raw) {
+    if (entry is! Map<String, dynamic>) continue;
+    try {
+      conflicts.add(CalendarConflict.fromJson(entry));
+    } catch (_) {
+      // Skip the one we cannot read; keep the rest.
+    }
+  }
+  return List.unmodifiable(conflicts);
+}
+
 _CalendarErrorPayload _errorPayload(String body) {
   try {
     final decoded = jsonDecode(body) as Map<String, dynamic>;
@@ -490,10 +503,11 @@ _CalendarErrorPayload _errorPayload(String body) {
           (detailsRaw is String ? detailsRaw : null) ??
           'Não foi possível concluir a solicitação.',
       details: detailsRaw is List<dynamic> ? detailsRaw : const [],
-      conflicts: conflictsRaw
-          .cast<Map<String, dynamic>>()
-          .map(CalendarConflict.fromJson)
-          .toList(growable: false),
+      // Guarded on its own: a conflict this client cannot read is a reason to
+      // lose that conflict, not to lose the server's message, its code and
+      // every other conflict with it. That is what used to happen, and it
+      // turned a precise 409 into "não foi possível concluir a solicitação".
+      conflicts: _readConflicts(conflictsRaw),
       calendarId: readCrmIdOrNull(error['calendarId'], 'calendarId'),
       expectedVersion: error['expectedVersion'] as int?,
       actualVersion: error['actualVersion'] as int?,
