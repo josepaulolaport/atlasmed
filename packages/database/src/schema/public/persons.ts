@@ -78,13 +78,47 @@ export const healthcareSpecialties = pgTable(
   "healthcare_specialties",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    cnesId: bigint("cnes_id", { mode: "number" }).notNull(),
+    /**
+     * The official CBO/CNES id. **Nullable by correctness, not by relaxation**
+     * (spec 0016 §5.2).
+     *
+     * All 66 rows loaded from CNES carry one, and it must stay unique among
+     * them — two specialties claiming the same official id is a data error. But
+     * the column was `NOT NULL`, which made the table a mirror nobody could
+     * extend: registering a specialty CNES does not list meant inventing an
+     * official id, the exact trap spec 0013 §2 removed from the product coding
+     * columns.
+     *
+     * So: nullable, and the unique constraint **stays a plain one**. Postgres
+     * treats NULLs as distinct, so a plain `UNIQUE` on a nullable column already
+     * allows unlimited locally-created specialties while still refusing two rows
+     * claiming the same official id.
+     *
+     * Deliberately *not* the partial-index form `products.code` uses. That form
+     * states the predicate for readability, and it costs something here that it
+     * does not cost there: Postgres cannot infer a partial index as an
+     * `ON CONFLICT` arbiter unless the statement repeats the `WHERE` (42P10).
+     * This table is a CNES mirror — an upsert keyed on `cnes_id` is its natural
+     * shape — so a constraint that silently breaks `ON CONFLICT (cnes_id)` is a
+     * trap laid for whoever automates the sync.
+     */
+    cnesId: bigint("cnes_id", { mode: "number" }),
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (t) => [unique("healthcare_specialties_cnes_id_key").on(t.cnesId)]
+  (t) => [
+    // Unchanged from before the column became nullable — same name, same shape,
+    // so the migration only drops NOT NULL and `ON CONFLICT (cnes_id)` keeps
+    // working exactly as it did.
+    unique("healthcare_specialties_cnes_id_key").on(t.cnesId),
+    // Two specialties with the same name are a mistake however they got here,
+    // and the panel is the first thing that can create one by hand.
+    uniqueIndex("healthcare_specialties_name_normalized_uidx").on(
+      sql`lower(trim(${t.name}))`
+    ),
+  ]
 );
 
 export const personHealthcareProfileSpecialties = pgTable(

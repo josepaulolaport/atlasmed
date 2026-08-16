@@ -25,7 +25,7 @@ import { calendar } from "../modules/calendar";
 import { interactions } from "../modules/interactions";
 import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
-import { AppError } from "../shared/errors";
+import { AppError, toDatabaseConstraintError } from "../shared/errors";
 import { environment } from "./config/environment";
 import { observabilityPlugin } from "../infrastructure/plugins/observability.plugin";
 import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
@@ -159,6 +159,19 @@ const app = new Elysia()
           message: "Invalid file type",
         },
       };
+    }
+
+    // A constraint the *caller* tripped — a duplicate code, a row something
+    // still references — is their mistake to fix, not our failure. Before this,
+    // every one of them fell through to the 500 below, so an admin who typed a
+    // SIMPRO code twice was told "An unexpected error occurred. Please try again
+    // later." and had nothing to act on.
+    //
+    // Checked last, so any error that already carries a typed answer keeps it.
+    const constraintError = toDatabaseConstraintError(error);
+    if (constraintError) {
+      set.status = constraintError.statusCode;
+      return { error: constraintError.toClientJSON() };
     }
 
     // Unhandled — observability logs the original Error and stack once.

@@ -1,8 +1,12 @@
 import { describe, expect, it, mock } from "bun:test";
 import { createGlobalScopeContext, type ScopeContext } from "@atlasmed/access";
 import {
+  CreateProductUseCase,
+  DeleteProductUseCase,
   GetProductUseCase,
   ListProductsUseCase,
+  UpdateBusinessVerticalUseCase,
+  UpdateProductUseCase,
   ListCompetitorProductsUseCase,
   GetCompetitorProductUseCase,
   CreateCompetitorProductUseCase,
@@ -15,6 +19,7 @@ import {
   ReplaceFacilityHealthcareProviderSharesUseCase,
 } from "./catalog.use-cases";
 import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
+import type { BusinessVerticalRepository } from "../interfaces/business-vertical.repository.interface";
 import type {
   CompetitorProductRecord,
   CompetitorProductRepository,
@@ -22,7 +27,12 @@ import type {
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
 import type { FacilityVerticalAccessRepository } from "../interfaces/facility-vertical-access.repository.interface";
-import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import {
+  ForbiddenError,
+  ResourceInUseError,
+  ResourceNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
 
 function scopeWithVerticals(verticalIds: number[]): ScopeContext {
   return { ...createGlobalScopeContext(), assignedVerticalIds: verticalIds };
@@ -36,10 +46,17 @@ const product: ProductRecord = {
   commercialCode: "AG-240",
   productGroup: "Ortopedia",
   productClassification: "Tópico",
+  internalClassification: null,
   brand: "Atlas",
   unit: "240g",
+  barcode: null,
+  ncm: null,
+  anvisaRegistration: null,
+  requiresSterilization: false,
+  idProdutoEmultec: null,
   verticalIds: [1],
   pictureUrl: "https://cdn.example.com/atlas-gel.png",
+  pictureBlurhash: null,
   simproCode: "SIM-1",
   brasindiceCode: "BRA-1",
   tissCode: "TISS-1",
@@ -50,6 +67,7 @@ const product: ProductRecord = {
   price18: 91,
   price20: 92,
   brasindiceUpdatedAt: "2026-01-01",
+  metricUnits: 1,
   isActive: true,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-02T00:00:00.000Z"),
@@ -62,6 +80,8 @@ function repository(overrides: Partial<ProductRepository> = {}): ProductReposito
     findAllActive: mock(() => Promise.resolve([product])),
     create: mock(),
     update: mock(),
+    findReferences: mock(() => Promise.resolve({})),
+    deleteIfUnreferenced: mock(),
     ...overrides,
   } as ProductRepository;
 }
@@ -91,6 +111,8 @@ function competitorProductRepository(
     findAllActive: mock(() => Promise.resolve([competitor])),
     create: mock(() => Promise.resolve(competitor)),
     update: mock(() => Promise.resolve(competitor)),
+    findReferences: mock(() => Promise.resolve({})),
+    deleteIfUnreferenced: mock(),
     ...overrides,
   } as CompetitorProductRepository;
 }
@@ -101,12 +123,220 @@ function productEquivalenceRepository(
   return {
     findLinkedByProduct: mock(() => Promise.resolve([competitor])),
     findUnlinkedByProduct: mock(() => Promise.resolve([competitor])),
-    exists: mock(() => Promise.resolve(false)),
+        exists: mock(() => Promise.resolve(false)),
     link: mock(() => Promise.resolve()),
     unlink: mock(() => Promise.resolve(true)),
     ...overrides,
   } as ProductEquivalenceRepository;
 }
+
+/**
+ * Spec 0016 §5.1, §6.7 and §7.1 — the product write contract.
+ *
+ * Each of these is a rule that lives in more than one file (a route schema, a
+ * use case, a repository), so each is asserted at the layer that would still be
+ * wrong if one of the others were relaxed.
+ */
+describe("product write contract", () => {
+  it("passes null pricing-table codes through instead of demanding strings", async () => {
+    // Spec 0013 §2 made these nullable so the Emultec importer would stop
+    // inventing `EMULTEC-SIM-{id}`. The route kept requiring them until §5.1, so
+    // an admin registering a product by hand had to invent the same values.
+    const productRepository = repository({
+      create: mock(() => Promise.resolve(product)),
+    });
+
+    await new CreateProductUseCase({ productRepository }).execute({
+      name: "Sem códigos",
+      manufacturer: "AtlasMed",
+      countryOfOrigin: "Brasil",
+      verticalIds: [1],
+      code: null,
+      simproCode: null,
+      brasindiceCode: null,
+      tissCode: null,
+      brasindiceUpdatedAt: null,
+      price: null,
+    });
+
+    expect(productRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: null,
+        simproCode: null,
+        brasindiceCode: null,
+        tissCode: null,
+        brasindiceUpdatedAt: null,
+        price: null,
+      })
+    );
+  });
+
+  it("refuses a product with no Linha", async () => {
+    // The route enforces `minItems: 1`, but a product with no vertical is
+    // invisible to every rep and contributes to no metric (spec 0016 §7.2), so
+    // the rule is restated where it cannot be bypassed by another caller.
+    const productRepository = repository({ create: mock() });
+
+    await expect(
+      new CreateProductUseCase({ productRepository }).execute({
+        name: "Órfão",
+        manufacturer: "AtlasMed",
+        countryOfOrigin: "Brasil",
+        verticalIds: [],
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(productRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("never writes metricUnits, and reports it on the way out", async () => {
+    // Spec 0016 §7.1: informative field, no writer. `sumOurs` uses raw
+    // quantities and `sumOursByProduct` still multiplies by this column, so the
+    // day a value stops being 1 the total and its own breakdown disagree.
+    const productRepository = repository({
+      create: mock(() => Promise.resolve(product)),
+      update: mock(() => Promise.resolve(product)),
+    });
+
+    const created = await new CreateProductUseCase({ productRepository }).execute({
+      name: "AtlasGel",
+      manufacturer: "AtlasMed",
+      countryOfOrigin: "Brasil",
+      verticalIds: [1],
+    });
+    await new UpdateProductUseCase({ productRepository }).execute({
+      productId: 1,
+      name: "AtlasGel 2",
+    });
+
+    const createArg = (productRepository.create as ReturnType<typeof mock>).mock
+      .calls[0]![0] as Record<string, unknown>;
+    const updateArg = (productRepository.update as ReturnType<typeof mock>).mock
+      .calls[0]![1] as Record<string, unknown>;
+    expect(createArg).not.toHaveProperty("metricUnits");
+    expect(updateArg).not.toHaveProperty("metricUnits");
+    expect(created.metricUnits).toBe(1);
+  });
+
+  it("does not move a product between Linhas on update", async () => {
+    // Spec 0016 §6.7. Orders key on `facility_vertical_profile_id` and
+    // `product_potential_links` is unique per (product, vertical), so a move
+    // changes which profiles the product's sales join to and orphans its link.
+    const productRepository = repository({
+      update: mock(() => Promise.resolve(product)),
+    });
+
+    await new UpdateProductUseCase({ productRepository }).execute({
+      productId: 1,
+      name: "Renomeado",
+    });
+
+    const updateArg = (productRepository.update as ReturnType<typeof mock>).mock
+      .calls[0]![1] as Record<string, unknown>;
+    expect(updateArg).not.toHaveProperty("verticalIds");
+    expect(updateArg).not.toHaveProperty("productId");
+    expect(updateArg).toEqual({ name: "Renomeado" });
+  });
+
+  it("deletes a product nothing references", async () => {
+    const productRepository = repository({
+      deleteIfUnreferenced: mock(() =>
+        Promise.resolve({ found: true as const, deleted: true as const })
+      ),
+    });
+
+    const result = await new DeleteProductUseCase({ productRepository }).execute({
+      productId: 1,
+    });
+
+    expect(result).toEqual({ id: 1, deleted: true });
+  });
+
+  it("refuses to delete a referenced product, and says what blocks it", async () => {
+    // Spec 0016 §6.2. Not a warning to click through: `product_equivalences`
+    // cascades, so a forced delete would silently drop equivalences a rep's
+    // picker depends on, and `facility_product_usage` is `restrict`, so it would
+    // fail opaquely instead.
+    const productRepository = repository({
+      deleteIfUnreferenced: mock(() =>
+        Promise.resolve({
+          found: true as const,
+          deleted: false as const,
+          references: { orderItems: 3, productEquivalences: 1 },
+        })
+      ),
+    });
+
+    const failure = await new DeleteProductUseCase({ productRepository })
+      .execute({ productId: 1 })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ResourceInUseError);
+    expect((failure as ResourceInUseError).statusCode).toBe(409);
+    // The counts must survive `toClientJSON`, which drops context by default:
+    // an admin told only "cannot be deleted" has no next step.
+    expect((failure as ResourceInUseError).toClientJSON()).toMatchObject({
+      code: "RESOURCE_IN_USE",
+      blockedBy: { orderItems: 3, productEquivalences: 1 },
+    });
+  });
+
+  it("reports a missing product as 404, not as a refused delete", async () => {
+    // Two different answers for two different situations: collapsing them into
+    // one boolean is how a delete that did nothing reads as success.
+    const productRepository = repository({
+      deleteIfUnreferenced: mock(() => Promise.resolve({ found: false as const })),
+    });
+
+    await expect(
+      new DeleteProductUseCase({ productRepository }).execute({ productId: 99 })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+
+  it("tells the detail read whether the product can be deleted", async () => {
+    const productRepository = repository({
+      findReferences: mock(() => Promise.resolve({ orderItems: 2 })),
+    });
+
+    const detail = await new GetProductUseCase({ productRepository }).execute({
+      productId: 1,
+      scope: scopeWithVerticals([1]),
+      role: "ADMIN",
+    });
+
+    expect(detail.deletable).toBeFalse();
+    expect(detail.blockingReferences).toEqual({ orderItems: 2 });
+  });
+
+  it("does not change a Linha's code", async () => {
+    // Spec 0016 §4.1: `code` is a stable key other data joins on by meaning, and
+    // no screen edits a Linha at all — so an accepted `code` could only drift.
+    const businessVerticalRepository = {
+      findAll: mock(),
+      findById: mock(),
+      create: mock(),
+      update: mock(() =>
+        Promise.resolve({
+          id: 1,
+          code: "ORTO",
+          name: "Ortopedia",
+          isActive: true,
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        })
+      ),
+    } as unknown as BusinessVerticalRepository;
+
+    await new UpdateBusinessVerticalUseCase({ businessVerticalRepository }).execute({
+      verticalId: 1,
+      name: "Ortopedia",
+    });
+
+    expect(businessVerticalRepository.update).toHaveBeenCalledWith(1, {
+      name: "Ortopedia",
+      isActive: undefined,
+    });
+  });
+});
 
 describe("catalog product use cases", () => {
   const scope = scopeWithVerticals([1]);

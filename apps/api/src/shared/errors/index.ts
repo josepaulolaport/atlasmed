@@ -7,6 +7,11 @@
 export { AppError } from "./base-error";
 
 export {
+  DatabaseConstraintError,
+  toDatabaseConstraintError,
+} from "./database-constraint";
+
+export {
   // Authentication Errors
   InvalidCredentialsError,
   SessionExpiredError,
@@ -33,6 +38,7 @@ export {
   
   // Conflict Errors
   ResourceConflictError,
+  ResourceInUseError,
   CalendarConflictError,
   CalendarVersionConflictError,
   BoundaryImpactSetChangedError,

@@ -516,7 +516,19 @@ export const healthcareProviders = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (t) => [index("healthcare_providers_is_active_idx").on(t.isActive)]
+  (t) => [
+    index("healthcare_providers_is_active_idx").on(t.isActive),
+    // One row per payer (spec 0016 §5.2). The table had no uniqueness at all, so
+    // "Unimed" could be registered twice with no warning — after which a clinic's
+    // payer mix splits across two rows that look identical and neither is wrong.
+    //
+    // Normalised the same way `person_facility_roles` already does, because the
+    // duplicate someone actually creates is "Unimed " or "unimed", not a second
+    // byte-identical string.
+    uniqueIndex("healthcare_providers_name_normalized_uidx").on(
+      sql`lower(trim(${t.name}))`
+    ),
+  ]
 );
 
 export const facilityHealthcareProviderShares = pgTable(
@@ -588,6 +600,13 @@ export const conformityRequirements = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
+    // The slug was unique and the name was not, so two requirements could carry
+    // the same name and the cadastro would ask a clinic for the same document
+    // twice — indistinguishable in the admin list, where the name is all that
+    // shows.
+    uniqueIndex("conformity_requirements_name_normalized_uidx").on(
+      sql`lower(trim(${t.name}))`
+    ),
     index("conformity_requirements_vertical_id_idx").on(t.verticalId),
     index("conformity_requirements_is_active_idx").on(t.isActive),
     index("conformity_requirements_applies_to_legal_document_type_idx").on(

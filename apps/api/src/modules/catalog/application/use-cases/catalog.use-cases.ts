@@ -1,9 +1,19 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import {
+  ForbiddenError,
+  ResourceInUseError,
+  ResourceNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import type { BusinessVerticalRepository } from "../interfaces/business-vertical.repository.interface";
-import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
+import type {
+  CreateProductInput,
+  ProductRecord,
+  ProductRepository,
+  UpdateProductInput,
+} from "../interfaces/product.repository.interface";
 import type {
   HealthcareProviderRepository,
   HealthcareProviderType,
@@ -39,32 +49,7 @@ function serializeBusinessVertical(row: {
   };
 }
 
-function serializeProduct(row: {
-  id: number;
-  code: string | null;
-  name: string;
-  description: string | null;
-  commercialCode: string | null;
-  productGroup: string | null;
-  productClassification: string | null;
-  brand: string | null;
-  unit: string | null;
-  verticalIds: number[];
-  pictureUrl: string | null;
-  simproCode: string | null;
-  brasindiceCode: string | null;
-  tissCode: string | null;
-  manufacturer: string;
-  countryOfOrigin: string;
-  price: number | null;
-  price17: number;
-  price18: number;
-  price20: number;
-  brasindiceUpdatedAt: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}) {
+function serializeProduct(row: ProductRecord) {
   return {
     id: row.id,
     code: row.code,
@@ -73,10 +58,17 @@ function serializeProduct(row: {
     commercialCode: row.commercialCode,
     productGroup: row.productGroup,
     productClassification: row.productClassification,
+    internalClassification: row.internalClassification,
     brand: row.brand,
     unit: row.unit,
+    barcode: row.barcode,
+    ncm: row.ncm,
+    anvisaRegistration: row.anvisaRegistration,
+    requiresSterilization: row.requiresSterilization,
+    idProdutoEmultec: row.idProdutoEmultec,
     verticalIds: row.verticalIds,
     pictureUrl: row.pictureUrl,
+    pictureBlurhash: row.pictureBlurhash,
     simproCode: row.simproCode,
     brasindiceCode: row.brasindiceCode,
     tissCode: row.tissCode,
@@ -87,6 +79,8 @@ function serializeProduct(row: {
     price18: row.price18,
     price20: row.price20,
     brasindiceUpdatedAt: row.brasindiceUpdatedAt,
+    /** Informative only — spec 0016 §7.1. Displayed, never multiplied, never written. */
+    metricUnits: row.metricUnits,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -142,14 +136,13 @@ export class CreateBusinessVerticalUseCase {
 export class UpdateBusinessVerticalUseCase {
   constructor(private readonly deps: { businessVerticalRepository: BusinessVerticalRepository }) {}
 
-  async execute(input: {
-    verticalId: number;
-    code?: string;
-    name?: string;
-    isActive?: boolean;
-  }) {
+  /**
+   * `code` is not updatable (spec 0016 §4.1). It is a stable key other data
+   * joins on by meaning, and there is no screen that edits a Linha at all —
+   * so the only thing an accepted `code` could do here is let one drift.
+   */
+  async execute(input: { verticalId: number; name?: string; isActive?: boolean }) {
     const vertical = await this.deps.businessVerticalRepository.update(input.verticalId, {
-      code: input.code,
       name: input.name,
       isActive: input.isActive,
     });
@@ -220,30 +213,57 @@ export class GetProductUseCase {
       throw new ForbiddenError();
     }
 
-    return serializeProduct(product);
+    // Whether delete is available, and what blocks it (spec 0016 §6.2). Sent on
+    // the detail read so the client can disable the action with a reason rather
+    // than offer it and let it 409 — the difference between a rule and a
+    // surprise.
+    const references = await this.deps.productRepository.findReferences(
+      input.productId
+    );
+    return {
+      ...serializeProduct(product),
+      deletable: Object.keys(references).length === 0,
+      blockingReferences: references,
+    };
+  }
+}
+
+/**
+ * Hard-deletes a product, but only while nothing references it (spec 0016 §6.2).
+ *
+ * Not a soft delete and not an unconditional one. A product nothing points at is
+ * a mistake someone wants gone; a product with orders, recorded quantities,
+ * equivalences or a metric link is history, and removing it would either cascade
+ * over field-collected data — which spec 0013 §4.1 says a catalogue edit never
+ * invalidates — or fail on a foreign key the admin cannot act on. So the refusal
+ * names what blocks it and the answer is `isActive = false` instead.
+ */
+export class DeleteProductUseCase {
+  constructor(private readonly deps: { productRepository: ProductRepository }) {}
+
+  async execute(input: { productId: number }) {
+    const outcome = await this.deps.productRepository.deleteIfUnreferenced(
+      input.productId
+    );
+    if (!outcome.found) {
+      throw new ResourceNotFoundError("Product", input.productId);
+    }
+    if (!outcome.deleted) {
+      throw new ResourceInUseError("Product", outcome.references);
+    }
+    return { id: input.productId, deleted: true };
   }
 }
 
 export class CreateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
-  async execute(input: {
-    code: string | null;
-    name: string;
-    verticalIds: number[];
-    pictureUrl?: string | null;
-    simproCode: string | null;
-    brasindiceCode: string | null;
-    tissCode: string | null;
-    manufacturer: string;
-    countryOfOrigin: string;
-    price: number | null;
-    price17: number;
-    price18: number;
-    price20: number;
-    brasindiceUpdatedAt: string | null;
-    isActive?: boolean;
-  }) {
+  async execute(input: CreateProductInput) {
+    if (input.verticalIds.length === 0) {
+      throw new ValidationError([
+        { field: "verticalIds", message: "A product must belong to at least one Linha" },
+      ]);
+    }
     const product = await this.deps.productRepository.create(input);
     return serializeProduct(product);
   }
@@ -252,41 +272,14 @@ export class CreateProductUseCase {
 export class UpdateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
-  async execute(input: {
-    productId: number;
-    code?: string;
-    name?: string;
-    verticalIds?: number[];
-    pictureUrl?: string | null;
-    simproCode?: string;
-    brasindiceCode?: string;
-    tissCode?: string;
-    manufacturer?: string;
-    countryOfOrigin?: string;
-    price?: number;
-    price17?: number;
-    price18?: number;
-    price20?: number;
-    brasindiceUpdatedAt?: string;
-    isActive?: boolean;
-  }) {
-    const product = await this.deps.productRepository.update(input.productId, {
-      code: input.code,
-      name: input.name,
-      verticalIds: input.verticalIds,
-      pictureUrl: input.pictureUrl,
-      simproCode: input.simproCode,
-      brasindiceCode: input.brasindiceCode,
-      tissCode: input.tissCode,
-      manufacturer: input.manufacturer,
-      countryOfOrigin: input.countryOfOrigin,
-      price: input.price,
-      price17: input.price17,
-      price18: input.price18,
-      price20: input.price20,
-      brasindiceUpdatedAt: input.brasindiceUpdatedAt,
-      isActive: input.isActive,
-    });
+  /**
+   * `verticalIds` is absent by decision (spec 0016 §6.7): a product's Linhas are
+   * fixed at creation. The route does not accept them either, so this is the
+   * second of two places that would have to change to reintroduce the move.
+   */
+  async execute(input: UpdateProductInput & { productId: number }) {
+    const { productId, ...fields } = input;
+    const product = await this.deps.productRepository.update(productId, fields);
     return serializeProduct(product);
   }
 }
@@ -556,6 +549,11 @@ function serializeCompetitorProduct(row: CompetitorProductRecord) {
     price20: row.price20,
     brasindiceUpdatedAt: row.brasindiceUpdatedAt,
     isActive: row.isActive,
+    // Omitted rather than defaulted to 0 on reads that do not compute it —
+    // "not asked" and "none" are different answers (spec 0016 §5.3).
+    ...(row.equivalenceCount === undefined
+      ? {}
+      : { equivalenceCount: row.equivalenceCount }),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -658,7 +656,35 @@ export class GetCompetitorProductUseCase {
     if (!competitor) {
       throw new ResourceNotFoundError("CompetitorProduct", input.competitorProductId);
     }
-    return serializeCompetitorProduct(competitor);
+    const references = await this.deps.competitorProductRepository.findReferences(
+      input.competitorProductId
+    );
+    return {
+      ...serializeCompetitorProduct(competitor),
+      deletable: Object.keys(references).length === 0,
+      blockingReferences: references,
+    };
+  }
+}
+
+/** The competitor half of [DeleteProductUseCase] — same rule, same reasons. */
+export class DeleteCompetitorProductUseCase {
+  constructor(
+    private readonly deps: { competitorProductRepository: CompetitorProductRepository }
+  ) {}
+
+  async execute(input: { competitorProductId: number }) {
+    const outcome =
+      await this.deps.competitorProductRepository.deleteIfUnreferenced(
+        input.competitorProductId
+      );
+    if (!outcome.found) {
+      throw new ResourceNotFoundError("CompetitorProduct", input.competitorProductId);
+    }
+    if (!outcome.deleted) {
+      throw new ResourceInUseError("CompetitorProduct", outcome.references);
+    }
+    return { id: input.competitorProductId, deleted: true };
   }
 }
 
@@ -676,7 +702,7 @@ export class CreateCompetitorProductUseCase {
     price17: number;
     price18: number;
     price20: number;
-    brasindiceUpdatedAt: string;
+    brasindiceUpdatedAt?: string | null;
     isActive?: boolean;
   }) {
     const competitor = await this.deps.competitorProductRepository.create(input);
@@ -699,7 +725,7 @@ export class UpdateCompetitorProductUseCase {
     price17?: number;
     price18?: number;
     price20?: number;
-    brasindiceUpdatedAt?: string;
+    brasindiceUpdatedAt?: string | null;
     isActive?: boolean;
   }) {
     const { competitorProductId, ...rest } = input;

@@ -48,6 +48,11 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/person/infrastructure/routes/healthcare-specialties.route.ts": "auth+permission",
   "modules/person/infrastructure/routes/person-facility-roles.route.ts": "auth+permission",
   "modules/person/infrastructure/routes/person-professional-registration-councils.route.ts": "auth+permission",
+  // Spec 0016 §5.2 — the factory behind the admin writes for the support
+  // catalogues (clinical focuses, person–facility roles, councils). Its reads
+  // stay on their own routes, on `read PERSON` / `read FACILITY`, because a rep
+  // needs the pickers; every route it emits is `create`/`update CATALOG`.
+  "shared/catalog/simple-catalog.route.ts": "auth+permission",
   "modules/field-suggestions/infrastructure/routes/field-suggestions.route.ts": "auth+permission",
   "modules/interactions/infrastructure/routes/interactions.route.ts": "auth+permission",
   "modules/maps/infrastructure/routes/maps.route.ts": "auth+permission",

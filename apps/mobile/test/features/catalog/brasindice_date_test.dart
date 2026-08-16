@@ -1,69 +1,66 @@
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/brasindice_date.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// The comparison behind the variant form's "os preços mudaram e esta data
+/// não" hint.
+///
+/// It arrived as `brasindiceDateForSave`, which moved the date itself whenever
+/// a price moved. The form now asks the admin for the date instead — a price
+/// typed today is not evidence Brasíndice published today — so what is tested
+/// here is the comparison alone.
 void main() {
-  final lastYear = DateTime(2025, 3, 14);
-  final today = DateTime(2026, 8, 16);
-
-  test('editing a variant without touching a price keeps the old date', () {
+  test('an edit that leaves every price alone is not a change', () {
     expect(
-      brasindiceDateForSave(
-        existing: lastYear,
-        currentPrices: const [10.0, 11.0, 12.0],
-        savedPrices: const [10.0, 11.0, 12.0],
-        now: today,
+      brasindicePricesChanged(
+        current: const [10.0, 11.0, 12.0],
+        saved: const [10.0, 11.0, 12.0],
       ),
-      lastYear,
+      isFalse,
     );
   });
 
-  test('changing any one price stamps today', () {
+  test('any one price moving counts', () {
     expect(
-      brasindiceDateForSave(
-        existing: lastYear,
-        currentPrices: const [10.0, 11.0, 99.0],
-        savedPrices: const [10.0, 11.0, 12.0],
-        now: today,
+      brasindicePricesChanged(
+        current: const [10.0, 11.0, 99.0],
+        saved: const [10.0, 11.0, 12.0],
       ),
-      today,
-    );
-  });
-
-  test('a new record is stamped today', () {
-    expect(
-      brasindiceDateForSave(
-        existing: null,
-        currentPrices: const [10.0],
-        savedPrices: const [],
-        now: today,
-      ),
-      today,
-    );
-  });
-
-  test('a record that never had a date does not invent one from an '
-      'untouched edit', () {
-    expect(
-      brasindiceDateForSave(
-        existing: null,
-        currentPrices: const [10.0],
-        savedPrices: const [10.0],
-        now: today,
-      ),
-      isNull,
+      isTrue,
     );
   });
 
   test('an unparseable price counts as a change rather than silently '
       'matching', () {
+    // A field the form cannot read is not evidence that nothing moved.
     expect(
-      brasindiceDateForSave(
-        existing: lastYear,
-        currentPrices: const [null, 11.0, 12.0],
-        savedPrices: const [10.0, 11.0, 12.0],
-        now: today,
+      brasindicePricesChanged(
+        current: const [null, 11.0, 12.0],
+        saved: const [10.0, 11.0, 12.0],
       ),
-      today,
+      isTrue,
+    );
+  });
+
+  test('a price cleared to null counts', () {
+    expect(
+      brasindicePricesChanged(current: const [null], saved: const [10.0]),
+      isTrue,
+    );
+  });
+
+  test('lists of different lengths count as a change', () {
+    // Nothing produces this today; it is here so a caller that starts sending
+    // a fourth price gets a hint rather than silence.
+    expect(
+      brasindicePricesChanged(current: const [10.0, 11.0], saved: const [10.0]),
+      isTrue,
+    );
+  });
+
+  test('two empty lists are not a change', () {
+    expect(
+      brasindicePricesChanged(current: const [], saved: const []),
+      isFalse,
     );
   });
 }

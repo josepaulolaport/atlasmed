@@ -1,10 +1,18 @@
 import { db } from "../../../../../infrastructure/database/db";
-import { products } from "@atlasmed/database";
+import { productEquivalences, products } from "@atlasmed/database";
 import { eq, and, asc, sql, ilike, or } from "drizzle-orm";
 import type {
   CompetitorProductRecord,
   CompetitorProductRepository,
 } from "../../../application/interfaces/competitor-product.repository.interface";
+import type {
+  ProductDeletionOutcome,
+  ProductReferences,
+} from "../../../application/interfaces/product.repository.interface";
+import {
+  countProductReferences,
+  deleteProductIfUnreferenced,
+} from "./product-deletion";
 
 function toNumberOrNull(value: string | null): number | null {
   return value === null ? null : Number(value);
@@ -92,10 +100,36 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     }
     const where = and(...conditions);
 
+    // Spec 0016 §5.3: counted here rather than fetched per row, because the
+    // alternative on a list screen is one request per competitor product.
+    //
+    // A grouped sub-select joined on, **not** a correlated `sql` subquery. The
+    // correlated form was written first and silently reported 0 for every row:
+    // Drizzle only qualifies a column reference inside a `sql` template when the
+    // query has a join, and that one had none, so `where "competitor_product_id"
+    // = "id"` resolved `"id"` against `product_equivalences`, not `products`. It
+    // is valid SQL, it answers a different question, and nothing but the screen
+    // said so. Guarded by `competitor-equivalence-count.db.test.ts`.
+    const equivalenceCounts = db
+      .select({
+        competitorProductId: productEquivalences.competitorProductId,
+        count: sql<string>`count(*)`.as("count"),
+      })
+      .from(productEquivalences)
+      .groupBy(productEquivalences.competitorProductId)
+      .as("equivalence_counts");
+
     const [rows, countRows] = await Promise.all([
       db
-        .select(competitorColumns)
+        .select({
+          ...competitorColumns,
+          equivalenceCount: sql<string>`coalesce(${equivalenceCounts.count}, 0)`,
+        })
         .from(products)
+        .leftJoin(
+          equivalenceCounts,
+          eq(equivalenceCounts.competitorProductId, products.id)
+        )
         .where(where)
         .orderBy(asc(products.name))
         .offset(skip)
@@ -104,7 +138,10 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     ]);
 
     return {
-      competitorProducts: rows.map(mapCompetitorProduct),
+      competitorProducts: rows.map((row) => ({
+        ...mapCompetitorProduct(row),
+        equivalenceCount: Number(row.equivalenceCount),
+      })),
       total: Number(countRows[0]?.count ?? 0),
     };
   }
@@ -135,7 +172,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     price17: number;
     price18: number;
     price20: number;
-    brasindiceUpdatedAt: string;
+    brasindiceUpdatedAt?: string | null;
     isActive?: boolean;
   }): Promise<CompetitorProductRecord> {
     const [row] = await db
@@ -150,7 +187,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
         price17: String(data.price17),
         price18: String(data.price18),
         price20: String(data.price20),
-        brasindiceUpdatedAt: data.brasindiceUpdatedAt,
+        brasindiceUpdatedAt: data.brasindiceUpdatedAt ?? null,
         isActive: data.isActive ?? true,
       })
       .returning(competitorColumns);
@@ -168,7 +205,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
       price17?: number;
       price18?: number;
       price20?: number;
-      brasindiceUpdatedAt?: string;
+      brasindiceUpdatedAt?: string | null;
       isActive?: boolean;
     }
   ): Promise<CompetitorProductRecord> {
@@ -190,5 +227,13 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
       .returning(competitorColumns);
     if (!row) throw new Error("Competitor product not found");
     return mapCompetitorProduct(row);
+  }
+
+  async findReferences(id: number): Promise<ProductReferences> {
+    return countProductReferences(db, id);
+  }
+
+  async deleteIfUnreferenced(id: number): Promise<ProductDeletionOutcome> {
+    return deleteProductIfUnreferenced(id, "COMPETITOR");
   }
 }

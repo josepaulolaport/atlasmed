@@ -2,16 +2,20 @@ import {
   conformityRecords,
   conformityRequirements,
   facilities,
+  submissionDocuments,
   type Database,
   type FacilityLegalDocumentType,
 } from "@atlasmed/database";
-import { and, asc, count, desc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   ConformityRecordRow,
   ConformityRecordStatus,
   ConformityRepository,
+  ConformityRequirementDeletionOutcome,
+  ConformityRequirementReferences,
   ConformityRequirementRecord,
+  ConformityRequirementWritableFields,
 } from "../../../application/interfaces/conformity.repository.interface";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 
@@ -146,6 +150,168 @@ export class DrizzleConformityRepository implements ConformityRepository {
    * only be exercised against committed rows.
    */
   constructor(private readonly database: Database = db) {}
+
+  // ── Admin writes (spec 0016 §4.7) ───────────────────────────────────
+  // Kept beside the reads rather than in their own repository: the read below
+  // *is* a clinic's checklist and these are what fills it, so splitting them
+  // would let the two disagree about what a requirement is.
+
+  /**
+   * The whole catalogue, active and inactive — the admin list only.
+   *
+   * Separate from `findActiveRequirements` rather than a flag on it, because a
+   * retired requirement leaking into a checklist would ask a rep for a document
+   * nobody wants any more.
+   */
+  async findAllRequirements(): Promise<ConformityRequirementRecord[]> {
+    /*
+     * The reference counts come back with the rows so the admin form can
+     * disable delete with a reason rather than promise one the API refuses.
+     *
+     * Three grouped queries joined in memory, not correlated subqueries in the
+     * select list: the first attempt wrote the subquery inline and it did not
+     * correlate — every row came back with the table-wide total, so a catalogue
+     * where one requirement had a single answer reported all five as blocked.
+     * Caught on the simulator. This shape cannot express that mistake, and the
+     * catalogue is five rows.
+     */
+    const [rows, recordCounts, documentCounts] = await Promise.all([
+      this.database
+        .select()
+        .from(conformityRequirements)
+        .orderBy(asc(conformityRequirements.name)),
+      this.database
+        .select({
+          requirementId: conformityRecords.requirementId,
+          total: count(),
+        })
+        .from(conformityRecords)
+        .groupBy(conformityRecords.requirementId),
+      this.database
+        .select({
+          requirementId: submissionDocuments.requirementId,
+          total: count(),
+        })
+        .from(submissionDocuments)
+        .groupBy(submissionDocuments.requirementId),
+    ]);
+
+    const recordsById = new Map(recordCounts.map((r) => [r.requirementId, r.total]));
+    const documentsById = new Map(
+      documentCounts.map((r) => [r.requirementId, r.total])
+    );
+
+    return rows.map((row) => {
+      const references: ConformityRequirementReferences = {};
+      const records = recordsById.get(row.id) ?? 0;
+      const documents = documentsById.get(row.id) ?? 0;
+      if (records > 0) references.conformityRecords = records;
+      if (documents > 0) references.submissionDocuments = documents;
+      return { ...mapRequirement(row), references };
+    });
+  }
+
+  async createRequirement(
+    data: ConformityRequirementWritableFields & { slug: string }
+  ): Promise<ConformityRequirementRecord> {
+    const [row] = await this.database
+      .insert(conformityRequirements)
+      .values({
+        slug: data.slug,
+        name: data.name,
+        description: data.description,
+        verticalId: data.verticalId,
+        appliesToLegalDocumentType: data.appliesToLegalDocumentType,
+        isActive: data.isActive,
+        allowedMimeTypes: data.allowedMimeTypes,
+        maxFiles: data.maxFiles,
+        maxFileSizeBytes: data.maxFileSizeBytes,
+        maxCombinedSizeBytes: data.maxCombinedSizeBytes,
+        requiresFrontAndBack: data.requiresFrontAndBack,
+        requiresValidityDate: data.requiresValidityDate,
+      })
+      .returning();
+    return mapRequirement(row!);
+  }
+
+  /**
+   * `slug` cannot arrive here — it is absent from
+   * [ConformityRequirementWritableFields] by design. It is the key every
+   * cadastro DTO travels under, so it is chosen once and `name` is the label to
+   * change instead.
+   */
+  async updateRequirement(
+    id: number,
+    data: Partial<ConformityRequirementWritableFields>
+  ): Promise<ConformityRequirementRecord | null> {
+    const values = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== undefined)
+    );
+    // An empty `SET` is a syntax error rather than a no-op.
+    if (Object.keys(values).length === 0) {
+      return this.findRequirementById(id);
+    }
+
+    const [row] = await this.database
+      .update(conformityRequirements)
+      .set(values)
+      .where(eq(conformityRequirements.id, id))
+      .returning();
+    return row ? mapRequirement(row) : null;
+  }
+
+  /**
+   * Deletes a requirement, but only while no clinic has answered it.
+   *
+   * Both referencing foreign keys are `ON DELETE RESTRICT`, so the alternative
+   * is a bare 23503 the admin cannot act on. The row is locked before it is
+   * counted for the same reason the product delete locks (spec 0016 §6.2):
+   * otherwise a clinic submitting between the count and the delete decides the
+   * outcome.
+   */
+  async deleteRequirementIfUnanswered(
+    id: number
+  ): Promise<ConformityRequirementDeletionOutcome> {
+    return this.database.transaction(async (tx) => {
+      const locked = await tx
+        .select({ id: conformityRequirements.id })
+        .from(conformityRequirements)
+        .where(eq(conformityRequirements.id, id))
+        .for("update");
+      if (!locked[0]) return { found: false };
+
+      const [counts] = await tx
+        .select({
+          records: sql<string>`(
+            select count(*) from ${conformityRecords}
+            where ${conformityRecords.requirementId} = ${id}
+          )`,
+          documents: sql<string>`(
+            select count(*) from ${submissionDocuments}
+            where ${submissionDocuments.requirementId} = ${id}
+          )`,
+        })
+        .from(conformityRequirements)
+        .where(eq(conformityRequirements.id, id))
+        .limit(1);
+
+      const references: ConformityRequirementReferences = {};
+      if (Number(counts?.records ?? 0) > 0) {
+        references.conformityRecords = Number(counts!.records);
+      }
+      if (Number(counts?.documents ?? 0) > 0) {
+        references.submissionDocuments = Number(counts!.documents);
+      }
+      if (Object.keys(references).length > 0) {
+        return { found: true, deleted: false, references };
+      }
+
+      await tx
+        .delete(conformityRequirements)
+        .where(eq(conformityRequirements.id, id));
+      return { found: true, deleted: true };
+    });
+  }
 
   async findActiveRequirements(params?: {
     legalDocumentType?: FacilityLegalDocumentType | null;

@@ -59,6 +59,9 @@ function fakeRepository(
 ): FacilityRepository {
   return {
     findAll,
+    listDeactivated: async () => ({ facilities: [], total: 0 }),
+    findActiveCnpjHolder: async () => null,
+    findByIdIncludingDeactivated: async () => null,
     findAllByIds: async () => [],
     registryHasEstablishment: async () => true,
     findById: async () => null,

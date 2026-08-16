@@ -1,7 +1,8 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { personUseCases } from "../../composition";
+import { professionalCouncilCatalog } from "../../../../shared/catalog/support-catalogs";
 
 type Executable = { execute(input?: any): Promise<any> };
 
@@ -18,15 +19,22 @@ export function createPersonProfessionalRegistrationCouncilsRoutes(
     .use(requirePermission("read", "PERSON"))
     .get(
       "/person-professional-registration-councils",
-      async () =>
-        useCases.listPersonProfessionalRegistrationCouncils().execute(),
+      async ({ query }) => {
+        // Active only by default — this is a picker. The admin catalogue asks
+        // for both so a retired council can be reactivated (spec 0016 §4).
+        if (query.includeInactive === "true") {
+          return { data: await professionalCouncilCatalog.listAll() };
+        }
+        return useCases.listPersonProfessionalRegistrationCouncils().execute();
+      },
       {
         detail: {
           summary:
-            "List active professional registration councils (id, name, abbreviation)",
+            "List professional registration councils (id, name, abbreviation)",
           tags: ["Persons"],
           security: [{ bearerAuth: [] }],
         },
+        query: t.Object({ includeInactive: t.Optional(t.String()) }),
       }
     );
 }

@@ -21,6 +21,8 @@ void main() {
                   CompetitorListSkeleton(),
                   CompetitorPickerListSkeleton(),
                   UserPickerListSkeleton(),
+                  TeamListSkeleton(),
+                  SimpleListSkeleton(),
                 ],
               ),
             ),
@@ -28,7 +30,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(AtlasShimmer), findsNWidgets(8));
+      expect(find.byType(AtlasShimmer), findsNWidgets(10));
       expect(find.byType(CircularProgressIndicator), findsNothing);
     },
   );

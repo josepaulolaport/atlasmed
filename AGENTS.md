@@ -314,6 +314,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | Cadastro | `docs/specs/0011-cadastro-pipeline/requirements.md` |
 | Products / potencial de mercado | `docs/specs/0013-potencial-de-mercado/requirements.md` |
 | Dashboards / team | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
+| Admin CRUD (catalogue, métricas, fontes pagadoras, catálogos de apoio) | `docs/specs/0016-admin-panel/requirements.md` |
 
 ---
 
@@ -389,6 +390,7 @@ Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possíve
 | Cadastro screens | `docs/specs/0011-cadastro-pipeline/requirements.md` |
 | Potencial de mercado | `docs/specs/0013-potencial-de-mercado/requirements.md` |
 | Desempenho / Equipe | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
+| Administração (`/admin`) | `docs/specs/0016-admin-panel/requirements.md`, and `implementation.md` beside it for the per-screen build log |
 | API-backed mobile feature | this file → `apps/api` section (contract + DTO discipline) |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | **Build / CD / Shorebird** | `apps/mobile/Makefile`, `apps/mobile/scripts/resolve-shorebird-patches.sh`, `.github/workflows/deploy-mobile-main.yml` |

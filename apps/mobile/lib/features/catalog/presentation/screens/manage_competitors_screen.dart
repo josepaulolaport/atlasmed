@@ -6,6 +6,9 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_prod
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/competitor_form_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
@@ -27,53 +30,79 @@ class ManageCompetitorsScreen extends ConsumerWidget {
     required this.variantLabel,
   });
 
+  /// Spec 0013 §7: a competitor product equivalent to nothing is unreachable in
+  /// the rep's picker, so unlinking the last one stops a rep being able to
+  /// record quantities against it at all. The equivalence row is deleted, but
+  /// nothing a rep already recorded is — relinking brings it back.
   Future<void> _unlink(
     BuildContext context,
     WidgetRef ref,
     ComparisonRow row,
   ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desvincular produto?'),
+        content: Text(
+          '“${row.label}” deixa de aparecer no comparativo de "$variantLabel" e '
+          'no seletor do representante. As quantidades já registradas nas '
+          'clínicas não são apagadas — voltam a valer se o produto for '
+          'vinculado de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Desvincular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
     try {
       await ref
           .read(catalogRepositoryProvider)
           .unlinkCompetitor(variantId, row.id);
       invalidateCatalog(ref, variantId: variantId);
       if (!context.mounted) return;
-      // One tap took a brand out of the product's comparativo with nothing
-      // said and nothing to press. Re-linking is a round trip through the
-      // "adicionar" sheet, so offer the way back here instead.
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('${row.label} saiu do comparativo.'),
-            action: SnackBarAction(
-              label: 'Desfazer',
-              onPressed: () async {
-                try {
-                  await ref
-                      .read(catalogRepositoryProvider)
-                      .linkCompetitor(variantId, row.id);
-                  invalidateCatalog(ref, variantId: variantId);
-                } catch (_) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Não foi possível desfazer.')),
-                  );
-                }
-              },
-            ),
-          ),
-        );
+      // Two things need saying at once, and only one snackbar fits: that the
+      // clinic numbers move overnight rather than now, and that the unlink can
+      // be taken back. Re-linking is otherwise a round trip through the
+      // "adicionar" sheet.
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${row.label}” desvinculado.',
+        action: SnackBarAction(
+          label: 'Desfazer',
+          onPressed: () async {
+            try {
+              await ref
+                  .read(catalogRepositoryProvider)
+                  .linkCompetitor(variantId, row.id);
+              invalidateCatalog(ref, variantId: variantId);
+            } catch (_) {
+              if (!context.mounted) return;
+              showCatalogSnack(
+                context,
+                'Não foi possível desfazer.',
+                isError: true,
+              );
+            }
+          },
+        ),
+      );
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is CatalogApiException
-                ? error.message
-                : 'Não foi possível remover a marca.',
-          ),
-        ),
+      showCatalogSnack(
+        context,
+        error is CatalogApiException
+            ? error.message
+            : 'Não foi possível remover o produto.',
+        isError: true,
       );
     }
   }
@@ -100,32 +129,25 @@ class ManageCompetitorsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.gray950,
-        title: const Text(
-          'Gerenciar outras marcas',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
+      appBar: const CatalogFormAppBar(title: 'Produtos concorrentes'),
+      // A FAB, like every other add action in the panel. This screen used a
+      // full-width outlined button pinned to the bottom — the only one of its
+      // kind here, and it competed with the save bar the forms put there.
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.navyDeep,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Adicionar concorrente'),
+        onPressed: () => _openAddCompetitorSheet(context, ref),
       ),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  variantLabel.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                child: CatalogSectionLabel(variantLabel.toUpperCase()),
               ),
             ),
             Expanded(
@@ -140,18 +162,20 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                       .where((row) => !row.isOwn)
                       .toList();
                   if (competitors.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Nenhuma outra marca cadastrada ainda',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.gray400,
-                        ),
-                      ),
+                    // Spec 0013 §7: with no equivalence, a rep cannot record
+                    // quantities against any competitor for this product. The
+                    // empty state is the one place to say so.
+                    return const CatalogEmptyState(
+                      icon: Icons.compare_arrows_rounded,
+                      title: 'Nenhum concorrente vinculado',
+                      subtitle:
+                          'Sem equivalências, este produto não aparece no '
+                          'comparativo e o representante não consegue '
+                          'registrar quantidades contra ele.',
                     );
                   }
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                     itemCount: competitors.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
@@ -163,28 +187,6 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                     },
                   );
                 },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openAddCompetitorSheet(context, ref),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text(
-                    'Adicionar outra marca',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.navyDeep,
-                    side: const BorderSide(color: AppColors.navyDeep),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
               ),
             ),
           ],
@@ -248,11 +250,12 @@ class _CompetitorRow extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Desvincular',
             onPressed: onRemove,
             icon: const Icon(
               Icons.link_off_rounded,
               size: 18,
-              color: AppColors.gray400,
+              color: AppColors.error,
             ),
           ),
         ],
@@ -261,7 +264,7 @@ class _CompetitorRow extends StatelessWidget {
   }
 }
 
-/// Bottom sheet opened by "Adicionar outra marca" — either pick an
+/// Bottom sheet opened by "Adicionar concorrente" — either pick an
 /// already-registered competitor product not yet linked to this variant,
 /// or register a brand-new one (which gets linked automatically once
 /// saved).
@@ -285,14 +288,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
   void _showLinkError(Object error) {
     if (!mounted) return;
     setState(() => _linking = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          error is CatalogApiException
-              ? error.message
-              : 'Não foi possível vincular a marca.',
-        ),
-      ),
+    showCatalogSnack(
+      context,
+      error is CatalogApiException
+          ? error.message
+          : 'Não foi possível vincular o produto.',
+      isError: true,
     );
   }
 
@@ -304,7 +305,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           .read(catalogRepositoryProvider)
           .linkCompetitor(widget.variantId, competitor.id);
       invalidateCatalog(ref, variantId: widget.variantId);
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${competitor.name}” vinculado.',
+      );
     } catch (error) {
       _showLinkError(error);
     }
@@ -320,7 +326,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           .read(catalogRepositoryProvider)
           .linkCompetitor(widget.variantId, created.id);
       invalidateCatalog(ref, variantId: widget.variantId);
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${created.name}” cadastrado e vinculado.',
+      );
     } catch (error) {
       _showLinkError(error);
     }
@@ -339,7 +350,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           maxHeight: MediaQuery.of(context).size.height * 0.75,
         ),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.background,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -356,19 +367,33 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'ADICIONAR CONCORRENTE',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.5,
+            // A 17px title, like every other sheet in the panel. This one used
+            // an 11px caps section label, which read as a divider rather than
+            // the heading of the thing the admin had just opened.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 8, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Adicionar concorrente',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray900,
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -379,7 +404,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                   onPressed: _linking ? null : _createAndLink,
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text(
-                    'Cadastrar nova marca',
+                    'Cadastrar novo produto',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
@@ -399,7 +424,9 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 error: (_, _) => const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
-                    child: Text('Não foi possível carregar outras marcas'),
+                    child: Text(
+                      'Não foi possível carregar os produtos concorrentes',
+                    ),
                   ),
                 ),
                 data: (unlinked) {
@@ -407,8 +434,8 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     return const Padding(
                       padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
                       child: Text(
-                        'Todas as outras marcas cadastradas já estão '
-                        'vinculadas a este produto.',
+                        'Todos os produtos concorrentes cadastrados já estão '
+                        'vinculados a este produto.',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: AppColors.gray400,

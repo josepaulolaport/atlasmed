@@ -122,7 +122,9 @@ class FakeCalendarRepository implements CalendarRepository {
       id: 99,
       version: 1,
       owner: { id: input.event.ownerUserId, name: "Ana Silva" },
-      facility: input.interaction ? { id: input.interaction.facilityId, name: "Clínica Central" } : null,
+      facility: input.interaction
+        ? { id: input.interaction.facilityId, name: "Clínica Central", deactivated: false }
+        : null,
       overrides: [],
       interactions: input.interaction ? [{
         id: 10,
@@ -262,7 +264,7 @@ describe("Calendar application use cases", () => {
 
   it("filters manager interaction rows outside facility scope and rejects unmanaged owners", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 99, name: "Fora do escopo" }, interactions: [{ id: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 99, name: "Fora do escopo", deactivated: false }, interactions: [{ id: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: 99, modality: "REMOTE", status: "SCHEDULED", version: 1 }] })];
     const useCase = new ListCalendarUseCase({ repository });
     expect(await useCase.execute({ actor: { userId: 2, roleName: "MANAGER" }, scope: managerScope,
@@ -275,7 +277,7 @@ describe("Calendar application use cases", () => {
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({
       kind: "INTERACTION", recurrence: "WEEKLY", recurrenceCount: 2,
-      owner: { id: 1, name: "Ana Silva" }, facility: { id: 1, name: "Clínica Central" },
+      owner: { id: 1, name: "Ana Silva" }, facility: { id: 1, name: "Clínica Central", deactivated: false },
       interactions: [{ id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 7 }],
       overrides: [{ id: 20, calendarId: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
         startsAt: new Date("2026-08-03T11:00:00Z"), endsAt: new Date("2026-08-03T12:00:00Z"), status: "ACTIVE", reason: null, version: 2 }],
@@ -289,7 +291,7 @@ describe("Calendar application use cases", () => {
     expect(result).toEqual(expect.objectContaining({
       calendarId: 1, recurrenceKey: "2026-08-03T09:00[UTC]", recurrence: "WEEKLY", recurrenceCount: 2,
       recurrenceUntil: null, calendarVersion: 1, version: 1, overrideVersion: 2, canMutate: true,
-      owner: { id: 1, name: "Ana Silva" }, facility: { id: 1, name: "Clínica Central" },
+      owner: { id: 1, name: "Ana Silva" }, facility: { id: 1, name: "Clínica Central", deactivated: false },
       interaction: expect.objectContaining({ id: 10, status: "NOT_COMPLETED", version: 7 }),
     }));
     expect(repository.events[0]?.interactions[0]?.status).toBe("SCHEDULED");
@@ -341,7 +343,7 @@ describe("Calendar application use cases", () => {
 
   it("cancels a scheduled interaction occurrence and its lifecycle row with user metadata", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central" }, interactions: [{
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [{
       id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 1,
     }] })];
 
@@ -404,7 +406,7 @@ describe("Calendar application use cases", () => {
   it("rekeys untouched scheduled interactions when the materialized series shape changes", async () => {
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 2,
-      facility: { id: 1, name: "Clínica Central" }, interactions: [
+      facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [
         { id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
         { id: 11, recurrenceKey: "2026-08-04T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
       ] })];
@@ -422,7 +424,7 @@ describe("Calendar application use cases", () => {
   it("maps a later-only materialized interaction to the corresponding later occurrence", async () => {
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 3,
-      facility: { id: 1, name: "Clínica Central" }, interactions: [
+      facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [
         { id: 12, recurrenceKey: "2026-08-05T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
       ] })];
 
@@ -439,7 +441,7 @@ describe("Calendar application use cases", () => {
     const repository = new FakeCalendarRepository();
     const useCase = new UpdateCalendarEventUseCase({ repository });
     repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 1,
-      facility: { id: 1, name: "Clínica Central" }, interactions: [{
+      facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [{
         id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED",
         visitId: null, linkedOrderCount: 0, lifecycleEventCount: 1, version: 1,
       }] })];
@@ -457,7 +459,7 @@ describe("Calendar application use cases", () => {
   it("rejects materialized series shape edits after progress or linked orders but allows title-only edits", async () => {
     const repository = new FakeCalendarRepository();
     const useCase = new UpdateCalendarEventUseCase({ repository });
-    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central" }, interactions: [{
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [{
       id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "IN_PROGRESS",
       visitId: null, linkedOrderCount: 0, version: 2,
     }] })];
@@ -465,7 +467,7 @@ describe("Calendar application use cases", () => {
       id: 1, idempotencyKey: "progressed", expectedVersion: 1, changes: { recurrence: "DAILY", recurrenceCount: 2 } }))
       .rejects.toMatchObject({ code: "VALIDATION_ERROR" });
 
-    repository.events[0] = baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central" }, interactions: [{
+    repository.events[0] = baseEvent({ kind: "INTERACTION", facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [{
       id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED",
       visitId: null, linkedOrderCount: 1, version: 1,
     }] });
@@ -537,7 +539,7 @@ describe("Calendar application use cases", () => {
   it("cancels every materialized scheduled interaction in a series transactionally", async () => {
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 2,
-      facility: { id: 1, name: "Clínica Central" }, interactions: [
+      facility: { id: 1, name: "Clínica Central", deactivated: false }, interactions: [
         { id: 10, recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 1 },
         { id: 11, recurrenceKey: "2026-08-04T09:00[UTC]", facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 1 },
       ] })];

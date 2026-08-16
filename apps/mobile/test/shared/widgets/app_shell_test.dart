@@ -60,9 +60,30 @@ void main() {
       );
     });
 
+    test('Administração is admin-only and pinned to branch 12', () {
+      // Spec 0016 §3.1/§3.2. The branch index is asserted because a branch's
+      // position *is* its index: inserting a branch above it in `routes.dart`
+      // would silently point this entry at someone else's screen.
+      final admin = appNavigationItems.singleWhere(
+        (item) => item.route == '/admin',
+      );
+
+      expect(admin.label, 'Administração');
+      expect(admin.branchIndex, 12);
+      expect(admin.visibleFor!(UserRoleName.admin), isTrue);
+      expect(admin.visibleFor!(UserRoleName.manager), isFalse);
+      expect(admin.visibleFor!(UserRoleName.rep), isFalse);
+      expect(admin.visibleFor!(UserRoleName.ops), isFalse);
+
+      // Last in the list: a maintenance destination, not daily work.
+      expect(appNavigationItems.last.route, '/admin');
+    });
+
     test('offers no way into Usuários or Territórios', () {
       // Both were removed from the drawer by request. The branches and the
       // routes survive, as with Perfil above — only the entries are gone.
+      // Asserted rather than left to a screenshot because each entry is one
+      // line and would come back unnoticed in any merge that touches this list.
       //
       // What that costs, recorded here so it is not rediscovered as a bug:
       // "Convidar" starts on Usuários and nowhere else, so the app cannot

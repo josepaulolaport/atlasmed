@@ -28,6 +28,28 @@ const errorTestApp = app
   })
   .get("/__test/errors/unexpected", () => {
     throw new Error("database password leaked");
+  })
+  // Shaped like what the `postgres` driver throws, wrapped the way Drizzle
+  // wraps it — the SQLSTATE is one level down, on `cause`.
+  .get("/__test/errors/duplicate", () => {
+    throw Object.assign(new Error("insert failed"), {
+      cause: Object.assign(new Error("duplicate key"), {
+        code: "23505",
+        constraint: "products_simpro_code_unique",
+      }),
+    });
+  })
+  .get("/__test/errors/still-referenced", () => {
+    throw Object.assign(new Error("delete failed"), {
+      code: "23503",
+      constraint: "facility_product_usage_competitor_fk",
+    });
+  })
+  .get("/__test/errors/check-violation", () => {
+    throw Object.assign(new Error("check failed"), {
+      code: "23514",
+      constraint: "facility_product_usage_quantity_positive",
+    });
   });
 
 async function request(path: string, init?: RequestInit) {
@@ -96,6 +118,48 @@ describe("global error handler", () => {
     expect(response.status).toBe(418);
     expect(await response.json()).toEqual({
       error: { code: "TEST_ERROR", message: "Test app error" },
+    });
+  });
+
+  /**
+   * Spec 0016: the admin panel lets someone type a duplicate code or remove a
+   * row something still points at. Both are Postgres constraint violations, and
+   * both used to fall through to `500 An unexpected error occurred` — which
+   * reads as our fault and tells the admin nothing about what to change.
+   */
+  it("maps a duplicate key to 409 without naming the constraint", async () => {
+    const response = await request("/__test/errors/duplicate");
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "RESOURCE_CONFLICT",
+        message: "A record with this value already exists.",
+      },
+    });
+    // The index name is ours, not the caller's business — it stays in the logs.
+    expect(await request("/__test/errors/duplicate").then((r) => r.text())).not.toContain(
+      "products_simpro_code_unique"
+    );
+  });
+
+  it("maps a foreign key violation to 409", async () => {
+    // The delete guards in spec 0016 §6.2 catch this first; this is the race
+    // they cannot close, and it must not surface as a 500.
+    const response = await request("/__test/errors/still-referenced");
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "RESOURCE_IN_USE" },
+    });
+  });
+
+  it("maps a check violation to 400, not 500", async () => {
+    const response = await request("/__test/errors/check-violation");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "CONSTRAINT_VIOLATION" },
     });
   });
 

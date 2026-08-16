@@ -172,6 +172,25 @@ export type FacilityPurchaseProfileFilter = "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" 
 export type FacilityListSort = "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
 export type FacilityListOrder = "asc" | "desc";
 
+/** A deactivated clinic, with just enough to recognise and restore it. */
+export interface DeactivatedFacilitySummary {
+  id: number;
+  name: string;
+  city: string | null;
+  state: string | null;
+  legalDocument: string | null;
+  legalDocumentType: "CNPJ" | "CPF" | null;
+  cnesCode: string | null;
+  deactivatedAt: string;
+  /**
+   * Set when another *active* clinic already holds this CNPJ, which makes
+   * reactivation impossible until one of them changes:
+   * `facilities_active_legal_document_cnpj_uidx` is unique among active rows.
+   * Surfaced in the list so the admin learns it before pressing the button.
+   */
+  blockedByFacilityId: number | null;
+}
+
 export interface FacilityRepository {
   findAll(params: {
     page: number;
@@ -295,6 +314,49 @@ export interface FacilityRepository {
   ): Promise<FacilityRecord>;
 
   softDelete(id: number): Promise<void>;
+
+  /**
+   * Deactivated clinics, newest first — the only way to see one.
+   *
+   * Every other read in this repository filters `deactivated_at IS NULL`,
+   * including `findById`, and the search document is deleted on deactivation.
+   * That left `reactivate` reachable only by someone who already knew the id,
+   * which nothing in the product could tell them.
+   */
+  listDeactivated(input: {
+    search?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ facilities: DeactivatedFacilitySummary[]; total: number }>;
+
+  /**
+   * A single facility whether or not it is deactivated.
+   *
+   * `findById` hides them, so a reactivate use case built on it would 404 on
+   * exactly the rows it exists to act upon.
+   */
+  findByIdIncludingDeactivated(id: number): Promise<{
+    id: number;
+    name: string;
+    legalDocument: string | null;
+    legalDocumentType: "CNPJ" | "CPF" | null;
+    deactivatedAt: Date | null;
+  } | null>;
+
+  /**
+   * The active clinic holding this CNPJ, if any — the one thing that can stop a
+   * reactivation, because `facilities_active_legal_document_cnpj_uidx` is
+   * unique among active rows.
+   *
+   * A direct lookup rather than a search: the first attempt reused
+   * `listDeactivated({ search: cnpj, limit: 1 })` and then picked its own row
+   * out of the result, which silently found nothing whenever any other
+   * deactivated clinic sorted ahead of it.
+   */
+  findActiveCnpjHolder(input: {
+    legalDocument: string;
+    excludeFacilityId: number;
+  }): Promise<number | null>;
 
   reactivate(id: number): Promise<FacilityRecord>;
 

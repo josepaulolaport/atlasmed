@@ -35,7 +35,14 @@ List<RouteBase> get $appRoutes => [
   $territoryEditRoute,
   $territoryCreateRoute,
   $territoryCreatePtRoute,
-  $catalogHomeRoute,
+  $adminProductsRoute,
+  $adminCompetitorProductsRoute,
+  $adminHealthcareProvidersRoute,
+  $adminConformityRequirementsRoute,
+  $adminSupportCatalogsRoute,
+  $adminDeactivatedFacilitiesRoute,
+  $adminMetricsRoute,
+  $catalogComparisonRoute,
   $presentationsRoute,
 ];
 
@@ -350,6 +357,11 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           hasOverriddenOnExit: false,
           factory: $ProductsRoute._fromState,
         ),
+        GoRouteData.$route(
+          path: '/price-index',
+          hasOverriddenOnExit: false,
+          factory: $PriceIndexRoute._fromState,
+        ),
       ],
     ),
     StatefulShellBranchData.$branch(
@@ -367,6 +379,15 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           path: '/team',
           hasOverriddenOnExit: false,
           factory: $TeamRoute._fromState,
+        ),
+      ],
+    ),
+    StatefulShellBranchData.$branch(
+      routes: [
+        GoRouteData.$route(
+          path: '/admin',
+          hasOverriddenOnExit: false,
+          factory: $AdminRoute._fromState,
         ),
       ],
     ),
@@ -581,6 +602,27 @@ mixin $ProductsRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $PriceIndexRoute on GoRouteData {
+  static PriceIndexRoute _fromState(GoRouterState state) =>
+      const PriceIndexRoute();
+
+  @override
+  String get location => GoRouteData.$location('/price-index');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 mixin $ProfileRoute on GoRouteData {
   static ProfileRoute _fromState(GoRouterState state) => const ProfileRoute();
 
@@ -606,6 +648,26 @@ mixin $TeamRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/team');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $AdminRoute on GoRouteData {
+  static AdminRoute _fromState(GoRouterState state) => const AdminRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin');
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -1712,61 +1774,19 @@ mixin $TerritoryCreatePtRoute on GoRouteData {
       context.replace(location, extra: _self.$extra);
 }
 
-RouteBase get $catalogHomeRoute => GoRouteData.$route(
-  path: '/catalog',
+RouteBase get $adminProductsRoute => GoRouteData.$route(
+  path: '/admin/produtos',
   hasOverriddenOnExit: false,
-  parentNavigatorKey: CatalogHomeRoute.$parentNavigatorKey,
-  factory: $CatalogHomeRoute._fromState,
-  routes: [
-    GoRouteData.$route(
-      path: 'potential-definitions',
-      hasOverriddenOnExit: false,
-      parentNavigatorKey: CatalogPotentialDefinitionsRoute.$parentNavigatorKey,
-      factory: $CatalogPotentialDefinitionsRoute._fromState,
-    ),
-    GoRouteData.$route(
-      path: 'price-index',
-      hasOverriddenOnExit: false,
-      parentNavigatorKey: CatalogPriceIndexRoute.$parentNavigatorKey,
-      factory: $CatalogPriceIndexRoute._fromState,
-    ),
-    GoRouteData.$route(
-      path: 'comparison/:variantId',
-      hasOverriddenOnExit: false,
-      parentNavigatorKey: CatalogComparisonRoute.$parentNavigatorKey,
-      factory: $CatalogComparisonRoute._fromState,
-    ),
-  ],
+  parentNavigatorKey: AdminProductsRoute.$parentNavigatorKey,
+  factory: $AdminProductsRoute._fromState,
 );
 
-mixin $CatalogHomeRoute on GoRouteData {
-  static CatalogHomeRoute _fromState(GoRouterState state) =>
-      const CatalogHomeRoute();
+mixin $AdminProductsRoute on GoRouteData {
+  static AdminProductsRoute _fromState(GoRouterState state) =>
+      const AdminProductsRoute();
 
   @override
-  String get location => GoRouteData.$location('/catalog');
-
-  @override
-  void go(BuildContext context) => context.go(location);
-
-  @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
-
-  @override
-  void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
-
-  @override
-  void replace(BuildContext context) => context.replace(location);
-}
-
-mixin $CatalogPotentialDefinitionsRoute on GoRouteData {
-  static CatalogPotentialDefinitionsRoute _fromState(GoRouterState state) =>
-      const CatalogPotentialDefinitionsRoute();
-
-  @override
-  String get location =>
-      GoRouteData.$location('/catalog/potential-definitions');
+  String get location => GoRouteData.$location('/admin/produtos');
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -1782,12 +1802,19 @@ mixin $CatalogPotentialDefinitionsRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin $CatalogPriceIndexRoute on GoRouteData {
-  static CatalogPriceIndexRoute _fromState(GoRouterState state) =>
-      const CatalogPriceIndexRoute();
+RouteBase get $adminCompetitorProductsRoute => GoRouteData.$route(
+  path: '/admin/concorrentes',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminCompetitorProductsRoute.$parentNavigatorKey,
+  factory: $AdminCompetitorProductsRoute._fromState,
+);
+
+mixin $AdminCompetitorProductsRoute on GoRouteData {
+  static AdminCompetitorProductsRoute _fromState(GoRouterState state) =>
+      const AdminCompetitorProductsRoute();
 
   @override
-  String get location => GoRouteData.$location('/catalog/price-index');
+  String get location => GoRouteData.$location('/admin/concorrentes');
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -1802,6 +1829,153 @@ mixin $CatalogPriceIndexRoute on GoRouteData {
   @override
   void replace(BuildContext context) => context.replace(location);
 }
+
+RouteBase get $adminHealthcareProvidersRoute => GoRouteData.$route(
+  path: '/admin/fontes-pagadoras',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminHealthcareProvidersRoute.$parentNavigatorKey,
+  factory: $AdminHealthcareProvidersRoute._fromState,
+);
+
+mixin $AdminHealthcareProvidersRoute on GoRouteData {
+  static AdminHealthcareProvidersRoute _fromState(GoRouterState state) =>
+      const AdminHealthcareProvidersRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/fontes-pagadoras');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $adminConformityRequirementsRoute => GoRouteData.$route(
+  path: '/admin/requisitos',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminConformityRequirementsRoute.$parentNavigatorKey,
+  factory: $AdminConformityRequirementsRoute._fromState,
+);
+
+mixin $AdminConformityRequirementsRoute on GoRouteData {
+  static AdminConformityRequirementsRoute _fromState(GoRouterState state) =>
+      const AdminConformityRequirementsRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/requisitos');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $adminSupportCatalogsRoute => GoRouteData.$route(
+  path: '/admin/catalogos',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminSupportCatalogsRoute.$parentNavigatorKey,
+  factory: $AdminSupportCatalogsRoute._fromState,
+);
+
+mixin $AdminSupportCatalogsRoute on GoRouteData {
+  static AdminSupportCatalogsRoute _fromState(GoRouterState state) =>
+      const AdminSupportCatalogsRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/catalogos');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $adminDeactivatedFacilitiesRoute => GoRouteData.$route(
+  path: '/admin/clinicas-desativadas',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminDeactivatedFacilitiesRoute.$parentNavigatorKey,
+  factory: $AdminDeactivatedFacilitiesRoute._fromState,
+);
+
+mixin $AdminDeactivatedFacilitiesRoute on GoRouteData {
+  static AdminDeactivatedFacilitiesRoute _fromState(GoRouterState state) =>
+      const AdminDeactivatedFacilitiesRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/clinicas-desativadas');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $adminMetricsRoute => GoRouteData.$route(
+  path: '/admin/metricas',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminMetricsRoute.$parentNavigatorKey,
+  factory: $AdminMetricsRoute._fromState,
+);
+
+mixin $AdminMetricsRoute on GoRouteData {
+  static AdminMetricsRoute _fromState(GoRouterState state) =>
+      const AdminMetricsRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/metricas');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $catalogComparisonRoute => GoRouteData.$route(
+  path: '/products/:variantId/comparativo',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: CatalogComparisonRoute.$parentNavigatorKey,
+  factory: $CatalogComparisonRoute._fromState,
+);
 
 mixin $CatalogComparisonRoute on GoRouteData {
   static CatalogComparisonRoute _fromState(GoRouterState state) =>
@@ -1813,7 +1987,7 @@ mixin $CatalogComparisonRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location(
-    '/catalog/comparison/${Uri.encodeComponent(_self.variantId.toString())}',
+    '/products/${Uri.encodeComponent(_self.variantId.toString())}/comparativo',
   );
 
   @override

@@ -115,6 +115,46 @@ void main() {
     );
   });
 
+  test('Administração routes resolve to their locations', () {
+    // Spec 0016 §3.3. The hub is a shell branch; everything under it is pushed
+    // on the root navigator, so each screen gets a back button to the hub.
+    expect(const AdminRoute().location, '/admin');
+    expect(const AdminProductsRoute().location, '/admin/produtos');
+    expect(
+      const AdminCompetitorProductsRoute().location,
+      '/admin/concorrentes',
+    );
+    expect(const AdminMetricsRoute().location, '/admin/metricas');
+    expect(
+      const AdminHealthcareProvidersRoute().location,
+      '/admin/fontes-pagadoras',
+    );
+    expect(const AdminSupportCatalogsRoute().location, '/admin/catalogos');
+    expect(
+      const AdminConformityRequirementsRoute().location,
+      '/admin/requisitos',
+    );
+  });
+
+  test('the price index and the comparativo left the retired /catalog tree', () {
+    // Spec 0016 §3.4. `/catalog` held the admin catalogue and nothing linked to
+    // it. The two rep-facing screens under it had to move somewhere reachable.
+    expect(const PriceIndexRoute().location, '/price-index');
+    expect(
+      CatalogComparisonRoute(variantId: 11).location,
+      '/products/11/comparativo',
+    );
+
+    // `/price-index` is deliberately not nested under `/products`:
+    // `/products/:familyId` parses its segment as an int and would capture it.
+    expect(const PriceIndexRoute().location.startsWith('/products'), isFalse);
+    // The comparativo is two segments, so it does not collide with it either.
+    expect(Uri.parse(ProductDetailRoute(familyId: 11).location).pathSegments, [
+      'products',
+      '11',
+    ]);
+  });
+
   test('agenda occurrence edit encodes recurrenceKey', () {
     const key = '2026-08-17T12:00[America/Sao_Paulo]';
     expect(

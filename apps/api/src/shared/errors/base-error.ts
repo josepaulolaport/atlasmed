@@ -32,6 +32,16 @@ const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
    * less than a name they may not be entitled to read.
    */
   CNES_REGISTRATION_ALREADY_HELD: ["personId", "registrationLabel"],
+  /*
+   * Spec 0016 §6.2: the counts are the whole answer. "Cannot be deleted" alone
+   * leaves an admin with no next step, while "3 pedidos e 1 equivalência" tells
+   * them which — an order means deactivate, a stray equivalence is something
+   * they can remove and retry.
+   *
+   * Safe to expose: row counts of records attached to a catalogue entry the
+   * caller already holds `delete CATALOG` on, with no ids and no clinic names.
+   */
+  RESOURCE_IN_USE: ["blockedBy"],
 };
 
 export abstract class AppError extends Error {

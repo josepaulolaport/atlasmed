@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { catalogUseCases } from "../../composition";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { competitorProductsRoute } from "./competitor-products.route";
 import { productComparisonsRoute } from "./product-comparisons.route";
 
@@ -59,8 +59,9 @@ const updateBusinessVerticalRoute = new Elysia()
     {
       detail: { summary: "Update business vertical", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      // No `code`: it is immutable after creation (spec 0016 §4.1) — a stable
+      // key other data joins on by meaning.
       body: t.Object({
-        code: t.Optional(t.String()),
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
       }),
@@ -119,34 +120,72 @@ const getProductRoute = new Elysia()
     }
   );
 
+/**
+ * The columns an admin may set on a product.
+ *
+ * Nullable where the schema is nullable. Until spec 0016 §5.1 this route
+ * required `code`, `simproCode`, `brasindiceCode`, `tissCode` and
+ * `brasindiceUpdatedAt` as non-null strings — which spec 0013 §2 had already
+ * made nullable *on purpose*, so that the Emultec importer would stop inventing
+ * `EMULTEC-SIM-{id}` values to satisfy a constraint that guaranteed a string
+ * rather than a code. The migration landed and the route did not follow, so an
+ * admin registering a product by hand was forced to invent exactly the
+ * synthetic codes the spec removed.
+ *
+ * Two fields are absent by decision:
+ * - `metricUnits` — informative, no writer anywhere (spec 0016 §7.1).
+ * - `ownership` — chosen by the endpoint, never by a field (§6.1).
+ */
+/// `numeric(12,2)`: ten digits before the point, two after.
+const PRICE = t.Number({ minimum: 0, maximum: 9999999999.99 });
+
+const productWritableFields = {
+  code: t.Optional(t.Nullable(t.String())),
+  name: t.String({ minLength: 1 }),
+  description: t.Optional(t.Nullable(t.String())),
+  commercialCode: t.Optional(t.Nullable(t.String())),
+  productGroup: t.Optional(t.Nullable(t.String())),
+  productClassification: t.Optional(t.Nullable(t.String())),
+  internalClassification: t.Optional(t.Nullable(t.String())),
+  brand: t.Optional(t.Nullable(t.String())),
+  unit: t.Optional(t.Nullable(t.String())),
+  barcode: t.Optional(t.Nullable(t.String())),
+  ncm: t.Optional(t.Nullable(t.String())),
+  anvisaRegistration: t.Optional(t.Nullable(t.String())),
+  requiresSterilization: t.Optional(t.Boolean()),
+  idProdutoEmultec: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
+  // `pictureUrl` is absent by decision: it names an object this API stores, so
+  // it is written by `POST`/`DELETE /products/:id/picture` and by nothing else.
+  // As a body field it let a product point at any URL on the internet.
+  simproCode: t.Optional(t.Nullable(t.String())),
+  brasindiceCode: t.Optional(t.Nullable(t.String())),
+  tissCode: t.Optional(t.Nullable(t.String())),
+  manufacturer: t.String({ minLength: 1 }),
+  countryOfOrigin: t.String({ minLength: 1 }),
+  // Bounded, not merely typed. A price is a `numeric(12,2)` the comparativo and
+  // the rep's screens read straight out; nothing downstream treats a negative
+  // as invalid, so `-5` simply becomes what the product costs.
+  price: t.Optional(t.Nullable(PRICE)),
+  price17: t.Optional(PRICE),
+  price18: t.Optional(PRICE),
+  price20: t.Optional(PRICE),
+  brasindiceUpdatedAt: t.Optional(t.Nullable(t.String())),
+  isActive: t.Optional(t.Boolean()),
+} as const;
+
 const createProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "CATALOG"))
   .post(
     "/products",
-    async ({ body }) =>
-      catalogUseCases.createProduct().execute({
-        ...body,
-        verticalIds: body.verticalIds,
-      }),
+    async ({ body }) => catalogUseCases.createProduct().execute(body),
     {
       detail: { summary: "Create product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       body: t.Object({
-        code: t.String(),
-        name: t.String(),
+        ...productWritableFields,
+        // The only chance to choose: a product's Linhas are immutable after
+        // creation (spec 0016 §6.7), so `PATCH` does not accept them.
         verticalIds: t.Array(t.Number({ minimum: 1 }), { minItems: 1 }),
-        pictureUrl: t.Optional(t.Nullable(t.String())),
-        simproCode: t.String(),
-        brasindiceCode: t.String(),
-        tissCode: t.String(),
-        manufacturer: t.String(),
-        countryOfOrigin: t.String(),
-        price: t.Number(),
-        price17: t.Number(),
-        price18: t.Number(),
-        price20: t.Number(),
-        brasindiceUpdatedAt: t.String(),
-        isActive: t.Optional(t.Boolean()),
       }),
     }
   );
@@ -156,36 +195,136 @@ const updateProductRoute = new Elysia()
   .use(requirePermission("update", "CATALOG"))
   .patch(
     "/products/:id",
-    async ({ params, body }) => {
-      const { verticalIds: rawVerticalIds, ...rest } = body;
-      return catalogUseCases.updateProduct().execute({
-        productId: params.id,
-        ...rest,
-        ...(rawVerticalIds
-          ? { verticalIds: rawVerticalIds }
-          : {}),
-      });
-    },
+    async ({ params, body }) =>
+      catalogUseCases.updateProduct().execute({ productId: params.id, ...body }),
     {
       detail: { summary: "Update product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      // Every field optional, and no `verticalIds`: moving a product between
+      // Linhas is forbidden (spec 0016 §6.7) because orders key on
+      // `facility_vertical_profile_id` and `product_potential_links` is unique
+      // per (product, vertical) — so a move silently changes which profiles the
+      // product's sales join to and orphans its metric link.
       body: t.Object({
-        code: t.Optional(t.String()),
-        name: t.Optional(t.String()),
-        verticalIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { minItems: 1 })),
-        pictureUrl: t.Optional(t.Nullable(t.String())),
-        simproCode: t.Optional(t.String()),
-        brasindiceCode: t.Optional(t.String()),
-        tissCode: t.Optional(t.String()),
-        manufacturer: t.Optional(t.String()),
-        countryOfOrigin: t.Optional(t.String()),
-        price: t.Optional(t.Number()),
-        price17: t.Optional(t.Number()),
-        price18: t.Optional(t.Number()),
-        price20: t.Optional(t.Number()),
-        brasindiceUpdatedAt: t.Optional(t.String()),
-        isActive: t.Optional(t.Boolean()),
+        ...productWritableFields,
+        name: t.Optional(t.String({ minLength: 1 })),
+        manufacturer: t.Optional(t.String({ minLength: 1 })),
+        countryOfOrigin: t.Optional(t.String({ minLength: 1 })),
       }),
+    }
+  );
+
+/**
+ * Deletes a product, and only while nothing references it (spec 0016 §6.2).
+ *
+ * 409 `RESOURCE_IN_USE` when something does, carrying the counts, so the client
+ * can name what blocks it and offer deactivation instead. Not a soft delete:
+ * that is what `isActive` is for, and having both would be two ways to say the
+ * same thing.
+ */
+const deleteProductRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "CATALOG"))
+  .delete(
+    "/products/:id",
+    async ({ params }) =>
+      catalogUseCases.deleteProduct().execute({ productId: params.id }),
+    {
+      detail: {
+        summary: "Delete a product that nothing references",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    }
+  );
+
+/**
+ * The product picture (spec 0016 §4.2).
+ *
+ * Registered **before** `/products/:id` so `pictures` is not routed as a
+ * product id — the same ordering `facilities.route.ts` documents for
+ * `clinical-focuses`.
+ *
+ * Read permission rather than CATALOG-update: reps see the picture in the
+ * product list, and gating the bytes behind an admin permission would show
+ * them a broken image.
+ */
+const downloadProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CATALOG"))
+  .get(
+    "/products/pictures/*",
+    async ({ params, set }) => {
+      const key = params["*"];
+      if (typeof key !== "string") {
+        throw new ValidationError([
+          { field: "key", message: "Invalid product picture key" },
+        ]);
+      }
+      const result = await catalogUseCases
+        .downloadProductPicture()
+        .execute({ storageKey: key });
+      set.headers["content-type"] = result.contentType;
+      set.headers["cache-control"] = "private, max-age=3600";
+      // The stored object's bytes are whatever was uploaded. Without this a
+      // browser may sniff past the declared type and render them as something
+      // else entirely.
+      set.headers["x-content-type-options"] = "nosniff";
+      return result.bytes;
+    },
+    {
+      detail: {
+        summary: "Download a product picture by storage key",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const uploadProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CATALOG"))
+  .post(
+    "/products/:id/picture",
+    async ({ params, body }) => {
+      const picture = body.picture;
+      if (!(picture instanceof File)) {
+        throw new ValidationError([
+          { field: "picture", message: "Picture file is required" },
+        ]);
+      }
+      return catalogUseCases
+        .uploadProductPicture()
+        .execute({ productId: params.id, file: picture });
+    },
+    {
+      detail: {
+        summary: "Upload the picture of a product",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      body: t.Object({
+        picture: t.File({ description: "JPEG, PNG, or WebP image up to 5 MB" }),
+      }),
+    }
+  );
+
+const removeProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CATALOG"))
+  .delete(
+    "/products/:id/picture",
+    async ({ params }) =>
+      catalogUseCases.removeProductPicture().execute({ productId: params.id }),
+    {
+      detail: {
+        summary: "Remove the picture of a product",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -362,9 +501,14 @@ export const catalogRoute = new Elysia()
   .use(createBusinessVerticalRoute)
   .use(updateBusinessVerticalRoute)
   .use(listProductsRoute)
+  // Before `/products/:id` so `pictures` is not captured as a product id.
+  .use(downloadProductPictureRoute)
   .use(getProductRoute)
   .use(createProductRoute)
   .use(updateProductRoute)
+  .use(deleteProductRoute)
+  .use(uploadProductPictureRoute)
+  .use(removeProductPictureRoute)
   .use(listHealthcareProvidersRoute)
   .use(createHealthcareProviderRoute)
   .use(updateHealthcareProviderRoute)

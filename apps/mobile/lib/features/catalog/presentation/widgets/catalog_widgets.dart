@@ -88,7 +88,11 @@ class CatalogErrorState extends StatelessWidget {
 class CatalogSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final VoidCallback onFilter;
+
+  /// Null on a list with nothing to filter, so the button is not drawn at all.
+  /// Three admin screens passed `() {}` and rendered a control that did
+  /// nothing when tapped.
+  final VoidCallback? onFilter;
   final int filterCount;
   final String hintText;
 
@@ -96,7 +100,7 @@ class CatalogSearchBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onChanged,
-    required this.onFilter,
+    this.onFilter,
     this.filterCount = 0,
     this.hintText = 'Buscar produto…',
   });
@@ -174,63 +178,65 @@ class CatalogSearchBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onFilter,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: filterCount > 0 ? AppColors.navyBright : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gray200),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Icon(
-                      Icons.tune_rounded,
-                      size: 18,
-                      color: filterCount > 0
-                          ? Colors.white
-                          : AppColors.navyBright,
+          if (onFilter != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onFilter,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: filterCount > 0 ? AppColors.navyBright : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gray200),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
                     ),
-                  ),
-                  if (filterCount > 0)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        constraints: const BoxConstraints(minWidth: 16),
-                        height: 16,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.rose,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$filterCount',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: filterCount > 0
+                            ? Colors.white
+                            : AppColors.navyBright,
+                      ),
+                    ),
+                    if (filterCount > 0)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 16),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.rose,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$filterCount',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -725,16 +731,20 @@ class _FilterOptionRow extends StatelessWidget {
   }
 }
 
-/// Which peer view of the Catálogo section is active — used by
+/// Which peer view of the Produtos section is active — used by
 /// [CatalogTabBar] so switching between them feels like flipping a tab
 /// instead of drilling into a nested screen.
 enum CatalogTab { produtos, tabelaCompleta }
 
-/// Segmented control pinned below [AtlasTopBar] on every top-level catalog
-/// screen (the flat product list and the full Brasíndice/Simpro table).
-/// Selecting a segment replaces the current route with [context.go], so
-/// flipping back and forth never piles up the back stack — it behaves like
-/// a tab, not a pushed detail screen.
+/// Segmented control pinned below [AtlasTopBar] on both rep-facing product
+/// screens: the product list (`/products`) and the full Brasíndice/Simpro
+/// table (`/price-index`). Selecting a segment replaces the current route with
+/// [context.go], so flipping back and forth never piles up the back stack — it
+/// behaves like a tab, not a pushed detail screen.
+///
+/// Both targets live in the same shell branch (spec 0016 §3.4), so the drawer
+/// stays available on either. It used to point at `/catalog`, an admin screen
+/// nothing else linked to — which made this tab bar that screen's only way in.
 class CatalogTabBar extends StatelessWidget {
   final CatalogTab active;
   const CatalogTabBar({super.key, required this.active});
@@ -755,14 +765,14 @@ class CatalogTabBar extends StatelessWidget {
               child: _segment(
                 label: 'Produtos',
                 selected: active == CatalogTab.produtos,
-                onTap: () => const CatalogHomeRoute().go(context),
+                onTap: () => const ProductsRoute().go(context),
               ),
             ),
             Expanded(
               child: _segment(
                 label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
-                onTap: () => const CatalogPriceIndexRoute().go(context),
+                onTap: () => const PriceIndexRoute().go(context),
               ),
             ),
           ],

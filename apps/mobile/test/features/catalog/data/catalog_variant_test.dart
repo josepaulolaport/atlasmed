@@ -67,5 +67,69 @@ void main() {
     final variant = CatalogVariant.fromJson(row(productGroup: null));
 
     expect(variant.familyName, variant.name);
+    // …but `productGroup` itself stays null, so a save cannot write the
+    // fallback back as if it were a real family (spec 0016 §4.2).
+    expect(variant.productGroup, isNull);
+  });
+
+  test('keeps productGroup distinct from the display fallback', () {
+    final variant = CatalogVariant.fromJson(row(productGroup: 'EVISC'));
+
+    expect(variant.productGroup, 'EVISC');
+    expect(variant.familyName, 'EVISC');
+  });
+
+  test('metricUnits defaults to 1 and parses a numeric string', () {
+    // Informative only (spec 0016 §7.1) — read, displayed, never written.
+    expect(CatalogVariant.fromJson(row()).metricUnits, 1);
+    expect(
+      CatalogVariant.fromJson({...row(), 'metricUnits': '5.000'}).metricUnits,
+      5,
+    );
+  });
+
+  test('reads the admin columns spec 0016 §4.2 added to the form', () {
+    final variant = CatalogVariant.fromJson({
+      ...row(),
+      'description': 'Gel viscoelástico',
+      'brand': 'Evisc',
+      'unit': 'caixa',
+      'barcode': '7891234567890',
+      'ncm': '3006.10.19',
+      'anvisaRegistration': '80102510036',
+      'commercialCode': 'EV-1',
+      'internalClassification': 'A',
+      'productClassification': 'Tópico',
+      'requiresSterilization': true,
+      'idProdutoEmultec': 4321,
+    });
+
+    expect(variant.description, 'Gel viscoelástico');
+    expect(variant.brand, 'Evisc');
+    expect(variant.unit, 'caixa');
+    expect(variant.barcode, '7891234567890');
+    expect(variant.ncm, '3006.10.19');
+    expect(variant.anvisaRegistration, '80102510036');
+    expect(variant.commercialCode, 'EV-1');
+    expect(variant.internalClassification, 'A');
+    expect(variant.productClassification, 'Tópico');
+    expect(variant.requiresSterilization, isTrue);
+    expect(variant.idProdutoEmultec, 4321);
+  });
+
+  test('blank optional text reads as absent, not as an empty string', () {
+    // The coding columns are partial-unique where not null (spec 0013 §2), so
+    // two products saved with `""` would collide where two saved with null
+    // would not — and `""` is not a code anyone can look up.
+    final variant = CatalogVariant.fromJson({
+      ...row(),
+      'brand': '   ',
+      'unit': '',
+      'idProdutoEmultec': null,
+    });
+
+    expect(variant.brand, isNull);
+    expect(variant.unit, isNull);
+    expect(variant.idProdutoEmultec, isNull);
   });
 }

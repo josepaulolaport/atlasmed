@@ -26,6 +26,8 @@ interface Dependencies {
   fieldSuggestionRepository: FieldSuggestionRepository;
   facilityRepository: FacilityRepository;
   applyService: FieldSuggestionApplyService;
+  /** Re-syncs the facility's search document; deletes it once deactivated. */
+  onFacilityChanged?: (facilityId: number) => Promise<void>;
   auditLogService?: AuditLogService;
 }
 
@@ -227,6 +229,11 @@ export class ApproveFieldSuggestionUseCase {
 
     if (suggestion.kind === "DEACTIVATION") {
       await this.deps.facilityRepository.softDelete(suggestion.facilityId);
+      // The search index is the only place a deactivated clinic could still be
+      // seen: Meilisearch backs Explorar's list and map, and nothing else here
+      // told it the row was gone. `DELETE /facilities/:id` has always done this;
+      // this path — the only one a reviewer actually uses — did not.
+      await this.deps.onFacilityChanged?.(suggestion.facilityId);
     } else {
       if (!suggestion.fieldKey || !isFieldSuggestionFieldKey(suggestion.fieldKey)) {
         throw new ValidationError([

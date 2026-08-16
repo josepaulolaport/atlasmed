@@ -283,6 +283,65 @@ class _ProductRowPlaceholder extends StatelessWidget {
   );
 }
 
+/// A plain label-over-sublabel list — the support catalogues, the metrics, the
+/// cadastro requirements.
+///
+/// Those three screens showed a bare `CircularProgressIndicator` while loading,
+/// which `list_skeletons_test.dart` exists to prevent: a spinner says "wait",
+/// a skeleton says "a list is coming and this is its shape".
+class SimpleListSkeleton extends StatelessWidget {
+  const SimpleListSkeleton({super.key, this.rows = 6, this.hasSubtitle = true});
+
+  final int rows;
+  final bool hasSubtitle;
+
+  @override
+  Widget build(BuildContext context) => _ListPlaceholder(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+    children: List.generate(
+      rows,
+      (index) => Padding(
+        padding: EdgeInsets.only(bottom: index == rows - 1 ? 0 : 8),
+        child: _SimpleRowPlaceholder(hasSubtitle: hasSubtitle),
+      ),
+    ),
+  );
+}
+
+class _SimpleRowPlaceholder extends StatelessWidget {
+  const _SimpleRowPlaceholder({required this.hasSubtitle});
+
+  final bool hasSubtitle;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.surfaceSecondary),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SkeletonBar(width: 160, height: 14),
+              if (hasSubtitle) ...[
+                const SizedBox(height: 6),
+                const _SkeletonBar(width: 96, height: 11),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        const _SkeletonBar(width: 18, height: 18),
+      ],
+    ),
+  );
+}
+
 class CompetitorListSkeleton extends StatelessWidget {
   const CompetitorListSkeleton({super.key});
 

@@ -49,6 +49,11 @@ production, so the filter currently renders with no options.
 ## Mobile Architecture
 
 - Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
+- **`Administração` (`/admin`, drawer branch 12, ADMIN-only)** is the reference-data
+  surface: produtos, produtos concorrentes, métricas, fontes pagadoras and the
+  support catalogues (spec 0016). It replaced `/catalog`, which held the admin
+  catalogue and which nothing in the app linked to. The rep-facing product
+  surfaces are `/products` and its peer tab `/price-index`.
 - The user-facing product routes (`/products`, `/products/:familyId`) read the API-backed catalog through `CatalogRepository` and Riverpod's `catalogFamiliesProvider`; no local product fixture is used. The route opens a product family from any of its variant IDs, preserving deep links if the API reorders presentations.
 - ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
@@ -81,7 +86,16 @@ Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/data
 
 ## Cadastro documents
 
-Facility cadastro uses versioned **submissions** with logical **documents** (catalogued in `conformity_requirements`) and ordered **file assets** in private object storage. Clients upload via signed URLs (PUT / multipart). Ops review is manual per logical document.
+Facility cadastro uses versioned **submissions** with logical **documents** (catalogued in `conformity_requirements`) and ordered **file assets** in private object storage.
+
+The requirement catalogue is seeded by migration `0089` (five documents, scoped to
+Ortopedia) and had **no write path** until spec 0016 §4.7 added one at
+`Administração › Requisitos de cadastro` — before that, changing the checklist
+meant writing a migration.
+
+⚠️ `atlasmed_prod_snapshot` on the local Postgres is **32 migrations stale** (86
+of 118). Counting rows in it without checking `drizzle.__drizzle_migrations`
+gives confidently wrong answers — it reports this table as empty. Clients upload via signed URLs (PUT / multipart). Ops review is manual per logical document.
 
 ⚠️ **As-built, file processing runs inline on the API request thread**, not in the Temporal
 workflow — `cadastroFileUploadedWorkflow` exists and is fired best-effort, so both paths can
@@ -92,5 +106,15 @@ write the same row. Being replaced by [Spec 0011](../specs/0011-cadastro-pipelin
 - Visit/activity domain is early / incomplete; nothing meaningful populates `visits` or
   `interactions` yet, so no activity metric is currently derivable.
 - Mobile stack migration (Flutter → React Native/Expo) not decided for production (ADR 0002 Proposed).
-- Several catalogs (`unit_types`, `unit_subtypes`, `clinical_focuses`, `occupations`,
-  `healthcare_specialties`) have **no write path in code** and are populated manually.
+- `unit_types`, `unit_subtypes` and `occupations` have **no write path in code**
+  and are populated from CNES. Deliberate — a human-editable copy of an official
+  catalogue is a divergence waiting to happen (spec 0016 §2.3).
+- `healthcare_specialties`, `clinical_focuses`, `person_facility_roles` and
+  `person_professional_registration_councils` gained `POST`/`PATCH` on the
+  `CATALOG` subject with spec 0016 §5.2, edited from
+  `Administração › Catálogos`. `healthcare_specialties.cnes_id` became nullable
+  in migration `0118` so a specialty CNES does not list can be registered without
+  inventing an official id; its plain `UNIQUE` is kept rather than swapped for a
+  partial index, because NULLs are already distinct under one and a partial index
+  cannot be inferred as an `ON CONFLICT` arbiter — which would break any future
+  CNES sync upserting on `cnes_id`.

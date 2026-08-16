@@ -23,6 +23,15 @@ export interface ConformityRequirementRecord {
   maxCombinedSizeBytes: number;
   requiresFrontAndBack: boolean;
   requiresValidityDate: boolean;
+  /**
+   * What already points at this requirement (spec 0016 §6.2).
+   *
+   * Populated only by `findAllRequirements` — the admin read — so the form can
+   * disable delete with a reason instead of offering it and discovering the
+   * refusal afterwards. Undefined on the checklist reads, which have no use for
+   * it and should not pay for the counts.
+   */
+  references?: ConformityRequirementReferences;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +66,45 @@ export interface ConformityRecordRow {
   };
 }
 
+/**
+ * The columns an admin sets on a requirement (spec 0016 §4.7).
+ *
+ * `slug` is absent: it is chosen once, at creation. It is the requirement's
+ * stable key — it travels in every cadastro DTO the mobile app reads — and
+ * renaming it would silently orphan anything that had learned it. `name` is the
+ * label to change instead.
+ */
+export interface ConformityRequirementWritableFields {
+  name: string;
+  description: string | null;
+  /** Null means every Linha. */
+  verticalId: number | null;
+  /** Null means every clinic, CNPJ or CPF. */
+  appliesToLegalDocumentType: FacilityLegalDocumentType | null;
+  isActive: boolean;
+  allowedMimeTypes: string[];
+  maxFiles: number;
+  maxFileSizeBytes: number;
+  maxCombinedSizeBytes: number;
+  requiresFrontAndBack: boolean;
+  requiresValidityDate: boolean;
+}
+
+/** What still points at a requirement. Empty ⇒ it can be deleted. */
+export type ConformityRequirementReferences = {
+  conformityRecords?: number;
+  submissionDocuments?: number;
+};
+
+export type ConformityRequirementDeletionOutcome =
+  | { found: false }
+  | { found: true; deleted: true }
+  | {
+      found: true;
+      deleted: false;
+      references: ConformityRequirementReferences;
+    };
+
 export interface ConformityRepository {
   findActiveRequirements(params?: {
     legalDocumentType?: FacilityLegalDocumentType | null;
@@ -69,6 +117,35 @@ export interface ConformityRepository {
   }): Promise<ConformityRequirementRecord[]>;
 
   findRequirementById(id: number): Promise<ConformityRequirementRecord | null>;
+
+  /**
+   * The whole catalogue, active and inactive — the admin list (spec 0016 §4).
+   *
+   * Separate from `findActiveRequirements` rather than a flag on it: that one
+   * builds a *clinic's checklist*, and a retired requirement leaking into it
+   * would ask a rep for a document nobody wants any more.
+   */
+  findAllRequirements(): Promise<ConformityRequirementRecord[]>;
+
+  createRequirement(
+    data: ConformityRequirementWritableFields & { slug: string }
+  ): Promise<ConformityRequirementRecord>;
+
+  updateRequirement(
+    id: number,
+    data: Partial<ConformityRequirementWritableFields>
+  ): Promise<ConformityRequirementRecord | null>;
+
+  /**
+   * Deletes a requirement, but only while no clinic has answered it.
+   *
+   * Both referencing foreign keys are `ON DELETE RESTRICT`, so the alternative
+   * is a bare 23503 the admin cannot act on. Same rule and same reasons as the
+   * catalogue deletes in spec 0016 §6.2 — retirement is `isActive = false`.
+   */
+  deleteRequirementIfUnanswered(
+    id: number
+  ): Promise<ConformityRequirementDeletionOutcome>;
 
   findRecordsByFacility(facilityId: number): Promise<ConformityRecordRow[]>;
 

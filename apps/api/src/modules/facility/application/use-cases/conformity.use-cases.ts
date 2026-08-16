@@ -1,11 +1,67 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
+import type {
+  ConformityRepository,
+  ConformityRequirementRecord,
+  ConformityRequirementWritableFields,
+  FacilityLegalDocumentType,
+} from "../interfaces/conformity.repository.interface";
+import {
+  ResourceInUseError,
+  ResourceNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
+
+/**
+ * The full admin shape of a requirement (spec 0016 §4.7).
+ *
+ * The picker DTO below omits the upload limits and the two behavioural flags,
+ * which is right for a checklist and useless for the screen that sets them.
+ */
+function serializeRequirementForAdmin(requirement: ConformityRequirementRecord) {
+  return {
+    id: requirement.id,
+    slug: requirement.slug,
+    name: requirement.name,
+    description: requirement.description,
+    verticalId: requirement.verticalId,
+    appliesToLegalDocumentType: requirement.appliesToLegalDocumentType,
+    isActive: requirement.isActive,
+    allowedMimeTypes: requirement.allowedMimeTypes,
+    maxFiles: requirement.maxFiles,
+    maxFileSizeBytes: requirement.maxFileSizeBytes,
+    maxCombinedSizeBytes: requirement.maxCombinedSizeBytes,
+    requiresFrontAndBack: requirement.requiresFrontAndBack,
+    requiresValidityDate: requirement.requiresValidityDate,
+    // Whether delete is available, and what blocks it (spec 0016 §6.2). Present
+    // only on the list read, which is the one that computes the counts — a
+    // create or update response says nothing, because nothing has changed about
+    // what references it.
+    ...(requirement.references === undefined
+      ? {}
+      : {
+          deletable: Object.keys(requirement.references).length === 0,
+          blockingReferences: requirement.references,
+        }),
+    createdAt: requirement.createdAt.toISOString(),
+    updatedAt: requirement.updatedAt.toISOString(),
+  };
+}
 
 export class ListConformityRequirementsUseCase {
   constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
 
-  async execute() {
+  /**
+   * `includeInactive` switches this from *a clinic's checklist source* to *the
+   * admin catalogue* — two different questions with two different answers, and
+   * the default stays the safe one.
+   */
+  async execute(input: { includeInactive?: boolean } = {}) {
+    if (input.includeInactive) {
+      const requirements = await this.deps.conformityRepository.findAllRequirements();
+      return { data: requirements.map(serializeRequirementForAdmin) };
+    }
+
     const requirements = await this.deps.conformityRepository.findActiveRequirements();
 
     return {
@@ -20,6 +76,139 @@ export class ListConformityRequirementsUseCase {
         createdAt: requirement.createdAt.toISOString(),
       })),
     };
+  }
+}
+
+/** Defaults matching the column defaults, so a short form is a complete one. */
+const REQUIREMENT_DEFAULTS = {
+  allowedMimeTypes: ["image/jpeg", "image/png", "application/pdf"],
+  maxFiles: 10,
+  maxFileSizeBytes: 52_428_800,
+  maxCombinedSizeBytes: 209_715_200,
+  requiresFrontAndBack: false,
+  requiresValidityDate: false,
+} as const;
+
+/** `licença sanitária` → `licenca_sanitaria`. */
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/**
+ * Registers a document every clinic in scope must submit.
+ *
+ * ⚠️ **This is the most consequential write in the admin panel.** An active
+ * requirement is immediately missing from every clinic it applies to, so
+ * creating one moves the conformity of the whole base at once. Scope it with
+ * `verticalId` and `appliesToLegalDocumentType` before activating it, or create
+ * it inactive and turn it on deliberately.
+ */
+export class CreateConformityRequirementUseCase {
+  constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
+
+  async execute(input: {
+    slug?: string;
+    name: string;
+    description?: string | null;
+    verticalId?: number | null;
+    appliesToLegalDocumentType?: FacilityLegalDocumentType | null;
+    isActive?: boolean;
+    allowedMimeTypes?: string[];
+    maxFiles?: number;
+    maxFileSizeBytes?: number;
+    maxCombinedSizeBytes?: number;
+    requiresFrontAndBack?: boolean;
+    requiresValidityDate?: boolean;
+  }) {
+    const name = input.name.trim();
+    if (!name) {
+      throw new ValidationError([{ field: "name", message: "Name is required" }]);
+    }
+    const slug = (input.slug?.trim() || slugify(name)) || "";
+    if (!slug) {
+      throw new ValidationError([
+        { field: "slug", message: "A slug could not be derived from this name" },
+      ]);
+    }
+    const allowedMimeTypes =
+      input.allowedMimeTypes ?? [...REQUIREMENT_DEFAULTS.allowedMimeTypes];
+    if (allowedMimeTypes.length === 0) {
+      throw new ValidationError([
+        {
+          field: "allowedMimeTypes",
+          message: "At least one file type must be accepted",
+        },
+      ]);
+    }
+
+    const created = await this.deps.conformityRepository.createRequirement({
+      slug,
+      name,
+      description: input.description ?? null,
+      verticalId: input.verticalId ?? null,
+      appliesToLegalDocumentType: input.appliesToLegalDocumentType ?? null,
+      isActive: input.isActive ?? true,
+      allowedMimeTypes,
+      maxFiles: input.maxFiles ?? REQUIREMENT_DEFAULTS.maxFiles,
+      maxFileSizeBytes: input.maxFileSizeBytes ?? REQUIREMENT_DEFAULTS.maxFileSizeBytes,
+      maxCombinedSizeBytes:
+        input.maxCombinedSizeBytes ?? REQUIREMENT_DEFAULTS.maxCombinedSizeBytes,
+      requiresFrontAndBack:
+        input.requiresFrontAndBack ?? REQUIREMENT_DEFAULTS.requiresFrontAndBack,
+      requiresValidityDate:
+        input.requiresValidityDate ?? REQUIREMENT_DEFAULTS.requiresValidityDate,
+    });
+    return serializeRequirementForAdmin(created);
+  }
+}
+
+export class UpdateConformityRequirementUseCase {
+  constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
+
+  async execute(
+    input: { id: number } & Partial<ConformityRequirementWritableFields>
+  ) {
+    const { id, ...fields } = input;
+    if (fields.name !== undefined && !fields.name.trim()) {
+      throw new ValidationError([{ field: "name", message: "Name is required" }]);
+    }
+    if (fields.allowedMimeTypes !== undefined && fields.allowedMimeTypes.length === 0) {
+      throw new ValidationError([
+        {
+          field: "allowedMimeTypes",
+          message: "At least one file type must be accepted",
+        },
+      ]);
+    }
+
+    const updated = await this.deps.conformityRepository.updateRequirement(id, fields);
+    if (!updated) throw new ResourceNotFoundError("ConformityRequirement", id);
+    return serializeRequirementForAdmin(updated);
+  }
+}
+
+/**
+ * Deletes a requirement no clinic has answered. Anything else is
+ * `isActive = false` — spec 0016 §6.2, and both foreign keys are RESTRICT.
+ */
+export class DeleteConformityRequirementUseCase {
+  constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
+
+  async execute(input: { id: number }) {
+    const outcome =
+      await this.deps.conformityRepository.deleteRequirementIfUnanswered(input.id);
+    if (!outcome.found) {
+      throw new ResourceNotFoundError("ConformityRequirement", input.id);
+    }
+    if (!outcome.deleted) {
+      throw new ResourceInUseError("ConformityRequirement", outcome.references);
+    }
+    return { id: input.id, deleted: true };
   }
 }
 

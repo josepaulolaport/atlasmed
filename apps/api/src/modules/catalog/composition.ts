@@ -5,6 +5,12 @@ import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructu
 import { DrizzleFacilityVerticalAccessRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-vertical-access.repository";
 import { DrizzleCompetitorProductRepository } from "./infrastructure/repositories/drizzle/drizzle-competitor-product.repository";
 import { DrizzleProductEquivalenceRepository } from "./infrastructure/repositories/drizzle/drizzle-product-equivalence.repository";
+import { AvatarStorageAdapter } from "../access/infrastructure/avatar-storage/avatar-storage.adapter";
+import {
+  UploadProductPictureUseCase,
+  RemoveProductPictureUseCase,
+  DownloadProductPictureUseCase,
+} from "./application/use-cases/product-picture.use-cases";
 import {
   ListBusinessVerticalsUseCase,
   CreateBusinessVerticalUseCase,
@@ -13,6 +19,8 @@ import {
   GetProductUseCase,
   CreateProductUseCase,
   UpdateProductUseCase,
+  DeleteProductUseCase,
+  DeleteCompetitorProductUseCase,
   ListHealthcareProvidersUseCase,
   CreateHealthcareProviderUseCase,
   UpdateHealthcareProviderUseCase,
@@ -40,6 +48,12 @@ export const catalogRepositories = {
   productEquivalence: new DrizzleProductEquivalenceRepository(),
 };
 
+/**
+ * The same adapter the facility photos and user avatars use. A second storage
+ * client would be a second place for the bucket configuration to be wrong.
+ */
+const productPictureStorage = new AvatarStorageAdapter();
+
 export const catalogUseCases = {
   listBusinessVerticals: () =>
     new ListBusinessVerticalsUseCase({
@@ -57,6 +71,22 @@ export const catalogUseCases = {
   getProduct: () => new GetProductUseCase({ productRepository: catalogRepositories.product }),
   createProduct: () => new CreateProductUseCase({ productRepository: catalogRepositories.product }),
   updateProduct: () => new UpdateProductUseCase({ productRepository: catalogRepositories.product }),
+  uploadProductPicture: () =>
+    new UploadProductPictureUseCase({
+      productRepository: catalogRepositories.product,
+      storage: productPictureStorage,
+    }),
+  removeProductPicture: () =>
+    new RemoveProductPictureUseCase({
+      productRepository: catalogRepositories.product,
+      storage: productPictureStorage,
+    }),
+  downloadProductPicture: () =>
+    new DownloadProductPictureUseCase({
+      productRepository: catalogRepositories.product,
+      storage: productPictureStorage,
+    }),
+  deleteProduct: () => new DeleteProductUseCase({ productRepository: catalogRepositories.product }),
   listHealthcareProviders: () =>
     new ListHealthcareProvidersUseCase({
       healthcareProviderRepository: catalogRepositories.healthcareProvider,
@@ -98,6 +128,10 @@ export const catalogUseCases = {
     }),
   updateCompetitorProduct: () =>
     new UpdateCompetitorProductUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  deleteCompetitorProduct: () =>
+    new DeleteCompetitorProductUseCase({
       competitorProductRepository: catalogRepositories.competitorProduct,
     }),
   getProductComparison: () =>

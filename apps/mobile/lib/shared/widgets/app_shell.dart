@@ -427,6 +427,21 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.inventory_outlined,
     visibleFor: canReadCatalog,
   ),
+  // Spec 0016. Last in the list because it is a maintenance destination rather
+  // than daily work, and branch 12 because a branch's position *is* its index —
+  // see the note in `routes.dart`.
+  //
+  // Gated on `isAdmin` rather than `canManageCatalog`, which is the same
+  // predicate today: the panel is wider than the catalogue and the two should
+  // be free to diverge. Hiding it is not the control — every route it reaches
+  // is `requirePermission`-gated on the API.
+  AppNavigationItem(
+    branchIndex: 12,
+    label: 'Administração',
+    route: '/admin',
+    icon: Icons.tune_rounded,
+    visibleFor: isAdmin,
+  ),
 
   // Perfil is hidden alongside Usuários. Branch 10 and `/profile` still exist —
   // only the drawer entry is gone. Note what goes with it: the avatar picker,

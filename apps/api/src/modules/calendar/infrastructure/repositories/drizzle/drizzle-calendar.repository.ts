@@ -28,7 +28,7 @@ function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount 
     lifecycleEventCount: lifecycle.eventCount ?? 0 };
 }
 export function mapCalendarEvent(row: typeof calendar.$inferSelect, overrides: CalendarOverrideRecord[] = [], interactionRows: CalendarInteractionRecord[] = [],
-  owner: { id: number; name: string } = { id: row.ownerUserId, name: String(row.ownerUserId) }, facility: { id: number; name: string } | null = null): CalendarEventRecord {
+  owner: { id: number; name: string } = { id: row.ownerUserId, name: String(row.ownerUserId) }, facility: { id: number; name: string; deactivated: boolean } | null = null): CalendarEventRecord {
   return { id: row.id, ownerUserId: row.ownerUserId, kind: row.kind, title: row.title,
     anchorLocalDate: row.anchorLocalDate, anchorLocalTime: row.anchorLocalTime.slice(0, 5), timeZone: row.timeZone,
     durationMinutes: row.durationMinutes, firstStartsAt: row.firstStartsAt ?? null, firstEndsAt: row.firstEndsAt ?? null,
@@ -59,7 +59,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     const ownerIds = [...new Set(rows.map((row) => row.ownerUserId))];
     const [ownerRows, facilityRows, orderCounts, lifecycleRows] = await Promise.all([
       this.database.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(inArray(users.id, ownerIds)),
-      interactionRows.length ? this.database.select({ id: facilities.id, name: facilities.displayName }).from(facilities)
+      interactionRows.length ? this.database.select({ id: facilities.id, name: facilities.displayName, deactivatedAt: facilities.deactivatedAt }).from(facilities)
         .where(inArray(facilities.id, [...new Set(interactionRows.map((item) => item.facilityId))])) : Promise.resolve([]),
       interactionRows.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` }).from(orders)
         .where(inArray(orders.interactionId, interactionRows.map((item) => item.id))).groupBy(orders.interactionId) : Promise.resolve([]),
@@ -76,7 +76,16 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       { eventCount: item.count }]));
     return rows.map((row) => {
       const rowInteractions = interactionRows.filter((item) => item.calendarId === row.id);
-      const facility = rowInteractions[0] ? facilityById.get(rowInteractions[0].facilityId) ?? null : null;
+      const facilityRow = rowInteractions[0]
+        ? facilityById.get(rowInteractions[0].facilityId) ?? null
+        : null;
+      const facility = facilityRow
+        ? {
+            id: facilityRow.id,
+            name: facilityRow.name,
+            deactivated: facilityRow.deactivatedAt !== null,
+          }
+        : null;
       return mapCalendarEvent(row, overrideRows.filter((item) => item.calendarId === row.id).map(mapOverride),
         rowInteractions.map((item) => mapInteraction(item, orderCountByInteractionId.get(item.id) ?? 0, lifecycleByInteractionId.get(item.id))),
         ownerById.get(row.ownerUserId), facility);
