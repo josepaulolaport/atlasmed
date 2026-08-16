@@ -58,6 +58,13 @@ Future<void> recordClinicArrival(
       ..showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
+          // `SnackBar.persist` defaults to `action != null`, and the dismiss
+          // timer returns early when it is set — so a snackbar with an action
+          // stays on screen for ever unless something else replaces it. Ours
+          // sat over the clinic list until the next press. Long enough to read
+          // and reach "Abrir", then gone.
+          persist: false,
+          duration: const Duration(seconds: 6),
           content: Text('Visita iniciada em $facilityName'),
           action: SnackBarAction(
             // The way back from a mistaken press, and the way to finish the

@@ -147,6 +147,21 @@ void main() {
     expect(find.textContaining('Visita iniciada em Clínica Central'), findsOne);
   });
 
+  testWidgets('the confirmation goes away on its own', (tester) async {
+    // `SnackBar.persist` defaults to `action != null` and the dismiss timer
+    // returns early when it is set, so ours sat over the clinic list until the
+    // next press — for minutes, on the simulator.
+    final repository = _ArrivalRecordingRepository();
+
+    await _tapCheguei(tester, repository);
+    expect(find.textContaining('Visita iniciada'), findsOne);
+
+    await tester.pump(const Duration(seconds: 7));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Visita iniciada'), findsNothing);
+  });
+
   testWidgets('offers a way into the visit it just started', (tester) async {
     // The recovery path for a mistaken press, and the way to end the visit
     // deliberately rather than waiting to be closed.
