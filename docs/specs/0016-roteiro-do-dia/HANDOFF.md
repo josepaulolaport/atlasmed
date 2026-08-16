@@ -19,21 +19,27 @@ cd apps/mobile && fvm flutter run -d <iPhone 17 udid> \
   --dart-define=API_BASE_URL=http://localhost:3021
 ```
 
-`apps/api/.env` points at `atlasmed_scratch` on `localhost:5434`. The simulator's
-fixed GPS is Rio, which matched rep 2 (Adriana Oliveira, 146 clinics); rep 4's
-book is Paraná and will read as out of range from there.
+`apps/api/.env` points at **`atlasmed_roteiro_p1`** on `localhost:5434`. The
+simulator's fixed GPS is Rio, which matches rep 2 (Adriana Oliveira, 146
+clinics); rep 4's book is Paraná and will read as out of range from there.
 
-⚠️ **`atlasmed_scratch` was emptied mid-session on 2026-08-15** — it went from a
-clone of the real book (~400 MB) to 22 MB with every table at zero rows, and its
-schema rolled back behind this branch's migrations (`duration_source` gone).
-Nothing in this worktree did it. `db:migrate` then fails on a pre-existing
-schema and `db:push` needs an interactive rename prompt, so the database needs
-restoring from a fresh clone before the app is useful against it again.
+⚠️ **It used to point at `atlasmed_scratch`, and that database was emptied twice
+on 2026-08-15** — once mid-session, and again within five minutes of being
+restored. The second time it came back with 119 migrations where this branch
+has 122, so it was dropped and recreated by something on an older branch, not
+merely truncated.
 
-For a Postgres check that does not depend on that, `atlasmed_empty` is one of
-the three names `db:push` accepts as disposable. Drop it, create it, enable
-`postgis` and `pg_trgm` first (push fails on `type "geometry" does not exist`
-otherwise), then `ATLASMED_ALLOW_DB_PUSH=1 … bun run db:push`.
+`atlasmed_scratch` is one of the three names the tooling itself treats as
+disposable — `db:push` names `atlasmed_test`, `atlasmed_scratch` and
+`atlasmed_empty` as the only databases it will overwrite. Any lane's DB tests
+may reset it. It was never a safe home for a working dataset, which is why this
+worktree now has its own name that nothing else claims.
+
+To rebuild it: `create database atlasmed_roteiro_p1 template
+atlasmed_prod_snapshot`, then `DATABASE_URL=… bun run db:migrate` from
+`packages/database` — the snapshot's journal is intact, so migrate applies only
+what this branch adds. Stop the API first; the drop fails while it holds
+connections.
 
 **Verify SQL against Postgres, not only in unit tests.** Six defects this
 session were invisible to `bun test` and `tsc` and only appeared against a real
@@ -130,10 +136,18 @@ device: 10:00 stored, picker and speed dial both followed it.
   rule. It does not run the conflict check: arriving somewhere is a fact, and
   refusing to record it because the rep's own calendar disagrees is the failure
   the spec describes. Verified against Postgres.
-- **Offline stamping.** The server stamps `startedAt: now` at receipt, so a
-  start queued without signal records the moment the queue drained. **P6 is a
-  correctness dependency of P5, not a convenience.** Until it exists, offline
-  capture should refuse rather than record.
+- **Offline stamping — half done.** The correctness half is built: start,
+  complete and arrival accept an instant from the device, and
+  `resolveClientInstant` decides whether to believe it (absent means now, small
+  skew is clamped, the future and anything over a day old are refused). Verified
+  against Postgres: a 90-minute-old arrival anchors to the hour the rep was
+  there and a completion an hour later reports 60 minutes, not the queue's
+  latency.
+
+  **There is still no offline queue.** Nothing is recorded offline yet — the
+  request simply fails, which is the spec's other permitted answer. What exists
+  now is the contract that makes a queue correct when it is built: persisting
+  requests, replaying them, and showing the rep what is still pending.
 - **Push reminder with an "Iniciar" action.** `firebase_messaging` is absent,
   there is no device-token store, and nothing reads `pushNotificationsEnabled`.
 - **Geofence arrival/exit.** `geolocator` is one-shot and foreground, permission
