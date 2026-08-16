@@ -1,24 +1,28 @@
 import { environment } from "@atlasmed/config";
 import {
   facilities,
+  facilityClinicalFocuses,
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
   municipalities,
   orders,
+  purchaseRecurrenceWatermark,
   states,
   type Database,
 } from "@atlasmed/database";
 import { ApplicationFailure } from "@temporalio/activity";
 import {
+  APPLICATION_TIMEZONE,
   calculatePurchaseRecurrenceSnapshot,
   type PurchaseProfile,
   type PurchaseRecurrenceSnapshot,
 } from "@atlasmed/facility-insights";
-import { and, asc, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Meilisearch } from "meilisearch";
 import { getDb } from "../infrastructure/db";
 import { logger } from "../logger";
 import {
+  FACILITY_DOCUMENT_COLUMNS,
   createSearchIndexClient,
   mapFacilitySearchDocument,
   type FacilityProfileFunnelData,
@@ -63,11 +67,35 @@ export interface PurchaseRecurrenceStore {
     limit: number;
     today: string;
   }): Promise<number[]>;
-  recalculateFacility(facilityId: number, today: string): Promise<{
+  /**
+   * Profiles whose snapshot has been invalidated — never calculated, or
+   * explicitly cleared because the orders underneath them moved.
+   *
+   * Neither of the other two selectors can find these. `listChangedOrderFacilityIds`
+   * reaches a facility by joining an order to its profile, so a clinic that
+   * *lost* an order is reachable from nothing; `listDueTransitionFacilityIds`
+   * needs a transition date, and a brand-new profile has none.
+   */
+  listInvalidatedFacilityIds(input: {
+    cursor: number | null;
+    limit: number;
+  }): Promise<number[]>;
+  /** How far a completed reconcile has covered, or null before the first one. */
+  readCoveredUntil(): Promise<string | null>;
+  /** Advances the watermark, never backwards. */
+  commitCoveredUntil(until: string): Promise<void>;
+  /**
+   * Recalculates a whole page at once.
+   *
+   * Per facility this used to be one transaction and four round trips, plus one
+   * order query per profile — roughly 2,000 round trips for a 500-facility page,
+   * all serial. Every read here is now one query for the page.
+   */
+  recalculateFacilities(facilityIds: number[], today: string): Promise<Array<{
     facilityId: number;
     changed: boolean;
     document: FacilitySearchDocument | null;
-  }>;
+  }>>;
 }
 
 const MAX_FAILURE_DETAILS = 20;
@@ -87,10 +115,15 @@ function boundFailures(failures: PurchaseRecurrenceFailure[]): PurchaseRecurrenc
 export function selectReconcileFacilityIds(input: {
   changedOrderIds: readonly number[];
   dueTransitionIds: readonly number[];
+  invalidatedIds?: readonly number[];
   cursor: number | null;
   limit: number;
 }): number[] {
-  return [...new Set([...input.changedOrderIds, ...input.dueTransitionIds])]
+  return [...new Set([
+    ...input.changedOrderIds,
+    ...input.dueTransitionIds,
+    ...(input.invalidatedIds ?? []),
+  ])]
     .filter((id) => input.cursor === null || id > input.cursor)
     .sort((a, b) => a - b)
     .slice(0, input.limit);
@@ -115,6 +148,132 @@ export function snapshotEquals(
     && current.purchaseRecurrenceSampleSize === snapshot.purchaseRecurrenceSampleSize
     && current.purchaseFunnelStage === snapshot.purchaseFunnelStage
     && normalizePostgresDate(current.nextPurchaseFunnelTransitionDate as string | Date | null) === snapshot.nextPurchaseFunnelTransitionDate;
+}
+
+type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+const PURCHASE_DATE_LIMIT = 13;
+const WATERMARK_ROW_ID = 1;
+
+/** The lookback used before a watermark exists — twice the schedule interval. */
+export const DEFAULT_RECONCILE_LOOKBACK_HOURS = 2;
+
+/**
+ * Past this, re-cover everything instead of widening the window.
+ *
+ * A worker down for a day leaves a watermark far enough behind that the
+ * incremental query stops being the cheap one, and a very wide window is also
+ * the case where being slow matters most. Sweeping is bounded work with the same
+ * outcome.
+ */
+export const MAX_RECONCILE_WINDOW_HOURS = 24;
+
+export function planReconcileWindow(input: {
+  coveredUntil: string | null;
+  until: string;
+  lookbackHours?: number;
+  maxWindowHours?: number;
+}): { since: string; fullSweep: boolean } {
+  const until = Date.parse(input.until);
+  const lookbackHours = input.lookbackHours ?? DEFAULT_RECONCILE_LOOKBACK_HOURS;
+  const maxWindowHours = input.maxWindowHours ?? MAX_RECONCILE_WINDOW_HOURS;
+  const fallback = new Date(until - lookbackHours * 3_600_000).toISOString();
+
+  if (input.coveredUntil === null) return { since: fallback, fullSweep: false };
+
+  const covered = Date.parse(input.coveredUntil);
+  // A watermark ahead of this run means a later run already committed — take the
+  // fallback rather than an empty or inverted window.
+  if (!Number.isFinite(covered) || covered >= until) {
+    return { since: fallback, fullSweep: false };
+  }
+  if (until - covered > maxWindowHours * 3_600_000) {
+    return { since: new Date(covered).toISOString(), fullSweep: true };
+  }
+  // Never *narrower* than the fallback: overlap is free and cheap, and it covers
+  // an order committed just after a run read its window.
+  return {
+    since: covered < Date.parse(fallback) ? new Date(covered).toISOString() : fallback,
+    fullSweep: false,
+  };
+}
+
+function groupBy<T>(items: T[], key: (item: T) => number): Map<number, T[]> {
+  const groups = new Map<number, T[]>();
+  for (const item of items) {
+    const group = groups.get(key(item));
+    if (group) group.push(item);
+    else groups.set(key(item), [item]);
+  }
+  return groups;
+}
+
+/**
+ * The 13 most recent distinct purchase days for every profile on the page.
+ *
+ * One query for the whole page. It was one query *per profile*, which is where a
+ * 500-facility page spent most of its wall clock.
+ *
+ * Dates are civil days in São Paulo, not UTC. `ordered_at` is `timestamp without
+ * time zone`, and the old expression cast through `AT TIME ZONE 'UTC'` to
+ * `::date`, which resolves against the *session* `TimeZone` — correct only
+ * because the server happens to run as `Etc/UTC`. It is explicit now, and it
+ * agrees with `market-metric.ts` and migration 0090, which already bucket by São
+ * Paulo. On the current data every eligible order is stamped 12:00 UTC, so this
+ * changes no stored value today; it stops being luck.
+ *
+ * The status/type predicate must stay identical to the partial index
+ * `orders_valid_purchase_profile_ordered_at_idx`. If they drift this degrades to
+ * a sequential scan over every order and nothing fails loudly.
+ */
+async function loadPurchaseDatesByProfile(
+  tx: Tx,
+  profileIds: number[],
+): Promise<Map<number, string[]>> {
+  const dates = new Map<number, string[]>();
+  if (profileIds.length === 0) return dates;
+
+  const purchaseDate = sql<string | Date>`(${orders.orderedAt} at time zone 'UTC' at time zone ${APPLICATION_TIMEZONE})::date`;
+
+  const distinctDates = tx
+    .selectDistinct({
+      profileId: orders.facilityVerticalProfileId,
+      purchaseDate: purchaseDate.as("purchase_date"),
+    })
+    .from(orders)
+    .where(and(
+      inArray(orders.facilityVerticalProfileId, profileIds),
+      inArray(orders.status, ["APPROVED", "INVOICED"]),
+      inArray(orders.type, ["SALE", "CONSIGNMENT"]),
+    ))
+    .as("distinct_dates");
+
+  const ranked = tx
+    .select({
+      profileId: distinctDates.profileId,
+      purchaseDate: distinctDates.purchaseDate,
+      rank: sql<number>`row_number() over (
+        partition by ${distinctDates.profileId}
+        order by ${distinctDates.purchaseDate} desc
+      )`.as("purchase_rank"),
+    })
+    .from(distinctDates)
+    .as("ranked");
+
+  const rows = await tx
+    .select({ profileId: ranked.profileId, purchaseDate: ranked.purchaseDate })
+    .from(ranked)
+    .where(lte(ranked.rank, PURCHASE_DATE_LIMIT))
+    .orderBy(asc(ranked.profileId), desc(ranked.purchaseDate));
+
+  for (const row of rows) {
+    const date = normalizePostgresDate(row.purchaseDate);
+    if (date === null) continue;
+    const current = dates.get(row.profileId);
+    if (current) current.push(date);
+    else dates.set(row.profileId, [date]);
+  }
+  return dates;
 }
 
 export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
@@ -190,54 +349,123 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
     return rows.map((row) => row.id);
   }
 
-  async recalculateFacility(facilityId: number, today: string): Promise<{
+  async listInvalidatedFacilityIds(input: {
+    cursor: number | null;
+    limit: number;
+  }): Promise<number[]> {
+    // Backed by facility_vertical_profiles_invalidated_snapshot_idx.
+    const rows = await this.database
+      .selectDistinct({ id: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .where(and(
+        isNull(facilities.deactivatedAt),
+        eq(facilityVerticalProfiles.isActive, true),
+        isNull(facilityVerticalProfiles.purchaseRecurrenceCalculatedAt),
+        input.cursor ? gt(facilityVerticalProfiles.facilityId, input.cursor) : undefined,
+      ))
+      .orderBy(asc(facilityVerticalProfiles.facilityId))
+      .limit(input.limit);
+    return rows.map((row) => row.id);
+  }
+
+  async readCoveredUntil(): Promise<string | null> {
+    const [row] = await this.database
+      .select({ coveredUntil: purchaseRecurrenceWatermark.coveredUntil })
+      .from(purchaseRecurrenceWatermark)
+      .where(eq(purchaseRecurrenceWatermark.id, WATERMARK_ROW_ID))
+      .limit(1);
+    return row?.coveredUntil ? row.coveredUntil.toISOString() : null;
+  }
+
+  async commitCoveredUntil(until: string): Promise<void> {
+    const coveredUntil = new Date(until);
+    await this.database
+      .insert(purchaseRecurrenceWatermark)
+      .values({ id: WATERMARK_ROW_ID, coveredUntil })
+      .onConflictDoUpdate({
+        target: purchaseRecurrenceWatermark.id,
+        // Never backwards. The hourly reconcile and the daily sweep both commit,
+        // and the sweep can finish after an hourly run that started later.
+        set: {
+          coveredUntil: sql`greatest(${purchaseRecurrenceWatermark.coveredUntil}, excluded.covered_until)`,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async recalculateFacilities(facilityIds: number[], today: string): Promise<Array<{
     facilityId: number;
     changed: boolean;
     document: FacilitySearchDocument | null;
-  }> {
+  }>> {
+    if (facilityIds.length === 0) return [];
+
     return this.database.transaction(async (tx) => {
-      const facilityAlive = await tx
-        .select({ id: facilities.id })
-        .from(facilities)
-        .where(and(eq(facilities.id, facilityId), isNull(facilities.deactivatedAt)))
-        .limit(1);
-      if (!facilityAlive[0]) {
-        return { facilityId, changed: false, document: null };
+      /**
+       * The shared column list, not a local copy.
+       *
+       * The local copy is what broke this: it omitted `unitTypeId` and
+       * `legalDocumentType`, and because the publication below is
+       * `addDocuments` — replace, not merge — every facility this activity
+       * touched was rewritten with both blanked. The daily sweep did it to every
+       * active facility at once, and nothing errored: the clinics simply stopped
+       * matching the unit-type and CPF/CNPJ filters, and the list path only
+       * falls back to SQL when Meili returns *nothing*, so partial loss was
+       * invisible until a full rebuild.
+       */
+      const rows = await tx.select(FACILITY_DOCUMENT_COLUMNS).from(facilities)
+        .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+        .innerJoin(states, eq(states.id, facilities.stateId))
+        .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deactivatedAt)));
+
+      const aliveIds = rows.map((row) => row.id);
+      if (aliveIds.length === 0) {
+        return facilityIds.map((facilityId) => ({ facilityId, changed: false, document: null }));
       }
 
       const profiles = await tx
         .select()
         .from(facilityVerticalProfiles)
         .where(and(
-          eq(facilityVerticalProfiles.facilityId, facilityId),
+          inArray(facilityVerticalProfiles.facilityId, aliveIds),
           eq(facilityVerticalProfiles.isActive, true),
         ));
+      const profileIds = profiles.map((profile) => profile.id);
 
-      let changed = false;
-      const profileFunnelData: FacilityProfileFunnelData[] = [];
+      const [purchaseDates, repRows, focusRows] = await Promise.all([
+        loadPurchaseDatesByProfile(tx, profileIds),
+        profileIds.length === 0
+          ? Promise.resolve([] as Array<{ facilityVerticalProfileId: number; userId: number }>)
+          : tx
+            .select({
+              facilityVerticalProfileId: facilityVerticalRepAssignments.facilityVerticalProfileId,
+              userId: facilityVerticalRepAssignments.userId,
+            })
+            .from(facilityVerticalRepAssignments)
+            .where(and(
+              inArray(facilityVerticalRepAssignments.facilityVerticalProfileId, profileIds),
+              isNull(facilityVerticalRepAssignments.endedAt),
+            )),
+        tx
+          .select({
+            facilityId: facilityClinicalFocuses.facilityId,
+            clinicalFocusId: facilityClinicalFocuses.clinicalFocusId,
+          })
+          .from(facilityClinicalFocuses)
+          .where(inArray(facilityClinicalFocuses.facilityId, aliveIds)),
+      ]);
+
+      const profilesByFacility = groupBy(profiles, (profile) => profile.facilityId);
+      const repsByProfile = groupBy(repRows, (rep) => rep.facilityVerticalProfileId);
+      const focusesByFacility = groupBy(focusRows, (focus) => focus.facilityId);
+
+      const changedFacilityIds = new Set<number>();
+      const funnelByFacility = new Map<number, FacilityProfileFunnelData[]>();
 
       for (const profile of profiles) {
-        const purchaseDates = await tx
-          .select({ date: sql<string | Date>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
-          .from(orders)
-          // Keyed on the profile since spec 0010 §4. We are already iterating
-          // profiles, so this reads orders for the row in hand rather than
-          // re-deriving it from (facility, vertical). Predicate must stay
-          // identical to orders_valid_purchase_profile_ordered_at_idx.
-          .where(and(
-            eq(orders.facilityVerticalProfileId, profile.id),
-            inArray(orders.status, ["APPROVED", "INVOICED"]),
-            inArray(orders.type, ["SALE", "CONSIGNMENT"]),
-          ))
-          .groupBy(sql`(${orders.orderedAt} at time zone 'UTC')::date`)
-          .orderBy(sql`(${orders.orderedAt} at time zone 'UTC')::date desc`)
-          .limit(13)
-          .then((rows) => rows
-            .map((row) => normalizePostgresDate(row.date))
-            .filter((date): date is string => date !== null));
-
         const snapshot = calculatePurchaseRecurrenceSnapshot({
-          purchaseDates,
+          purchaseDates: purchaseDates.get(profile.id) ?? [],
           manualProfile: profile.manualPurchaseProfile as PurchaseProfile | null,
           manualIntervalDays: profile.manualPurchaseIntervalDays,
           today,
@@ -256,8 +484,12 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         const profileChanged =
           profile.purchaseRecurrenceCalculatedAt === null
           || !snapshotEquals(current, snapshot);
+
         if (profileChanged) {
-          changed = true;
+          changedFacilityIds.add(profile.facilityId);
+          // Only rows that actually moved are written, so a steady-state sweep
+          // issues no updates at all. Left per row rather than one multi-row
+          // statement: the set is small by construction and this stays typed.
           await tx.update(facilityVerticalProfiles).set({
             observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
             purchaseIntervalDays: snapshot.purchaseIntervalDays,
@@ -274,17 +506,14 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         }
 
         const effectiveSnapshot = profileChanged ? snapshot : {
-          observedPurchaseIntervalDays: profile.observedPurchaseIntervalDays,
           purchaseIntervalDays: profile.purchaseIntervalDays,
           purchaseIntervalSource: profile.purchaseIntervalSource as PurchaseRecurrenceSnapshot["purchaseIntervalSource"],
           manualPurchaseProfile: profile.manualPurchaseProfile as PurchaseRecurrenceSnapshot["manualPurchaseProfile"],
-          manualPurchaseIntervalDays: profile.manualPurchaseIntervalDays,
           lastValidPurchaseDate: normalizePostgresDate(profile.lastValidPurchaseDate),
-          purchaseRecurrenceSampleSize: profile.purchaseRecurrenceSampleSize,
           purchaseFunnelStage: profile.purchaseFunnelStage as PurchaseRecurrenceSnapshot["purchaseFunnelStage"],
-          nextPurchaseFunnelTransitionDate: normalizePostgresDate(profile.nextPurchaseFunnelTransitionDate),
         };
-        profileFunnelData.push({
+        const funnel = funnelByFacility.get(profile.facilityId) ?? [];
+        funnel.push({
           verticalId: profile.verticalId,
           purchaseFunnelStage: effectiveSnapshot.purchaseFunnelStage,
           purchaseIntervalDays: effectiveSnapshot.purchaseIntervalDays,
@@ -292,48 +521,33 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
           manualPurchaseProfile: effectiveSnapshot.manualPurchaseProfile,
           lastValidPurchaseDate: effectiveSnapshot.lastValidPurchaseDate,
         });
+        funnelByFacility.set(profile.facilityId, funnel);
       }
 
-      const profileIds = profiles.map((profile) => profile.id);
-      const repRows = profileIds.length === 0
-        ? []
-        : await tx
-          .select({ userId: facilityVerticalRepAssignments.userId })
-          .from(facilityVerticalRepAssignments)
-          .where(and(
-            inArray(facilityVerticalRepAssignments.facilityVerticalProfileId, profileIds),
-            isNull(facilityVerticalRepAssignments.endedAt),
-          ));
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      return facilityIds.map((facilityId) => {
+        const row = byId.get(facilityId);
+        // Absent or deactivated: no document, which the caller turns into a
+        // Meili delete so a ghost cannot outlive the row.
+        if (!row) return { facilityId, changed: false, document: null };
 
-      const [row] = await tx.select({
-        id: facilities.id,
-        displayName: facilities.displayName,
-        legalName: facilities.legalName,
-        tradeName: facilities.tradeName,
-        legalDocument: facilities.legalDocument,
-        cnesCode: facilities.cnesCode,
-        city: municipalities.name,
-        state: states.abbreviation,
-        streetAddress: facilities.streetAddress,
-        neighborhood: facilities.neighborhood,
-        latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
-        longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
-        deactivatedAt: facilities.deactivatedAt,
-      }).from(facilities)
-        .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
-        .innerJoin(states, eq(states.id, facilities.stateId))
-        .where(eq(facilities.id, facilityId)).limit(1);
-      return {
-        facilityId,
-        changed,
-        document: row ? mapFacilitySearchDocument({
-          ...row,
-          verticalIds: profileFunnelData.map((profile) => profile.verticalId),
-          territoryIds: [...new Set(profiles.flatMap((profile) => profile.managerZoneId ? [profile.managerZoneId] : []))],
-          repUserIds: repRows.map((rep) => rep.userId),
-          profileFunnelData,
-        }) : null,
-      };
+        const facilityProfiles = profilesByFacility.get(facilityId) ?? [];
+        return {
+          facilityId,
+          changed: changedFacilityIds.has(facilityId),
+          document: mapFacilitySearchDocument({
+            ...row,
+            verticalIds: facilityProfiles.map((profile) => profile.verticalId),
+            territoryIds: [...new Set(facilityProfiles.flatMap((profile) =>
+              profile.managerZoneId ? [profile.managerZoneId] : []))],
+            repUserIds: facilityProfiles.flatMap((profile) =>
+              (repsByProfile.get(profile.id) ?? []).map((rep) => rep.userId)),
+            clinicalFocusIds: (focusesByFacility.get(facilityId) ?? [])
+              .map((focus) => focus.clinicalFocusId),
+            profileFunnelData: funnelByFacility.get(facilityId) ?? [],
+          }),
+        };
+      });
     });
   }
 }
@@ -387,7 +601,7 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
       if (input.mode === "BACKFILL" || input.fullSweep) {
         facilityIds = await dependencies.store.listBackfillFacilityIds({ cursor: input.cursor, limit: input.limit });
       } else {
-        const [changedOrderIds, dueTransitionIds] = await Promise.all([
+        const [changedOrderIds, dueTransitionIds, invalidatedIds] = await Promise.all([
           dependencies.store.listChangedOrderFacilityIds({
             cursor: input.cursor,
             limit: input.limit,
@@ -399,8 +613,12 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
             limit: input.limit,
             today: input.today,
           }),
+          dependencies.store.listInvalidatedFacilityIds({
+            cursor: input.cursor,
+            limit: input.limit,
+          }),
         ]);
-        facilityIds = selectReconcileFacilityIds({ changedOrderIds, dueTransitionIds, cursor: input.cursor, limit: input.limit });
+        facilityIds = selectReconcileFacilityIds({ changedOrderIds, dueTransitionIds, invalidatedIds, cursor: input.cursor, limit: input.limit });
       }
     } catch (error) {
       const failure = { facilityId: null, message: errorMessage(error) };
@@ -420,20 +638,30 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
     const documents: FacilitySearchDocument[] = [];
     const deleteIds: number[] = [];
     let updated = 0;
-    for (const facilityId of facilityIds) {
-      try {
-        const result = await dependencies.store.recalculateFacility(facilityId, input.today);
+    try {
+      const results = await dependencies.store.recalculateFacilities(facilityIds, input.today);
+      for (const result of results) {
         if (result.changed) updated += 1;
         // Re-publish no-op snapshots too: a prior DB commit may have outlived a failed search update.
         if (result.document) {
           documents.push(result.document);
         } else {
           // Deactivated / unindexable — remove ghost Meili docs.
-          deleteIds.push(facilityId);
+          deleteIds.push(result.facilityId);
         }
-      } catch (error) {
-        failures.push({ facilityId, message: errorMessage(error) });
       }
+    } catch (error) {
+      /**
+       * The page is one transaction now, so a database error is the page's, not
+       * one facility's. That is not a loss of detail: the old per-facility catch
+       * collected failures and then threw retryable the moment there was one, so
+       * a single bad row already failed the whole page. Recording the range keeps
+       * the culprit findable.
+       */
+      failures.push({
+        facilityId: null,
+        message: `${errorMessage(error)} (facilities ${facilityIds.at(0)}..${facilityIds.at(-1)})`,
+      });
     }
 
     if (failures.length > 0) {
@@ -544,4 +772,67 @@ export const recalculatePurchaseRecurrenceBatch = createPurchaseRecurrenceBatchA
   store: new DrizzlePurchaseRecurrenceStore(),
   updateSearchDocuments: updateFacilitySearchDocuments,
   deleteSearchDocuments: deleteFacilitySearchDocuments,
+});
+
+export interface ReconcileWindowInput {
+  until: string;
+}
+
+export interface ReconcileWindowPlan {
+  since: string;
+  fullSweep: boolean;
+}
+
+export function createClaimReconcileWindowActivity(dependencies: {
+  store: Pick<PurchaseRecurrenceStore, "readCoveredUntil">;
+}) {
+  return async function claimPurchaseRecurrenceWindow(
+    input: ReconcileWindowInput,
+  ): Promise<ReconcileWindowPlan> {
+    let coveredUntil: string | null = null;
+    try {
+      coveredUntil = await dependencies.store.readCoveredUntil();
+    } catch (error) {
+      throw ApplicationFailure.retryable(
+        `Purchase recurrence watermark read failed: ${errorMessage(error)}`,
+        "PurchaseRecurrenceDatabaseFailure",
+      );
+    }
+    const plan = planReconcileWindow({ coveredUntil, until: input.until });
+    logger.info("facility_purchase_recurrence.window_planned", {
+      coveredUntil: coveredUntil ?? undefined,
+      since: plan.since,
+      until: input.until,
+      fullSweep: plan.fullSweep,
+    });
+    return plan;
+  };
+}
+
+export function createCommitReconcileWindowActivity(dependencies: {
+  store: Pick<PurchaseRecurrenceStore, "commitCoveredUntil">;
+}) {
+  return async function commitPurchaseRecurrenceWindow(
+    input: ReconcileWindowInput,
+  ): Promise<void> {
+    try {
+      await dependencies.store.commitCoveredUntil(input.until);
+    } catch (error) {
+      // Retryable on purpose: dropping the commit would silently re-do the same
+      // window forever, which is the failure this watermark exists to prevent.
+      throw ApplicationFailure.retryable(
+        `Purchase recurrence watermark commit failed: ${errorMessage(error)}`,
+        "PurchaseRecurrenceDatabaseFailure",
+      );
+    }
+    logger.info("facility_purchase_recurrence.window_committed", { until: input.until });
+  };
+}
+
+export const claimPurchaseRecurrenceWindow = createClaimReconcileWindowActivity({
+  store: new DrizzlePurchaseRecurrenceStore(),
+});
+
+export const commitPurchaseRecurrenceWindow = createCommitReconcileWindowActivity({
+  store: new DrizzlePurchaseRecurrenceStore(),
 });

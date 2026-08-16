@@ -298,6 +298,13 @@ export const FACILITY_SETTINGS = {
     "verticalManualPurchaseProfiles",
     "purchaseFunnelStagesAny",
     "purchaseIntervalDaysMin",
+    // Unscoped funnel filters read "does the clinic have *a* profile like
+    // this", matching the SQL EXISTS. Testing them against the per-facility
+    // minimum instead turned that into "every profile" for multi-vertical
+    // clinics. Adding these needs a full rebuild before the filters are used.
+    "purchaseIntervalDaysMax",
+    "purchaseIntervalSourcesAny",
+    "manualPurchaseProfilesAny",
     "unitTypeId",
     "legalDocumentType",
     "clinicalFocusIds",
@@ -321,6 +328,38 @@ type ActiveFacilityProfiles = {
 
 /** The row shape [facilityPages] selects, kept structural for testability. */
 type FacilityPageRow = Parameters<typeof mapFacilitySearchDocument>[0];
+
+/**
+ * The facility columns a search document is built from — one definition, used by
+ * every writer of the `facilities` index.
+ *
+ * Shared rather than copied because the copies drifted. The purchase-recurrence
+ * activity had its own select that omitted `unitTypeId` and `legalDocumentType`,
+ * and since it publishes with `addDocuments` — replace, not merge — every
+ * facility it recalculated was rewritten with both blanked, silently dropping
+ * those clinics out of the unit-type and CPF/CNPJ filters. Importing the column
+ * list makes that particular divergence impossible rather than merely tested.
+ *
+ * Callers must still join `municipalities` and `states`, which supply `city` and
+ * `state`.
+ */
+export const FACILITY_DOCUMENT_COLUMNS = {
+  id: facilities.id,
+  displayName: facilities.displayName,
+  legalName: facilities.legalName,
+  tradeName: facilities.tradeName,
+  legalDocument: facilities.legalDocument,
+  cnesCode: facilities.cnesCode,
+  city: municipalities.name,
+  state: states.abbreviation,
+  streetAddress: facilities.streetAddress,
+  neighborhood: facilities.neighborhood,
+  unitTypeId: facilities.unitTypeId,
+  legalDocumentType: facilities.legalDocumentType,
+  latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
+  longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
+  deactivatedAt: facilities.deactivatedAt,
+} as const;
 
 /**
  * Joins a page of facility rows to its separately-loaded associations.
@@ -477,23 +516,7 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
 
   while (true) {
     const rows = await db
-      .select({
-        id: facilities.id,
-        displayName: facilities.displayName,
-        legalName: facilities.legalName,
-        tradeName: facilities.tradeName,
-        legalDocument: facilities.legalDocument,
-        cnesCode: facilities.cnesCode,
-        city: municipalities.name,
-        state: states.abbreviation,
-        streetAddress: facilities.streetAddress,
-        neighborhood: facilities.neighborhood,
-        unitTypeId: facilities.unitTypeId,
-        legalDocumentType: facilities.legalDocumentType,
-        latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
-        longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
-        deactivatedAt: facilities.deactivatedAt,
-      })
+      .select(FACILITY_DOCUMENT_COLUMNS)
       .from(facilities)
       .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
       .innerJoin(states, eq(states.id, facilities.stateId))

@@ -176,6 +176,27 @@ export function emultecOrderRowUnchanged(
   );
 }
 
+/**
+ * The profile an order is moving *away* from, if it is moving at all.
+ *
+ * An avulsa routinely lands on the surgeon's own CPF facility first and moves to
+ * the clinic once the CNPJ link exists — often through the skip re-check queue.
+ * Reconciliation reaches a facility by joining an order to its profile, so the
+ * destination is found and the origin is reachable from nothing: it keeps
+ * reporting a `last_valid_purchase_date` for a purchase that left.
+ *
+ * Exported so the rule is testable without a live importer, for the same reason
+ * [emultecOrderRowUnchanged] is.
+ */
+export function displacedProfileId(
+  existing: EmultecOrderRow,
+  desired: EmultecOrderRow,
+): number | null {
+  return existing.facilityVerticalProfileId === desired.facilityVerticalProfileId
+    ? null
+    : existing.facilityVerticalProfileId;
+}
+
 export function emultecOrderItemRowUnchanged(
   existing: EmultecOrderItemRow,
   desired: EmultecOrderItemRow
@@ -525,7 +546,35 @@ async function upsertOneOrder(
     orderId = existing.id;
     if (!emultecOrderRowUnchanged(existing, desired)) {
       changed = true;
+      const displaced = displacedProfileId(existing, desired);
       await db.update(orders).set(desired).where(eq(orders.id, orderId));
+      /**
+       * Re-keying an order leaves its old clinic holding a purchase it no longer
+       * has.
+       *
+       * This happens for real: an avulsa first resolves to the surgeon's own CPF
+       * facility and later, once the CNPJ link exists — often through the skip
+       * re-check queue — moves to the clinic. Reconciliation finds facilities by
+       * joining orders to their profile, so the *new* clinic is picked up and the
+       * old one is reachable from nothing. Its `last_valid_purchase_date` and
+       * funnel stage go on counting an order that moved away, until the daily
+       * sweep happens to recompute it.
+       *
+       * Clearing the timestamp is the same sentinel the recalculation already
+       * treats as "must write", and `listInvalidatedFacilityIds` selects on it,
+       * so the next reconcile picks the clinic up within the hour.
+       */
+      if (displaced !== null) {
+        await db
+          .update(facilityVerticalProfiles)
+          .set({ purchaseRecurrenceCalculatedAt: null })
+          .where(eq(facilityVerticalProfiles.id, displaced));
+        logger.info("emultec_order_import.profile_snapshot_invalidated", {
+          idAvulsa: bundle.idAvulsa,
+          fromProfileId: displaced,
+          toProfileId: desired.facilityVerticalProfileId,
+        });
+      }
     }
   } else {
     const [inserted] = await db

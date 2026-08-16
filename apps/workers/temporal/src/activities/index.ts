@@ -17,6 +17,8 @@ import {
 } from "./metric-snapshot.activities";
 
 import {
+  claimPurchaseRecurrenceWindow as claimPurchaseRecurrenceWindowImpl,
+  commitPurchaseRecurrenceWindow as commitPurchaseRecurrenceWindowImpl,
   logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
   recalculatePurchaseRecurrenceBatch as recalculatePurchaseRecurrenceBatchImpl,
 } from "./purchase-recurrence.activities";
@@ -31,6 +33,16 @@ import {
 export const recalculatePurchaseRecurrenceBatch = wrapActivity(
   "recalculatePurchaseRecurrenceBatch",
   recalculatePurchaseRecurrenceBatchImpl
+);
+
+export const claimPurchaseRecurrenceWindow = wrapActivity(
+  "claimPurchaseRecurrenceWindow",
+  claimPurchaseRecurrenceWindowImpl
+);
+
+export const commitPurchaseRecurrenceWindow = wrapActivity(
+  "commitPurchaseRecurrenceWindow",
+  commitPurchaseRecurrenceWindowImpl
 );
 
 export const logPurchaseRecurrenceLifecycle = wrapActivity(

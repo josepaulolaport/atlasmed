@@ -44,6 +44,16 @@ export function meiliFunnelStageFilter(
   return inFilter("purchaseFunnelStagesAny", stages);
 }
 
+/**
+ * Unscoped, this asks the same question the SQL does: does the clinic have *a*
+ * profile matching, not do all of them.
+ *
+ * `verticalManualPurchaseProfiles IS EMPTY` was the old unscoped AUTOMATIC
+ * filter and meant "every profile is automatic", so a clinic running Ortopedia
+ * automatically and one other line on a manual profile vanished from a filter it
+ * belongs in. Nothing caught it: the hydrate check only fires when Meili returns
+ * rows SQL then rejects, never when it returns too few.
+ */
 export function meiliPurchaseProfileFilter(
   verticalIds: number[] | undefined,
   profile: FacilityPurchaseProfileFilter,
@@ -52,7 +62,7 @@ export function meiliPurchaseProfileFilter(
 
   if (profile === "AUTOMATIC") {
     if (scopedVerticalIds.length === 0) {
-      return { expression: "verticalManualPurchaseProfiles IS EMPTY" };
+      return inFilter("purchaseIntervalSourcesAny", [...AUTOMATIC_INTERVAL_SOURCES]);
     }
     const tokens = scopedVerticalIds.flatMap((verticalId) =>
       AUTOMATIC_INTERVAL_SOURCES.map((source) => `${verticalId}:${source}`),
@@ -61,7 +71,7 @@ export function meiliPurchaseProfileFilter(
   }
 
   if (scopedVerticalIds.length === 0) {
-    return undefined;
+    return inFilter("manualPurchaseProfilesAny", [profile]);
   }
 
   const tokens = scopedVerticalIds.map((verticalId) => `${verticalId}:${profile}`);

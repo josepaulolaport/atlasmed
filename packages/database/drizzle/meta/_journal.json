@@ -820,6 +820,20 @@
       "when": 1786744335612,
       "tag": "0116_ortopedia_managers_and_zone_geometry",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1786842472899,
+      "tag": "0117_purchase_recurrence_watermark",
+      "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1786843113615,
+      "tag": "0118_invalidated_snapshot_index",
+      "breakpoints": true
     }
   ]
 }

@@ -199,6 +199,38 @@ function addDays(value: string, days: number): string {
     .slice(0, 10);
 }
 
+/**
+ * The typical gap between purchases — the **median**, not the mean.
+ *
+ * A clinic's history is short (at most twelve gaps) and routinely contains one
+ * dormancy that is nothing like its habit: a holiday, a stock-out, a rep
+ * changing hands. On the production snapshot, 21 of the 51 clinics with three
+ * or more gaps have a single gap longer than 3x their typical one, and the mean
+ * runs 1.51x the median across the whole set.
+ *
+ * That error is not neutral. It always lengthens the interval, and a longer
+ * interval widens every stage boundary, so the clinic looks like it still has
+ * time. One real example: gaps of 23, 24, 31, 33, 34, 35, 35, 40, 46, 50, 61
+ * and 293 days. The mean calls that a 59-day buyer and reports PURCHASE_WINDOW
+ * at 87 days silent; it is a monthly buyer that has been quiet for two and a
+ * half cycles, which is CHURN. The mean hid it.
+ *
+ * Switching moved five clinics on that snapshot, every one of them to a *more*
+ * urgent stage and none to a less urgent one — the change can surface a clinic
+ * the funnel was quietly excusing, never bury one it was flagging.
+ *
+ * Even counts take the mean of the two middle gaps, so two gaps behave exactly
+ * as they did before.
+ */
+function medianInterval(intervals: readonly number[]): number | null {
+  if (intervals.length === 0) return null;
+  const sorted = [...intervals].sort((left, right) => left - right);
+  const middle = sorted.length >> 1;
+  return sorted.length % 2 === 1
+    ? sorted[middle]!
+    : Math.round((sorted[middle - 1]! + sorted[middle]!) / 2);
+}
+
 function resolveEffectiveInterval(input: {
   manualProfile: PurchaseProfile | null;
   manualIntervalDays: number | null;
@@ -389,13 +421,7 @@ export function calculatePurchaseRecurrenceSnapshot(
         civilDateToEpochDay(purchaseDate) -
         civilDateToEpochDay(normalizedPurchaseDates[index + 1]!),
     );
-  const observedPurchaseIntervalDays =
-    intervals.length === 0
-      ? null
-      : Math.round(
-          intervals.reduce((sum, interval) => sum + interval, 0) /
-            intervals.length,
-        );
+  const observedPurchaseIntervalDays = medianInterval(intervals);
   const effectiveInterval = resolveEffectiveInterval({
     manualProfile: input.manualProfile,
     manualIntervalDays: input.manualIntervalDays,

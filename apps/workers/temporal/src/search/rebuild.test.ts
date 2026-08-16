@@ -100,6 +100,12 @@ describe("search rebuild", () => {
       purchaseFunnelStagesAny: ["NEVER_PURCHASED"],
       purchaseFunnelStageRank: 0,
       purchaseIntervalDaysMin: 30,
+      // Both bounds, because an unscoped interval filter asks "has a profile of
+      // at least N" and "has a profile of at most M" as two separate questions,
+      // exactly as the SQL does.
+      purchaseIntervalDaysMax: 30,
+      purchaseIntervalSourcesAny: ["DEFAULT"],
+      manualPurchaseProfilesAny: [],
       hasLastValidPurchase: 0,
       lastValidPurchaseSortAt: 0,
       _geo: { lat: -23.55, lng: -46.63 },
@@ -333,6 +339,67 @@ describe("search rebuild", () => {
         new Map(),
       ),
     ).toEqual([]);
+  });
+
+  /**
+   * Every writer of the `facilities` index publishes with `addDocuments`, which
+   * replaces the document rather than merging into it. A writer that selects
+   * fewer columns therefore *erases* the rest, and because the missing values
+   * are filterable attributes, the only symptom is clinics quietly failing to
+   * match a filter they should match.
+   *
+   * The purchase-recurrence activity had its own column list and omitted
+   * `unitTypeId` and `legalDocumentType`; its daily sweep blanked both on every
+   * active facility. Sharing the list makes that impossible, and this asserts
+   * the shared list still carries everything the index filters on.
+   */
+  test("one column list feeds every facilities-index writer", () => {
+    const columns = Object.keys(searchRebuild.FACILITY_DOCUMENT_COLUMNS);
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        "id",
+        "displayName",
+        "legalName",
+        "tradeName",
+        "legalDocument",
+        "cnesCode",
+        "city",
+        "state",
+        "streetAddress",
+        "neighborhood",
+        "unitTypeId",
+        "legalDocumentType",
+        "latitude",
+        "longitude",
+        "deactivatedAt",
+      ])
+    );
+
+    /**
+     * Every filterable or searchable attribute is either derived from the
+     * facility's profiles and associations, or read straight off the facility
+     * row — and if it is the latter it has to be in the column list, or the next
+     * publication blanks it.
+     *
+     * The derived set is computed, not typed out, so adding a funnel field
+     * cannot quietly widen the exemption.
+     */
+    const derived = new Set([
+      ...Object.keys(searchRebuild.deriveFacilityProfileFunnelFields([])),
+      "id",
+      "name",
+      "_geo",
+      "verticalIds",
+      "territoryIds",
+      "repUserIds",
+      "clinicalFocusIds",
+      "territoryAssignmentStatus",
+    ]);
+    const fromTheFacilityRow = [
+      ...searchRebuild.FACILITY_SETTINGS.filterableAttributes,
+      ...searchRebuild.FACILITY_SETTINGS.searchableAttributes,
+    ].filter((attribute) => !derived.has(attribute));
+    expect(columns).toEqual(expect.arrayContaining(fromTheFacilityRow));
   });
 
   test("exposes hybrid filter and distance-sort index settings", () => {

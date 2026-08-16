@@ -73,7 +73,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     });
   });
 
-  test("rounds the mean of up to twelve consecutive intervals", () => {
+  test("takes the median of up to twelve consecutive intervals", () => {
     expect(
       calculate({ purchaseDates: ["2026-07-20", "2026-07-10", "2026-06-29"] }),
     ).toMatchObject({
@@ -82,6 +82,61 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       purchaseIntervalSource: "CALCULATED",
       lastValidPurchaseDate: "2026-07-20",
       purchaseRecurrenceSampleSize: 2,
+    });
+  });
+
+  test("takes the middle gap of an odd sample rather than averaging", () => {
+    // 10, 10 and 100 days apart, newest first.
+    expect(
+      calculate({
+        purchaseDates: ["2026-07-20", "2026-07-10", "2026-06-30", "2026-03-22"],
+      }),
+    ).toMatchObject({
+      // The mean would be 40 and would call this a six-week buyer.
+      observedPurchaseIntervalDays: 10,
+      purchaseIntervalDays: 10,
+      purchaseRecurrenceSampleSize: 3,
+    });
+  });
+
+  test("averages the two middle gaps of an even sample", () => {
+    // 10, 12, 14 and 400 days apart, newest first.
+    expect(
+      calculate({
+        purchaseDates: [
+          "2026-07-20",
+          "2026-07-10",
+          "2026-06-28",
+          "2026-06-14",
+          "2025-05-11",
+        ],
+      }),
+    ).toMatchObject({
+      observedPurchaseIntervalDays: 13,
+      purchaseRecurrenceSampleSize: 4,
+    });
+  });
+
+  /**
+   * The production case this switch was made for: eleven gaps between 23 and 61
+   * days and one of 293. The mean reports 59 and leaves the clinic in
+   * PURCHASE_WINDOW at 87 days silent; it is a monthly buyer two and a half
+   * cycles overdue.
+   */
+  test("a lone dormancy does not excuse a churning clinic", () => {
+    const gaps = [23, 24, 31, 33, 34, 35, 35, 40, 46, 50, 61, 293];
+    let day = Date.UTC(2026, 4, 20);
+    const purchaseDates = ["2026-05-20"];
+    for (const gap of gaps) {
+      day -= gap * 86_400_000;
+      purchaseDates.push(new Date(day).toISOString().slice(0, 10));
+    }
+
+    expect(calculate({ purchaseDates, today: "2026-08-15" })).toMatchObject({
+      observedPurchaseIntervalDays: 35,
+      purchaseIntervalDays: 35,
+      purchaseRecurrenceSampleSize: 12,
+      purchaseFunnelStage: "CHURN",
     });
   });
 
@@ -133,7 +188,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     });
   });
 
-  test("deduplicates zero-day purchases before calculating the mean", () => {
+  test("deduplicates zero-day purchases before calculating the interval", () => {
     expect(
       calculate({
         purchaseDates: [
