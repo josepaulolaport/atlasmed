@@ -189,18 +189,29 @@ class DashboardTerritoryFeature {
     required this.id,
     required this.name,
     this.boundary,
+    this.ownerId,
+    this.ownerName,
   });
 
   final int id;
   final String name;
   final Map<String, dynamic>? boundary;
 
+  /// Who holds the zone. Only the admin's map resolves this — everywhere else
+  /// the owner is the person whose desempenho is on screen, so there is nothing
+  /// to distinguish.
+  final int? ownerId;
+  final String? ownerName;
+
   factory DashboardTerritoryFeature.fromJson(Map<String, dynamic> json) {
     final raw = json['boundary'];
+    final owner = json['ownerId'];
     return DashboardTerritoryFeature(
       id: readCrmId(json['id'], 'id'),
       name: json['name'] as String,
       boundary: raw is Map<String, dynamic> ? raw : null,
+      ownerId: owner == null ? null : readCrmId(owner, 'ownerId'),
+      ownerName: json['ownerName'] as String?,
     );
   }
 }

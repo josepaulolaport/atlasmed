@@ -1,5 +1,7 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_territory_card.dart';
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
@@ -74,6 +76,30 @@ void main() {
 
     test('an empty zone set is the same overview, not a crash', () {
       expect(camera(const []).zoom, 3.2);
+    });
+
+    test('frames a linha-wide zone set without cutting the south off', () {
+      // An admin's card runs from Roraima to Paraná. The fit clamped zoom to a
+      // floor of 2.5 — closer than that span fits in a 160pt box — so the
+      // camera sat on the north and São Paulo and Rio fell off the bottom
+      // edge. Asserted in pixels, because "too zoomed in" only means anything
+      // against the box the map is drawn in.
+      final roraima = zone(3, 'Roraima', -61, 2);
+      final parana = zone(4, 'Paraná', -51, -25);
+      final view = camera([roraima, norte, rio, parana]);
+
+      // Web Mercator: the whole sheet is 512·2^zoom points tall.
+      double mercatorY(double lat) {
+        final radians = lat * math.pi / 180;
+        return 0.5 -
+            math.log(math.tan(math.pi / 4 + radians / 2)) / (2 * math.pi);
+      }
+
+      // The zones span one degree beyond each seed point, as `zone` builds them.
+      final spanFraction = (mercatorY(-26) - mercatorY(3)).abs();
+      final spanPoints = spanFraction * 512 * math.pow(2, view.zoom!);
+
+      expect(spanPoints, lessThanOrEqualTo(160.0));
     });
   });
 }

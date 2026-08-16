@@ -658,6 +658,45 @@ function stageList(metric: keyof typeof PURCHASE_BUCKET_STAGES) {
   )})`;
 }
 
+/** Merges a filter's singular and plural forms into one distinct list. */
+function selectedFilterIds(
+  one: number | null | undefined,
+  many: number[] | null | undefined,
+): number[] {
+  const values = [...(many ?? [])];
+  if (one != null) values.push(one);
+  return [...new Set(values)];
+}
+
+/**
+ * What an admin's territory card is called.
+ *
+ * Names the person when the zones belong to one — an admin who filtered to a
+ * gerente wants their name, not a tally. Otherwise it counts both the zones and
+ * the people holding them, which is the fact that separates this card from a
+ * rep's: the outline is several people's work, not the viewer's.
+ */
+export function globalTerritoryLabel(
+  features: readonly { name: string; ownerId?: number | null; ownerName?: string | null }[],
+): string {
+  const owners = new Set(
+    features.map((f) => f.ownerId).filter((id): id is number => id != null),
+  );
+
+  if (owners.size === 1) {
+    const named = features.find((f) => f.ownerName)?.ownerName;
+    if (named) {
+      return features.length === 1
+        ? `${features[0]!.name} · ${named}`
+        : `${features.length} territórios · ${named}`;
+    }
+  }
+  if (features.length === 1) return features[0]!.name;
+
+  const zones = `${features.length} territórios`;
+  return owners.size > 1 ? `${zones} · ${owners.size} responsáveis` : zones;
+}
+
 /**
  * The territory card — retained from the previous screen, now scoped by the
  * same subject resolution as every metric.
@@ -691,6 +730,23 @@ export class GetDashboardTerritoryUseCase extends DashboardMetricUseCase {
       context.subject.roleName !== Role.REP &&
       context.subject.roleName !== Role.MANAGER;
 
+    // The people the filters narrowed to. Empty means the admin has picked
+    // nobody, and the map falls back to every manager's zone — the coarsest
+    // level, which is also the only one whose zones do not overlap.
+    //
+    // A representante chosen alone wins over a gerente chosen alone because it
+    // is the finer of the two: picking both a manager and one of their reps
+    // should draw the rep's patch, not the manager's whole zone around it.
+    const selectedReps = selectedFilterIds(
+      request.filters.repId,
+      request.filters.repIds,
+    );
+    const selectedManagers = selectedFilterIds(
+      request.filters.managerId,
+      request.filters.managerIds,
+    );
+    const ownerIds = selectedReps.length > 0 ? selectedReps : selectedManagers;
+
     const [clinicCount, doctorCount, features] = await Promise.all([
       this.deps.repository.countProfiles(context.filter),
       this.deps.repository.countDoctors(context.filter),
@@ -701,6 +757,7 @@ export class GetDashboardTerritoryUseCase extends DashboardMetricUseCase {
         ? this.deps.repository.listVerticalTerritoryFeatures({
             verticalId: context.verticalId,
             filter: context.filter,
+            ownerIds,
           })
         : this.deps.repository.listAssignedTerritoryFeatures({
             userId: context.subject.userId,
@@ -714,8 +771,15 @@ export class GetDashboardTerritoryUseCase extends DashboardMetricUseCase {
     let mode: "global" | "assigned" | "empty";
     let label: string | null;
     if (isGlobal) {
+      // Still "global" with nothing to draw: the client shows a basemap for
+      // that case, and "empty" would tell an admin no territory is assigned to
+      // *them*, which was never the question.
       mode = "global";
-      label = null;
+      // The card used to fall back to the word "Território" here, which told an
+      // admin the zones were theirs. They are other people's, and how many
+      // people is the fact that distinguishes this view from every other one.
+      label =
+        withBoundary.length > 0 ? globalTerritoryLabel(withBoundary) : null;
     } else if (withBoundary.length > 0) {
       mode = "assigned";
       label =
