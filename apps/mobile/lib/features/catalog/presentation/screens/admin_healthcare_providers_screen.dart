@@ -53,6 +53,12 @@ class _AdminHealthcareProvidersScreenState
     final saved = await showModalBottomSheet<HealthcareProvider>(
       context: context,
       isScrollControlled: true,
+      // Drag-to-dismiss and a tap on the barrier both bypass `PopScope`: the
+      // sheet route pops without consulting it, so a half-typed form vanished
+      // silently even with the guard in place. The ✕ inside the sheet is
+      // guarded, so it becomes the only way out.
+      enableDrag: false,
+      isDismissible: false,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
