@@ -16,6 +16,14 @@ export interface PersonRecord {
   /** Same active links as `facilityIds`, named, ordered by name. */
   facilities: PersonFacilitySummary[];
   hasHealthcareProfile: boolean;
+  /**
+   * Every specialty the doctor holds, primary first.
+   *
+   * The list endpoints carry only the primary one's *name*, which is enough to
+   * print a badge and useless for editing: the picker needs ids, and needs the
+   * secondary ones or saving would silently drop them.
+   */
+  specialties: { id: number; name: string; isPrimary: boolean }[];
 }
 
 export interface PersonFacilitySummary {

@@ -70,6 +70,29 @@ export class DrizzlePersonRepository implements PersonRepository {
       )
       .orderBy(asc(facilities.displayName));
 
+    // Primary first, then alphabetical — the order the doctor's chips read in,
+    // and the same rule `replaceSpecialties` returns.
+    const specialtyRows = (
+      await db
+        .select({
+          id: healthcareSpecialties.id,
+          name: healthcareSpecialties.name,
+          isPrimary: personHealthcareProfileSpecialties.isPrimary,
+        })
+        .from(personHealthcareProfileSpecialties)
+        .innerJoin(
+          healthcareSpecialties,
+          eq(
+            healthcareSpecialties.id,
+            personHealthcareProfileSpecialties.specialtyId
+          )
+        )
+        .where(eq(personHealthcareProfileSpecialties.personId, personId))
+    ).sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.localeCompare(b.name, "pt-BR");
+    });
+
     return {
       id: row.id,
       firstName: row.firstName,
@@ -90,6 +113,7 @@ export class DrizzlePersonRepository implements PersonRepository {
         name: r.facilityName,
       })),
       hasHealthcareProfile: Boolean(row.hasHealthcareProfile),
+      specialties: specialtyRows,
     };
   }
 
