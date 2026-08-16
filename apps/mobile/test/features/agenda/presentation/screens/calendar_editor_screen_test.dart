@@ -182,7 +182,9 @@ void main() {
     expect(find.byTooltip('Cancelar toda a série'), findsOneWidget);
   });
 
-  testWidgets('the cancel dialog will not act without a reason', (tester) async {
+  testWidgets('the cancel dialog will not act without a reason', (
+    tester,
+  ) async {
     // It used to accept the press, pop with an empty string, and be discarded
     // by two separate guards — the dialog closed, nothing was cancelled, and
     // nothing said either had happened.

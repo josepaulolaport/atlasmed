@@ -428,27 +428,30 @@ void main() {
     },
   );
 
-  test('a cancellation does not reuse the key a failed save is holding', () async {
-    // Receipts are stored per (user, key) and replaying one under a different
-    // command kind is a hard error. A save that reached the server and failed
-    // on the way back leaves an UPDATE receipt against the key the client is
-    // still holding, so sharing it turned the next cancel into an idempotency
-    // conflict the rep could only escape by leaving the screen.
-    final repository = _FakeCalendarRepository()
-      ..submitError = const CalendarNetworkException('Sem conexão.');
-    var keys = 0;
-    final notifier = CalendarEditorNotifier(
-      repository: repository,
-      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
-      idempotencyKeyFactory: () => 'key-${++keys}',
-    );
+  test(
+    'a cancellation does not reuse the key a failed save is holding',
+    () async {
+      // Receipts are stored per (user, key) and replaying one under a different
+      // command kind is a hard error. A save that reached the server and failed
+      // on the way back leaves an UPDATE receipt against the key the client is
+      // still holding, so sharing it turned the next cancel into an idempotency
+      // conflict the rep could only escape by leaving the screen.
+      final repository = _FakeCalendarRepository()
+        ..submitError = const CalendarNetworkException('Sem conexão.');
+      var keys = 0;
+      final notifier = CalendarEditorNotifier(
+        repository: repository,
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+        idempotencyKeyFactory: () => 'key-${++keys}',
+      );
 
-    expect(await notifier.submit(), isFalse);
-    expect(repository.occurrenceUpdateKey, 'key-1');
+      expect(await notifier.submit(), isFalse);
+      expect(repository.occurrenceUpdateKey, 'key-1');
 
-    expect(await notifier.cancel('Clínica fechou'), isTrue);
-    expect(repository.occurrenceCancellationKey, isNot('key-1'));
-  });
+      expect(await notifier.cancel('Clínica fechou'), isTrue);
+      expect(repository.occurrenceCancellationKey, isNot('key-1'));
+    },
+  );
 
   test('a cancellation retry reuses its own key', () async {
     // The other half of the same rule: retrying the same cancel must not
@@ -471,17 +474,20 @@ void main() {
     expect(repository.occurrenceCancellationKey, first);
   });
 
-  test('a blank cancellation reason says so instead of doing nothing', () async {
-    // It used to return false silently, so the dialog closed, nothing was
-    // cancelled, and the screen gave no sign either had happened.
-    final notifier = CalendarEditorNotifier(
-      repository: _FakeCalendarRepository(),
-      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
-    );
+  test(
+    'a blank cancellation reason says so instead of doing nothing',
+    () async {
+      // It used to return false silently, so the dialog closed, nothing was
+      // cancelled, and the screen gave no sign either had happened.
+      final notifier = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+      );
 
-    expect(await notifier.cancel('   '), isFalse);
-    expect(notifier.state.errorMessage, isNotNull);
-  });
+      expect(await notifier.cancel('   '), isFalse);
+      expect(notifier.state.errorMessage, isNotNull);
+    },
+  );
 
   test('the failure reason is readable the moment submit returns', () async {
     // The day grid's quick sheet is not a ConsumerWidget, so it used to read

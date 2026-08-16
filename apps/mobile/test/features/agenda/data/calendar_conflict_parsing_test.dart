@@ -27,10 +27,7 @@ void main() {
 
     expect(conflict.candidate.id, isNull);
     expect(conflict.existing.id, 7);
-    expect(
-      conflict.existing.startsAt,
-      DateTime.utc(2026, 8, 15, 22),
-    );
+    expect(conflict.existing.startsAt, DateTime.utc(2026, 8, 15, 22));
     expect(conflict.existing.endsAt, DateTime.utc(2026, 8, 15, 23));
   });
 

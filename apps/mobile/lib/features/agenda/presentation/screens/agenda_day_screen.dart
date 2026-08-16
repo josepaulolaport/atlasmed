@@ -168,11 +168,7 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
                   // would write to their calendar, which is theirs alone —
                   // the same rule that hides the create controls above.
                   if (!canCreate) return;
-                  AgendaOccurrenceEditRoute(
-                    id: occurrence.calendarId,
-                    recurrenceKey: occurrence.recurrenceKey,
-                    $extra: occurrence,
-                  ).push(context);
+                  _openEditor(occurrence);
                 },
               ),
             ),
@@ -269,6 +265,78 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     } finally {
       notifier.dispose();
     }
+  }
+
+  /// Opens the right editor for [occurrence], asking first when it repeats.
+  ///
+  /// Editing a *series* had no way in. `AgendaEditRoute` and the whole
+  /// `CalendarEditorMode.series` branch existed — screen title, "Cancelar toda
+  /// a série", its own expectedVersion rule, tests — and nothing in the app
+  /// pushed it. A rep who set up a weekly block could only ever move or cancel
+  /// one week at a time, for as long as the series ran.
+  ///
+  /// One-off appointments skip the question: there is no series to mean.
+  Future<void> _openEditor(CalendarOccurrence occurrence) async {
+    if (occurrence.recurrence == CalendarRecurrence.none) {
+      AgendaOccurrenceEditRoute(
+        id: occurrence.calendarId,
+        recurrenceKey: occurrence.recurrenceKey,
+        $extra: occurrence,
+      ).push(context);
+      return;
+    }
+
+    final wholeSeries = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(
+                'Este compromisso se repete.',
+                style: TextStyle(fontSize: 14, color: AppColors.gray600),
+              ),
+            ),
+            ListTile(
+              key: const Key('edit-this-occurrence'),
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('Esta ocorrência'),
+              onTap: () => Navigator.of(sheetContext).pop(false),
+            ),
+            ListTile(
+              key: const Key('edit-whole-series'),
+              leading: const Icon(Icons.repeat_rounded),
+              title: const Text('Toda a série'),
+              onTap: () => Navigator.of(sheetContext).pop(true),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (wholeSeries == null || !mounted) return;
+    if (wholeSeries) {
+      AgendaEditRoute(
+        id: occurrence.calendarId,
+        // Not used to address the series — it dates the appointment, so it can
+        // be found again when `$extra` is lost to a router refresh.
+        recurrenceKey: occurrence.recurrenceKey,
+        $extra: occurrence,
+      ).push(context);
+      return;
+    }
+    AgendaOccurrenceEditRoute(
+      id: occurrence.calendarId,
+      recurrenceKey: occurrence.recurrenceKey,
+      $extra: occurrence,
+    ).push(context);
   }
 
   /// Hands the block to the full editor, carrying what the rep already typed.

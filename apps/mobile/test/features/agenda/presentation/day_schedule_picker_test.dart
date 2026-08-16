@@ -314,7 +314,9 @@ void main() {
     expect(_inStrip('fora'), findsWidgets);
   });
 
-  testWidgets("uses the rep's own hours, not a hardcoded 07:00", (tester) async {
+  testWidgets("uses the rep's own hours, not a hardcoded 07:00", (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _host(
         booked: const [],

@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// already existed; it was pointed at a screen nothing can reach any more.
 class _QueryRecordingRepository implements CalendarRepositoryContract {
   final List<AgendaQuery> queries = [];
+  List<CalendarOccurrence> occurrences = const [];
 
   @override
   Future<List<CalendarOccurrence>> listCalendar({
@@ -28,7 +29,7 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     int? ownerUserId,
   }) async {
     queries.add(AgendaQuery(from: from, to: to, ownerUserId: ownerUserId));
-    return const [];
+    return occurrences;
   }
 
   @override
@@ -79,16 +80,48 @@ final _manager = User(
   updatedAt: DateTime(2026),
 );
 
+final _rep = User(
+  id: 42,
+  email: 'rep@atlasmed.test',
+  username: 'rep',
+  firstName: 'Adriana',
+  status: UserStatus.active,
+  emailVerified: true,
+  phoneVerified: true,
+  twoFactorEnabled: false,
+  role: const UserRole(id: 3, name: UserRoleName.rep),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+CalendarOccurrence _weekly() => CalendarOccurrence.fromJson({
+  'id': 9,
+  'occurrenceId': '9:2026-08-22T22:00[America/Sao_Paulo]',
+  'calendarId': 9,
+  'recurrenceKey': '2026-08-22T22:00[America/Sao_Paulo]',
+  'ownerUserId': 42,
+  'kind': 'PERSONAL_BLOCK',
+  'title': 'Bloqueio semanal',
+  'startsAt': '2026-08-23T01:00:00.000Z',
+  'endsAt': '2026-08-23T02:00:00.000Z',
+  'timeZone': 'America/Sao_Paulo',
+  'durationMinutes': 60,
+  'recurrence': 'WEEKLY',
+  'version': 1,
+  'canMutate': true,
+});
+
 Future<void> _pump(
   WidgetTester tester,
   Widget screen,
-  _QueryRecordingRepository repository,
-) async {
+  _QueryRecordingRepository repository, {
+  User? user,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         calendarRepositoryProvider.overrideWithValue(repository),
-        currentUserProvider.overrideWith((ref) async => _manager),
+        currentUserProvider.overrideWith((ref) async => user ?? _manager),
         // The day screen reads the rep's working hours to decide where a new
         // appointment opens. Left to the real repository it starts an
         // eight-minute periodic timer the test never outlives.
@@ -148,6 +181,29 @@ void main() {
     );
 
     expect(repository.queries.first.ownerUserId, isNull);
+  });
+
+  testWidgets('a repeating appointment asks which one you mean', (
+    tester,
+  ) async {
+    // Editing a *series* had no way in: `AgendaEditRoute` and the whole
+    // `CalendarEditorMode.series` branch existed — screen title, "Cancelar
+    // toda a série", its own expectedVersion rule, tests — and nothing pushed
+    // it. A weekly block could only be moved one week at a time, forever.
+    final repository = _QueryRecordingRepository()..occurrences = [_weekly()];
+
+    await _pump(
+      tester,
+      AgendaDayScreen(day: DateTime(2026, 8, 22)),
+      repository,
+      user: _rep,
+    );
+
+    await tester.tap(find.text('Bloqueio semanal'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('edit-this-occurrence')), findsOneWidget);
+    expect(find.byKey(const Key('edit-whole-series')), findsOneWidget);
   });
 
   testWidgets("a manager cannot draw on somebody else's day", (tester) async {
