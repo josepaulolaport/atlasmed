@@ -231,7 +231,7 @@ void main() {
       );
       await tester.tap(find.text('Salvar compromisso'));
       await tester.pump();
-      expect(find.text('Selecione uma clínica.'), findsWidgets);
+      expect(find.text('Selecione uma clínica ou um médico.'), findsWidgets);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(

@@ -303,7 +303,10 @@ void main() {
       notifier.setTitle('Visita');
       notifier.setDurationMinutes(45);
 
-      expect(notifier.validationErrors['facilityId'], 'Selecione uma clínica.');
+      expect(
+        notifier.validationErrors['facilityId'],
+        'Selecione uma clínica ou um médico.',
+      );
       expect(
         notifier.validationErrors['durationMinutes'],
         'Use uma duração em múltiplos de 30 minutos.',
@@ -313,6 +316,61 @@ void main() {
       expect(notifier.validationErrors, isNot(contains('facilityId')));
     },
   );
+
+  test('a remote contact with a doctor needs no clinic', () {
+    // §15.7.5 — the rep phoned a doctor. There is no building to name, and
+    // naming one they never entered would poison the record.
+    final repository = _FakeCalendarRepository();
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: const CalendarEditorTarget.creating(),
+      now: () => DateTime(2026, 8, 3, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setModality(CalendarModality.remote);
+
+    expect(notifier.validationErrors, isNot(contains('facilityId')));
+    // The contact names itself, the way a chosen clinic does.
+    expect(notifier.state.draft.title, 'Contato · Dra. Marina Alves');
+  });
+
+  test('a presencial contact with a doctor still needs a clinic', () {
+    // If the rep drove somewhere, there is a place, and the record says where.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(),
+      now: () => DateTime(2026, 8, 3, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setModality(CalendarModality.inPerson);
+
+    expect(
+      notifier.validationErrors['facilityId'],
+      'Uma visita presencial precisa de uma clínica.',
+    );
+  });
+
+  test('sends the doctor with the appointment', () async {
+    final repository = _FakeCalendarRepository();
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: const CalendarEditorTarget.creating(),
+      now: () => DateTime(2026, 8, 3, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    notifier.setTitle('Ligação de acompanhamento');
+    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setModality(CalendarModality.remote);
+    await notifier.submit();
+
+    expect(repository.created?.toJson()['personId'], 7);
+    expect(repository.created?.toJson().containsKey('facilityId'), isFalse);
+  });
 
   test(
     'serializes mutually exclusive recurrence bounds and offset startsAt',

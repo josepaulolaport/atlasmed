@@ -13,6 +13,8 @@ class CalendarEditorDraft extends Equatable {
     required this.title,
     required this.facilityId,
     required this.facilityName,
+    required this.personId,
+    required this.personName,
     required this.modality,
     required this.startsAt,
     required this.timeZone,
@@ -30,6 +32,11 @@ class CalendarEditorDraft extends Equatable {
   final String title;
   final int? facilityId;
   final String? facilityName;
+  /// The doctor the contact is with, when the rep booked a person rather than
+  /// a place (§15.7.5). Both may be set: a visit to a named doctor at their
+  /// clinic is one interaction, not two.
+  final int? personId;
+  final String? personName;
   final CalendarModality modality;
   final DateTime startsAt;
   final String timeZone;
@@ -48,6 +55,9 @@ class CalendarEditorDraft extends Equatable {
     int? facilityId,
     String? facilityName,
     bool clearFacility = false,
+    int? personId,
+    String? personName,
+    bool clearPerson = false,
     CalendarModality? modality,
     DateTime? startsAt,
     String? timeZone,
@@ -64,6 +74,8 @@ class CalendarEditorDraft extends Equatable {
     title: title ?? this.title,
     facilityId: clearFacility ? null : (facilityId ?? this.facilityId),
     facilityName: clearFacility ? null : (facilityName ?? this.facilityName),
+    personId: clearPerson ? null : (personId ?? this.personId),
+    personName: clearPerson ? null : (personName ?? this.personName),
     modality: modality ?? this.modality,
     startsAt: startsAt ?? this.startsAt,
     timeZone: timeZone ?? this.timeZone,
@@ -85,6 +97,7 @@ class CalendarEditorDraft extends Equatable {
     kind: kind,
     title: title.trim(),
     facilityId: kind == CalendarEventKind.interaction ? facilityId : null,
+    personId: kind == CalendarEventKind.interaction ? personId : null,
     modality: kind == CalendarEventKind.interaction ? modality : null,
     startsAt: _offsetIso(startsAt),
     timeZone: timeZone,
@@ -129,6 +142,8 @@ class CalendarEditorDraft extends Equatable {
     title,
     facilityId,
     facilityName,
+    personId,
+    personName,
     modality,
     startsAt,
     timeZone,
@@ -233,9 +248,17 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
     if (draft.title.trim().isEmpty) {
       errors['title'] = 'Informe um título.';
     }
-    if (draft.kind == CalendarEventKind.interaction &&
-        draft.facilityId == null) {
-      errors['facilityId'] = 'Selecione uma clínica.';
+    // §15.7.5 — an interaction is about a clinic, a doctor, or both. A remote
+    // contact with a doctor happened nowhere, and naming a clinic the rep never
+    // entered would be worse than leaving it empty. A presencial one still has
+    // a place, because the rep drove there.
+    if (draft.kind == CalendarEventKind.interaction) {
+      if (draft.facilityId == null && draft.personId == null) {
+        errors['facilityId'] = 'Selecione uma clínica ou um médico.';
+      } else if (draft.facilityId == null &&
+          draft.modality == CalendarModality.inPerson) {
+        errors['facilityId'] = 'Uma visita presencial precisa de uma clínica.';
+      }
     }
     if (draft.durationMinutes <= 0 || draft.durationMinutes % 30 != 0) {
       errors['durationMinutes'] = 'Use uma duração em múltiplos de 30 minutos.';
@@ -305,6 +328,30 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
             ),
     );
   }
+  /// Picking the doctor names the contact, on the same rule as the clinic:
+  /// only a title the rep has not written themselves is replaced.
+  void setPerson(CalendarIdentity? person) {
+    final draft = state.draft;
+    final automatic =
+        draft.title.trim().isEmpty ||
+        (draft.personName != null &&
+            draft.title == contactTitleForPerson(draft.personName!)) ||
+        (draft.facilityName != null &&
+            draft.title == visitTitleForFacility(draft.facilityName!));
+
+    _setDraft(
+      person == null
+          ? draft.copyWith(clearPerson: true, title: automatic ? '' : draft.title)
+          : draft.copyWith(
+              personId: person.id,
+              personName: person.name,
+              title: automatic
+                  ? contactTitleForPerson(person.name)
+                  : draft.title,
+            ),
+    );
+  }
+
   void setModality(CalendarModality value) =>
       _setDraft(state.draft.copyWith(modality: value));
   void setStartsAt(DateTime value) =>
@@ -512,6 +559,8 @@ CalendarEditorDraft _initialDraft(
       title: occurrence.title,
       facilityId: occurrence.facility?.id ?? occurrence.interaction?.facilityId,
       facilityName: occurrence.facility?.name,
+      personId: occurrence.interaction?.person?.id,
+      personName: occurrence.interaction?.person?.name,
       modality: occurrence.modality ?? CalendarModality.inPerson,
       startsAt: target.mode == CalendarEditorMode.series
           ? (_seriesAnchorStart(occurrence) ?? occurrence.startsAt.toLocal())
@@ -564,6 +613,10 @@ CalendarEditorDraft _initialDraft(
     title: prefill?.title ?? '',
     facilityId: prefill?.facilityId,
     facilityName: prefill?.facilityName,
+    // Opening the editor from a doctor's page carries them in, so the rep is
+    // not asked again for the answer they just gave.
+    personId: prefill?.personId,
+    personName: prefill?.personName,
     modality: CalendarModality.inPerson,
     // A slot drawn on the day grid wins over the next free half hour: the rep
     // has already said when, and reopening the form on a default time would

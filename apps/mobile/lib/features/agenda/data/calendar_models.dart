@@ -148,6 +148,7 @@ class CalendarCreateCommand extends Equatable {
     required this.durationMinutes,
     required this.recurrence,
     this.facilityId,
+    this.personId,
     this.modality,
     this.recurrenceUntil,
     this.recurrenceCount,
@@ -156,6 +157,9 @@ class CalendarCreateCommand extends Equatable {
   final CalendarEventKind kind;
   final String title;
   final int? facilityId;
+  /// The doctor, when the contact is with a person (§15.7.5). A remote one may
+  /// name no clinic at all; an in-person one still has to.
+  final int? personId;
   final CalendarModality? modality;
   final String startsAt;
   final String timeZone;
@@ -168,6 +172,7 @@ class CalendarCreateCommand extends Equatable {
     'kind': calendarEventKindToApi(kind),
     'title': title,
     if (facilityId != null) 'facilityId': facilityId,
+    if (personId != null) 'personId': personId,
     if (modality != null) 'modality': calendarModalityToApi(modality!),
     'startsAt': startsAt,
     'timeZone': timeZone,
@@ -182,6 +187,7 @@ class CalendarCreateCommand extends Equatable {
     kind,
     title,
     facilityId,
+    personId,
     modality,
     startsAt,
     timeZone,
@@ -307,6 +313,7 @@ class CalendarInteractionContext extends Equatable {
     required this.id,
     required this.status,
     this.facilityId,
+    this.person,
     this.agentUserId,
     this.modality,
     this.version = 0,
@@ -316,6 +323,10 @@ class CalendarInteractionContext extends Equatable {
 
   final int id;
   final int? facilityId;
+
+  /// The doctor the contact was with, when it was booked against a person
+  /// rather than a clinic (§15.7.5). Null for an ordinary clinic visit.
+  final CalendarIdentity? person;
   final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
@@ -334,6 +345,13 @@ class CalendarInteractionContext extends Equatable {
       CalendarInteractionContext(
         id: readCrmId(json['id'], 'id'),
         facilityId: readCrmIdOrNull(json['facilityId'], 'facilityId'),
+        person: json['person'] == null
+            ? null
+            : CalendarIdentity.fromJson(
+                json['person'] as Map<String, dynamic>,
+                fallbackId: 0,
+                fallbackName: 'Médico',
+              ),
         agentUserId: readCrmIdOrNull(json['agentUserId'], 'agentUserId'),
         modality: json['modality'] == null
             ? null
@@ -348,6 +366,7 @@ class CalendarInteractionContext extends Equatable {
   List<Object?> get props => [
     id,
     facilityId,
+    person,
     agentUserId,
     modality,
     status,
@@ -961,6 +980,10 @@ String formatAgendaDay(DateTime date) {
 /// the full editor agree on the string — that agreement is what lets either of
 /// them recognise a title as still automatic and replace it.
 String visitTitleForFacility(String facilityName) => 'Visita · $facilityName';
+
+/// What a contact with a doctor is called when the rep has not named it
+/// (§15.7.5). "Contato", not "Visita": it may have happened on the phone.
+String contactTitleForPerson(String personName) => 'Contato · $personName';
 
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);

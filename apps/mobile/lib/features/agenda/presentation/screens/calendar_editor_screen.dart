@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agend
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_facility_selector.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calendar_person_field.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/recurrence_fields.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -157,7 +158,9 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                   const SizedBox(height: 16),
                                   CalendarFacilitySelector(
                                     choice: _facilityChoice,
-                                    personId: widget.target.prefill?.personId,
+                                    personId:
+                                        draft.personId ??
+                                        widget.target.prefill?.personId,
                                     selected: draft.facilityId == null
                                         ? null
                                         : CalendarIdentity(
@@ -168,6 +171,28 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                           ),
                                     errorText: errors['facilityId'],
                                     onChanged: notifier.setFacility,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // §15.7.5 — the rep may be booking a person
+                                  // rather than a place. A remote contact with
+                                  // a doctor needs no clinic at all; naming one
+                                  // the rep never entered would be worse than
+                                  // leaving it empty.
+                                  CalendarPersonField(
+                                    selected: draft.personId == null
+                                        ? null
+                                        : CalendarIdentity(
+                                            id: draft.personId!,
+                                            name:
+                                                draft.personName ??
+                                                'Médico selecionado',
+                                          ),
+                                    helperText:
+                                        draft.modality ==
+                                            CalendarModality.remote
+                                        ? 'Um contato remoto pode ficar sem clínica.'
+                                        : null,
+                                    onChanged: notifier.setPerson,
                                   ),
                                   const SizedBox(height: 16),
                                   _PickerTile(
