@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 
 class DashboardTerritoryCard extends StatelessWidget {
   const DashboardTerritoryCard({
@@ -272,7 +273,10 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
                           // Brazil, leaving it a speck in an empty map.
                           viewport: territoryViewport(widget.features),
                           onMapCreated: _onMapCreated,
-                          onStyleLoadedListener: (_) => _configureMap(),
+                          onStyleLoadedListener: (_) async {
+                            await useFlatProjection(_mapboxMap);
+                            await _configureMap();
+                          },
                           onMapLoadErrorListener: (_) =>
                               setState(() => _mapUnavailable = true),
                         ),

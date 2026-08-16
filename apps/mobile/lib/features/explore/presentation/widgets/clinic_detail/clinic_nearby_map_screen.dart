@@ -18,6 +18,7 @@ import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_p
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/nearby_stack_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
@@ -436,6 +437,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                             setState(() => _mapUnavailable = true),
                         onStyleImageMissingListener: _onStyleImageMissing,
                         onStyleLoadedListener: (_) async {
+                          await useFlatProjection(_mapboxMap);
                           _clinicLayersEpoch++;
                           _clinicLayersReady = false;
                           _clinicInteractionsRegistered = false;

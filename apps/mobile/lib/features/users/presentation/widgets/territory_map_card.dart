@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territor
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// A small, non-interactive live map preview for a single assigned
@@ -137,7 +138,10 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
                               styleUri: MapboxStyles.STANDARD,
                               viewport: _initialViewport,
                               onMapCreated: _onMapCreated,
-                              onStyleLoadedListener: (_) => _configureMap(),
+                              onStyleLoadedListener: (_) async {
+                                await useFlatProjection(_mapboxMap);
+                                await _configureMap();
+                              },
                               onMapLoadErrorListener: (_) =>
                                   setState(() => _mapUnavailable = true),
                             ),

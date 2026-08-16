@@ -24,6 +24,7 @@ import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
@@ -566,6 +567,8 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     if (mapboxMap == null || !mounted) return;
 
     try {
+      await useFlatProjection(mapboxMap);
+
       _polygonManager = await mapboxMap.annotations
           .createPolygonAnnotationManager();
       _borderManager = await mapboxMap.annotations

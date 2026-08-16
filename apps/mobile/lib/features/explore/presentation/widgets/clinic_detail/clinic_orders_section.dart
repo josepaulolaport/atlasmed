@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
@@ -383,7 +384,10 @@ class _OrderItemsTable extends StatelessWidget {
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                'R\$ ${order.itemsSubtotal.toStringAsFixed(2)}',
+                // The same formatter Pedidos uses. This printed
+                // "R$ 8000.00" — a decimal point — beside screens showing
+                // "R$ 5301,00".
+                formatOrderCurrency(order.itemsSubtotal),
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,

@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Map picker modes for invite / assignment flows.
@@ -423,7 +424,10 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
         _viewportApplied = true;
         mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
       },
-      onStyleLoadedListener: (_) => _configureMap(),
+      onStyleLoadedListener: (_) async {
+        await useFlatProjection(_mapboxMap);
+        await _configureMap();
+      },
       onMapLoadErrorListener: (_) => setState(() => _mapUnavailable = true),
       onCameraChangeListener: _handleCameraChanged,
       // ignore: deprecated_member_use

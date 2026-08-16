@@ -164,7 +164,7 @@ class _Profile extends ConsumerWidget {
           _LinkCard(
             icon: Icons.add_location_alt_outlined,
             title: 'Associar nova clínica',
-            subtitle: 'Sem representante, ou já com outro — com justificativa',
+            subtitle: 'Sem consultor, ou já com outro — com justificativa',
             onTap: () => AssignClinicRoute(
               userId: member.userId,
               memberName: member.displayName,
@@ -182,7 +182,12 @@ class _Profile extends ConsumerWidget {
             accent: member.unassignedClinicCount! > 0
                 ? AppColors.amber
                 : AppColors.navyBright,
-            title: 'Clínicas sem representante',
+            // "Consultor" is what the rest of the app calls the person
+            // assigned to a clinic — the action that creates the assignment is
+            // "Atribuir consultor". This one number was called three things:
+            // "não atribuídas" on Desempenho, "sem representante" here, and
+            // "sem consultor" on Territórios.
+            title: 'Clínicas sem consultor',
             trailing: '${member.unassignedClinicCount}',
             subtitle: member.unassignedClinicCount! > 0
                 ? 'Dentro das zonas, sem ninguém atendendo'

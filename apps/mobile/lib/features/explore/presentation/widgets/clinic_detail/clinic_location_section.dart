@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -369,7 +370,10 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
           applyPreviewMapChrome(map);
         },
         onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
-        onStyleLoadedListener: (_) => _addPin(),
+        onStyleLoadedListener: (_) async {
+          await useFlatProjection(_mapboxMap);
+          await _addPin();
+        },
       ),
     );
   }

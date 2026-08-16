@@ -25,6 +25,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
@@ -296,6 +297,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           viewport: _viewport,
                           onMapCreated: _onMapCreated,
                           onStyleLoadedListener: (_) async {
+                            await useFlatProjection(_mapboxMap);
                             await _onStyleLoaded();
                           },
                           onStyleImageMissingListener: _onStyleImageMissing,
