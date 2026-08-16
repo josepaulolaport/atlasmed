@@ -1,6 +1,9 @@
 import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
+import 'package:atlasmed_mobile_app/features/capture/data/capture_queue.dart';
+import 'package:atlasmed_mobile_app/features/capture/data/pending_capture.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,12 +35,20 @@ class InteractionState {
 
 class InteractionNotifier extends StateNotifier<InteractionState>
     with DisposeSafeStateWrites<InteractionState> {
-  InteractionNotifier(this._repository, this.interactionId)
-    : super(const InteractionState()) {
+  InteractionNotifier(
+    this._repository,
+    this.interactionId, {
+    CaptureQueue? queue,
+  }) : _queue = queue,
+       super(const InteractionState()) {
     load();
   }
 
   final CalendarRepositoryContract _repository;
+
+  /// Where a press goes when there is no signal — §15.6.6-4. Nullable so the
+  /// notifier can still be built in tests that are not about the queue.
+  final CaptureQueue? _queue;
   final int interactionId;
   final Map<String, String> _commandKeys = {};
 
@@ -92,6 +103,10 @@ class InteractionNotifier extends StateNotifier<InteractionState>
       keySlot,
       () => '$command-$interactionId-v${detail.version}',
     );
+    // Stamped before the request (§15.6.6-4). This is the instant the rep
+    // pressed, and it is what gets sent whether the request goes now or out of
+    // the queue tomorrow morning.
+    final pressedAt = DateTime.now().toUtc();
     state = state.copyWith(commandInProgress: command, clearError: true);
     try {
       if (command == 'start') {
@@ -99,6 +114,7 @@ class InteractionNotifier extends StateNotifier<InteractionState>
           interactionId,
           expectedVersion: detail.version,
           idempotencyKey: idempotencyKey,
+          startedAt: pressedAt.toIso8601String(),
         );
       } else {
         await _repository.completeInteraction(
@@ -106,6 +122,7 @@ class InteractionNotifier extends StateNotifier<InteractionState>
           expectedVersion: detail.version,
           idempotencyKey: idempotencyKey,
           correctionReason: correctionReason,
+          completedAt: pressedAt.toIso8601String(),
         );
       }
       final refreshed = await _repository.getInteraction(interactionId);
@@ -116,6 +133,31 @@ class InteractionNotifier extends StateNotifier<InteractionState>
         clearError: true,
       );
       return true;
+    } on CalendarNetworkException {
+      // The press is a fact the rep witnessed; the network is not their
+      // problem. Kept with the instant it happened and sent when there is one.
+      await _queue?.enqueue(
+        kind: command == 'start'
+            ? PendingCaptureKind.start
+            : PendingCaptureKind.complete,
+        label: command == 'start'
+            ? 'Iniciar · ${detail.facility.displayName}'
+            : 'Encerrar · ${detail.facility.displayName}',
+        payload: {
+          'interactionId': interactionId,
+          'expectedVersion': detail.version,
+          if (correctionReason != null && correctionReason.trim().isNotEmpty)
+            'correctionReason': correctionReason.trim(),
+        },
+        stampedAt: pressedAt,
+      );
+      state = state.copyWith(
+        commandError: _queue == null
+            ? 'Não foi possível concluir a ação. Verifique sua conexão e tente novamente.'
+            : 'Sem conexão. Guardado e será enviado.',
+        clearCommand: true,
+      );
+      return false;
     } catch (error) {
       state = state.copyWith(
         commandError: interactionErrorMessage(error),
@@ -151,5 +193,10 @@ final interactionProvider = StateNotifierProvider.autoDispose
       return InteractionNotifier(
         ref.watch(calendarRepositoryProvider),
         interactionId,
+        // Read, not watch. The queue is a ChangeNotifier that notifies as soon
+        // as it counts what is waiting, and watching it rebuilt this
+        // autoDispose family — a fresh notifier, a second load(), and two GETs
+        // for one screen. Nothing here needs to rebuild when the count moves.
+        queue: ref.read(captureQueueProvider),
       );
     });
