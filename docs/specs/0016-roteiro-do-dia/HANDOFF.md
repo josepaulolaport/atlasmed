@@ -483,12 +483,29 @@ a number is never local when other things are derived from it.
   wrong vertical factor made a working cancel button look like a silently
   failing one for several attempts.
 
-**Next, in order**, all four now specified in §15.7:
+**Next, in order**, all four specified in §15.7:
 
-1. **Contacts with a doctor** (§15.7.5) — migration first: `person_id` added,
-   `facility_id` nullable, at least one present, `IN_PERSON` still requires a
-   facility. Then capture in the app, then the scope rule (a person who works at
-   a clinic in the rep's scope).
+1. ~~**Contacts with a doctor** (§15.7.5)~~ — **done, and driven.** Migration
+   0126 (`person_id`, nullable `facility_id`, the two checks), the scope rule
+   through `person_facilities`, the editor's doctor field, and the interaction
+   screen. On the iPhone 17 against Postgres: a REMOTE contact with a doctor and
+   no clinic saves, opens, starts, and closes COMPLETED/MEASURED with
+   VAI_AVALIAR + DIAS_30 — and writes **no `visits` row**, which is the decision
+   this feature makes about a contact that happened nowhere. A presencial one
+   with no clinic is refused on the device.
+
+   Four defects on the way, three of which only a real database or a real device
+   could show: the subject rules were first folded into `validateEventData`,
+   which every *reschedule* also runs (five existing tests caught it); the day
+   list hydrates through `ensureInteractionsForOccurrences`, not `hydrate`, so
+   every doctor came back null while the code that looked responsible was right;
+   `InteractionDetail.facility` was non-null and cast unconditionally, so the
+   first such contact would have crashed the screen it was built for; and the
+   day grid offered *Cheguei* on a contact with nobody's clinic to arrive at.
+
+   Still open on this one: **what the rep types about how it went.** The two
+   structured questions work as they are, and the free-text description §15.7.5
+   calls for has nowhere to live yet — `person_notes` exists and is unused.
 2. **The relationship-activity merit component** (§15.7.5) — a bonus, never a
    veto: no cooldown from a doctor contact, a small decaying lift on that
    doctor's clinics, weighted by the outcome.
