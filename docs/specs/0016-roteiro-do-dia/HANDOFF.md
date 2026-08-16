@@ -1,7 +1,11 @@
 # Roteiro do dia — handoff
 
-Branch `feature/roteiro-do-dia-p1-20260815`, tree clean. Last commit on
-2026-08-16 after a second full simulator sweep.
+Branch `feature/roteiro-do-dia-p1-20260815`, tree clean. Last work 2026-08-16:
+a second full simulator sweep (§7), then the day grid's drag, the quick sheet
+and Perfil (§8).
+
+**Read §8 first if you are picking this up cold** — it is the most recent, and
+the lunch defect it describes changes what every generated day looks like.
 
 Spec: `requirements.md` in this folder. Section numbers below refer to it.
 
@@ -125,7 +129,14 @@ and the loop has since been exercised many times.
 Note what this gates: aderência, conversão and validated potential (the rest of
 P5) are all waiting on usage, not on code.
 
-### 3. ~~Three places disagree about when a rep works~~ — done
+### 3. ~~Three places disagree about when a rep works~~ — done, and lunch with it
+
+Lunch was the half of §15.5.5 that was never finished: the sheet asked when it
+starts and never how long, and an unset duration read as zero rather than as
+the linha's 60 (§8). Both fixed, so "when a rep works" is now genuinely one
+answer. **Yes, lunch belongs to this feature** — `lunchStart`/`lunchMinutes`
+have exactly one consumer, the busy block the roteiro engine pushes into the
+day, and a start with no duration is a zero-width block, i.e. nothing at all.
 
 The slot picker reads the rep's own hours. Its window is the rep's day widened
 by an hour either side, plus far enough to reach the time being edited and
@@ -317,8 +328,66 @@ the agenda; the notes composer; and working hours stored at 09:25 from the wheel
   the calendar snaps to half hours and the wheel picker steps by five minutes.
   A rep who edits a roteiro-made visit will nudge it by a minute without meaning
   to. Changing it would change route packing, so it is a product call.
-- Perfil's *cobertura* is distinct clinics visited this week; Desempenho's is
-  the purchase funnel. Two meanings, one word.
+
+---
+
+### 8. Dragging, the quick sheet, and Perfil (2026-08-16, later)
+
+**The day grid's drag was broken in both directions**, and no widget test
+existed for any of it — the geometry functions were correct the whole time and
+the bug lived entirely in how the widget fed them.
+
+- *Moving did nothing unless you flicked.* The grid handed `moveDraft` one
+  frame's delta at a time and `moveDraft` snaps to a half hour, so a frame of an
+  ordinary drag — two to seven pixels, two to seven minutes — rounded to nothing
+  and was thrown away. Only a flick covering sixteen pixels between two frames
+  moved the block at all.
+- *Resizing amplified.* The handle read `details.localPosition`, the finger's
+  offset inside the handle's own box — but that box is positioned by the value
+  being dragged, and Flutter keeps the transform captured at touch-down, so each
+  frame re-added growth already applied. A 32px pull on the bottom edge
+  stretched an hour into three.
+- *Half of each handle was dead.* They sat at `left: -_handleTouchRadius / 2`,
+  straddling the block's edge, and a box has to be inside its Stack to be hit.
+
+Both gestures now measure position against an anchor captured on drag start,
+with `DragStartBehavior.down` so the touch slop is inside the measurement.
+`agenda_day_grid_drag_test.dart` drives the real gestures in frame-sized steps;
+three of its five tests fail against the old move code and one against the old
+handle code.
+
+**The quick sheet lost "Mais opções" and gained Repetição.** The button existed
+for one field — everything else the full editor offers is either on the sheet
+already or decided by the block that was dragged — and paid for it by opening a
+second form over a block the rep had just placed. Modality went with it: a visit
+drawn on the grid saves as Presencial, and a remote one is made through the
+speed dial or edited afterwards.
+
+**Perfil was mostly decoration.** A hand-painted map — a polygon of no
+particular place, eight clinic pins at fixed fractions of the box, a green dot
+for the rep that never moved — sat under the heading "Território" looking like a
+view of their own patch. `since` was a string that defaulted to empty and
+nothing filled in. `avatarHue` was read by nobody. All gone.
+
+Território and Resumo rápido went too, at the user's call: both reported what
+Desempenho reports, from a second query, which is how the two came to disagree
+about the same book. Perfil is now Conta, Preferências and sair.
+
+What it gained is real and editable: **the name**, through `PATCH /user`
+(`firstName`/`lastName` — the only fields anyone may change about themselves,
+and nothing in the app had ever called it), plus e-mail, telephone and username
+shown read-only with a line saying an administrator changes them. Verified on
+device: renaming moved the header, the initials and `users.last_name`.
+
+**And the one that was costing every rep an hour a day.** The working-hours
+sheet asked when lunch *starts* and never how long it lasts. Worse,
+`findWorkingHours` ran the stored value through `Number()` — and `Number(null)`
+is a finite zero that passes a `>= 0 && <= 240` range check, so a rep who had
+never chosen reported a break of *no minutes*,
+`hours.lunchMinutes ?? linhaParams.lunchMinutes` never fired, and the linha's
+own 60-minute default **has never applied to anybody**. Every generated day
+planned visits straight through lunch. Both halves fixed; `tsc` could not see
+the second one, because the types were right and the value was wrong.
 
 ---
 
