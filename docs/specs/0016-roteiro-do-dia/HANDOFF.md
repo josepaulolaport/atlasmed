@@ -103,26 +103,13 @@ assumption in the feature — that reps want it in this shape — is untested.
 Note what this gates: aderência, conversão and validated potential (the rest of
 P5) are all waiting on usage, not on code.
 
-### 3. Three places disagree about when a rep works
+### 3. ~~Three places disagree about when a rep works~~ — done
 
-| where | hours |
-|---|---|
-| `day_schedule_picker.dart` | hardcoded `07:00–20:00` |
-| roteiro engine, workday auto-close | the rep's own, default `08:00–18:00` |
-
-A rep who sets 06:00 is honoured when planning a roteiro and ignored when
-picking a slot.
-
-**The working-hours sheet already exists and works** — `working_hours_sheet.dart`,
-verified on device: setting 20:00 stored `{"workdayEnd":"20:00"}` with the other
-three still null, and the engine planned against it. It is reachable from the
-roteiro overrun warning, and it is wired into the Perfil screen.
-
-⚠️ **Perfil itself is unreachable.** Nothing navigates to `/profile`; the drawer
-entry was removed deliberately alongside Usuários, and `app_shell.dart` records
-what became unreachable with it — the avatar picker, the notification
-preference and the personal Território card. Restoring an entry point is a
-product decision, not a bug fix.
+The slot picker reads the rep's own hours. Its window is the rep's day widened
+by an hour either side, plus far enough to reach the time being edited and
+anything already booked; slots outside the working day are marked *fora* and
+stay pickable. Perfil is reached by tapping the drawer header. Verified on
+device: 10:00 stored, picker and speed dial both followed it.
 
 ### 4. Not built at all (§15.6.5, §15.6.7)
 
@@ -140,14 +127,36 @@ product decision, not a bug fix.
 
 ### 5. Where the audit stopped
 
-Covered: month view, day grid, overlap layout, role scoping, taps, the editor's
-date bounds and recurrence validation, the slot picker.
+Covered by reading: month view, day grid, overlap layout, role scoping, taps,
+the editor's date bounds and recurrence validation, the slot picker.
 
-**Not covered**: cancellation, occurrence-vs-series editing, the 409/conflict
-paths, and the notes composer.
+**Driven on the iPhone 17** and now working: cancelling an occurrence, the
+409/conflict path both client- and server-side, the notes composer, dragging a
+block by its middle, "Mais opções" end to end, the speed dial, creating a
+weekly series, and reaching both "Editar ocorrência" and "Editar toda a série".
 
-**Never verified on device**: dragging a block by its middle, and "Mais opções"
-end to end. Both are unit-tested; neither has been seen working.
+Eight defects came out of that pass; see the commits from `4f310dc6` on. The
+one that mattered most was a hard crash on **every** cancellation — an inline
+dialog disposing its controller while the route was still animating out. No
+test saw it; the app went to a red screen on the first press.
+
+**Still not driven**: saving a series edit and confirming it moves every future
+occurrence (the screen opens and reads correctly; the write was not exercised),
+cancelling a whole series, and the month view's own controls.
+
+**Noticed, not acted on** — these are yours to call:
+
+- `facility_notes` carries 1,445 rows reading *"Nenhuma observação registrada!"*,
+  one per clinic, bulk-inserted. They render as real notes beside real ones.
+  The string is nowhere in the repo, so it came in with the data.
+- `showTimePicker` in `working_hours_sheet.dart` renders in **English**
+  ("Select time", "Cancel", "OK"). The editor's pickers pass explicit pt-BR
+  labels and read correctly, so the app has no Material localization delegate
+  and each caller is papering over it.
+- The quick sheet demands a typed title even once a clinic is chosen, while the
+  editor auto-titles *"Visita · <clinic>"* from the same choice.
+- Perfil reports 184 médicos and "São Paulo · Zona Oeste"; Desempenho reports
+  214 and "Patch Adriana Oliveira" over Rio. Same rep, same session.
 
 ---
 
