@@ -43,7 +43,17 @@ export interface CalendarOccurrenceDto {
   calendarVersion: number;
   overrideVersion?: number;
   owner: { id: number; name: string };
-  facility: { id: number; name: string } | null;
+  facility: {
+    id: number;
+    name: string;
+    /**
+     * A clinic deactivated after this visit was scheduled. The appointment is
+     * kept — a rep's commitment is not ours to erase — but the clinic is
+     * unreachable everywhere else in the app, so the agenda has to say why the
+     * row cannot be opened rather than leave a dead link.
+     */
+    deactivated: boolean;
+  } | null;
   canMutate: boolean;
   interaction?: { id: number; facilityId: number; modality: InteractionModality; status: string; version: number };
 }

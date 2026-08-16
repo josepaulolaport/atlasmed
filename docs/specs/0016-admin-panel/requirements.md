@@ -316,6 +316,43 @@ deleted.
 Create, edit, deactivate. No delete: rows are referenced by
 `facility_healthcare_provider_shares`.
 
+### 4.8 Clínicas desativadas (`/admin/clinicas-desativadas`)
+
+The one screen here that touches **operational** data, against §2.3's rule that
+facilities live in Explorar. The exception is deliberate: deactivation is an
+admin action, and Explorar cannot offer to undo it because Explorar cannot see
+a deactivated clinic at all.
+
+Deactivation is a soft delete — `facilities.deactivated_at` is set and the
+Meilisearch document removed — and it was **one-way in practice**. The
+repository already had a `reactivate` method; nothing called it, and nothing
+could, because no read in the product returns a deactivated row: `findById`
+filters them, every list filters them, and Explorar reads the search index they
+were removed from. Reactivating meant knowing an id the product could not tell
+you.
+
+So this needs a read path of its own:
+
+| Route | Notes |
+| --- | --- |
+| `GET /facilities/deactivated` | Newest first, searchable by name/CNPJ/CNES |
+| `POST /facilities/:id/reactivate` | Clears `deactivated_at`, re-indexes for search |
+
+**Gated on `delete FACILITY`**, not `update`. Only ADMIN holds it — MANAGER and
+REP are denied it explicitly. `update FACILITY` is the intuitive choice and is
+wrong, because every rep holds that in order to edit clinic fields; the first
+draft used it and a rep could both list and reactivate.
+
+**Unscoped, deliberately.** A deactivated clinic has no live vertical profile,
+so it belongs to no territory and no rep. Narrowing the list by the caller's
+scope would return nothing on every call.
+
+**A CNPJ can block reactivation.** `facilities_active_legal_document_cnpj_uidx`
+is unique among *active* rows, so another clinic may have taken the number while
+this one was away. The list computes that up front and the row says
+"CNPJ em uso por outra clínica" instead of letting the admin discover it by
+pressing the button.
+
 ### 4.7 Requisitos de cadastro (`/admin/requisitos`)
 
 `conformity_requirements` — the documents the cadastro asks each clinic for.

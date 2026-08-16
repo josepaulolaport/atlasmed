@@ -40,6 +40,7 @@ List<RouteBase> get $appRoutes => [
   $adminHealthcareProvidersRoute,
   $adminConformityRequirementsRoute,
   $adminSupportCatalogsRoute,
+  $adminDeactivatedFacilitiesRoute,
   $adminMetricsRoute,
   $catalogComparisonRoute,
   $presentationsRoute,
@@ -1898,6 +1899,34 @@ mixin $AdminSupportCatalogsRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/admin/catalogos');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $adminDeactivatedFacilitiesRoute => GoRouteData.$route(
+  path: '/admin/clinicas-desativadas',
+  hasOverriddenOnExit: false,
+  parentNavigatorKey: AdminDeactivatedFacilitiesRoute.$parentNavigatorKey,
+  factory: $AdminDeactivatedFacilitiesRoute._fromState,
+);
+
+mixin $AdminDeactivatedFacilitiesRoute on GoRouteData {
+  static AdminDeactivatedFacilitiesRoute _fromState(GoRouterState state) =>
+      const AdminDeactivatedFacilitiesRoute();
+
+  @override
+  String get location => GoRouteData.$location('/admin/clinicas-desativadas');
 
   @override
   void go(BuildContext context) => context.go(location);

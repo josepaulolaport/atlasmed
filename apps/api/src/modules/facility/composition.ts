@@ -12,7 +12,9 @@ import {
   CreateFacilityUseCase,
   DeleteFacilityUseCase,
   GetFacilityUseCase,
+  ListDeactivatedFacilitiesUseCase,
   ListFacilitiesUseCase,
+  ReactivateFacilityUseCase,
   ListClinicalFocusesUseCase,
   ListFacilityUnitTypesUseCase,
   ListUnitTypesUseCase,
@@ -180,6 +182,9 @@ const facilityMembershipDeps = {
 
 export const facilityUseCases = {
   listFacilities: () => new ListFacilitiesUseCase(facilityMembershipDeps),
+  listDeactivatedFacilities: () =>
+    new ListDeactivatedFacilitiesUseCase(facilityMembershipDeps),
+  reactivateFacility: () => new ReactivateFacilityUseCase(facilityMembershipDeps),
   listMapFacilityPoints: () =>
     new ListMapFacilityPointsUseCase({
       facilityRepository: facilityRepositories.facility,

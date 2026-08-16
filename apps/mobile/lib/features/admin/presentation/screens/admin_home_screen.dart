@@ -70,6 +70,13 @@ class AdminHomeScreen extends StatelessWidget {
               onTap: () => const AdminHealthcareProvidersRoute().push(context),
             ),
             _AdminDestinationCard(
+              icon: Icons.restore_from_trash_outlined,
+              label: 'Clínicas desativadas',
+              description: 'Reative uma clínica que foi removida por engano',
+              onTap: () =>
+                  const AdminDeactivatedFacilitiesRoute().push(context),
+            ),
+            _AdminDestinationCard(
               icon: Icons.fact_check_outlined,
               label: 'Requisitos de cadastro',
               description: 'Os documentos que o cadastro pede de cada clínica',

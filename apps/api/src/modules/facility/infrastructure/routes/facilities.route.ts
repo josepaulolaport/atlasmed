@@ -301,6 +301,68 @@ const updateFacilityRoute = new Elysia()
     }
   );
 
+/**
+ * The deactivated clinics (spec 0016 §4.8).
+ *
+ * Gated on **`delete FACILITY`**, which only ADMIN holds — MANAGER and REP are
+ * denied it explicitly (`role.permissions.ts`). `update FACILITY` would have
+ * been the intuitive choice and is wrong: every rep holds it, because reps edit
+ * clinic fields. Reactivation is the inverse of `DELETE /facilities/:id`, so it
+ * answers to the same permission.
+ *
+ * No `resourceIdParam`, and deliberately so: the rows this returns are exactly
+ * the ones no scope contains — a deactivated clinic has no live profile, so it
+ * sits in no territory and under no rep. Narrowing by scope would return
+ * nothing on every call.
+ *
+ * Registered before `/facilities/:id` so `deactivated` is not read as an id.
+ */
+const listDeactivatedFacilitiesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "FACILITY"))
+  .get(
+    "/facilities/deactivated",
+    async ({ query }) =>
+      facilityUseCases.listDeactivatedFacilities().execute({
+        search: query.search,
+        page: query.page ?? 1,
+        limit: query.limit ?? 50,
+      }),
+    {
+      detail: {
+        summary: "List deactivated clinics",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        search: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+      }),
+    }
+  );
+
+/**
+ * Puts a deactivated clinic back — the inverse of `DELETE /facilities/:id`, and
+ * gated on the same ADMIN-only permission for the same reason.
+ */
+const reactivateFacilityRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "FACILITY"))
+  .post(
+    "/facilities/:id/reactivate",
+    async ({ params }) =>
+      facilityUseCases.reactivateFacility().execute({ facilityId: params.id }),
+    {
+      detail: {
+        summary: "Reactivate a deactivated clinic",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    }
+  );
+
 const deleteFacilityRoute = new Elysia()
   .use(auth)
   .use(requirePermission("delete", "FACILITY", { resourceIdParam: "id" }))
@@ -1129,6 +1191,8 @@ export const facilitiesRoute = new Elysia()
   // Same reason, and `PATCH /facilities/clinical-focuses/:id` must not be
   // routed as `PATCH /facilities/:id` either.
   .use(clinicalFocusWritesRoute)
+  // Same reason: `deactivated` must not be captured as a facility id.
+  .use(listDeactivatedFacilitiesRoute)
   // Same reason: `cnes-candidates` must not be captured as a facility id.
   .use(createCnesFacilityImportRoutes())
   // Same reason — `unit-types` must not be routed as `/facilities/:id`.
@@ -1138,6 +1202,7 @@ export const facilitiesRoute = new Elysia()
   .use(getFacilityRoute)
   .use(updateFacilityRoute)
   .use(deleteFacilityRoute)
+  .use(reactivateFacilityRoute)
   .use(listFacilityNotesRoute)
   .use(createFacilityNoteRoute)
   .use(updateFacilityNoteRoute)

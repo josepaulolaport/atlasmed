@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_busines
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/conformity_requirement.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/deactivated_facility.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/healthcare_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/support_catalog.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
@@ -69,6 +70,14 @@ final adminAllCompetitorsProvider = FutureProvider<List<CompetitorProduct>>((
 
 /// Fontes pagadoras, inactive included — the admin list only (spec 0016 §4.5).
 /// The clinic-side picker reads its own catalogue and keeps filtering to active.
+/// The deactivated clinics (spec 0016 §4.8). Not `autoDispose`-scoped by search
+/// term: the list is small and the screen filters it in memory, like the other
+/// admin lists.
+final adminDeactivatedFacilitiesProvider =
+    FutureProvider<List<DeactivatedFacility>>((ref) {
+      return ref.watch(catalogRepositoryProvider).getDeactivatedFacilities();
+    });
+
 final adminHealthcareProvidersProvider =
     FutureProvider<List<HealthcareProvider>>((ref) {
       return ref

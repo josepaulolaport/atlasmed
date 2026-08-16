@@ -2,7 +2,11 @@ import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
 import type { PurchaseRecurrenceCommand, PurchaseRecurrenceService } from "../services/purchase-recurrence.service";
-import { ValidationError } from "../../../../shared/errors";
+import {
+  OperationNotAllowedError,
+  ResourceNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { logger } from "../../../../infrastructure/logging/logger";
 import {
@@ -629,6 +633,83 @@ export class UpdateFacilityUseCase {
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
     return serializeFacility(refreshed ?? clinic);
+  }
+}
+
+/**
+ * The deactivated clinics, so one can be found and put back (spec 0016 §4.8).
+ *
+ * ADMIN-only and deliberately unscoped: a deactivated clinic has no live
+ * vertical profile, so it belongs to no territory and no rep, and scoping the
+ * list by the caller's assignments would hide every row it exists to show.
+ */
+export class ListDeactivatedFacilitiesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { search?: string; page: number; limit: number }) {
+    const { facilities, total } = await this.deps.facilityRepository.listDeactivated({
+      search: input.search,
+      limit: input.limit,
+      offset: (input.page - 1) * input.limit,
+    });
+    return { data: facilities, total, page: input.page, limit: input.limit };
+  }
+}
+
+/**
+ * Puts a deactivated clinic back (spec 0016 §4.8).
+ *
+ * Two things this cannot do through the usual repository calls:
+ *
+ * - `findById` filters `deactivated_at IS NULL`, so the existence check uses
+ *   `findByIdIncludingDeactivated`. Built on `findById` it would 404 on exactly
+ *   the rows it is for.
+ * - A CNPJ is unique only among *active* clinics
+ *   (`facilities_active_legal_document_cnpj_uidx`). While this one was away,
+ *   another clinic may have taken its number, and reactivating would trip the
+ *   index. That is checked first so the admin gets a sentence instead of a
+ *   constraint violation.
+ */
+export class ReactivateFacilityUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { facilityId: number }) {
+    const existing = await this.deps.facilityRepository.findByIdIncludingDeactivated(
+      input.facilityId
+    );
+    if (!existing) {
+      throw new ResourceNotFoundError("Clinic", input.facilityId);
+    }
+    if (!existing.deactivatedAt) {
+      throw new OperationNotAllowedError(
+        "reactivate_facility",
+        "Esta clínica já está ativa."
+      );
+    }
+
+    if (existing.legalDocumentType === "CNPJ" && existing.legalDocument) {
+      const { facilities: sameDocument } =
+        await this.deps.facilityRepository.listDeactivated({
+          search: existing.legalDocument,
+          limit: 1,
+          offset: 0,
+        });
+      const blocker = sameDocument.find(
+        (row) => row.id === existing.id
+      )?.blockedByFacilityId;
+      if (blocker) {
+        throw new OperationNotAllowedError(
+          "reactivate_facility",
+          "Outra clínica ativa já usa este CNPJ. Corrija o cadastro dela antes de reativar esta."
+        );
+      }
+    }
+
+    const facility = await this.deps.facilityRepository.reactivate(input.facilityId);
+    // Back into the search index: the document was deleted on deactivation, so
+    // without this the clinic is live in the database and invisible in Explorar.
+    await this.deps.onFacilityChanged?.(input.facilityId);
+    return serializeFacility(facility);
   }
 }
 

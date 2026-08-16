@@ -18,7 +18,8 @@ import {
   personFacilityClassifications,
   unitSubtypes,
 } from "@atlasmed/database";
-import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
+import { alias as aliasedTable } from "drizzle-orm/pg-core";
 import { expandAddressAbbreviations } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError, ValidationError } from "../../../../../shared/errors";
@@ -27,6 +28,7 @@ import {
   type FacilityPurchaseBucket,
 } from "../../../application/list-facilities-query";
 import type {
+  DeactivatedFacilitySummary,
   FacilityClinicalFocus,
   FacilityUnitType,
   FacilityCommercialStatus,
@@ -1305,6 +1307,96 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .update(facilities)
       .set({ deactivatedAt: new Date(), updatedAt: new Date() })
       .where(eq(facilities.id, id));
+  }
+
+  async listDeactivated(input: {
+    search?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ facilities: DeactivatedFacilitySummary[]; total: number }> {
+    const conditions = [isNotNull(facilities.deactivatedAt)];
+    const search = input.search?.trim();
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(facilities.displayName, pattern),
+          ilike(facilities.legalDocument, pattern),
+          ilike(facilities.cnesCode, pattern)
+        )!
+      );
+    }
+    const where = and(...conditions);
+
+    // `active` is the same table again: a CNPJ is unique only among live rows,
+    // so the clinic that took this one over is what stands between the admin
+    // and the button.
+    const active = aliasedTable(facilities, "active_holder");
+
+    const [rows, countRows] = await Promise.all([
+      db
+        .select({
+          id: facilities.id,
+          name: facilities.displayName,
+          city: municipalities.name,
+          state: states.abbreviation,
+          legalDocument: facilities.legalDocument,
+          legalDocumentType: facilities.legalDocumentType,
+          cnesCode: facilities.cnesCode,
+          deactivatedAt: facilities.deactivatedAt,
+          blockedByFacilityId: active.id,
+        })
+        .from(facilities)
+        .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+        .innerJoin(states, eq(states.id, facilities.stateId))
+        .leftJoin(
+          active,
+          and(
+            eq(active.legalDocument, facilities.legalDocument),
+            eq(active.legalDocumentType, "CNPJ"),
+            eq(facilities.legalDocumentType, "CNPJ"),
+            isNull(active.deactivatedAt)
+          )
+        )
+        .where(where)
+        .orderBy(desc(facilities.deactivatedAt))
+        .limit(input.limit)
+        .offset(input.offset),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(facilities)
+        .where(where),
+    ]);
+
+    return {
+      facilities: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        city: row.city,
+        state: row.state,
+        legalDocument: row.legalDocument,
+        legalDocumentType: row.legalDocumentType,
+        cnesCode: row.cnesCode,
+        deactivatedAt: (row.deactivatedAt ?? new Date()).toISOString(),
+        blockedByFacilityId: row.blockedByFacilityId ?? null,
+      })),
+      total: Number(countRows[0]?.count ?? 0),
+    };
+  }
+
+  async findByIdIncludingDeactivated(id: number) {
+    const [row] = await db
+      .select({
+        id: facilities.id,
+        name: facilities.displayName,
+        legalDocument: facilities.legalDocument,
+        legalDocumentType: facilities.legalDocumentType,
+        deactivatedAt: facilities.deactivatedAt,
+      })
+      .from(facilities)
+      .where(eq(facilities.id, id))
+      .limit(1);
+    return row ?? null;
   }
 
   async reactivate(id: number): Promise<FacilityRecord> {

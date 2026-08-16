@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_busines
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/deactivated_facility.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/conformity_requirement.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/healthcare_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
@@ -506,6 +507,36 @@ class CatalogRepository {
     404 => 'Este produto não existe mais.',
     _ => 'Não foi possível enviar a imagem. Tente novamente.',
   };
+
+  /// The deactivated clinics (spec 0016 §4.8).
+  ///
+  /// A separate endpoint rather than a flag on the clinic list: every other read
+  /// in the app filters deactivated rows out, and this is the only one that
+  /// looks for them.
+  Future<List<DeactivatedFacility>> getDeactivatedFacilities({
+    String? search,
+  }) async {
+    final response = await _get(
+      _uri('/facilities/deactivated', {
+        'limit': '100',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return (decoded['data'] as List<dynamic>)
+        .map((row) => DeactivatedFacility.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Puts a deactivated clinic back and re-indexes it for search.
+  Future<void> reactivateFacility(int facilityId) async {
+    final response = await _send(
+      _uri('/facilities/$facilityId/reactivate'),
+      RepositoryHttpMethod.post,
+    );
+    _throwIfError(response);
+  }
 
   Future<ProductDeletability> getCompetitorDeletability(
     int competitorId,

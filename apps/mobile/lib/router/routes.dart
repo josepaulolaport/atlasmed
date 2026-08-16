@@ -14,6 +14,7 @@ import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cada
 import 'package:atlasmed_mobile_app/features/admin/presentation/screens/admin_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_competitor_products_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_conformity_requirements_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_deactivated_facilities_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_healthcare_providers_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_metrics_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_products_screen.dart';
@@ -1192,6 +1193,20 @@ class AdminSupportCatalogsRoute extends GoRouteData
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const AdminSupportCatalogsScreen();
+}
+
+@TypedGoRoute<AdminDeactivatedFacilitiesRoute>(
+  path: '/admin/clinicas-desativadas',
+)
+class AdminDeactivatedFacilitiesRoute extends GoRouteData
+    with $AdminDeactivatedFacilitiesRoute {
+  const AdminDeactivatedFacilitiesRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AdminDeactivatedFacilitiesScreen();
 }
 
 @TypedGoRoute<AdminMetricsRoute>(path: '/admin/metricas')

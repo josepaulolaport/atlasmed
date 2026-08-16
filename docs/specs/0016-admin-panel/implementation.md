@@ -1258,3 +1258,75 @@ longer there. `drizzle-kit check` passes on the regenerated chain.
 Anything that already applied the old local `0117` on a scratch database has the
 same statements under a different name and should be rebuilt rather than
 migrated forward.
+
+---
+
+## Phase 12 — reactivating a clinic, and what deactivation actually does
+
+Asked to add clinic reactivation, and to confirm that deactivating one does not
+break anything or produce incoherent metrics. The second answer changed the
+first.
+
+### What deactivation does, traced end to end
+
+`facilities.deactivated_at` is the flag. Every **read** filters it consistently
+— dashboard/desempenho, territories, search rebuild, visits, bookmarks, person
+and professional lists, purchase-recurrence funnel, Emultec order import. The
+dashboard is the one worth naming: `liveFacility()` is applied once inside
+`profileScopeConditions`, and all fourteen dashboard queries build from that, so
+no metric can quietly forget it. The metric snapshots are read through
+`buildScopedProfilesQuery`, which joins `facilities` and applies the same
+predicate.
+
+**Numbers are coherent. Four things were not:**
+
+1. **The clinic stayed in the search index.** Approving a "desativar" suggestion
+   — the only path a reviewer actually uses — called `softDelete` and nothing
+   else. `DELETE /facilities/:id` has always removed the Meilisearch document;
+   this path never did, so the clinic kept appearing in Explorar while every
+   database read treated it as gone, and opening it failed. Fixed by routing the
+   approval through the same re-sync, which deletes the document when the row is
+   deactivated.
+2. **The nightly metric sweep recomputed them forever.** `listAllProfileIds` had
+   no join to `facilities`, so snapshots were rewritten every night for clinics
+   nothing could display. Now excluded.
+3. **The agenda kept dead visits silently.** The appointment is *not* removed —
+   a rep's commitment is not ours to erase — but the clinic now carries a
+   `deactivated` flag through `CalendarEventRecord` so the agenda can say why
+   the row will not open, instead of leaving a dead link.
+4. **Reactivation was unreachable.** See below.
+
+### The feature
+
+`reactivate` existed on the repository and interface and **nothing called it** —
+no use case, no route, no UI. It could not have been called usefully either:
+`findById` filters `deactivated_at IS NULL`, so any use case built on it would
+404 on exactly the rows it exists for.
+
+| Layer | What was added |
+|---|---|
+| Repository | `listDeactivated` (with the CNPJ blocker computed by a self-join), `findByIdIncludingDeactivated` |
+| Use cases | `ListDeactivatedFacilitiesUseCase`, `ReactivateFacilityUseCase` |
+| Routes | `GET /facilities/deactivated`, `POST /facilities/:id/reactivate` |
+| Mobile | `AdminDeactivatedFacilitiesScreen`, a hub card, `/admin/clinicas-desativadas` |
+
+Two decisions worth the words:
+
+- **`delete FACILITY`, not `update`.** The first draft used `update`, and a REP
+  could list and reactivate — every rep holds it, because reps edit clinic
+  fields. Only ADMIN holds `delete`; MANAGER and REP are denied it explicitly.
+  Caught by testing the route with a rep token rather than by reading the rule.
+- **The CNPJ blocker is computed in the list.** A CNPJ is unique only among
+  active clinics, so another may have taken the number. The row says so before
+  the admin presses anything, and the use case refuses with a sentence rather
+  than a constraint violation.
+
+### Testing Phase 12 on screen
+
+- `Administração › Clínicas desativadas` lists them newest first, searchable by
+  name, CNPJ or CNES.
+- "Reativar" confirms, then the row disappears and the clinic is findable in
+  Explorar again — verified against the live search index, not just the table.
+- A clinic whose CNPJ is held by an active one shows "CNPJ em uso por outra
+  clínica" and explains rather than acting.
+- With a REP token both endpoints answer 403.

@@ -12,6 +12,7 @@ import {
   RejectFieldSuggestionUseCase,
 } from "./application/use-cases/field-suggestion.use-cases";
 import { DrizzleFieldSuggestionRepository } from "./infrastructure/repositories/drizzle/drizzle-field-suggestion.repository";
+import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 
 const fieldSuggestionRepository = new DrizzleFieldSuggestionRepository();
 
@@ -28,6 +29,12 @@ const deps = {
   facilityRepository: facilityRepositories.facility,
   applyService,
   auditLogService,
+  // Approving a deactivation soft-deletes the row and nothing else. Without
+  // this the clinic stayed in the search index — findable in Explorar, and
+  // failing to open, because every database read already treated it as gone.
+  // `upsertFacilitySearchDocument` deletes the document when the row is
+  // deactivated, so one call covers both directions.
+  onFacilityChanged: upsertFacilitySearchDocument,
 };
 
 export const fieldSuggestionUseCases = {

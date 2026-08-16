@@ -4,7 +4,7 @@ import {
   type MetricSnapshotStore,
 } from "@atlasmed/facility-insights";
 import type { AnyDatabase } from "../client";
-import { facilityVerticalProfiles } from "../schema/public/facilities";
+import { facilities, facilityVerticalProfiles } from "../schema/public/facilities";
 import { orderItems, orders } from "../schema/public/orders";
 import { productEquivalences, products } from "../schema/public/catalog";
 import {
@@ -263,7 +263,17 @@ export async function listAllProfileIds(
   const rows = await database
     .select({ id: facilityVerticalProfiles.id })
     .from(facilityVerticalProfiles)
-    .where(gt(facilityVerticalProfiles.id, input.afterProfileId))
+    // Deactivated clinics are excluded. Every read of these snapshots already
+    // filters them out — `buildScopedProfilesQuery` joins `facilities` and
+    // applies the same predicate — so recomputing them wrote rows nothing could
+    // ever display, on every nightly run, forever.
+    .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+    .where(
+      and(
+        gt(facilityVerticalProfiles.id, input.afterProfileId),
+        isNull(facilities.deactivatedAt),
+      ),
+    )
     .orderBy(asc(facilityVerticalProfiles.id))
     .limit(input.limit);
   return rows.map((row) => row.id);
