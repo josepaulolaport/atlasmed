@@ -325,6 +325,10 @@ void main() {
       expect(request.method, RepositoryHttpMethod.post);
       expect(request.url.path, '/api/v1/interactions/1/start');
       expect(request.headers['Idempotency-Key'], 'start-interaction-1-3');
+      // Without it Elysia parses no body and answers 400 for fields that were
+      // sent. The calendar mutations always set it; these did not, so the whole
+      // capture loop could not work from the app.
+      expect(request.headers['Content-Type'], 'application/json');
       expect((request.body as Map)['expectedVersion'], 3);
       // §15.6.6-4: the device says when the rep pressed. Without it the server
       // stamps receipt time, and a start queued in a clinic with no signal

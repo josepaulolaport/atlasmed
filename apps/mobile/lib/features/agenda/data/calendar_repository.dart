@@ -295,7 +295,16 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id/start'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
         // §15.6.6-4: the moment the rep pressed, not the moment the request
         // arrived. A start queued in a clinic with no signal used to be
         // stamped when connectivity returned, and every duration computed
@@ -321,7 +330,16 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id/complete'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
         body: {
           'expectedVersion': expectedVersion,
           // The end is the device's too: waiting for signal would otherwise
@@ -350,6 +368,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id/outcome'),
         method: RepositoryHttpMethod.post,
+        headers: {'Content-Type': 'application/json'},
         body: {'outcome': outcome.wire, 'followUp': followUp.wire},
       ),
     );
@@ -373,7 +392,16 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/arrivals'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
         body: {
           'facilityId': facilityId,
           'timeZone': timeZone,
