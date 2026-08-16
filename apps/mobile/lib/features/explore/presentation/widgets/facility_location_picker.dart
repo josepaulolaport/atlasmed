@@ -47,7 +47,14 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   );
 
   MapboxMap? _map;
+
+  /// Where the map is centred, which is where the marker is drawn.
   late MapCoordinate _pin;
+
+  /// The same value, but only updated for the readout — [_pin] changes on
+  /// every frame of a drag and rebuilding that fast is wasted work.
+  late MapCoordinate _readout;
+
   late bool _placed;
   bool _mapUnavailable = false;
 
@@ -55,28 +62,45 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   void initState() {
     super.initState();
     _pin = widget.initial ?? _fallback;
+    _readout = _pin;
     _placed = widget.initial != null;
     MapboxOptions.setAccessToken(AppConfig.mapboxAccessToken);
   }
 
-  /// Tapping recentres, and the pin is drawn by Flutter over the middle.
+  /// The marker is painted over the middle of the map, so the middle of the
+  /// map is the pin. Nothing else can be, or the two disagree.
   ///
-  /// A `PointAnnotation` was the obvious way and it drew nothing: the icon
-  /// names that ship with the older Streets sprite are not in Standard's, so
-  /// the annotation existed with no image. Painting the marker ourselves also
-  /// removes the guesswork about which sprite a style happens to carry.
+  /// They did disagree: the marker sat at the widget's centre while the
+  /// coordinate only moved on a tap, so dragging the map slid the marker over
+  /// a new spot and confirmed the old one. The address then did not change,
+  /// because as far as the code was concerned the pin had not moved.
+  void _onCameraChanged(CameraChangedEventData event) {
+    final centre = event.cameraState.center.coordinates;
+    final moved = MapCoordinate(
+      longitude: centre.lng.toDouble(),
+      latitude: centre.lat.toDouble(),
+    );
+    if (moved == _pin) return;
+    // No setState for the coordinate itself — this fires per frame while the
+    // map moves, and only the readout below the map shows it.
+    _pin = moved;
+    if (_readout != _pin) setState(() => _readout = _pin);
+  }
+
+  /// A gesture, rather than the camera settling after we moved it ourselves.
+  void _onUserGesture() {
+    if (_placed) return;
+    setState(() => _placed = true);
+  }
+
   void _onMapTap(MapContentGestureContext context) {
     final position = context.point.coordinates;
-    setState(() {
-      _pin = MapCoordinate(
-        longitude: position.lng.toDouble(),
-        latitude: position.lat.toDouble(),
-      );
-      _placed = true;
-    });
+    _onUserGesture();
+    // Centres what was tapped; the camera listener takes the coordinate from
+    // there, so tapping and dragging end in the same place.
     _map?.easeTo(
       CameraOptions(
-        center: Point(coordinates: Position(_pin.longitude, _pin.latitude)),
+        center: Point(coordinates: Position(position.lng, position.lat)),
       ),
       MapAnimationOptions(duration: 220),
     );
@@ -106,16 +130,34 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
             width: double.infinity,
             color: AppColors.blue50,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: Text(
-              _placed
-                  ? 'Toque no mapa para mover o pino. O endereço é atualizado '
-                        'a partir dele.'
-                  : 'Toque no mapa para marcar onde fica a clínica.',
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: AppColors.blueDarker,
-                height: 1.35,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _placed
+                      ? 'Arraste o mapa ou toque para posicionar o pino. O '
+                            'endereço é atualizado a partir dele.'
+                      : 'Arraste o mapa até a clínica ficar sob o pino, ou '
+                            'toque onde ela fica.',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.blueDarker,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // The live coordinate, so what will be confirmed is on screen
+                // rather than inferred from where the marker looks like it is.
+                Text(
+                  '${_readout.latitude.toStringAsFixed(6)}, '
+                  '${_readout.longitude.toStringAsFixed(6)}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.gray600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -151,11 +193,14 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
                             useFlatProjection(_mapboxMapOrNull()),
                         onMapLoadErrorListener: (_) =>
                             setState(() => _mapUnavailable = true),
+                        onCameraChangeListener: _onCameraChanged,
+                        // Panning counts as placing the pin — with a centre
+                        // marker, dragging the map under it is the gesture.
+                        onScrollListener: (_) => _onUserGesture(),
                         // ignore: deprecated_member_use
                         onTapListener: _onMapTap,
                       ),
-                      if (_placed)
-                        const IgnorePointer(child: Center(child: _PinMarker())),
+                      const IgnorePointer(child: Center(child: _PinMarker())),
                     ],
                   ),
           ),
@@ -182,7 +227,7 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
                           ? () => Navigator.of(context).pop(_pin)
                           : null,
                       child: Text(
-                        _placed ? 'Confirmar local' : 'Toque no mapa',
+                        _placed ? 'Confirmar local' : 'Posicione o pino',
                       ),
                     ),
                   ),
