@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_prod
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/competitor_form_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
@@ -27,16 +28,46 @@ class ManageCompetitorsScreen extends ConsumerWidget {
     required this.variantLabel,
   });
 
+  /// Spec 0013 §7: a competitor product equivalent to nothing is unreachable in
+  /// the rep's picker, so unlinking the last one stops a rep being able to
+  /// record quantities against it at all. The equivalence row is deleted, but
+  /// nothing a rep already recorded is — relinking brings it back.
   Future<void> _unlink(
     BuildContext context,
     WidgetRef ref,
     ComparisonRow row,
   ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desvincular produto?'),
+        content: Text(
+          '“${row.label}” deixa de aparecer no comparativo de "$variantLabel" e '
+          'no seletor do representante. As quantidades já registradas nas '
+          'clínicas não são apagadas — voltam a valer se o produto for '
+          'vinculado de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Desvincular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
     try {
       await ref
           .read(catalogRepositoryProvider)
           .unlinkCompetitor(variantId, row.id);
       invalidateCatalog(ref, variantId: variantId);
+      if (!context.mounted) return;
+      showNightlyRecomputeNotice(context, prefix: '“${row.label}” desvinculado.');
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -277,7 +308,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           .read(catalogRepositoryProvider)
           .linkCompetitor(widget.variantId, competitor.id);
       invalidateCatalog(ref, variantId: widget.variantId);
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${competitor.name}” vinculado.',
+      );
     } catch (error) {
       _showLinkError(error);
     }
@@ -293,7 +329,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           .read(catalogRepositoryProvider)
           .linkCompetitor(widget.variantId, created.id);
       invalidateCatalog(ref, variantId: widget.variantId);
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${created.name}” cadastrado e vinculado.',
+      );
     } catch (error) {
       _showLinkError(error);
     }

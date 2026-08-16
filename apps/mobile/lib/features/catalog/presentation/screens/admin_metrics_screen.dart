@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
@@ -408,14 +409,7 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       );
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Os números das clínicas são atualizados no próximo processamento '
-            'noturno.',
-          ),
-        ),
-      );
+      showNightlyRecomputeNotice(context);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -464,17 +458,7 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       );
       await _load();
       if (!mounted) return;
-      // Spec 0013 §4.6 backlogs the catalogue fan-out: recompute is per-profile
-      // and nothing recomputes every clinic holding this product. Saying so is
-      // the difference between "it worked" and an admin repeating the edit.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Os números das clínicas são atualizados no próximo processamento '
-            'noturno.',
-          ),
-        ),
-      );
+      showNightlyRecomputeNotice(context);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
