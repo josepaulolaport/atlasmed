@@ -277,6 +277,26 @@ void main() {
     });
   });
 
+  testWidgets('says the day is over instead of showing an empty strip', (
+    tester,
+  ) async {
+    // Late enough that every slot has gone. It used to render as blank space
+    // above a legend explaining the colours of nothing.
+    await tester.pumpWidget(
+      _host(
+        booked: const [],
+        selected: DateTime(2026, 8, 15, 9),
+        now: DateTime(2026, 8, 15, 23, 45),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('day-slot-strip-empty')), findsOneWidget);
+    expect(find.byKey(const Key('day-slot-strip')), findsNothing);
+    // The legend goes with it — it explains a strip that is not there.
+    expect(find.text('escolhido'), findsNothing);
+  });
+
   testWidgets('marks a slot outside the working day without refusing it', (
     tester,
   ) async {

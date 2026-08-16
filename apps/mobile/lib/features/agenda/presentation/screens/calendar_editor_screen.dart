@@ -509,40 +509,20 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
   }
 
   Future<void> _cancel() async {
-    final controller = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          widget.target.mode == CalendarEditorMode.occurrence
-              ? 'Cancelar esta ocorrência?'
-              : 'Cancelar esta série?',
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Motivo do cancelamento',
-            hintText: 'Informe por que o compromisso será cancelado',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Voltar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Cancelar compromisso'),
-          ),
-        ],
-      ),
+      builder: (_) => _CancelReasonDialog(mode: widget.target.mode),
     );
-    controller.dispose();
     if (reason == null || reason.isEmpty || !mounted) return;
     final notifier = ref.read(calendarEditorProvider(widget.target).notifier);
-    if (await notifier.cancel(reason) && mounted) _finish();
+    if (await notifier.cancel(reason) && mounted) {
+      _finish();
+      return;
+    }
+    // A failed cancel writes its reason to the foot of the form, which is not
+    // where the rep is looking — they pressed a button in the app bar. Without
+    // this the screen simply sits there.
+    if (mounted) _revealError();
   }
 
   void _attemptBack() {
@@ -573,6 +553,72 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
       ),
     );
     if (discard == true && mounted) Navigator.of(context).pop();
+  }
+}
+
+/// Asks why, and owns the controller that asks it.
+///
+/// It used to be an inline `AlertDialog` with a controller disposed on the line
+/// after `await showDialog`. The route is still animating out at that point and
+/// its `TextField` is still mounted, so every cancellation crashed the app to a
+/// red screen: *A TextEditingController was used after being disposed*. A
+/// `StatefulWidget` ties the controller's life to the dialog's own, which is
+/// the only thing that actually knows when the field is gone.
+class _CancelReasonDialog extends StatefulWidget {
+  const _CancelReasonDialog({required this.mode});
+
+  final CalendarEditorMode mode;
+
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = _controller.text.trim();
+    return AlertDialog(
+      title: Text(
+        widget.mode == CalendarEditorMode.occurrence
+            ? 'Cancelar esta ocorrência?'
+            : 'Cancelar esta série?',
+      ),
+      content: TextField(
+        key: const Key('cancel-reason'),
+        controller: _controller,
+        autofocus: true,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          labelText: 'Motivo do cancelamento',
+          hintText: 'Informe por que o compromisso será cancelado',
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Voltar'),
+        ),
+        // Disabled until there is a reason, rather than accepting the press and
+        // discarding it. The API requires a non-empty reason and both this
+        // screen and the notifier dropped a blank one on the floor: the dialog
+        // closed, nothing was cancelled, and nothing said so.
+        FilledButton(
+          onPressed: reason.isEmpty
+              ? null
+              : () => Navigator.pop(context, reason),
+          child: const Text('Cancelar compromisso'),
+        ),
+      ],
+    );
   }
 }
 

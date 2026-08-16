@@ -182,6 +182,29 @@ void main() {
     expect(find.byTooltip('Cancelar toda a série'), findsOneWidget);
   });
 
+  testWidgets('the cancel dialog will not act without a reason', (tester) async {
+    // It used to accept the press, pop with an empty string, and be discarded
+    // by two separate guards — the dialog closed, nothing was cancelled, and
+    // nothing said either had happened.
+    await tester.pumpWidget(
+      _app(
+        _EditorRepository(),
+        target: CalendarEditorTarget.editingOccurrence(_recurringOccurrence()),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Cancelar esta ocorrência'));
+    await tester.pumpAndSettle();
+
+    final confirm = find.widgetWithText(FilledButton, 'Cancelar compromisso');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+
+    await tester.enterText(find.byKey(const Key('cancel-reason')), 'Fechou');
+    await tester.pump();
+
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+  });
+
   testWidgets(
     'validates clinic and keeps entered draft after network failure',
     (tester) async {

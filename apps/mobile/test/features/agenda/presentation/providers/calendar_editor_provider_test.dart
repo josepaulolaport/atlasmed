@@ -7,8 +7,11 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
   CalendarCreateCommand? created;
   String? createKey;
   CalendarOccurrenceUpdateCommand? occurrenceUpdate;
+  String? occurrenceUpdateKey;
   CalendarCancellationCommand? occurrenceCancellation;
+  String? occurrenceCancellationKey;
   Object? submitError;
+  Object? cancelError;
 
   @override
   Future<void> createCalendar({
@@ -35,6 +38,8 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String idempotencyKey,
   }) async {
     occurrenceUpdate = command;
+    occurrenceUpdateKey = idempotencyKey;
+    if (submitError case final error?) throw error;
   }
 
   @override
@@ -52,6 +57,8 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String idempotencyKey,
   }) async {
     occurrenceCancellation = command;
+    occurrenceCancellationKey = idempotencyKey;
+    if (cancelError case final error?) throw error;
   }
 }
 
@@ -420,6 +427,61 @@ void main() {
       expect(notifier.state.isSaved, isTrue);
     },
   );
+
+  test('a cancellation does not reuse the key a failed save is holding', () async {
+    // Receipts are stored per (user, key) and replaying one under a different
+    // command kind is a hard error. A save that reached the server and failed
+    // on the way back leaves an UPDATE receipt against the key the client is
+    // still holding, so sharing it turned the next cancel into an idempotency
+    // conflict the rep could only escape by leaving the screen.
+    final repository = _FakeCalendarRepository()
+      ..submitError = const CalendarNetworkException('Sem conexão.');
+    var keys = 0;
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+      idempotencyKeyFactory: () => 'key-${++keys}',
+    );
+
+    expect(await notifier.submit(), isFalse);
+    expect(repository.occurrenceUpdateKey, 'key-1');
+
+    expect(await notifier.cancel('Clínica fechou'), isTrue);
+    expect(repository.occurrenceCancellationKey, isNot('key-1'));
+  });
+
+  test('a cancellation retry reuses its own key', () async {
+    // The other half of the same rule: retrying the same cancel must not
+    // create a second cancellation if the first one landed.
+    final repository = _FakeCalendarRepository()
+      ..cancelError = const CalendarNetworkException('Sem conexão.');
+    var keys = 0;
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+      idempotencyKeyFactory: () => 'key-${++keys}',
+    );
+
+    expect(await notifier.cancel('Clínica fechou'), isFalse);
+    final first = repository.occurrenceCancellationKey;
+
+    repository.cancelError = null;
+    expect(await notifier.cancel('Clínica fechou'), isTrue);
+
+    expect(repository.occurrenceCancellationKey, first);
+  });
+
+  test('a blank cancellation reason says so instead of doing nothing', () async {
+    // It used to return false silently, so the dialog closed, nothing was
+    // cancelled, and the screen gave no sign either had happened.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+    );
+
+    expect(await notifier.cancel('   '), isFalse);
+    expect(notifier.state.errorMessage, isNotNull);
+  });
 
   test('shows first conflict in pt-BR and keeps draft', () async {
     final repository = _FakeCalendarRepository()

@@ -110,6 +110,25 @@ SlotWindow slotWindowFor({
   );
 }
 
+/// The slots the strip can still offer, in order.
+///
+/// A slot that has already gone is not a choice: offering 08:00 at half past
+/// eight in the evening fills the strip with times nobody can pick and pushes
+/// the ones they can off the end of it. On any day but today nothing is past,
+/// so the whole window stands.
+List<DateTime> remainingSlots({
+  required SlotWindow window,
+  required DateTime dayStart,
+  required DateTime now,
+}) {
+  final isToday = _isSameDay(dayStart, now);
+  return [
+    for (var m = window.startMinutes; m <= window.endMinutes; m += _slotMinutes)
+      if (!isToday || !dayStart.add(Duration(minutes: m)).isBefore(now))
+        dayStart.add(Duration(minutes: m)),
+  ];
+}
+
 /// What the day already holds, and which times are still free for it.
 ///
 /// Saving into an occupied slot is refused by the API with a conflict, and the
@@ -243,6 +262,12 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
               busy: busy,
             );
 
+            final slots = remainingSlots(
+              window: window,
+              dayStart: dayStart,
+              now: widget.now ?? DateTime.now(),
+            );
+
             _centreOnSelection(window);
 
             return _ScheduleShell(
@@ -262,18 +287,31 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
                   else
                     _BusyList(occurrences: busy),
                   const SizedBox(height: 14),
-                  _SlotStrip(
-                    now: widget.now ?? DateTime.now(),
-                    controller: _slotsController,
-                    window: window,
-                    dayStart: dayStart,
-                    durationMinutes: widget.durationMinutes,
-                    selectedStartsAt: widget.selectedStartsAt,
-                    busy: busy,
-                    onPick: widget.onPick,
-                  ),
-                  const SizedBox(height: 10),
-                  const _Legend(),
+                  // Every slot gone. It used to render as blank space above a
+                  // legend explaining the colours of nothing; the day is not
+                  // broken, it is over, and the answer is another date.
+                  if (slots.isEmpty)
+                    const Text(
+                      'Não há mais horários hoje. Escolha outra data.',
+                      key: Key('day-slot-strip-empty'),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.gray500,
+                      ),
+                    )
+                  else ...[
+                    _SlotStrip(
+                      controller: _slotsController,
+                      window: window,
+                      slots: slots,
+                      durationMinutes: widget.durationMinutes,
+                      selectedStartsAt: widget.selectedStartsAt,
+                      busy: busy,
+                      onPick: widget.onPick,
+                    ),
+                    const SizedBox(height: 10),
+                    const _Legend(),
+                  ],
                   // The chosen time can become occupied without being touched —
                   // lengthening the appointment is enough — so say it here
                   // rather than letting the save fail with a conflict.
@@ -477,10 +515,9 @@ class _BusyList extends StatelessWidget {
 
 class _SlotStrip extends StatelessWidget {
   const _SlotStrip({
-    required this.now,
     required this.controller,
     required this.window,
-    required this.dayStart,
+    required this.slots,
     required this.durationMinutes,
     required this.selectedStartsAt,
     required this.busy,
@@ -489,28 +526,15 @@ class _SlotStrip extends StatelessWidget {
 
   final ScrollController controller;
   final SlotWindow window;
-  final DateTime dayStart;
   final int durationMinutes;
   final DateTime selectedStartsAt;
   final List<CalendarOccurrence> busy;
   final ValueChanged<DateTime> onPick;
-  final DateTime now;
+
+  final List<DateTime> slots;
 
   @override
   Widget build(BuildContext context) {
-    // A slot that has already gone is not a choice. Offering 08:00 at
-    // half past eight in the evening fills the strip with times nobody can
-    // pick, and pushes the ones they can off the end of it.
-    final slots = <DateTime>[
-      for (
-        var m = window.startMinutes;
-        m <= window.endMinutes;
-        m += _slotMinutes
-      )
-        if (!dayStart.add(Duration(minutes: m)).isBefore(now) ||
-            !_isSameDay(dayStart, now))
-          dayStart.add(Duration(minutes: m)),
-    ];
     final selectedMinutes = _minutesOf(selectedStartsAt);
 
     return SizedBox(

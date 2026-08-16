@@ -208,6 +208,15 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
   final String Function() _idempotencyKeyFactory;
   String? _pendingIdempotencyKey;
 
+  /// Cancelling carries its own key.
+  ///
+  /// A receipt is stored per (user, key) and replaying one under a different
+  /// command kind is a hard error. Sharing one key meant a save that reached
+  /// the server but failed on the way back — the receipt says UPDATE, the
+  /// client still holds the key — turned the next cancel into an idempotency
+  /// conflict the rep could only escape by leaving the screen.
+  String? _pendingCancelKey;
+
   Map<String, String> get validationErrors {
     final errors = <String, String>{};
     final draft = state.draft;
@@ -381,8 +390,15 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
 
   Future<bool> cancel(String reason) async {
     final occurrence = target.occurrence;
-    if (occurrence == null || reason.trim().isEmpty) return false;
-    final key = _pendingIdempotencyKey ??= _idempotencyKeyFactory();
+    if (occurrence == null) return false;
+    if (reason.trim().isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'Informe o motivo do cancelamento.',
+        canRetry: false,
+      );
+      return false;
+    }
+    final key = _pendingCancelKey ??= _idempotencyKeyFactory();
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final command = CalendarCancellationCommand(
@@ -405,7 +421,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
           idempotencyKey: key,
         );
       }
-      _pendingIdempotencyKey = null;
+      _pendingCancelKey = null;
       state = state.copyWith(isSubmitting: false, isSaved: true);
       return true;
     } on CalendarApiException catch (error) {
