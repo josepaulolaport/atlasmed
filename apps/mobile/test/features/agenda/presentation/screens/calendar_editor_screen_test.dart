@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,6 +104,10 @@ Widget _app(
   overrides: [
     calendarMutationRepositoryProvider.overrideWithValue(repository),
     calendarRepositoryProvider.overrideWithValue(_EmptyDayRepository()),
+    // The slot picker reads the rep's working hours. Left to the real
+    // repository it opens an eight-minute periodic timer the test never
+    // outlives, and the failure names the timer rather than this line.
+    userPreferencesValueProvider.overrideWith((ref) async => null),
   ],
   child: MaterialApp(
     theme: AppTheme.light,
