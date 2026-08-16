@@ -80,6 +80,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     final legalDocumentType = parseFacilityLegalDocumentType(
       detail.registration?.legalDocumentType,
     );
+    final unitTypeName = _nonEmpty(detail.registration?.unitTypeName);
     final phone = _nonEmpty(detail.contact?.phone);
     final whatsapp = _nonEmpty(detail.contact?.whatsapp);
     final email = _nonEmpty(detail.contact?.email);
@@ -153,6 +154,28 @@ class ClinicHeaderSection extends ConsumerWidget {
                                 color: Color(0xB3FFFFFF),
                               ),
                               maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          // The CNES unit type, under the legal type: both say
+                          // what kind of establishment this is, and the app
+                          // held the id without ever showing the words.
+                          //
+                          // Its own line rather than appended to the one above,
+                          // because "Estabelecimento CNPJ · Clínica/Centro de
+                          // Especialidade" runs past the avatar and ellipses
+                          // away exactly the half that is new.
+                          if (unitTypeName != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              unitTypeName,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.3,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0x99FFFFFF),
+                              ),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],

@@ -140,6 +140,10 @@ class FacilityDTO {
   final String? imageBlurhash;
   final String? cnesCode;
   final int? unitTypeId;
+
+  /// The CNES unit type in words. Detail responses only — list payloads carry
+  /// the id alone, and an id is not something to print.
+  final String? unitTypeName;
   final int? unitSubtypeId;
   final double? distanceKm;
   final String? lastVisitAt;
@@ -183,6 +187,7 @@ class FacilityDTO {
     this.imageBlurhash,
     this.cnesCode,
     this.unitTypeId,
+    this.unitTypeName,
     this.unitSubtypeId,
     this.distanceKm,
     this.lastVisitAt,
@@ -244,6 +249,7 @@ class FacilityDTO {
       imageBlurhash: readNullableString(map['imageBlurhash']),
       cnesCode: readNullableString(map['cnesCode']),
       unitTypeId: readCrmIdOrNull(map['unitTypeId'], 'unitTypeId'),
+      unitTypeName: readNullableString(map['unitTypeName']),
       unitSubtypeId: readCrmIdOrNull(map['unitSubtypeId'], 'unitSubtypeId'),
       distanceKm: readNullableDouble(map['distanceKm']),
       lastVisitAt: readNullableString(map['lastVisitAt']),

@@ -39,6 +39,7 @@ function facilityRecord(id: number): FacilityListRecord {
     commercialStatus: null,
     cnesCode: null,
     unitTypeId: null,
+    unitTypeName: null,
     unitSubtypeId: null,
     deactivatedAt: null,
     createdAt: now,

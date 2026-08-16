@@ -130,6 +130,13 @@ export interface FacilityRecord {
   cnesCode: string | null;
   /** CNES TP_UNIDADE → unit_types.id. */
   unitTypeId: number | null;
+  /**
+   * The CNES unit type's name, when the caller resolved it.
+   *
+   * Null on list payloads, which carry the id alone — the clinic header needs
+   * the words, and an id tells a rep nothing.
+   */
+  unitTypeName: string | null;
   /** CNES subtype → unit_subtypes.id (must belong to unitTypeId when both set). */
   unitSubtypeId: number | null;
   deactivatedAt: Date | null;
