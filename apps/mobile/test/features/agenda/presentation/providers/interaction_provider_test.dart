@@ -31,6 +31,7 @@ class _Repository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     startCalls++;
     keys.add(idempotencyKey);
@@ -45,6 +46,7 @@ class _Repository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async => detail;
 
   @override
@@ -66,6 +68,7 @@ class _Repository implements CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async => throw UnimplementedError();
 }
 

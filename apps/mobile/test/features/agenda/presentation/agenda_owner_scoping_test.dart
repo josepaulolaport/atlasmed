@@ -48,6 +48,7 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async => throw UnimplementedError();
 
   @override
@@ -56,6 +57,7 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async => throw UnimplementedError();
 
   @override
@@ -70,6 +72,7 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async => throw UnimplementedError();
 }
 

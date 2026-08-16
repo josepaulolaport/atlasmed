@@ -85,6 +85,7 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) => throw UnimplementedError();
 
   @override
@@ -93,6 +94,7 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) => throw UnimplementedError();
 
   @override
@@ -100,6 +102,7 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async => throw UnimplementedError();
 }
 

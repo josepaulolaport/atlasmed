@@ -36,10 +36,14 @@ abstract interface class CalendarRepositoryContract {
 
   Future<InteractionDetail> getInteraction(int id);
 
+  /// [startedAt] is the instant the rep pressed, offset ISO-8601. Omitted
+  /// means now; the queue passes the original stamp when replaying, which is
+  /// the whole point of §15.6.6-4.
   Future<InteractionDetail> startInteraction(
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   });
 
   Future<InteractionDetail> completeInteraction(
@@ -47,6 +51,7 @@ abstract interface class CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   });
 
   /// Records how the visit went and when to return — spec 0016 §15.6.4.
@@ -66,6 +71,7 @@ abstract interface class CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   });
 }
 
@@ -283,6 +289,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
@@ -295,7 +302,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         // from it was fiction.
         body: {
           'expectedVersion': expectedVersion,
-          'startedAt': clientInstant(),
+          'startedAt': startedAt ?? clientInstant(),
         },
       ),
     );
@@ -308,6 +315,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
@@ -318,7 +326,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
           'expectedVersion': expectedVersion,
           // The end is the device's too: waiting for signal would otherwise
           // inflate the duration by however long the wait was.
-          'completedAt': clientInstant(),
+          'completedAt': completedAt ?? clientInstant(),
           if (correctionReason != null && correctionReason.trim().isNotEmpty)
             'correctionReason': correctionReason.trim(),
         },
@@ -359,6 +367,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
@@ -368,7 +377,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         body: {
           'facilityId': facilityId,
           'timeZone': timeZone,
-          'startedAt': clientInstant(),
+          'startedAt': startedAt ?? clientInstant(),
         },
       ),
     );

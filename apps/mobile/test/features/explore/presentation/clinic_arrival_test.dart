@@ -1,14 +1,24 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/capture/data/pending_capture.dart';
+import 'package:atlasmed_mobile_app/features/capture/data/pending_capture_store.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/clinic_arrival.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _ArrivalRecordingRepository implements CalendarRepositoryContract {
-  final List<({int facilityId, String timeZone, String idempotencyKey})> calls =
-      [];
+  final List<
+    ({
+      int facilityId,
+      String timeZone,
+      String idempotencyKey,
+      String? startedAt,
+    })
+  >
+  calls = [];
   Object? error;
 
   @override
@@ -16,11 +26,13 @@ class _ArrivalRecordingRepository implements CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     calls.add((
       facilityId: facilityId,
       timeZone: timeZone,
       idempotencyKey: idempotencyKey,
+      startedAt: startedAt,
     ));
     if (error case final failure?) throw failure;
     return InteractionDetail.fromJson({
@@ -68,6 +80,7 @@ class _ArrivalRecordingRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) => throw UnimplementedError();
 
   @override
@@ -76,6 +89,7 @@ class _ArrivalRecordingRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) => throw UnimplementedError();
 
   @override
@@ -88,11 +102,16 @@ class _ArrivalRecordingRepository implements CalendarRepositoryContract {
 
 Future<void> _tapCheguei(
   WidgetTester tester,
-  _ArrivalRecordingRepository repository,
-) async {
+  _ArrivalRecordingRepository repository, {
+  PendingCaptureStore? captureStore,
+}) async {
+  final store = captureStore ?? MemoryPendingCaptureStore();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [calendarRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        calendarRepositoryProvider.overrideWithValue(repository),
+        pendingCaptureStoreProvider.overrideWithValue(store),
+      ],
       child: MaterialApp(
         home: Scaffold(
           body: Consumer(
@@ -162,5 +181,44 @@ void main() {
     await _tapCheguei(tester, repository);
 
     expect(find.text('Clínica fora do seu escopo.'), findsOne);
+  });
+
+  testWidgets('keeps the visit when there is no signal', (tester) async {
+    // The case the queue exists for. Losing the press because a clinic sits in
+    // a basement is exactly the under-counting §15.6.3 is about.
+    final store = MemoryPendingCaptureStore();
+    final repository = _ArrivalRecordingRepository()
+      ..error = const CalendarNetworkException('Sem conexão.');
+
+    await _tapCheguei(tester, repository, captureStore: store);
+
+    final queued = await store.list();
+    expect(queued, hasLength(1));
+    expect(queued.single.kind, PendingCaptureKind.arrival);
+    expect(queued.single.payload['facilityId'], 5);
+    expect(queued.single.label, 'Cheguei · Clínica Central');
+    expect(find.textContaining('Sem conexão'), findsOne);
+  });
+
+  testWidgets('does not queue a visit the server refused', (tester) async {
+    // A decision is not a connectivity problem. Queuing it would refuse again
+    // later and tell the rep twice about one mistake.
+    final store = MemoryPendingCaptureStore();
+    final repository = _ArrivalRecordingRepository()
+      ..error = const CalendarForbiddenException('Clínica fora do seu escopo.');
+
+    await _tapCheguei(tester, repository, captureStore: store);
+
+    expect(await store.list(), isEmpty);
+  });
+
+  testWidgets('sends the instant the rep pressed, not the instant it arrived', (
+    tester,
+  ) async {
+    final repository = _ArrivalRecordingRepository();
+
+    await _tapCheguei(tester, repository);
+
+    expect(repository.calls.single.startedAt, isNotNull);
   });
 }

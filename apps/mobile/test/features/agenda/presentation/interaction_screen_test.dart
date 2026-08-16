@@ -47,6 +47,7 @@ class _InteractionRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     starts++;
     detail = _detail(status: InteractionStatus.inProgress, version: 2);
@@ -59,6 +60,7 @@ class _InteractionRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async {
     completes++;
     this.correctionReason = correctionReason;
@@ -92,6 +94,7 @@ class _InteractionRepository implements CalendarRepositoryContract {
     required int facilityId,
     required String timeZone,
     required String idempotencyKey,
+    String? startedAt,
   }) async => throw UnimplementedError();
 }
 

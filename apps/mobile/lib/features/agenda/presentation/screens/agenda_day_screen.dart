@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calen
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_day_grid.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/pending_captures_banner.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/schedule_draft_sheet.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_speed_dial.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -125,6 +126,10 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       body: Column(
         children: [
           _DayHeader(day: start, count: agenda.valueOrNull?.length ?? 0),
+          // Captures still waiting for signal (§15.6.6-4). Sits above the day
+          // because it is about the day: a visit recorded in a basement is
+          // part of it whether or not the server has heard about it yet.
+          const PendingCapturesBanner(),
           Expanded(
             child: agenda.when(
               loading: () => const Center(child: CircularProgressIndicator()),

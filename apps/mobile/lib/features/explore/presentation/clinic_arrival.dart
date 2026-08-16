@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
+import 'package:atlasmed_mobile_app/features/capture/data/pending_capture.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,19 +29,29 @@ Future<void> recordClinicArrival(
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final repository = ref.read(calendarRepositoryProvider);
+  final queue = ref.read(captureQueueProvider);
+
+  // Stamped before the request, not after it. §15.6.6-4: this is the instant
+  // the rep pressed, and it is what gets sent whether the request goes now or
+  // out of a queue tomorrow morning.
+  final pressedAt = DateTime.now();
+  // The same resolver the calendar editor uses, so an arrival and a scheduled
+  // visit are anchored against one clock.
+  final timeZone = resolveDeviceCalendarTimeZone(pressedAt);
 
   try {
     final interaction = await repository.recordArrival(
       facilityId: facilityId,
-      // The same resolver the calendar editor uses, so an arrival and a
-      // scheduled visit are anchored against one clock.
-      timeZone: resolveDeviceCalendarTimeZone(DateTime.now()),
+      timeZone: timeZone,
       idempotencyKey: _arrivalKey(),
+      startedAt: pressedAt.toUtc().toIso8601String(),
     );
     if (!context.mounted) return;
 
     // Today's agenda now holds a visit it did not a moment ago.
     ref.invalidate(calendarRepositoryProvider);
+    // Signal is back, so anything waiting can go now.
+    unawaited(queue.drain());
 
     messenger
       ..hideCurrentSnackBar()
@@ -55,7 +68,29 @@ Future<void> recordClinicArrival(
           ),
         ),
       );
+  } on CalendarNetworkException {
+    // The case this whole feature exists for: a clinic with no signal. The
+    // press is kept with the instant it happened and sent when there is a
+    // network, so the visit is recorded as having started here rather than
+    // wherever the rep was when the bars came back.
+    await queue.enqueue(
+      kind: PendingCaptureKind.arrival,
+      label: 'Cheguei · $facilityName',
+      payload: {'facilityId': facilityId, 'timeZone': timeZone},
+      stampedAt: pressedAt,
+    );
+    if (!context.mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: const Text('Sem conexão. Visita guardada e será enviada.'),
+        ),
+      );
   } on CalendarApiException catch (error) {
+    // The server answered and refused. Queuing would only refuse again later,
+    // and the rep would be told twice about one mistake.
     if (!context.mounted) return;
     messenger
       ..hideCurrentSnackBar()
