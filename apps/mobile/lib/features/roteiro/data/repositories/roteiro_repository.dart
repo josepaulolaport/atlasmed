@@ -228,7 +228,21 @@ class RoteiroRepository extends Repository<String>
     );
     final id = draft.id;
     if (id == null) throw StateError('Não foi possível salvar o roteiro.');
-    return confirm(id);
+
+    // Confirm for its effect, not its answer.
+    //
+    // `POST /roteiros` returns the planned day — clinic names, cities,
+    // distances, travel between stops, the reasons each was chosen.
+    // `POST /roteiros/:id/confirm` returns the stored row, which carries none
+    // of that. Returning it replaced the slate the rep had just approved with
+    // five cards reading "Clínica", no distances and "0 min" of travel: the
+    // save looked like it had emptied the day it had in fact just written.
+    //
+    // The confirm still has to happen and still has to be able to fail — a 409
+    // means the calendar moved under the plan — but the day to show afterwards
+    // is the one that was planned.
+    await confirm(id);
+    return draft;
   }
 
   /// Writes the roteiro into the agent's agenda.
