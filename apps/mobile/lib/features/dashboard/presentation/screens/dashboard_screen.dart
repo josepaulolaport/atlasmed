@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
@@ -75,6 +76,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _onRefresh() async {
     ref.invalidate(dashboardVerticalOptionsProvider);
+    // "Meus compromissos hoje" watches today's agenda, and this screen never
+    // leaves the tree — so without this the card keeps the day it first loaded
+    // however the day actually went, and pins it for the agenda screen too.
+    ref.invalidate(agendaProvider);
     // Rebuilding the scope object rebuilds every metric family member, so each
     // card refetches on its own request.
     final filters = ref.read(dashboardFiltersProvider);

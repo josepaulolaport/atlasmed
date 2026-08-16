@@ -123,6 +123,30 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
               ),
           ],
         ),
+        actions: [
+          // The day had no way to reload itself. Not a nicety: the same query
+          // is watched by "Meus compromissos hoje" on Desempenho, which never
+          // leaves the tree, so today's agenda is pinned in memory and stays
+          // whatever it was when the app started — through a visit recorded
+          // from a clinic page, a queue that drained, or a manager's change.
+          //
+          // A button rather than pull-to-refresh: the grid opens at the working
+          // day, so an overscroll gesture is eight hours of scrolling away.
+          IconButton(
+            key: const Key('agenda-day-refresh'),
+            tooltip: 'Atualizar',
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            onPressed: () => ref.invalidate(
+              agendaProvider(
+                AgendaQuery(
+                  from: start,
+                  to: start.add(const Duration(days: 1)),
+                  ownerUserId: ownerUserId,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
