@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 
 const _hourHeight = kHourHeight;
@@ -48,6 +49,11 @@ class AgendaDayGrid extends StatefulWidget {
 class _AgendaDayGridState extends State<AgendaDayGrid> {
   final _controller = ScrollController();
   bool _openedOnTheDay = false;
+
+  /// The block as it was when the current move began, and where the finger was
+  /// when it began. Null between drags.
+  DayGridDraft? _moveAnchor;
+  double _moveFrom = 0;
 
   DateTime get day => widget.day;
   List<CalendarOccurrence> get occurrences => widget.occurrences;
@@ -203,10 +209,42 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
             height: height,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
+              // Where the finger is now, against where it started — never
+              // frame by frame.
+              //
+              // `moveDraft` snaps to a half-hour, and a frame of an ordinary
+              // drag is two to seven pixels, which snaps to nothing. Handing it
+              // one frame's delta at a time rounded every frame's movement away
+              // separately, so the block sat still through a careful drag and
+              // only jumped when a flick happened to cover sixteen pixels
+              // between two frames.
+              //
+              // Position rather than a running sum of deltas, and `down` rather
+              // than the default `start`, so the touch slop is inside the
+              // measurement: the block tracks the finger one for one, and a
+              // drag down and back up returns to where it began instead of
+              // landing a slot above it.
+              dragStartBehavior: DragStartBehavior.down,
+              onVerticalDragStart: onDraftChanged == null
+                  ? null
+                  : (details) {
+                      _moveAnchor = active;
+                      _moveFrom = details.globalPosition.dy;
+                    },
               onVerticalDragUpdate: onDraftChanged == null
                   ? null
-                  : (details) =>
-                        onDraftChanged!(moveDraft(active, details.delta.dy)),
+                  : (details) {
+                      final anchor = _moveAnchor;
+                      if (anchor == null) return;
+                      onDraftChanged!(
+                        moveDraft(
+                          anchor,
+                          details.globalPosition.dy - _moveFrom,
+                        ),
+                      );
+                    },
+              onVerticalDragEnd: (_) => _moveAnchor = null,
+              onVerticalDragCancel: () => _moveAnchor = null,
               child: Container(
                 decoration: BoxDecoration(
                   color: colour.withValues(alpha: 0.14),
@@ -259,28 +297,47 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
   }) {
     return Positioned(
       top: centreY - _handleTouchRadius,
-      left: -_handleTouchRadius / 2,
+      // Inside the block, not straddling its edge.
+      //
+      // These sat at `-_handleTouchRadius / 2`, so half of each target hung
+      // over the gutter — and a box has to be inside its Stack to be hit at
+      // all, which made that half dead. The rep saw a circle and pressed the
+      // side of it that did nothing.
+      left: 0,
       height: _handleTouchRadius * 2,
+      // The grab area runs past the dot, because a 14px circle is not a target
+      // on a moving bus — but it stops well short of the block's width, so the
+      // rest of the block stays available for moving.
       width: _handleTouchRadius * 2,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        // As with the move: the edge follows the finger from the moment it
+        // touches down, rather than eighteen pixels behind it for ever.
+        dragStartBehavior: DragStartBehavior.down,
         onVerticalDragUpdate: onDraftChanged == null
             ? null
             : (details) {
                 // The handle's own box is the frame of reference; the draft
                 // maths works in grid coordinates, so the press is converted
                 // back before it is used.
+                //
+                // Absolute, unlike the move: each update asks "where is the
+                // finger now", so nothing is lost to rounding between frames.
                 final gridDy = details.localPosition.dy - _handleTouchRadius;
                 onDraftChanged!(onDrag(centreY - _handleTouchRadius + gridDy));
               },
-        child: Center(
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: colour, width: 3),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: colour, width: 3),
+              ),
             ),
           ),
         ),
