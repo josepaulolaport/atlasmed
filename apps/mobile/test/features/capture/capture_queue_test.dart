@@ -140,6 +140,20 @@ void main() {
         CaptureVerdict.discard,
       );
     });
+
+    test('an appointment that no longer exists is dropped, not retried', () {
+      // A 404 used to arrive as CalendarNetworkException — the default arm of
+      // the status mapping — so a press for a cancelled appointment kept its
+      // place at the head of the queue and stopped everything behind it from
+      // draining. The queue halts on the first *unreachable* entry, which made
+      // one dead entry enough to freeze every later press.
+      expect(
+        classifyCaptureFailure(
+          const CalendarGoneException('Interaction not found'),
+        ),
+        CaptureVerdict.discard,
+      );
+    });
   });
 
   group('drainCaptures', () {
