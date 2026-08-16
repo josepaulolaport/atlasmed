@@ -471,35 +471,20 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.calendar_month_outlined,
     visibleFor: canReadAgenda,
   ),
-  AppNavigationItem(
-    branchIndex: 4,
-    label: 'Territórios',
-    route: '/territories',
-    icon: Icons.layers_outlined,
-    visibleFor: canReadTerritories,
-  ),
-  // Spec 0014 §6. `Usuários` below stays admin-only and unrelated: this is the
-  // roster a manager works from, not the user-administration surface.
+  // Territórios and Usuários are out of the drawer by request. Branches 4 and
+  // 5 and their routes still exist, so anything already holding a link still
+  // resolves — only the way in from here is gone.
+  //
+  // What goes with them, so it is not rediscovered as a bug: the territory
+  // editor and the map of zones have no other entry point, and neither does
+  // the invitations list. "Convidar" starts on Usuários and nowhere else, so
+  // with this removed the app cannot invite anyone.
   AppNavigationItem(
     branchIndex: 11,
     label: 'Equipe',
     route: '/team',
     icon: Icons.groups_outlined,
     visibleFor: canReadTeam,
-  ),
-  // Usuários is back. It had been dropped because Equipe is the one place
-  // people are *listed* — which is true, and Equipe keeps that job. But this
-  // is a different surface: roles, assignments, and invitations. Taking it out
-  // of the drawer left the app with no way to invite anyone at all, since
-  // "Convidar" starts here and nowhere else.
-  //
-  // Admin-only, as it was.
-  AppNavigationItem(
-    branchIndex: 5,
-    label: 'Usuários',
-    route: '/users',
-    icon: Icons.manage_accounts_outlined,
-    visibleFor: canManageUsers,
   ),
   AppNavigationItem(
     branchIndex: 6,

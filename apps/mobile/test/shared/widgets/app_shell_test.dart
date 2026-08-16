@@ -29,15 +29,9 @@ void main() {
       expect(agenda.visibleFor!(UserRoleName.manager), isTrue);
       expect(agenda.visibleFor!(UserRoleName.admin), isTrue);
       expect(agenda.visibleFor!(UserRoleName.ops), isFalse);
-      expect(
-        appNavigationItems
-            .singleWhere((item) => item.route == '/territories')
-            .branchIndex,
-        4,
-      );
-      // `/profile` was pinned here too. It is no longer in this list — the
-      // drawer entry is hidden — and branch 10 is now guarded by the router,
-      // not by the navigation items.
+      // `/profile`, `/territories` and `/users` were pinned here too. None are
+      // in this list any more — their drawer entries are hidden — and branches
+      // 10, 4 and 5 are guarded by the router rather than by these items.
     });
   });
 
@@ -117,20 +111,19 @@ void main() {
       );
     });
 
-    test('offers a way into Usuários, gated to admins', () {
-      // This used to assert the opposite. Usuários had been dropped from the
-      // drawer on the grounds that Equipe is the one place people are listed —
-      // true of *listing* people, but Usuários is roles, assignments and
-      // invitations, and "Convidar" starts there and nowhere else. Removing
-      // the entry left the app with no way to invite anyone at all.
-      final users = appNavigationItems.where((item) => item.route == '/users');
-
-      expect(users, hasLength(1));
-      expect(users.single.label, 'Usuários');
+    test('offers no way into Usuários or Territórios', () {
+      // Both were removed from the drawer by request. The branches and the
+      // routes survive, as with Perfil above — only the entries are gone.
+      //
+      // What that costs, recorded here so it is not rediscovered as a bug:
+      // "Convidar" starts on Usuários and nowhere else, so the app cannot
+      // invite anyone; and the territory editor and the map of zones have no
+      // other entry point either.
       expect(
-        users.single.visibleFor,
-        isNotNull,
-        reason: 'user administration stays admin-only',
+        appNavigationItems.where(
+          (item) => item.route == '/users' || item.route == '/territories',
+        ),
+        isEmpty,
       );
     });
   });
