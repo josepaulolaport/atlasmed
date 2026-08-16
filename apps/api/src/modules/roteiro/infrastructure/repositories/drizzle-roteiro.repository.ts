@@ -189,6 +189,26 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     };
   }
 
+  /**
+   * How long this rep's lunch is, or null when they have never said.
+   *
+   * Null has to survive, and `Number(null)` is `0`. `->>` yields SQL NULL for a
+   * missing key, which arrives here as `null`, and zero is perfectly finite and
+   * inside the range — so every rep who had never chosen reported a break of no
+   * minutes. `hours.lunchMinutes ?? linhaParams.lunchMinutes` then never fired,
+   * and the linha's own 60-minute default has never applied to anybody: the
+   * engine reserved a zero-width block at midday and planned straight through
+   * it. An explicit zero is still honoured — a rep who works through lunch has
+   * said so.
+   */
+  static parseLunchMinutes(raw: unknown): number | null {
+    if (raw === null || raw === undefined) return null;
+    const minutes = Number(raw);
+    return Number.isFinite(minutes) && minutes >= 0 && minutes <= 240
+      ? minutes
+      : null;
+  }
+
   async countAssignedProfiles(input: { userId: number; verticalId: number }): Promise<number> {
     const rows = await db.execute<{ n: string }>(sql`
       select count(*)::text as n
@@ -221,13 +241,13 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
     const row = rows[0];
     const time = (v: unknown): string | null =>
       typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null;
-    const minutes = Number(row?.lunch_minutes);
     return {
       workdayStart: time(row?.workday_start),
       workdayEnd: time(row?.workday_end),
       lunchStart: time(row?.lunch_start),
-      lunchMinutes:
-        Number.isFinite(minutes) && minutes >= 0 && minutes <= 240 ? minutes : null,
+      lunchMinutes: DrizzleRoteiroRepository.parseLunchMinutes(
+        row?.lunch_minutes,
+      ),
     };
   }
 
