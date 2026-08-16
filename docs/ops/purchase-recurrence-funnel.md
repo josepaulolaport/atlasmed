@@ -95,14 +95,41 @@ A field missing from a document does not error. The clinic just stops matching
 filters on it, and the API only falls back to SQL when Meili returns *nothing* —
 so partial loss is invisible. `rebuild.test.ts` guards the column list.
 
-**After deploying the 2026-08-15 change, run a full facilities rebuild.**
+### Adding a filterable attribute: the cutover
+
 `purchaseIntervalDaysMax`, `purchaseIntervalSourcesAny` and
-`manualPurchaseProfilesAny` are absent from existing documents, and the interval
-and profile filters will under-match until they exist.
+`manualPurchaseProfilesAny` (2026-08-15) do not exist on documents written by
+older code, and a Meili filter on a field a document lacks does not match it.
+
+The dangerous state is not "no document has the field" — that returns nothing,
+the API reports `empty_hits` and falls back to SQL, and results stay correct.
+It is the **mixed** state. Once a reconcile or a facility edit republishes part
+of the index in the new shape, a filter matches only the republished subset:
+non-empty, so no fallback fires, and the rest of the clinics silently drop out.
+That is the same failure this release fixes, reintroduced for the length of the
+window.
+
+The rebuild is blue/green — it fills a temporary index and swaps — so the live
+index is either wholly old or wholly new. Keep it that way by not writing to it
+in between:
 
 ```bash
+# 1. no scheduled writer running or about to run
+temporal schedule pause --schedule-id facility-purchase-recurrence-hourly
+temporal schedule pause --schedule-id facility-purchase-recurrence-daily-sweep
+# 2. terminate anything in flight (see the deploy section below)
+# 3. deploy the worker and API
+# 4. rebuild, and wait for the swap
 curl -XPOST "$API/sync" -H 'content-type: application/json' -d '{"entity":"facilities"}'
+# 5. resume
+temporal schedule unpause --schedule-id facility-purchase-recurrence-hourly
+temporal schedule unpause --schedule-id facility-purchase-recurrence-daily-sweep
 ```
+
+A facility edited through the API during the window still republishes early;
+that is a handful of clinics and the rebuild corrects them. Skipping the pause
+entirely is survivable — exposure is at most one hour, on the interval and
+purchase-profile filters only — but it is exactly the silent kind, so pause.
 
 ## Deploying a change to these workflows
 
