@@ -1152,4 +1152,97 @@ describe("GenerateRoteiroUseCase", () => {
 
     expect(acrossMidday).toBe(true);
   });
+
+  it("says so when the day runs through midday with no block", async () => {
+    // The other half of the trade. Nobody gets a lunch they did not ask for,
+    // but a rep who has never marked one should not discover that at noon,
+    // standing in a clinic with the next visit already booked.
+    const repository = new FakeRepository(
+      Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const useCase = new GenerateRoteiroUseCase({ repository });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T11:40:00-03:00") }),
+    );
+
+    expect(result.notices.map((n) => n.code)).toContain("NO_BREAK");
+  });
+
+  it("stays quiet about the break the rep already has", async () => {
+    const repository = new FakeRepository(
+      Array.from({ length: 10 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: {
+        execute: async () => [
+          {
+            startsAt: new Date("2026-08-17T12:00:00-03:00").toISOString(),
+            endsAt: new Date("2026-08-17T13:00:00-03:00").toISOString(),
+          },
+        ],
+      },
+    });
+
+    const result = await useCase.execute(
+      baseInput({ now: new Date("2026-08-17T11:40:00-03:00") }),
+    );
+
+    expect(result.notices.map((n) => n.code)).not.toContain("NO_BREAK");
+  });
+
+  it("counts clinics already booked against the day's limit", async () => {
+    // `dailyLimit` is how many clinics a day should hold, including the ones
+    // already in the diary. It used to bound suggestions alone, so a rep with
+    // two visits booked was offered five more and ended the day with seven.
+    const repository = new FakeRepository(
+      Array.from({ length: 20 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const booked = (hour: number) => ({
+      startsAt: new Date(`2026-08-17T${String(hour).padStart(2, "0")}:00:00-03:00`).toISOString(),
+      endsAt: new Date(`2026-08-17T${String(hour + 1).padStart(2, "0")}:00:00-03:00`).toISOString(),
+      interaction: { facilityId: 9_001, modality: "REMOTE" as const },
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: { execute: async () => [booked(9), booked(15)] },
+    });
+
+    const result = await useCase.execute(baseInput({ limit: 5 }));
+
+    // Two booked plus three suggested is the five the linha asked for.
+    expect(result.stops.length).toBeLessThanOrEqual(3);
+    const budget = result.notices.find((n) => n.code === "DAY_BUDGET");
+    expect(budget).toBeDefined();
+    expect(budget?.committed).toBe(2);
+    expect(budget?.remaining).toBe(3);
+  });
+
+  it("suggests nothing once the booked clinics fill the day", async () => {
+    // And says why. An empty slate with no explanation reads as a broken
+    // engine or an empty territory; neither is what happened.
+    const repository = new FakeRepository(
+      Array.from({ length: 20 }, (_, i) => candidate({ id: i + 1 })),
+    );
+    const booked = (hour: number) => ({
+      startsAt: new Date(`2026-08-17T${String(hour).padStart(2, "0")}:00:00-03:00`).toISOString(),
+      endsAt: new Date(`2026-08-17T${String(hour).padStart(2, "0")}:30:00-03:00`).toISOString(),
+      interaction: { facilityId: 9_000 + hour, modality: "REMOTE" as const },
+    });
+    const useCase = new GenerateRoteiroUseCase({
+      repository,
+      schedule: { execute: async () => [8, 9, 10, 11, 14].map(booked) },
+    });
+
+    const result = await useCase.execute(baseInput({ limit: 5 }));
+
+    expect(result.stops).toHaveLength(0);
+    const codes = result.notices.map((n) => n.code);
+    expect(codes).toContain("DAY_BUDGET");
+    // Not this one: there are clinics at hand, the day simply has no room for
+    // them, and "nenhuma clínica elegível" would send the rep looking at their
+    // territory settings for a problem that is not there.
+    expect(codes).not.toContain("NO_CANDIDATES");
+  });
 });

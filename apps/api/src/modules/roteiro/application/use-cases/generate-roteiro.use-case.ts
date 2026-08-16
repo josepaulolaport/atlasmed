@@ -269,6 +269,19 @@ export class RoteiroQuotaExceededError extends AppError {
   }
 }
 
+/**
+ * Where a break would be if the rep took one.
+ *
+ * Only used to answer whether they have *any* pause over the middle of the day,
+ * never to place one: lunch stopped being a parameter when it became a block on
+ * the rep's own calendar (§15.5.5), and a window this wide would be a poor
+ * default even if it were still allowed to be one.
+ */
+const MIDDAY_BREAK_WINDOW = { from: "11:00", to: "14:00" } as const;
+
+/** The stretch a day has to cover before "no break" is worth saying at all. */
+const MIDDAY_CORE = { from: "12:00", to: "13:00" } as const;
+
 export interface RoteiroNotice {
   code: string;
   message: string;
@@ -722,8 +735,8 @@ export class GenerateRoteiroUseCase {
       workdayEnd: hours.workdayEnd ?? linhaParams.workdayEnd,
     };
 
-    const limit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
-    if (limit < 1) {
+    const requestedLimit = Math.min(input.limit ?? params.dailyLimit, params.dailyLimit);
+    if (requestedLimit < 1) {
       throw new ValidationError([{ field: "limit", message: "limit must be at least 1" }]);
     }
 
@@ -747,13 +760,38 @@ export class GenerateRoteiroUseCase {
     }
 
     const timeZone = input.timeZone ?? APP_TIME_ZONE;
-    const { fixedPoints, busy } = await this.loadSchedule(
+    const { fixedPoints, busy, committedClinics, hasMiddayBreak } = await this.loadSchedule(
       input,
       subjectUserId,
       timeZone,
       params,
       notices,
     );
+
+    /**
+     * `dailyLimit` is how many clinics a day should hold, **including the ones
+     * already booked**.
+     *
+     * It used to bound suggestions alone, so a rep with three visits in the
+     * diary was offered five more and ended the day with eight. Nobody chose
+     * that number: it fell out of counting only the half of the day the engine
+     * happened to produce. Counting both halves makes the ops setting mean what
+     * it says, and it is the only knob — a linha that wants busier days raises
+     * `daily_limit`.
+     */
+    const limit = Math.max(0, requestedLimit - committedClinics);
+    if (committedClinics > 0) {
+      notices.push({
+        code: "DAY_BUDGET",
+        dailyLimit: requestedLimit,
+        committed: committedClinics,
+        remaining: limit,
+        message:
+          limit === 0
+            ? `Você já tem ${committedClinics} ${committedClinics === 1 ? "clínica marcada" : "clínicas marcadas"} hoje — o limite do dia é ${requestedLimit}.`
+            : `Você já tem ${committedClinics} ${committedClinics === 1 ? "clínica marcada" : "clínicas marcadas"} hoje, então o roteiro sugere até ${limit} de ${requestedLimit}.`,
+      });
+    }
     // The mode is derived, never asked for: a day with bookings is planned
     // around them, a clear day is a plain circle around the rep.
     const reachMode: RoteiroReachMode = fixedPoints.length > 0 ? "ANCORA" : "LIVRE";
@@ -778,7 +816,11 @@ export class GenerateRoteiroUseCase {
       reachMode,
       fixedPoints,
       origin,
-      limit,
+      // A day already at its budget still shortlists one clinic deep. Asking
+      // for a shortlist of nothing finds nothing, and "nenhuma clínica ao
+      // alcance" is a dead end on the rep's screen — the opposite of what a
+      // full day means.
+      limit: Math.max(1, limit),
     });
 
     if (expanded) {
@@ -964,6 +1006,39 @@ export class GenerateRoteiroUseCase {
       });
     }
 
+    /**
+     * **Nobody gets a lunch they did not ask for — but they get told.**
+     *
+     * Lunch is a block on the rep's own calendar (§15.5.5), so a rep who has
+     * never marked one is planned straight through midday. That is the honest
+     * behaviour: the agenda shows exactly what is true. What it should not do is
+     * stay quiet about it, because the rep only finds out at noon, standing in a
+     * clinic, with the next visit already booked.
+     *
+     * So this says what happened rather than fixing it: no default block, no
+     * time reserved, one line pointing at the thing that would reserve it.
+     */
+    const coreFrom = this.atLocalTime(input.today, MIDDAY_CORE.from, timeZone).getTime();
+    const coreTo = this.atLocalTime(input.today, MIDDAY_CORE.to, timeZone).getTime();
+    const worksThroughMidday = [
+      ...stops.map((stop) => ({
+        startsAt: stop.plannedStartsAt.getTime(),
+        endsAt: stop.plannedEndsAt.getTime(),
+      })),
+      ...fixedPoints.map((point) => ({
+        startsAt: point.startsAt.getTime(),
+        endsAt: point.endsAt.getTime(),
+      })),
+    ].some((span) => span.startsAt < coreTo && span.endsAt > coreFrom);
+
+    if (!hasMiddayBreak && worksThroughMidday) {
+      notices.push({
+        code: "NO_BREAK",
+        message:
+          "Seu dia não tem pausa no meio — marque um bloqueio na agenda e o roteiro passa ao redor dele.",
+      });
+    }
+
     const persisted = input.persist
       ? await this.deps.repository.createDraft({
           userId: subjectUserId,
@@ -1094,11 +1169,22 @@ export class GenerateRoteiroUseCase {
     timeZone: string,
     params: RoteiroParams,
     notices: RoteiroNotice[],
-  ): Promise<{ fixedPoints: FixedPoint[]; busy: BusyInterval[] }> {
+  ): Promise<{
+    fixedPoints: FixedPoint[];
+    busy: BusyInterval[];
+    /** Clinic contacts already booked for the day — see `committedClinics`. */
+    committedClinics: number;
+    /** Whether the rep has a personal block somewhere around the middle of it. */
+    hasMiddayBreak: boolean;
+  }> {
     const dayStart = this.atLocalTime(input.today, params.workdayStart, timeZone);
     const dayEnd = this.atLocalTime(input.today, params.workdayEnd, timeZone);
+    const breakWindowStart = this.atLocalTime(input.today, MIDDAY_BREAK_WINDOW.from, timeZone).getTime();
+    const breakWindowEnd = this.atLocalTime(input.today, MIDDAY_BREAK_WINDOW.to, timeZone).getTime();
     const busy: BusyInterval[] = [];
     const fixedPoints: FixedPoint[] = [];
+    let committedClinics = 0;
+    let hasMiddayBreak = false;
 
     if (this.deps.schedule) {
       const occurrences = await this.deps.schedule.execute({
@@ -1127,6 +1213,19 @@ export class GenerateRoteiroUseCase {
         const startsAt = new Date(occurrence.startsAt);
         const endsAt = new Date(occurrence.endsAt);
         busy.push({ startsAt: startsAt.getTime(), endsAt: endsAt.getTime() });
+
+        // A clinic the rep has already committed to today counts against the
+        // day's budget, in person or on the phone — `dailyLimit` is how many
+        // clinics a day should hold, not how many the engine may add on top.
+        if (occurrence.interaction) committedClinics += 1;
+        // Anything with no interaction is a personal block: lunch, the dentist,
+        // the school run. One over the middle of the day is the rep's break.
+        else if (
+          startsAt.getTime() < breakWindowEnd &&
+          endsAt.getTime() > breakWindowStart
+        ) {
+          hasMiddayBreak = true;
+        }
 
         const facilityId = occurrence.interaction?.facilityId;
         /**
@@ -1180,7 +1279,12 @@ export class GenerateRoteiroUseCase {
     // break. A preference could only ever say one time for every day; a block
     // can be moved when a morning overruns, dropped on a day they eat on the
     // road, and — unlike a preference — actually seen on the agenda.
-    return { fixedPoints, busy: busy.sort((a, b) => a.startsAt - b.startsAt) };
+    return {
+      fixedPoints,
+      busy: busy.sort((a, b) => a.startsAt - b.startsAt),
+      committedClinics,
+      hasMiddayBreak,
+    };
   }
 
   /** §4.1 — widen the bound until the shortlist is deep enough, or give up. */
