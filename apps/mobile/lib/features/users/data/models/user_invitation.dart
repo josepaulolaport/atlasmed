@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:equatable/equatable.dart';
@@ -91,8 +92,38 @@ class UserInvitation extends Equatable {
       firstName,
       lastName,
     ].whereType<String>().map((s) => s.trim()).where((s) => s.isNotEmpty);
-    if (parts.isEmpty) return email;
-    return parts.join(' ');
+    if (parts.isNotEmpty) return parts.join(' ');
+    // An invite can go out by phone instead of email — the API takes either.
+    // Falling back to `email` alone left those rows with a blank title over a
+    // blank subtitle, since the repository maps a missing email to ''.
+    if (email.trim().isNotEmpty) return email.trim();
+    final phone = phoneNumber?.trim();
+    if (phone != null && phone.isNotEmpty) return phone;
+    return 'Convite #$id';
+  }
+
+  /// The status to show and act on.
+  ///
+  /// The server only flips PENDING to EXPIRED from a cron that runs every 12
+  /// hours, so for up to half a day a dead invite came back as PENDING: an
+  /// amber "Pendente" chip, a past date under "Expira em", and a "Reenviar"
+  /// that the API rejects every time.
+  InvitationStatus get effectiveStatus {
+    if (status == InvitationStatus.pending &&
+        expiresAt.isBefore(DateTime.now())) {
+      return InvitationStatus.expired;
+    }
+    return status;
+  }
+
+  /// Human role name. `roleName` is the raw enum off the wire — the list rows
+  /// printed "REP" and "MANAGER" next to a detail screen saying
+  /// "Representante" and "Gerente".
+  String get roleLabel {
+    final match = UserRoleName.values.where(
+      (r) => r.name.toUpperCase() == roleName.toUpperCase(),
+    );
+    return match.isEmpty ? roleName : match.first.label;
   }
 
   factory UserInvitation.fromJson(Map<String, dynamic> json) => UserInvitation(

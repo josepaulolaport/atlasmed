@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/confirm_revoke_dialog.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/invite_action_message.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
@@ -46,29 +47,54 @@ class InvitationsScreen extends ConsumerWidget {
             Expanded(
               child: invitationsAsync.when(
                 loading: () => const InvitationListSkeleton(),
-                error: (_, _) => const Center(
-                  child: Text(
-                    'Não foi possível carregar os convites.',
-                    style: TextStyle(color: AppColors.gray500),
-                  ),
+                error: (_, _) => _InvitationsMessage(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Não foi possível carregar os convites.',
+                  description:
+                      'Verifique sua conexão e tente de novo. Puxe para '
+                      'atualizar.',
+                  onRetry: () => ref.invalidate(invitationsListProvider),
                 ),
                 data: (invitations) {
+                  // The empty and error states used to sit outside the
+                  // RefreshIndicator, so the one screen where you most want to
+                  // pull down — nothing here, did it not load? — was the one
+                  // screen where pulling did nothing.
                   if (invitations.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Nenhum convite enviado ainda.',
-                        style: TextStyle(color: AppColors.gray500),
+                    return _RefreshableBody(
+                      onRefresh: () => ref.invalidate(invitationsListProvider),
+                      child: const _InvitationsMessage(
+                        icon: Icons.mark_email_read_outlined,
+                        title: 'Nenhum convite enviado ainda.',
+                        description:
+                            'Convites aparecem aqui até serem aceitos ou '
+                            'expirarem.',
                       ),
                     );
                   }
+                  final pending = invitations
+                      .where(
+                        (i) => i.effectiveStatus == InvitationStatus.pending,
+                      )
+                      .length;
                   return RefreshIndicator(
                     onRefresh: () async =>
                         ref.invalidate(invitationsListProvider),
                     child: ListView.builder(
                       padding: const EdgeInsets.only(bottom: 24),
-                      itemCount: invitations.length,
-                      itemBuilder: (context, index) =>
-                          _InvitationRow(invitation: invitations[index]),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: invitations.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _CountHeader(
+                            total: invitations.length,
+                            pending: pending,
+                          );
+                        }
+                        return _InvitationRow(
+                          invitation: invitations[index - 1],
+                        );
+                      },
                     ),
                   );
                 },
@@ -88,7 +114,8 @@ class _InvitationRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canAct = invitation.status == InvitationStatus.pending;
+    final status = invitation.effectiveStatus;
+    final canAct = status == InvitationStatus.pending;
 
     return Material(
       color: Colors.white,
@@ -141,7 +168,7 @@ class _InvitationRow extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            invitation.roleName,
+                            invitation.roleLabel,
                             style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
@@ -156,17 +183,15 @@ class _InvitationRow extends ConsumerWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: invitation.status.color.withValues(
-                              alpha: 0.12,
-                            ),
+                            color: status.color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            invitation.status.label,
+                            status.label,
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
-                              color: invitation.status.color,
+                              color: status.color,
                             ),
                           ),
                         ),
@@ -174,8 +199,11 @@ class _InvitationRow extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Expira em ${formatDate(invitation.expiresAt)} · '
-                      'convidado por ${invitation.invitedByName}',
+                      // "Expira em" only makes sense while it still can. On an
+                      // accepted or revoked invite it was a future-tense line
+                      // about a date that no longer means anything.
+                      '${canAct ? 'Expira em ${formatDate(invitation.expiresAt)}' : 'Enviado em ${formatDate(invitation.createdAt)}'}'
+                      ' · convidado por ${invitation.invitedByName}',
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.gray400,
@@ -238,12 +266,113 @@ class _InvitationRow extends ConsumerWidget {
           ),
         );
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível concluir a ação.')),
+          SnackBar(content: Text(describeInviteActionError(error))),
         );
       }
     }
+  }
+}
+
+/// How many invites there are, and how many still need an answer.
+class _CountHeader extends StatelessWidget {
+  const _CountHeader({required this.total, required this.pending});
+
+  final int total;
+  final int pending;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalLabel = total == 1 ? '1 convite' : '$total convites';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      child: Text(
+        pending == 0
+            ? totalLabel
+            : '$totalLabel · $pending pendente'
+                  '${pending == 1 ? '' : 's'}',
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.gray500,
+        ),
+      ),
+    );
+  }
+}
+
+/// Scrollable wrapper so a full-screen message can still be pulled down.
+class _RefreshableBody extends StatelessWidget {
+  const _RefreshableBody({required this.onRefresh, required this.child});
+
+  final VoidCallback onRefresh;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [SizedBox(height: constraints.maxHeight, child: child)],
+        ),
+      ),
+    );
+  }
+}
+
+class _InvitationsMessage extends StatelessWidget {
+  const _InvitationsMessage({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.onRetry,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 40, color: AppColors.gray300),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton(
+                key: const Key('invitations-retry'),
+                onPressed: onRetry,
+                child: const Text('Tentar de novo'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -155,6 +155,30 @@ class AppTheme {
         color: AppColors.gray700,
       ),
     ),
+
+    /// Same story as the dialog and the popup menu above, and the last one
+    /// still untreated: the date picker inherits `surfaceTint` and arrives
+    /// lavender over a white form.
+    datePickerTheme: DatePickerThemeData(
+      backgroundColor: AppColors.cardBg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+
+    /// Placeholders have to look like placeholders. Material 3 draws
+    /// `hintText` in `onSurfaceVariant`, which against this palette is close
+    /// enough to body text that an empty field reads as a filled one — the
+    /// phone field on "Editar informações" showed "+55 11 99999-0000" for a
+    /// user with no phone on record, and the form then refused to save.
+    inputDecorationTheme: const InputDecorationTheme(
+      hintStyle: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14.5,
+        fontWeight: FontWeight.w400,
+        color: AppColors.gray400,
+      ),
+    ),
   );
 }
 

@@ -10,6 +10,7 @@ import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:atlasmed_mobile_app/core/session/user_activity.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -100,6 +101,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
     theme: AppTheme.light,
     themeMode: ThemeMode.light,
     routerConfig: _router,
+    // The app has always been pt-BR, but never said so to Material: every
+    // date picker opened in English on US date order.
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    supportedLocales: const [Locale('pt', 'BR')],
     // Device Preview: no web (ver main.dart) o app é envolvido no
     // DevicePreview; aqui conectamos locale e builder para que o dispositivo
     // simulado (MediaQuery) seja aplicado. Em plataformas nativas nada muda.

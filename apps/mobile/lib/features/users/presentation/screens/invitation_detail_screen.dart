@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/confirm_revoke_dialog.dart';
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/invite_action_message.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
@@ -49,7 +49,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   invitationAsync.maybeWhen(
-                    data: (invitation) => invitation.status.isEditable
+                    data: (invitation) => invitation.effectiveStatus.isEditable
                         ? PopupMenuButton<String>(
                             icon: const Icon(
                               Icons.more_vert_rounded,
@@ -77,10 +77,23 @@ class InvitationDetailScreen extends ConsumerWidget {
             Expanded(
               child: invitationAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => const Center(
-                  child: Text(
-                    'Não foi possível carregar o convite.',
-                    style: TextStyle(color: AppColors.gray500),
+                error: (_, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Não foi possível carregar o convite.',
+                        style: TextStyle(color: AppColors.gray500),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        key: const Key('invitation-detail-retry'),
+                        onPressed: () => ref.invalidate(
+                          invitationDetailProvider(invitationId),
+                        ),
+                        child: const Text('Tentar de novo'),
+                      ),
+                    ],
                   ),
                 ),
                 data: (invitation) => _InvitationDetailBody(
@@ -131,11 +144,11 @@ class InvitationDetailScreen extends ConsumerWidget {
       if (action == 'revoke' && context.mounted) {
         context.pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível concluir a ação.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(describeInviteActionError(error))));
     }
   }
 }
@@ -150,13 +163,6 @@ class _InvitationDetailBody extends StatelessWidget {
   bool get _isManager => invitation.roleName.toUpperCase() == 'MANAGER';
   bool get _showsAssignments => _isRep || _isManager;
 
-  String get _roleLabel {
-    final match = UserRoleName.values.where(
-      (r) => r.name.toUpperCase() == invitation.roleName.toUpperCase(),
-    );
-    return match.isEmpty ? invitation.roleName : match.first.label;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -165,7 +171,10 @@ class _InvitationDetailBody extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              _IdentityCard(invitation: invitation, roleLabel: _roleLabel),
+              _IdentityCard(
+                invitation: invitation,
+                roleLabel: invitation.roleLabel,
+              ),
               const SizedBox(height: 12),
               _MetaCard(invitation: invitation),
               if (_showsAssignments) ...[
@@ -193,7 +202,7 @@ class _InvitationDetailBody extends StatelessWidget {
             ],
           ),
         ),
-        if (invitation.status.isEditable)
+        if (invitation.effectiveStatus.isEditable)
           SafeArea(
             top: false,
             child: Padding(
@@ -251,22 +260,27 @@ class _IdentityCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: invitation.status.color.withValues(alpha: 0.12),
+                  color: invitation.effectiveStatus.color.withValues(
+                    alpha: 0.12,
+                  ),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  invitation.status.label,
+                  invitation.effectiveStatus.label,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: invitation.status.color,
+                    color: invitation.effectiveStatus.color,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          _InfoRow(label: 'Email', value: invitation.email),
+          _InfoRow(
+            label: 'E-mail',
+            value: invitation.email.trim().isEmpty ? '—' : invitation.email,
+          ),
           _InfoRow(
             label: 'Telefone',
             value: invitation.phoneNumber?.isNotEmpty == true
@@ -301,7 +315,14 @@ class _MetaCard extends StatelessWidget {
             label: 'Enviado em',
             value: formatDate(invitation.createdAt),
           ),
-          _InfoRow(label: 'Expira em', value: formatDate(invitation.expiresAt)),
+          _InfoRow(
+            // Past tense once it can no longer expire — an accepted invite
+            // read "Expira em" over a date that had stopped meaning anything.
+            label: invitation.effectiveStatus == InvitationStatus.pending
+                ? 'Expira em'
+                : 'Expirava em',
+            value: formatDate(invitation.expiresAt),
+          ),
           _InfoRow(label: 'Reenvios', value: '${invitation.resendCount}'),
         ],
       ),
