@@ -61,6 +61,15 @@ abstract interface class CalendarRepositoryContract {
     required InteractionFollowUp followUp,
   });
 
+  /// Records that a planned visit did not happen — spec 0016 §15.7.7. The
+  /// reason is optional: the sheet lets the rep out, because made to answer a
+  /// rep in a hurry presses nothing at all.
+  Future<InteractionDetail> markInteractionMissed(
+    int id, {
+    required int expectedVersion,
+    InteractionMissReason? reason,
+  });
+
   /// Records arriving at a clinic the roteiro never suggested — §15.6.3.
   ///
   /// Creates the visit and starts it in one call. There is no appointment to
@@ -370,6 +379,26 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         method: RepositoryHttpMethod.post,
         headers: {'Content-Type': 'application/json'},
         body: {'outcome': outcome.wire, 'followUp': followUp.wire},
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  @override
+  Future<InteractionDetail> markInteractionMissed(
+    int id, {
+    required int expectedVersion,
+    InteractionMissReason? reason,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id/missed'),
+        method: RepositoryHttpMethod.post,
+        headers: {'Content-Type': 'application/json'},
+        body: {
+          'expectedVersion': expectedVersion,
+          if (reason != null) 'reason': reason.wire,
+        },
       ),
     );
     return _interactionFromResponse(response);

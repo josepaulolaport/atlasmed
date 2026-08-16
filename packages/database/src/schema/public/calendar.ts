@@ -199,6 +199,24 @@ export const calendarOccurrenceOverrides = pgTable(
   ],
 );
 
+/**
+ * Why a planned visit did not happen — §15.7.7.
+ *
+ * Deliberately **not** the rejection vocabulary of §15.5.2, which describes a
+ * judgement made about a clinic *before* going ("longe demais", "não tem
+ * interesse") and carries a decaying merit penalty. This describes a day that
+ * did not go to plan. The two overlap on exactly one value, `FECHADA`, which is
+ * a fact about the world rather than an opinion about the clinic — and the one
+ * the engine can act on without guessing.
+ */
+export const interactionMissReasonEnum = pgEnum("interaction_miss_reason", [
+  "FECHADA",
+  "SEM_TEMPO",
+  "CLIENTE_CANCELOU",
+  "REAGENDEI",
+  "OUTRO",
+]);
+
 export const interactions = pgTable(
   "interactions",
   {
@@ -241,6 +259,13 @@ export const interactions = pgTable(
      * and common state — the questions are asked, never enforced, because a
      * visit that happened is worth recording even when the rep was in a hurry.
      */
+    /**
+     * Why it did not happen, when it did not (§15.7.7). Null on every other
+     * status, and null on a miss the rep chose not to explain — the question is
+     * offered, never enforced, because a rep in a hurry pressing nothing is how
+     * you get a miss with no reason *and* no record that it was missed.
+     */
+    missReason: interactionMissReasonEnum("miss_reason"),
     outcome: interactionOutcomeEnum("outcome"),
     followUp: interactionFollowUpEnum("follow_up"),
     outcomeAnsweredAt: timestamp("outcome_answered_at", { withTimezone: true }),

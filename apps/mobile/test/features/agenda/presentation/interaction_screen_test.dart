@@ -69,6 +69,13 @@ class _InteractionRepository implements CalendarRepositoryContract {
   }
 
   @override
+  Future<InteractionDetail> markInteractionMissed(
+    int id, {
+    required int expectedVersion,
+    InteractionMissReason? reason,
+  }) => throw UnimplementedError();
+
+  @override
   Future<InteractionDetail> recordInteractionOutcome(
     int id, {
     required InteractionOutcome outcome,

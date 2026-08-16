@@ -60,6 +60,14 @@ const CAPACITY_RATIO_WEIGHT = 0.4;
  * the **second** removal — the point at which the question is earned and the
  * answer means something. Asking every time buys worse data, not more.
  */
+/**
+ * How long a clinic the rep found closed stays out of the slate (§15.7.7).
+ *
+ * Two weeks: long enough that the engine is not sending them back to a locked
+ * door on Thursday, short enough that a holiday closure does not cost a quarter.
+ */
+const MISSED_CLOSED_PAUSE_DAYS = 14;
+
 const REJECTION_PAUSE_DAYS = 7;
 
 /**
@@ -652,6 +660,19 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
           and not exists (
             select 1 from roteiro_stop_rejections x
             where x.rejected_profile_id = p.id and x.reason = 'FECHADA'
+          )
+          -- §15.7.7 — the rep went and found it shut. Same fact as a FECHADA
+          -- rejection, learned the expensive way, so it drops out the same way
+          -- rather than being proposed again tomorrow at identical merit.
+          --
+          -- Scoped to a window rather than forever: a rejection is a judgement
+          -- the rep stands behind, while this is one closed door on one
+          -- afternoon, and clinics reopen.
+          and not exists (
+            select 1 from interactions shut
+            where shut.facility_id = f.id
+              and shut.miss_reason = 'FECHADA'
+              and shut.updated_at >= now() - make_interval(days => ${MISSED_CLOSED_PAUSE_DAYS})
           )
           -- A clinic the rep pulled out this week is not offered again this
           -- week. Removal without a reason says "not now", and the honest

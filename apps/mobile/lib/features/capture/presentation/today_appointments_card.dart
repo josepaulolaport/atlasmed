@@ -2,7 +2,9 @@ import 'dart:ui' show FontFeature;
 
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/missed_visit_sheet.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/pending_captures_banner.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/visit_actions.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
@@ -298,18 +300,55 @@ class _StopFooter extends ConsumerWidget {
         colour: AppColors.gray500,
       );
     }
-    // Missed and still open: the day moved past it and nobody said what
-    // happened. The press is the same one, so it stays offered.
+    // Still to do. Past its window it turns amber but keeps the same press —
+    // the rep can walk in late and the visit is measured (§15.7.7) — and gains
+    // the other half of the truth: they might not be going at all.
     final late = occurrence.endsAt.toLocal().isBefore(now);
-    return _Action(
-      label: _startLabel(occurrence),
-      icon: _startsWithArrival(occurrence)
-          ? Icons.where_to_vote_rounded
-          : Icons.play_circle_outline_rounded,
-      colour: late ? AppColors.amber : AppColors.green,
-      semanticKey: const Key('today-cheguei'),
-      onPressed: () => _record(context, ref, finish: false),
+    return Row(
+      children: [
+        _Action(
+          label: _startLabel(occurrence),
+          icon: _startsWithArrival(occurrence)
+              ? Icons.where_to_vote_rounded
+              : Icons.play_circle_outline_rounded,
+          colour: late ? AppColors.amber : AppColors.green,
+          semanticKey: const Key('today-cheguei'),
+          onPressed: () => _record(context, ref, finish: false),
+        ),
+        if (late)
+          _Action(
+            label: 'Não fui',
+            icon: Icons.event_busy_outlined,
+            colour: AppColors.gray600,
+            semanticKey: const Key('today-missed'),
+            onPressed: () => _declareMissed(context, ref),
+          ),
+      ],
     );
+  }
+
+  /// §15.7.7 — the rep saying it did not happen, and why.
+  Future<void> _declareMissed(BuildContext context, WidgetRef ref) async {
+    final interaction = occurrence.interaction;
+    if (interaction == null) return;
+    final answer = await showMissedVisitSheet(context, subject: name);
+    if (answer == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(calendarRepositoryProvider)
+          .markInteractionMissed(
+            interaction.id,
+            expectedVersion: interaction.version,
+            reason: answer.reason,
+          );
+      ref.invalidate(agendaProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Registrado como não realizada.')),
+      );
+    } on CalendarApiException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   Future<void> _record(

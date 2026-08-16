@@ -6,6 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _Repository implements CalendarRepositoryContract {
   @override
+  Future<InteractionDetail> markInteractionMissed(
+    int id, {
+    required int expectedVersion,
+    InteractionMissReason? reason,
+  }) => throw UnimplementedError();
+
+  @override
   Future<InteractionDetail> recordInteractionOutcome(
     int id, {
     required InteractionOutcome outcome,

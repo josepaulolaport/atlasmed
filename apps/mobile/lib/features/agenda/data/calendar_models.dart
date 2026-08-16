@@ -473,6 +473,26 @@ enum InteractionOutcome {
   final String label;
 }
 
+/// Why a planned visit did not happen — spec 0016 §15.7.7.
+///
+/// Deliberately **not** the rejection vocabulary of §15.5.2, which is a
+/// judgement about a clinic made *before* going and carries a decaying merit
+/// penalty. This is about a day that did not go to plan. They overlap on
+/// exactly one value, [fechada] — a fact about the world rather than an opinion
+/// — and that is the one the engine acts on, by leaving the clinic out of the
+/// slate for a fortnight instead of sending the rep back to a locked door.
+enum InteractionMissReason {
+  fechada('FECHADA', 'Estava fechada'),
+  clienteCancelou('CLIENTE_CANCELOU', 'Cancelaram comigo'),
+  semTempo('SEM_TEMPO', 'Não deu tempo'),
+  reagendei('REAGENDEI', 'Remarquei'),
+  outro('OUTRO', 'Outro motivo');
+
+  const InteractionMissReason(this.wire, this.label);
+  final String wire;
+  final String label;
+}
+
 /// When to come back. The load-bearing answer: it governs the coverage
 /// rotation, so a rep answering it is scheduling their own next visit.
 enum InteractionFollowUp {

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."interaction_miss_reason" AS ENUM('FECHADA', 'SEM_TEMPO', 'CLIENTE_CANCELOU', 'REAGENDEI', 'OUTRO');--> statement-breakpoint
+ALTER TABLE "interactions" ADD COLUMN "miss_reason" "interaction_miss_reason";

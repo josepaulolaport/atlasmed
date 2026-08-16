@@ -9,6 +9,7 @@ import {
   GetInteractionUseCase,
   InteractionTransitionError,
   InteractionVersionConflictError,
+  MarkInteractionMissedUseCase,
   MarkOverdueInteractionsUseCase,
   RecordArrivalUseCase,
   StartInteractionUseCase,
@@ -46,6 +47,7 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
     actualStartedAt: null,
   outcome: null,
   followUp: null,
+  missReason: null,
   outcomeAnsweredAt: null,
     actualEndedAt: null,
     correctedAt: null,
@@ -172,6 +174,14 @@ class FakeInteractionRepository implements InteractionRepository {
 
   async closeStaleVisits(): Promise<number> {
     return 0;
+  }
+  async markMissed(input: { expectedVersion: number; actorUserId: number; reason?: string; at: Date }) {
+    if (!this.record || this.record.version !== input.expectedVersion) return null;
+    const previousStatus = this.record.status;
+    this.record = { ...this.record, status: "NOT_COMPLETED", missReason: (input.reason ?? null) as never,
+      version: this.record.version + 1, updatedAt: input.at };
+    this.events.push({ previousStatus, newStatus: "NOT_COMPLETED", ...(input.reason ? { reason: input.reason } : {}) });
+    return this.record;
   }
   async recordOutcome(): Promise<null> {
     return null;
@@ -435,6 +445,47 @@ describe("MarkOverdueInteractionsUseCase", () => {
     inProgress.record = interaction({ status: "IN_PROGRESS" });
     expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: null }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
     expect(inProgress.record.status).toBe("IN_PROGRESS");
+  });
+});
+
+describe("MarkInteractionMissedUseCase", () => {
+  const missed = (repository: FakeInteractionRepository, reason?: "FECHADA" | "SEM_TEMPO", at = "2026-08-03T14:00:00.000Z") =>
+    new MarkInteractionMissedUseCase({ repository, now: () => new Date(at) }).execute({
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
+      expectedVersion: repository.record?.version ?? 1, ...(reason ? { reason } : {}),
+    });
+
+  test("records why a planned visit did not happen", async () => {
+    // A miss used to be inferred only: the day ended, a sweep wrote
+    // NOT_COMPLETED, and nothing said whether the clinic was shut or the day
+    // simply ran out. The engine then proposed it again at the same merit.
+    const repository = new FakeInteractionRepository();
+
+    const result = await missed(repository, "FECHADA");
+
+    expect(result.status).toBe("NOT_COMPLETED");
+    expect(result.missReason).toBe("FECHADA");
+    expect(repository.events.at(-1)).toMatchObject({ newStatus: "NOT_COMPLETED", reason: "FECHADA" });
+  });
+
+  test("takes the miss without a reason", async () => {
+    // Offered, never required: made to answer, a rep in a hurry presses
+    // nothing at all — and the sweep marks it missed with no reason anyway.
+    const repository = new FakeInteractionRepository();
+
+    const result = await missed(repository);
+
+    expect(result.status).toBe("NOT_COMPLETED");
+    expect(result.missReason).toBeNull();
+  });
+
+  test("refuses to call a visit that happened a miss", async () => {
+    // Completed or in progress is a record of something real; overwriting it
+    // would throw away a measurement.
+    const repository = new FakeInteractionRepository();
+    repository.record = interaction({ status: "IN_PROGRESS", actualStartedAt: new Date("2026-08-03T12:10:00.000Z") });
+
+    await expect(missed(repository, "SEM_TEMPO")).rejects.toBeInstanceOf(InteractionTransitionError);
   });
 });
 

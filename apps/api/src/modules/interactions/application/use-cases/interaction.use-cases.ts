@@ -8,6 +8,7 @@ import type {
   InteractionRepository,
   InteractionStatus,
   InteractionFollowUp,
+  InteractionMissReason,
   InteractionOutcome,
 } from "../interfaces/interaction.repository.interface";
 
@@ -103,6 +104,7 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Da
     actualEndedAt: record.actualEndedAt?.toISOString() ?? null,
     outcome: record.outcome,
     followUp: record.followUp,
+    missReason: record.missReason,
     outcomeAnsweredAt: record.outcomeAnsweredAt?.toISOString() ?? null,
     // The client needs to know *whether to ask*, and "completed with no answer"
     // is the only state where the questions are worth putting on screen.
@@ -345,6 +347,54 @@ export class RecordInteractionOutcomeUseCase {
       answeredAt: now,
     });
     if (!updated) throw new InteractionTransitionError(effectiveStatus(record, effectiveOccurrence(record), now), "COMPLETED");
+    return toDto(updated, input.actor, now);
+  }
+}
+
+/**
+ * The rep says a planned visit did not happen, and why — §15.7.7.
+ *
+ * Until now a miss was only ever *inferred*: the day ended, a sweep wrote
+ * NOT_COMPLETED, and nothing anywhere said whether the clinic was shut, the
+ * doctor cancelled, or the day simply ran out. The engine then proposed the
+ * same clinic tomorrow at the same merit, because a missing row is not
+ * evidence of anything.
+ *
+ * The reason is **offered, never required**: a rep in a hurry who is made to
+ * answer presses nothing at all, and then the sweep marks the visit missed with
+ * no reason anyway — strictly worse than a miss the rep declared.
+ */
+export class MarkInteractionMissedUseCase {
+  constructor(private readonly deps: Dependencies) {}
+  async execute(input: {
+    id: number;
+    actor: InteractionActor;
+    scope: ScopeContext;
+    expectedVersion: number;
+    reason?: InteractionMissReason;
+  }) {
+    const now = this.deps.now?.() ?? new Date();
+    const record = await this.deps.repository.findById(input.id);
+    if (!record) throw new ResourceNotFoundError("Interaction", input.id);
+    assertOwner(record, input.actor, input.scope);
+    const status = effectiveStatus(record, effectiveOccurrence(record), now);
+    // A visit that started, finished or was cancelled is not a miss. The first
+    // two are records of something that happened, and saying otherwise would
+    // throw away a measurement.
+    if (status !== "SCHEDULED" && status !== "NOT_COMPLETED") {
+      throw new InteractionTransitionError(status, "NOT_COMPLETED");
+    }
+    if (record.version !== input.expectedVersion) {
+      throw new InteractionVersionConflictError(input.expectedVersion, record.version);
+    }
+    const updated = await this.deps.repository.markMissed({
+      id: input.id,
+      actorUserId: input.actor.userId,
+      expectedVersion: input.expectedVersion,
+      ...(input.reason ? { reason: input.reason } : {}),
+      at: now,
+    });
+    if (!updated) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     return toDto(updated, input.actor, now);
   }
 }

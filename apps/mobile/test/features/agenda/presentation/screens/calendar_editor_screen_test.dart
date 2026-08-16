@@ -56,6 +56,13 @@ class _EditorRepository implements CalendarMutationRepositoryContract {
 /// test, and a refresh timer still pending at teardown.
 class _EmptyDayRepository implements CalendarRepositoryContract {
   @override
+  Future<InteractionDetail> markInteractionMissed(
+    int id, {
+    required int expectedVersion,
+    InteractionMissReason? reason,
+  }) => throw UnimplementedError();
+
+  @override
   Future<InteractionDetail> recordInteractionOutcome(
     int id, {
     required InteractionOutcome outcome,

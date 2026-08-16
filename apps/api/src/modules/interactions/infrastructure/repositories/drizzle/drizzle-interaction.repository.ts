@@ -19,6 +19,7 @@ import { calendarOccurrenceFromRecurrenceKey } from "../../../../calendar/applic
 import { missedAfter } from "../../../application/services/day-window";
 import type {
   InteractionFollowUp,
+  InteractionMissReason,
   InteractionOutcome,
   InteractionDetailRecord,
   InteractionMutationResult,
@@ -566,6 +567,34 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         closed += 1;
       }
       return closed;
+    });
+  }
+
+  async markMissed(input: {
+    id: number; actorUserId: number; expectedVersion: number; reason?: InteractionMissReason; at: Date;
+  }): Promise<InteractionDetailRecord | null> {
+    return this.inTransaction(async (repository, tx) => {
+      const [updated] = await tx.update(interactions).set({
+        status: "NOT_COMPLETED",
+        ...(input.reason ? { missReason: input.reason } : {}),
+        updatedAt: input.at,
+        version: sql`${interactions.version} + 1`,
+      }).where(and(
+        eq(interactions.id, input.id),
+        eq(interactions.version, input.expectedVersion),
+        // Only a visit that never started. A started or finished one is a
+        // record of something that happened, and overwriting it would throw
+        // away a measurement.
+        inArray(interactions.status, ["SCHEDULED", "NOT_COMPLETED"]),
+      )).returning();
+      if (!updated) return null;
+      await tx.insert(interactionEvents).values({
+        interactionId: input.id, actorUserId: input.actorUserId, source: "USER",
+        previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED",
+        ...(input.reason ? { reason: input.reason } : {}),
+        metadata: { source: "rep-marked-missed", ...(input.reason ? { missReason: input.reason } : {}) },
+      });
+      return repository.findById(input.id);
     });
   }
 

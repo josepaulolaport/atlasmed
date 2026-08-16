@@ -15,6 +15,9 @@ export type InteractionOutcome =
 /** §15.6.4 — when to come back. Governs the §4.3.1 coverage rotation. */
 export type InteractionFollowUp = "NENHUM" | "DIAS_15" | "DIAS_30" | "DIAS_90";
 
+/** Why a planned visit did not happen (§15.7.7). */
+export type InteractionMissReason = "FECHADA" | "SEM_TEMPO" | "CLIENTE_CANCELOU" | "REAGENDEI" | "OUTRO";
+
 export interface InteractionDetailRecord {
   id: number;
   calendarId: number;
@@ -28,6 +31,7 @@ export interface InteractionDetailRecord {
   actualStartedAt: Date | null;
   outcome: InteractionOutcome | null;
   followUp: InteractionFollowUp | null;
+  missReason: InteractionMissReason | null;
   outcomeAnsweredAt: Date | null;
   actualEndedAt: Date | null;
   correctedAt: Date | null;
@@ -183,6 +187,18 @@ export interface InteractionRepository {
   findFacilitySummary(id: number): Promise<{ id: number; displayName: string } | null>;
 
   closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
+
+  /**
+   * The rep declaring a planned visit did not happen, with an optional reason.
+   * Distinct from `markOverdue`, which is the day ending on their behalf.
+   */
+  markMissed(input: {
+    id: number;
+    actorUserId: number;
+    expectedVersion: number;
+    reason?: InteractionMissReason;
+    at: Date;
+  }): Promise<InteractionDetailRecord | null>;
 
   markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 }

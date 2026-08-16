@@ -12,6 +12,7 @@ export interface InteractionHttpUseCases {
   start(): Executable;
   complete(): Executable;
   recordOutcome(): Executable;
+  markMissed(): Executable;
   recordArrival(): Executable;
 }
 
@@ -27,6 +28,14 @@ const completeSchema = z.object({ expectedVersion: z.number().int().nonnegative(
 const outcomeSchema = z.object({
   outcome: z.enum(["PEDIDO", "VAI_AVALIAR", "RELACIONAMENTO", "NAO_FALEI_COM_NINGUEM"]),
   followUp: z.enum(["NENHUM", "DIAS_15", "DIAS_30", "DIAS_90"]),
+});
+
+// §15.7.7 — the rep saying a planned visit did not happen. The reason is
+// optional on purpose: required, a rep in a hurry presses nothing at all, and
+// the sweep then marks it missed with no reason anyway.
+const missedSchema = z.object({
+  expectedVersion: z.number().int().nonnegative(),
+  reason: z.enum(["FECHADA", "SEM_TEMPO", "CLIENTE_CANCELOU", "REAGENDEI", "OUTRO"]).optional(),
 });
 
 // The IANA zone comes from the device, the same way the calendar editor sends
@@ -94,6 +103,17 @@ export function createInteractionRoutes(useCases: InteractionHttpUseCases = inte
       }),
       detail: { summary: "Record how a visit went and when to return", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
+  const missed = new Elysia().use(authPlugin).use(requirePermission("update", "INTERACTION", { resourceIdParam: "id" }))
+    .post("/interactions/:id/missed", async (ctx) => useCases.markMissed().execute({ ...(await context(ctx)), id: ctx.params.id,
+      ...parse(missedSchema, ctx.body) }), {
+      params: interactionIdParams,
+      body: t.Object({
+        expectedVersion: t.Number(),
+        reason: t.Optional(t.Union([t.Literal("FECHADA"), t.Literal("SEM_TEMPO"),
+          t.Literal("CLIENTE_CANCELOU"), t.Literal("REAGENDEI"), t.Literal("OUTRO")])),
+      }),
+      detail: { summary: "Record that a planned visit did not happen", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
+    });
   // §15.6.3 — "Cheguei" on a clinic that was never on the roteiro. Permission
   // is `create` on INTERACTION rather than `update`: nothing exists yet to
   // address, which is the whole point of the route.
@@ -103,7 +123,7 @@ export function createInteractionRoutes(useCases: InteractionHttpUseCases = inte
       body: t.Object({ facilityId: t.Number({ minimum: 1 }), timeZone: t.String(), startedAt: t.Optional(t.String()) }),
       detail: { summary: "Record arriving at a clinic", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
-  return new Elysia().use(get).use(start).use(complete).use(outcome).use(arrival);
+  return new Elysia().use(get).use(start).use(complete).use(outcome).use(missed).use(arrival);
 }
 
 export const interactionsRoute = createInteractionRoutes();
