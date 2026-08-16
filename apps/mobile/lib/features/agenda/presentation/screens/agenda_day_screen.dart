@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/pending_captures_banner.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/visit_actions.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/schedule_draft_sheet.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_speed_dial.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -162,6 +163,15 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
                 onOccurrenceTap: (occurrence) {
                   final interactionId = occurrence.interaction?.id;
                   if (interactionId != null) {
+                    // Its own day, and a visit that can be started or ended:
+                    // offer that here rather than making the rep open the
+                    // visit to find the button. The planned path had no entry
+                    // point of its own — Cheguei only existed on the clinic's
+                    // profile, which is the improvised path.
+                    if (canCreate) {
+                      _offerVisitActions(occurrence, interactionId);
+                      return;
+                    }
                     InteractionDetailRoute(id: interactionId).push(context);
                     return;
                   }
@@ -270,6 +280,97 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     } finally {
       notifier.dispose();
     }
+  }
+
+  /// What the rep can do with a planned visit, from the day itself.
+  ///
+  /// A sheet rather than a straight jump: "Cheguei" is the common press but it
+  /// is not the only one, and a tap that silently started a visit would be a
+  /// tap nobody could take back.
+  Future<void> _offerVisitActions(
+    CalendarOccurrence occurrence,
+    int interactionId,
+  ) async {
+    final status = occurrence.interaction?.status;
+    final running = status == InteractionStatus.inProgress;
+    final startable = status == InteractionStatus.scheduled;
+    final name = occurrence.facility?.name ?? occurrence.title;
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+            ),
+            if (startable)
+              ListTile(
+                key: const Key('day-visit-start'),
+                leading: const Icon(
+                  Icons.where_to_vote_rounded,
+                  color: AppColors.green,
+                ),
+                title: const Text('Cheguei'),
+                onTap: () => Navigator.of(sheetContext).pop('start'),
+              ),
+            if (running)
+              ListTile(
+                key: const Key('day-visit-finish'),
+                leading: const Icon(Icons.stop_circle_outlined),
+                title: const Text('Encerrar visita'),
+                onTap: () => Navigator.of(sheetContext).pop('finish'),
+              ),
+            ListTile(
+              key: const Key('day-visit-open'),
+              leading: const Icon(Icons.open_in_new_rounded),
+              title: const Text('Abrir detalhes'),
+              onTap: () => Navigator.of(sheetContext).pop('open'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (action == null || !mounted) return;
+    final version = occurrence.interaction?.version ?? 0;
+    switch (action) {
+      case 'start':
+        await startPlannedVisit(
+          context,
+          ref,
+          interactionId: interactionId,
+          expectedVersion: version,
+          facilityName: name,
+        );
+      case 'finish':
+        await finishPlannedVisit(
+          context,
+          ref,
+          interactionId: interactionId,
+          expectedVersion: version,
+          facilityName: name,
+        );
+      case 'open':
+        if (mounted) InteractionDetailRoute(id: interactionId).push(context);
+    }
+    if (mounted) ref.invalidate(agendaProvider);
   }
 
   /// Opens the right editor for [occurrence], asking first when it repeats.

@@ -303,6 +303,7 @@ class CalendarInteractionContext extends Equatable {
     this.facilityId,
     this.agentUserId,
     this.modality,
+    this.version = 0,
   });
 
   final int id;
@@ -310,6 +311,11 @@ class CalendarInteractionContext extends Equatable {
   final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
+
+  /// Needed to start or finish this visit without opening it first — the
+  /// lifecycle calls take an `expectedVersion`. The API has always sent it on
+  /// the list DTO; the model simply dropped it.
+  final int version;
 
   factory CalendarInteractionContext.fromJson(Map<String, dynamic> json) =>
       CalendarInteractionContext(
@@ -320,10 +326,18 @@ class CalendarInteractionContext extends Equatable {
             ? null
             : _enumFromApi(CalendarModality.values, json['modality']),
         status: _enumFromApi(InteractionStatus.values, json['status']),
+        version: (json['version'] as num?)?.toInt() ?? 0,
       );
 
   @override
-  List<Object?> get props => [id, facilityId, agentUserId, modality, status];
+  List<Object?> get props => [
+    id,
+    facilityId,
+    agentUserId,
+    modality,
+    status,
+    version,
+  ];
 }
 
 class InteractionFacility extends Equatable {
