@@ -1147,7 +1147,10 @@ class _TerritoryActionBar extends ConsumerWidget {
                 ),
                 _ActionButton(
                   icon: Icons.person_outline,
-                  label: 'Responsável',
+                  // The same word this card and the detail sheet use for the
+                  // person. It was "Responsável" here, "Gerente:" two lines
+                  // above it, and "Gerente responsável" in the sheet behind it.
+                  label: roleLabel,
                   onTap: onAssign,
                 ),
                 _ActionButton(

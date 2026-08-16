@@ -77,25 +77,29 @@ class TerritoryDetailSheet extends ConsumerWidget {
             // (spec 0009 R9). It showed a second identifier nothing maintained;
             // the name above and the type below carry what it was standing in for.
             _DetailRow(label: 'Identificador', value: territory.slug),
+            // "Gerente" / "Representante" — the same word the action card on
+            // the map uses, rather than a third phrasing of it.
             if (territory.assignedUserId != null)
               _AssignedUserRow(
-                label: isManagerZone
-                    ? 'Gerente responsável'
-                    : 'Representante responsável',
+                label: isManagerZone ? 'Gerente' : 'Representante',
                 userId: territory.assignedUserId!,
               )
             else
               _DetailRow(
-                label: isManagerZone
-                    ? 'Gerente responsável'
-                    : 'Representante responsável',
+                label: isManagerZone ? 'Gerente' : 'Representante',
                 value: 'Não atribuído',
               ),
             _DetailRow(label: 'Clínicas', value: '${territory.clinicCount}'),
-            _DetailRow(
-              label: 'Usuários atribuídos',
-              value: '${territory.assignedUserCount}',
-            ),
+            // Only when it says something the row above did not. The count is
+            // holders plus pending invitations, so on the ordinary territory —
+            // one holder, no invitations — it read "Usuários atribuídos: 1"
+            // directly under that holder's name.
+            if (territory.assignedUserCount >
+                (territory.assignedUserId == null ? 0 : 1))
+              _DetailRow(
+                label: 'Usuários atribuídos',
+                value: '${territory.assignedUserCount}',
+              ),
             if (isManagerZone)
               _DetailRow(
                 label: 'Áreas de representante',
@@ -164,12 +168,20 @@ class _DetailRow extends StatelessWidget {
             label,
             style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray900,
+          const SizedBox(width: 16),
+          // Two unconstrained Texts in a Row: a long name — and the holder's
+          // full name is one of these values — overflowed the sheet.
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
             ),
           ),
         ],
