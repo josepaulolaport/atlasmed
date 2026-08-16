@@ -88,6 +88,7 @@ class CatalogErrorState extends StatelessWidget {
 class CatalogSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+
   /// Null on a list with nothing to filter, so the button is not drawn at all.
   /// Three admin screens passed `() {}` and rendered a control that did
   /// nothing when tapped.
@@ -178,63 +179,63 @@ class CatalogSearchBar extends StatelessWidget {
             ),
           ),
           if (onFilter != null) ...[
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onFilter,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: filterCount > 0 ? AppColors.navyBright : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gray200),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Icon(
-                      Icons.tune_rounded,
-                      size: 18,
-                      color: filterCount > 0
-                          ? Colors.white
-                          : AppColors.navyBright,
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onFilter,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: filterCount > 0 ? AppColors.navyBright : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gray200),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
                     ),
-                  ),
-                  if (filterCount > 0)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        constraints: const BoxConstraints(minWidth: 16),
-                        height: 16,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.rose,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$filterCount',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: filterCount > 0
+                            ? Colors.white
+                            : AppColors.navyBright,
+                      ),
+                    ),
+                    if (filterCount > 0)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 16),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.rose,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$filterCount',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           ],
         ],
       ),

@@ -1120,3 +1120,71 @@ No migration — both columns already existed.
 **5 · A new product**
 - `Novo produto`. The Imagem section reads *"Salve o produto primeiro"* — there
   is no id yet to hang an object off.
+
+---
+
+## Phase 9 — one design instead of six
+
+**Shipped:** every screen in the panel audited against the rest of the app and
+rebuilt on a shared kit.
+
+The panel had been built screen by screen, and it showed. The audit found, in
+one destination: three form styles across five forms, two list styles, three
+loading treatments, three error treatments, and an empty state that appears
+nowhere else in the product.
+
+### What the app already looked like
+
+| Concern | The app's answer | Where it lives |
+|---|---|---|
+| Empty list | 72px circle, 16/w600 line, 13/gray500 line | `EmptyState` (Explorar), `UsersEmptyState` (Equipe) |
+| Loading a list | shimmer skeleton, never a spinner | `list_skeletons.dart` + a test that asserts it |
+| Row | white card, 14px corners, hairline border, 8px apart | Explorar, Equipe, and this panel's two product lists |
+| Form field | label above, filled white box, 12px corners | `TerritoryInfoForm`, and this panel's two product forms |
+
+### The kit
+
+| File | What it holds |
+|---|---|
+| `widgets/catalog_list_row.dart` | `CatalogListRow`, `InactiveBadge`, `CatalogRowIcon` |
+| `widgets/catalog_form_fields.dart` | label, section label, input, dropdown, active switch, save bar, form sheet, form app bar |
+| `widgets/catalog_empty_state.dart` | `CatalogEmptyState` (+ `.noResults`), `CatalogInlineEmpty` |
+| `widgets/catalog_feedback.dart` | `showCatalogSnack`, `showNightlyRecomputeNotice` |
+| `shared/widgets/list_skeletons.dart` | `SimpleListSkeleton`, for label-over-sublabel lists |
+
+### Defects the audit turned up
+
+These are bugs, not preferences:
+
+1. **A filter button that did nothing.** Concorrentes, Fontes and Catálogos
+   passed `onFilter: () {}` and rendered a tappable control with no behaviour.
+   `onFilter` is now optional and undrawn without one.
+2. **Inactive rows in Catálogos looked untappable** — the "Inativo" badge
+   replaced the chevron, on exactly the rows an admin opens to reactivate.
+3. **Métricas hid three actions behind a popup menu** on the row. Rename and
+   remove moved into the metric's own screen, beside the products they affect.
+4. **A metric's linked product unlinked on row tap** — a mis-tap was
+   destructive. Only the trailing button does it now.
+5. **Catálogos could not be searched.** Especialidades alone is 69 rows.
+6. **"Retry"** in an otherwise Portuguese app, in one of the hand-rolled error
+   states.
+7. **Métricas announced itself twice**, a 22px heading under an app bar already
+   carrying the name.
+8. **Two page titles disagreed with the hub cards** leading to them.
+9. **A "coming soon" pencil** on the publication panel inside an edit form.
+10. **Switching segments in Catálogos kept the previous search**, showing an
+    empty list the admin did not ask for.
+
+### Testing Phase 9 on screen
+
+Walk all six lists and all five forms. What must be true everywhere:
+
+- A list with nothing in it shows a circle, a heading and a sentence — never a
+  lone grey line.
+- Searching for something absent echoes the query back and offers "Limpar
+  busca". That is a *different* screen from a list that is genuinely empty.
+- While loading, a shimmer in the shape of the rows — never a spinner.
+- Every row is a white card with a chevron, and an inactive one keeps it.
+- Every form field has its label above it and a navy focus ring.
+- Every add action is a navy extended FAB with white text.
+- Every toast floats, carries an icon, and is red only when something failed.

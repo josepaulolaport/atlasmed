@@ -69,7 +69,10 @@ class ManageCompetitorsScreen extends ConsumerWidget {
           .unlinkCompetitor(variantId, row.id);
       invalidateCatalog(ref, variantId: variantId);
       if (!context.mounted) return;
-      showNightlyRecomputeNotice(context, prefix: '“${row.label}” desvinculado.');
+      showNightlyRecomputeNotice(
+        context,
+        prefix: '“${row.label}” desvinculado.',
+      );
     } catch (error) {
       if (!context.mounted) return;
       showCatalogSnack(
@@ -105,6 +108,16 @@ class ManageCompetitorsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CatalogFormAppBar(title: 'Produtos concorrentes'),
+      // A FAB, like every other add action in the panel. This screen used a
+      // full-width outlined button pinned to the bottom — the only one of its
+      // kind here, and it competed with the save bar the forms put there.
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.navyDeep,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Adicionar concorrente'),
+        onPressed: () => _openAddCompetitorSheet(context, ref),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -140,7 +153,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                     );
                   }
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                     itemCount: competitors.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
@@ -152,28 +165,6 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                     },
                   );
                 },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openAddCompetitorSheet(context, ref),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text(
-                    'Adicionar concorrente',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.navyDeep,
-                    side: const BorderSide(color: AppColors.navyDeep),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
               ),
             ),
           ],
@@ -237,11 +228,12 @@ class _CompetitorRow extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Desvincular',
             onPressed: onRemove,
             icon: const Icon(
               Icons.link_off_rounded,
               size: 18,
-              color: AppColors.gray400,
+              color: AppColors.error,
             ),
           ),
         ],
@@ -336,7 +328,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
           maxHeight: MediaQuery.of(context).size.height * 0.75,
         ),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.background,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -353,19 +345,33 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'ADICIONAR CONCORRENTE',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.5,
+            // A 17px title, like every other sheet in the panel. This one used
+            // an 11px caps section label, which read as a divider rather than
+            // the heading of the thing the admin had just opened.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 8, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Adicionar concorrente',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray900,
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(

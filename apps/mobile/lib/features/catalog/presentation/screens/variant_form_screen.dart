@@ -576,7 +576,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                           children: [
                             const CatalogFieldLabel('Código'),
                             const SizedBox(height: 6),
-                            CatalogTextInput(controller: _code, hint: 'REV-1.0'),
+                            CatalogTextInput(
+                              controller: _code,
+                              hint: 'REV-1.0',
+                            ),
                           ],
                         ),
                       ),
@@ -637,7 +640,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                           children: [
                             const CatalogFieldLabel('Marca'),
                             const SizedBox(height: 6),
-                            CatalogTextInput(controller: _brand, hint: 'Opcional'),
+                            CatalogTextInput(
+                              controller: _brand,
+                              hint: 'Opcional',
+                            ),
                           ],
                         ),
                       ),
@@ -766,7 +772,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                           children: [
                             const CatalogFieldLabel('Fabricante'),
                             const SizedBox(height: 6),
-                            CatalogTextInput(controller: _manufacturer, hint: 'VSY'),
+                            CatalogTextInput(
+                              controller: _manufacturer,
+                              hint: 'VSY',
+                            ),
                           ],
                         ),
                       ),
@@ -850,7 +859,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                           children: [
                             const CatalogFieldLabel('NCM'),
                             const SizedBox(height: 6),
-                            CatalogTextInput(controller: _ncm, hint: '3006.10.19'),
+                            CatalogTextInput(
+                              controller: _ncm,
+                              hint: '3006.10.19',
+                            ),
                           ],
                         ),
                       ),
@@ -908,7 +920,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                   const SizedBox(height: 10),
                   const CatalogFieldLabel('Unidade'),
                   const SizedBox(height: 6),
-                  CatalogTextInput(controller: _unit, hint: 'Ex.: caixa, ampola'),
+                  CatalogTextInput(
+                    controller: _unit,
+                    hint: 'Ex.: caixa, ampola',
+                  ),
                   const SizedBox(height: 12),
                   // Read-only by decision (spec 0016 §7.1). Shown rather than
                   // hidden, because the number is already used in reads and an

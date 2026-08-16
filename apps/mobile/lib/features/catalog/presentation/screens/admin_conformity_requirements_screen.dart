@@ -630,9 +630,6 @@ class _ReadOnlyWhenEditing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isEditing) return child;
-    return Opacity(
-      opacity: 0.6,
-      child: IgnorePointer(child: child),
-    );
+    return Opacity(opacity: 0.6, child: IgnorePointer(child: child));
   }
 }

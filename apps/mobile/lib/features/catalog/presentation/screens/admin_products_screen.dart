@@ -239,4 +239,3 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 }
-
