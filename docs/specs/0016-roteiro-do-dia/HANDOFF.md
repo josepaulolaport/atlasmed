@@ -1,11 +1,12 @@
 # Roteiro do dia — handoff
 
 Branch `feature/roteiro-do-dia-p1-20260815`, tree clean. Last work 2026-08-16:
-a second full simulator sweep (§7), then the day grid's drag, the quick sheet
-and Perfil (§8).
+a second full simulator sweep (§7), the day grid's drag, the quick sheet and
+Perfil (§8), and lunch moving from a preference to a calendar block (§9).
 
-**Read §8 first if you are picking this up cold** — it is the most recent, and
-the lunch defect it describes changes what every generated day looks like.
+**Read §9 and §8 first if you are picking this up cold.** §9 changes what every
+generated day looks like — no rep gets a lunch break unless they have put one
+on their own calendar.
 
 Spec: `requirements.md` in this folder. Section numbers below refer to it.
 
@@ -129,14 +130,11 @@ and the loop has since been exercised many times.
 Note what this gates: aderência, conversão and validated potential (the rest of
 P5) are all waiting on usage, not on code.
 
-### 3. ~~Three places disagree about when a rep works~~ — done, and lunch with it
+### 3. ~~Three places disagree about when a rep works~~ — done
 
-Lunch was the half of §15.5.5 that was never finished: the sheet asked when it
-starts and never how long, and an unset duration read as zero rather than as
-the linha's 60 (§8). Both fixed, so "when a rep works" is now genuinely one
-answer. **Yes, lunch belongs to this feature** — `lunchStart`/`lunchMinutes`
-have exactly one consumer, the busy block the roteiro engine pushes into the
-day, and a start with no duration is a zero-width block, i.e. nothing at all.
+Working hours are the rep's own, with the linha as the fallback per field.
+**Lunch is no longer one of them** — see §9. It is a personal block on the
+rep's calendar, which the engine plans around like any other commitment.
 
 The slot picker reads the rep's own hours. Its window is the rep's day widened
 by an hour either side, plus far enough to reach the time being edited and
@@ -386,8 +384,51 @@ is a finite zero that passes a `>= 0 && <= 240` range check, so a rep who had
 never chosen reported a break of *no minutes*,
 `hours.lunchMinutes ?? linhaParams.lunchMinutes` never fired, and the linha's
 own 60-minute default **has never applied to anybody**. Every generated day
-planned visits straight through lunch. Both halves fixed; `tsc` could not see
-the second one, because the types were right and the value was wrong.
+planned visits straight through lunch. `tsc` could not see it: the types were
+right and the value was wrong. Superseded by §9, which removes the fields
+entirely — but worth reading, because it is the clearest example in this
+codebase of a defect that only a real database shows.
+
+---
+
+### 9. Lunch is a calendar block (2026-08-16, later still)
+
+Prompted by a good question: *why is lunch a preference at all, when the rep
+already has a calendar?*
+
+It should not be, and the engine already agreed. `buildSchedule` pushes **every**
+occurrence into `busy` and only the *fixed points* filter by facility — so a
+personal block holds the clock without anchoring the route, which is exactly a
+lunch break. A daily "Almoço" block was already being planned around by code
+that had been there the whole time.
+
+The preference could only say one time for every day, could not be moved when a
+morning overran, could not be skipped, and was invisible on the agenda the rep
+was looking at. All of that is free with a block.
+
+**Removed**: `lunchStart`/`lunchMinutes` from the zod schema, the Elysia body,
+`RoteiroParams`, `RepWorkingHours`, the working-hours sheet, and the
+`roteiro_params` columns (migration 0125). With them went the linha's 12:00/60
+default — which the `Number(null)` bug above meant had never reached a rep
+anyway.
+
+**The trade, stated plainly**: nobody now gets a lunch they did not ask for. A
+rep with no block is planned straight through midday. That was the explicit
+choice — the calendar shows exactly what is true — and the alternative
+considered was seeding a block on first roteiro. A test asserts the new
+behaviour rather than leaving it implied.
+
+**Added**: `WEEKDAYS` to the calendar recurrence (migration 0124), so the block
+can be Monday to Friday. Expansion counts in weekdays and converts back to
+calendar days; a weekend anchor starts on the following Monday, since every
+other recurrence has occurrence zero on the anchor date and this is the one that
+cannot. The two index estimates lean in opposite directions deliberately — one
+is only walked down, the other only up — and the tests cover a range months from
+the anchor, which is where a lean the wrong way would show up.
+
+Verified against Postgres: a WEEKDAYS block at 12:00 materialises Mon–Fri and
+not at the weekend, and a generated day ran 08:35, 09:38, 10:46, then jumped to
+13:00 — the end of the block.
 
 ---
 
