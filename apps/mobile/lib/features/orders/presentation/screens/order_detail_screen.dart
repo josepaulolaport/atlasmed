@@ -74,11 +74,15 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The same shell as the cards under it. It was a white strip with a
+    // bottom border floating inside a padded list, which read as a piece of
+    // a chrome bar that had come loose.
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(12, 12, 14, 14),
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -209,19 +213,34 @@ class _ItemsCard extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
           ...detail.items.map((item) => _ItemRow(item: item)),
-          const SizedBox(height: 6),
-          const Divider(height: 18, color: AppColors.surfaceSecondary),
-          _TotalRow(label: 'Subtotal', value: detail.itemsTotal),
-          // Shown whenever it moves the total. It is 1.00 on every imported
-          // order — a placeholder rather than a real shipping cost — but
-          // leaving it out is worse than naming it: the screen read
-          // "Subtotal 5300 / Total 5301", arithmetic a rep cannot check.
-          if (detail.freight != 0) ...[
-            const SizedBox(height: 6),
-            _TotalRow(label: 'Frete', value: detail.freight),
-          ],
-          const SizedBox(height: 6),
-          _TotalRow(label: 'Total', value: detail.total, bold: true),
+          const SizedBox(height: 4),
+          // The sums sit on their own ground rather than running straight on
+          // from the lines with a hairline between them.
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceTertiary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _TotalRow(label: 'Subtotal', value: detail.itemsTotal),
+                // Shown whenever it moves the total. It is 1.00 on every
+                // imported order — a placeholder rather than a real shipping
+                // cost — but leaving it out is worse than naming it: the
+                // screen read "Subtotal 5300 / Total 5301", arithmetic a rep
+                // cannot check.
+                if (detail.freight != 0) ...[
+                  const SizedBox(height: 6),
+                  _TotalRow(label: 'Frete', value: detail.freight),
+                ],
+                const SizedBox(height: 8),
+                const Divider(height: 1, color: AppColors.gray200),
+                const SizedBox(height: 8),
+                _TotalRow(label: 'Total', value: detail.total, bold: true),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -256,6 +275,9 @@ class _ItemRow extends StatelessWidget {
                   item.name ?? 'Produto não identificado',
                   style: const TextStyle(
                     fontSize: 13,
+                    // The catalogue stores these in capitals, so most run to
+                    // three lines and need the room to breathe.
+                    height: 1.3,
                     fontWeight: FontWeight.w600,
                     color: AppColors.gray900,
                   ),

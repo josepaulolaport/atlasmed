@@ -384,38 +384,46 @@ class _SummaryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = (counts['DRAFT'] ?? 0) + (counts['PENDING'] ?? 0);
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryCard(
-            label: 'Faturados',
-            count: counts['INVOICED'] ?? 0,
-            color: AppColors.green,
-            selected: selectedFilter == 'Faturados',
-            onTap: () => onSelect('Faturados'),
+    // IntrinsicHeight, not a bare stretch: this Row sits in a sliver with no
+    // height to inherit, so `CrossAxisAlignment.stretch` alone hands the cards
+    // h=Infinity and the screen throws on layout.
+    return IntrinsicHeight(
+      child: Row(
+        // "Sem faturamento" wraps to two lines and the other two do not, so
+        // the cards were three different heights on a shared baseline.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _SummaryCard(
+              label: 'Faturados',
+              count: counts['INVOICED'] ?? 0,
+              color: AppColors.green,
+              selected: selectedFilter == 'Faturados',
+              onTap: () => onSelect('Faturados'),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SummaryCard(
-            label: 'Sem faturamento',
-            count: counts['NO_BILLING'] ?? 0,
-            color: AppColors.navyDeep,
-            selected: selectedFilter == 'Sem faturamento',
-            onTap: () => onSelect('Sem faturamento'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Sem faturamento',
+              count: counts['NO_BILLING'] ?? 0,
+              color: AppColors.navyDeep,
+              selected: selectedFilter == 'Sem faturamento',
+              onTap: () => onSelect('Sem faturamento'),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SummaryCard(
-            label: 'Pendentes',
-            count: pending,
-            color: AppColors.amber,
-            selected: selectedFilter == 'Pendentes',
-            onTap: () => onSelect('Pendentes'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Pendentes',
+              count: pending,
+              color: AppColors.amber,
+              selected: selectedFilter == 'Pendentes',
+              onTap: () => onSelect('Pendentes'),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -445,7 +453,7 @@ class _SummaryCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
@@ -454,23 +462,26 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '$count',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
+                  height: 1.1,
                   color: color,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.gray500,
-                  fontWeight: FontWeight.w500,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  height: 1.2,
+                  color: selected ? AppColors.gray700 : AppColors.gray500,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ],
@@ -522,89 +533,99 @@ class _OrderCard extends StatelessWidget {
 
   const _OrderCard({required this.order, required this.onTap});
 
+  /// "Adriana Oliveira · 1 item", or whichever half exists.
+  ///
+  /// "1 itens" before, and the count sat on a line of its own under a divider.
+  String get _subtitle => [
+    if (order.seller != null) order.seller!,
+    '${order.items} ${order.items == 1 ? 'item' : 'itens'}',
+  ].join(' · ');
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.surfaceSecondary),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              // PED-1234 for an imported order — the number a rep reads back
-              // over the phone. This was the raw database id.
-              '${order.displayId} • ${order.date}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.gray400,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.surfaceSecondary),
+          ),
+          // Three rows, not five. The status chip and the item count each had
+          // a line to themselves — with a divider between — so twenty orders
+          // was a very long scroll for very little on it.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      // PED-1234 for an imported order — the number a rep
+                      // reads back over the phone. This was the database id.
+                      '${order.displayId} · ${order.date}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.gray400,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PStatusChip(status: order.status),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              order.clinic,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.gray800,
-              ),
-            ),
-            if (order.seller != null) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: 8),
               Text(
-                order.seller!,
-                style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+                order.clinic,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.gray500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    order.value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  // A chevron rather than "toque para detalhes" printed on
+                  // every card — the house signal for a row that opens.
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.gray400,
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: 10),
-            PStatusChip(status: order.status),
-            const SizedBox(height: 12),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.surfaceSecondary,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Text(
-                  // "1 itens" before. The count is real data, so it agrees
-                  // with itself.
-                  '${order.items} ${order.items == 1 ? 'item' : 'itens'}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray400,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  order.value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                // A chevron rather than "toque para detalhes" printed on every
-                // card — the house signal for a row that opens.
-                const SizedBox(width: 2),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.gray400,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
