@@ -130,17 +130,22 @@ class _PotentialDefinitionsAdminScreenState
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remover campo?'),
-        content: Text(
-          'Soft-delete de “${def.label}”. Valores e links ficam, campo some das listas.',
+        title: Text('Remover “${def.label}”?'),
+        // Was "Soft-delete de X. Valores e links ficam, campo some das
+        // listas." — a database term and a schema note, shown to whoever
+        // administers the catalogue.
+        content: const Text(
+          'O campo deixa de aparecer nas listas e nos formulários. O que já '
+          'foi preenchido nele continua guardado.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Remover'),
           ),
         ],
