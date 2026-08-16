@@ -154,7 +154,9 @@ void main() {
       expect(find.text('Interação'), findsWidgets);
       expect(find.text('Bloqueio pessoal'), findsOneWidget);
       expect(find.text('Presencial'), findsOneWidget);
-      expect(find.text('60 minutos'), findsOneWidget);
+      // "1h" rather than "60 minutos": the wheel is flicked past, and the
+      // shorter label is what fits and reads on it.
+      expect(find.text('1h'), findsOneWidget);
 
       final recurrence = find.byKey(const Key('calendar-recurrence')).first;
       await tester.ensureVisible(recurrence);
