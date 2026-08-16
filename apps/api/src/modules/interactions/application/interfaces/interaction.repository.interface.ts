@@ -72,6 +72,14 @@ export interface InteractionDetailRecord {
     firstName: string | null;
     lastName: string | null;
   };
+
+  /**
+   * The rep's own end of day (§15.5.5), `hh:mm` or null for the linha default.
+   *
+   * Read here because it decides how long a planned visit stays startable: a
+   * rep running late is recording a real visit, not filing a correction.
+   */
+  agentWorkdayEnd: string | null;
   linkedOrders: Array<{
     id: number;
     status: string;

@@ -72,6 +72,7 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
     facility: { id: 1, displayName: "Clínica Central", city: "São Paulo", state: "SP" },
     person: null,
     agent: { id: 1, firstName: "Ana", lastName: "Silva" },
+    agentWorkdayEnd: null,
     linkedOrders: [],
     ...overrides,
   };
@@ -93,7 +94,10 @@ class FakeInteractionRepository implements InteractionRepository {
   async start(input: { expectedVersion: number; idempotencyKey: string; startedAt: Date }) {
     const replay = this.receipts.get(`start:${input.idempotencyKey}`);
     if (replay) return { interaction: replay, replayed: true };
-    if (!this.record || this.record.version !== input.expectedVersion || this.record.status !== "SCHEDULED") return null;
+    // SCHEDULED or NOT_COMPLETED — the table accepts both, because a rep who
+    // turns up late reopens the visit rather than correcting it.
+    if (!this.record || this.record.version !== input.expectedVersion
+      || !["SCHEDULED", "NOT_COMPLETED"].includes(this.record.status)) return null;
     const previousStatus = this.record.status;
     this.record = { ...this.record, status: "IN_PROGRESS", actualStartedAt: input.startedAt, version: this.record.version + 1, updatedAt: input.startedAt };
     this.events.push({ previousStatus, newStatus: "IN_PROGRESS" });
@@ -224,9 +228,35 @@ describe("GetInteractionUseCase", () => {
     });
   });
 
-  test("derives missed when the effective occurrence ends exactly at now", async () => {
+  test("a visit whose window has passed is still today's visit", async () => {
+    // 09:00–10:00 local, read at 10:00:00.001. It used to flip to
+    // NOT_COMPLETED on the instant, which made running late — the most
+    // ordinary thing that happens to a day — unrecordable except as a
+    // correction.
     const repository = new FakeInteractionRepository();
-    const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.000Z") }).execute({
+    const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute({
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
+    });
+    expect(result.status).toBe("SCHEDULED");
+  });
+
+  test("derives missed once the rep's working day is over", async () => {
+    // 18:00 in America/Sao_Paulo is 21:00Z. A minute later the day is done and
+    // recording the visit becomes what it now really is: a correction.
+    const repository = new FakeInteractionRepository();
+    const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T21:00:00.001Z") }).execute({
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
+    });
+    expect(result.status).toBe("NOT_COMPLETED");
+  });
+
+  test("the rep's own end of day is what counts", async () => {
+    // A rep who stops at 16:00 has their visits swept three hours earlier than
+    // one who stops at 18:00 (§15.5.5 — the workday is the rep's, not the
+    // server's).
+    const repository = new FakeInteractionRepository();
+    repository.record = interaction({ agentWorkdayEnd: "16:00" });
+    const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T19:00:00.001Z") }).execute({
       id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     });
     expect(result.status).toBe("NOT_COMPLETED");
@@ -234,7 +264,7 @@ describe("GetInteractionUseCase", () => {
 
   test("derives missed and cancelled effective states without persisting on read", async () => {
     const overdue = new FakeInteractionRepository();
-    const overdueResult = await new GetInteractionUseCase({ repository: overdue, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute({
+    const overdueResult = await new GetInteractionUseCase({ repository: overdue, now: () => new Date("2026-08-03T21:00:00.001Z") }).execute({
       id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     });
     expect(overdueResult).toEqual(expect.objectContaining({ status: "NOT_COMPLETED", canMutate: true }));
@@ -278,10 +308,21 @@ describe("StartInteractionUseCase", () => {
     expect(repository.events).toEqual([{ previousStatus: "SCHEDULED", newStatus: "IN_PROGRESS" }]);
   });
 
-  test("rejects start after the effective end or when calendar/override cancellation makes a stale row cancelled", async () => {
-    const ended = new FakeInteractionRepository();
-    await expect(new StartInteractionUseCase({ repository: ended, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute(ownerInput()))
-      .rejects.toBeInstanceOf(InteractionTransitionError);
+  test("starts a visit the rep reached late, and reopens one already marked missed", async () => {
+    // Both are the same fact from two directions: the rep is in the clinic.
+    // A system that refuses the record because its own clock moved on is the
+    // one §15.6.5 warns about — it can only record what it suggested.
+    const late = new FakeInteractionRepository();
+    await expect(new StartInteractionUseCase({ repository: late, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute(ownerInput()))
+      .resolves.toBeDefined();
+
+    const swept = new FakeInteractionRepository();
+    swept.record = interaction({ status: "NOT_COMPLETED" });
+    await expect(new StartInteractionUseCase({ repository: swept, now: () => new Date("2026-08-03T21:30:00.000Z") }).execute(ownerInput()))
+      .resolves.toBeDefined();
+  });
+
+  test("rejects start when calendar/override cancellation makes a stale row cancelled", async () => {
 
     const cancelledSeries = new FakeInteractionRepository();
     cancelledSeries.record = interaction({ calendar: { ...interaction().calendar, status: "CANCELLED", version: 4 } });
@@ -349,7 +390,9 @@ describe("CompleteInteractionUseCase", () => {
 
   test("atomically persists an effective missed transition before correcting a read-derived scheduled row", async () => {
     const repository = new FakeInteractionRepository();
-    const result = await new CompleteInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.000Z") }).execute({
+    // After the working day: a visit recorded now really is a correction, and
+    // that is the one case where the justification belongs.
+    const result = await new CompleteInteractionUseCase({ repository, now: () => new Date("2026-08-03T21:30:00.000Z") }).execute({
       ...ownerInput(), correctionReason: "  Visita confirmada  ",
     });
 
@@ -361,8 +404,13 @@ describe("CompleteInteractionUseCase", () => {
     expect(repository.visits).toBe(1);
   });
 
-  test("does not complete a still-active scheduled interaction directly", async () => {
+  test("does not complete a visit that was never started while the day is still open", async () => {
+    // Including one whose window has passed: until the day ends it is still a
+    // visit the rep can walk into, so the honest press is Cheguei, not a
+    // silent completion of something nobody witnessed.
     await expect(new CompleteInteractionUseCase({ repository: new FakeInteractionRepository(), now: () => new Date("2026-08-03T12:59:59.999Z") }).execute(ownerInput()))
+      .rejects.toBeInstanceOf(InteractionTransitionError);
+    await expect(new CompleteInteractionUseCase({ repository: new FakeInteractionRepository(), now: () => new Date("2026-08-03T14:00:00.000Z") }).execute(ownerInput()))
       .rejects.toBeInstanceOf(InteractionTransitionError);
   });
 });

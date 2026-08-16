@@ -184,23 +184,47 @@ class _StopCard extends ConsumerWidget {
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Divider(color: accent.withValues(alpha: 0.35)),
+              // While a stop is running there is no end to show — inventing one
+              // would be the plan pretending to be the record — so the space
+              // the end would occupy says what is true instead.
+              if (running) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: AppColors.green,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              // While a visit is running there is no end to show — inventing
-              // one would be the plan pretending to be the record.
-              Text(
-                running ? '—' : _hhmm(_endOf(occurrence)),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: running ? accent : AppColors.gray600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'em andamento',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.green,
+                    ),
+                  ),
                 ),
-              ),
+              ] else ...[
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Divider(color: accent.withValues(alpha: 0.35)),
+                  ),
+                ),
+                Text(
+                  _hhmm(_endOf(occurrence)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 6),

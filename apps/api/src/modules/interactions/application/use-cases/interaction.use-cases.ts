@@ -2,6 +2,7 @@ import { assertResourceInScope, type Role, type ScopeContext } from "@atlasmed/a
 import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { calendarLocalAnchorAt, calendarOccurrenceFromRecurrenceKey } from "../../../calendar/application/services/recurrence.service";
 import { resolveClientInstant } from "../services/client-clock";
+import { missedAfter } from "../services/day-window";
 import type {
   InteractionDetailRecord,
   InteractionRepository,
@@ -80,7 +81,12 @@ function effectiveOccurrence(record: InteractionDetailRecord) {
 function effectiveStatus(record: InteractionDetailRecord, occurrence: ReturnType<typeof effectiveOccurrence>, now: Date): InteractionStatus {
   if (record.status !== "SCHEDULED") return record.status;
   if (record.calendar.status === "CANCELLED" || record.occurrenceOverride?.status === "CANCELLED") return "CANCELLED";
-  return occurrence.endsAt <= now ? "NOT_COMPLETED" : "SCHEDULED";
+  const missedFrom = missedAfter({
+    occurrenceEndsAt: occurrence.endsAt,
+    timeZone: record.calendar.timeZone,
+    workdayEnd: record.agentWorkdayEnd,
+  });
+  return missedFrom <= now ? "NOT_COMPLETED" : "SCHEDULED";
 }
 
 function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Date) {
@@ -157,7 +163,18 @@ export class StartInteractionUseCase {
     assertOwner(record, input.actor, input.scope);
     const occurrence = effectiveOccurrence(record);
     const status = effectiveStatus(record, occurrence, now);
-    if (status !== "SCHEDULED") throw new InteractionTransitionError(status, "IN_PROGRESS");
+    /**
+     * A missed visit reopens.
+     *
+     * The rep is standing in the clinic — that is a fact, and the system
+     * refusing to record it because its own clock has moved on is the failure
+     * §15.6.5 names: a platform that can only record what it suggested. The
+     * day's own sweep may already have written NOT_COMPLETED; pressing Cheguei
+     * says it was wrong, and the visit is measured like any other.
+     */
+    if (status !== "SCHEDULED" && status !== "NOT_COMPLETED") {
+      throw new InteractionTransitionError(status, "IN_PROGRESS");
+    }
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     const result = await this.deps.repository.start({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
       idempotencyKey: input.idempotencyKey, startedAt });

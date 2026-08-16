@@ -16,6 +16,7 @@ import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
 import { calendarOccurrenceFromRecurrenceKey } from "../../../../calendar/application/services/recurrence.service";
+import { missedAfter } from "../../../application/services/day-window";
 import type {
   InteractionFollowUp,
   InteractionOutcome,
@@ -214,6 +215,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         facilityState: states.abbreviation,
         person: persons,
         agent: users,
+        agentWorkdayEnd: sql<string | null>`${users.metadata} -> 'preferences' ->> 'workdayEnd'`,
       })
       .from(interactions)
       .innerJoin(calendar, eq(calendar.id, interactions.calendarId))
@@ -244,6 +246,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       { city: row.facilityCity, state: row.facilityState },
       row.person,
       row.agent,
+      row.agentWorkdayEnd,
       override[0] ?? null,
       orderRows,
     );
@@ -327,15 +330,23 @@ export class DrizzleInteractionRepository implements InteractionRepository {
           eq(calendarOccurrenceOverrides.recurrenceKey, interactions.recurrenceKey)))
         .where(eq(interactions.id, input.id)).limit(1);
       if (!context || context.calendarStatus === "CANCELLED" || context.overrideStatus === "CANCELLED") return null;
+      // SCHEDULED **or** NOT_COMPLETED: a rep who turns up late reopens the
+      // visit rather than filing a correction for it. The day's sweep writes
+      // NOT_COMPLETED once the working day is over, and arriving after that
+      // says the sweep was wrong.
+      const previousStatus = await tx.select({ status: interactions.status })
+        .from(interactions).where(eq(interactions.id, input.id)).limit(1)
+        .then((rows) => rows[0]?.status);
       const [updated] = await tx.update(interactions).set({ status: "IN_PROGRESS", actualStartedAt: input.startedAt,
         updatedAt: input.startedAt, version: sql`${interactions.version} + 1` }).where(and(eq(interactions.id, input.id),
-          eq(interactions.status, "SCHEDULED"), eq(interactions.version, input.expectedVersion))).returning();
+          inArray(interactions.status, ["SCHEDULED", "NOT_COMPLETED"]), eq(interactions.version, input.expectedVersion))).returning();
       if (!updated) {
         const concurrentReplay = await repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });
         return concurrentReplay ? { interaction: concurrentReplay, replayed: true } : null;
       }
       await tx.insert(interactionEvents).values({ interactionId: input.id, actorUserId: input.actorUserId, source: "USER",
-        previousStatus: "SCHEDULED", newStatus: "IN_PROGRESS", metadata: commandMetadata("start", input.idempotencyKey, updated.version) });
+        previousStatus: previousStatus ?? "SCHEDULED", newStatus: "IN_PROGRESS",
+        metadata: commandMetadata("start", input.idempotencyKey, updated.version) });
       await closeOpenVisits(tx, { agentUserId: updated.agentUserId, exceptId: input.id,
         at: input.startedAt, startingModality: updated.modality });
       const detail = await repository.findById(input.id);
@@ -542,6 +553,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         interaction: InteractionRow;
         calendar: CalendarRow;
         override: typeof calendarOccurrenceOverrides.$inferSelect | null;
+        agentWorkdayEnd: string | null;
       }>({
         limit: input.limit,
         pageSize,
@@ -550,21 +562,29 @@ export class DrizzleInteractionRepository implements InteractionRepository {
             ? or(gt(interactions.updatedAt, cursor.updatedAt),
               and(eq(interactions.updatedAt, cursor.updatedAt), gt(interactions.id, cursor.id)))
             : undefined;
-          return tx.select({ interaction: interactions, calendar, override: calendarOccurrenceOverrides })
+          return tx.select({ interaction: interactions, calendar, override: calendarOccurrenceOverrides,
+            agentWorkdayEnd: sql<string | null>`${users.metadata} -> 'preferences' ->> 'workdayEnd'` })
             .from(interactions).innerJoin(calendar, eq(calendar.id, interactions.calendarId))
+            .innerJoin(users, eq(users.id, interactions.agentUserId))
             .leftJoin(calendarOccurrenceOverrides, and(eq(calendarOccurrenceOverrides.calendarId, interactions.calendarId),
               eq(calendarOccurrenceOverrides.recurrenceKey, interactions.recurrenceKey)))
             .where(and(eq(interactions.status, "SCHEDULED"), eq(calendar.status, "ACTIVE"), cursorCondition))
             .orderBy(asc(interactions.updatedAt), asc(interactions.id)).limit(pageSize);
         },
-        isOverdue: ({ interaction, calendar: event, override }) => {
+        // The **same rule the read model uses**, and that is the point: the two
+        // disagreeing is what put a "Cheguei" button on a visit the server
+        // would refuse to start. A visit is missed once the rep's working day
+        // is over, not the moment its own window closes.
+        isOverdue: ({ interaction, calendar: event, override, agentWorkdayEnd }) => {
           if (override?.status === "CANCELLED") return false;
-          if (override) return override.endsAt <= input.now;
-          const occurrence = calendarOccurrenceFromRecurrenceKey({ anchorLocalDate: event.anchorLocalDate,
-            anchorLocalTime: event.anchorLocalTime.slice(0, 5), timeZone: event.timeZone, durationMinutes: event.durationMinutes,
-            recurrence: event.recurrence, ...(event.recurrenceUntil ? { recurrenceUntil: event.recurrenceUntil } : {}),
-            ...(event.recurrenceCount ? { recurrenceCount: event.recurrenceCount } : {}) }, interaction.recurrenceKey);
-          return !!occurrence && occurrence.endsAt <= input.now;
+          const endsAt = override
+            ? override.endsAt
+            : calendarOccurrenceFromRecurrenceKey({ anchorLocalDate: event.anchorLocalDate,
+              anchorLocalTime: event.anchorLocalTime.slice(0, 5), timeZone: event.timeZone, durationMinutes: event.durationMinutes,
+              recurrence: event.recurrence, ...(event.recurrenceUntil ? { recurrenceUntil: event.recurrenceUntil } : {}),
+              ...(event.recurrenceCount ? { recurrenceCount: event.recurrenceCount } : {}) }, interaction.recurrenceKey)?.endsAt;
+          if (!endsAt) return false;
+          return missedAfter({ occurrenceEndsAt: endsAt, timeZone: event.timeZone, workdayEnd: agentWorkdayEnd }) <= input.now;
         },
       });
       if (!overdue.length) return 0;
@@ -599,6 +619,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     facilityGeo: { city: string | null; state: string | null },
     person: typeof persons.$inferSelect | null,
     agent: typeof users.$inferSelect,
+    agentWorkdayEnd: string | null,
     override: typeof calendarOccurrenceOverrides.$inferSelect | null,
     linkedOrders: Array<{ id: number; status: string; type: string; orderedAt: Date }>,
   ): InteractionDetailRecord {
@@ -625,6 +646,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         }
         : null,
       agent: { id: agent.id, firstName: agent.firstName, lastName: agent.lastName },
+      agentWorkdayEnd,
       linkedOrders,
     };
   }
