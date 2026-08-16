@@ -338,6 +338,35 @@ describe("UnassignFacilityVerticalRepUseCase", () => {
     expect(UNASSIGN_REASONS).not.toContain("boundary_impact");
     expect(UNASSIGN_REASONS).not.toContain("vertical_deactivated");
   });
+
+  it("separates a chosen 'other' from a reason nobody recorded", () => {
+    // The picker sent `manual_unassign` for "Outro motivo", which is also what
+    // a legacy row and a caller sending nothing both carry. Counting how often
+    // the four reasons fail to fit was therefore impossible.
+    expect(UNASSIGN_REASONS).toContain("other");
+    expect(UNASSIGN_REASONS).toContain("manual_unassign");
+  });
+
+  it("still defaults to the historical catch-all, not to 'other'", async () => {
+    const seen: Array<{ endReason?: string }> = [];
+    const endActive = mock(async (input: { endReason?: string }) => {
+      seen.push(input);
+      return { profileId: 1, endedUserId: 7 };
+    });
+    const uc = new UnassignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({ endActive }),
+    });
+
+    await uc.execute({
+      facilityId: 1,
+      verticalId: 10,
+      scope: scope(),
+      role: "MANAGER",
+    });
+
+    // A caller that says nothing has not chosen "other" — it has said nothing.
+    expect(seen[0]).toMatchObject({ endReason: "manual_unassign" });
+  });
 });
 
 describe("DeactivateFacilityVerticalUseCase", () => {

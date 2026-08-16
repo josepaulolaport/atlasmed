@@ -150,7 +150,7 @@ void main() {
       role: UserRoleName.admin,
     );
 
-    expect(find.text('Clínicas sem representante'), findsOneWidget);
+    expect(find.text('Clínicas sem consultor'), findsOneWidget);
     expect(find.text('47'), findsOneWidget);
   });
 
@@ -160,7 +160,7 @@ void main() {
     // A clinic nobody holds is not in a rep's denominator at all — it is their
     // manager's gap, and putting it on the rep would read as their failure.
     await _pump(tester, _profile());
-    expect(find.text('Clínicas sem representante'), findsNothing);
+    expect(find.text('Clínicas sem consultor'), findsNothing);
   });
 
   testWidgets('leads to Desempenho rather than repeating it', (tester) async {

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_location_picker.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_candidate_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
@@ -279,8 +281,14 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
   final _postalCode = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
-  final _lat = TextEditingController();
-  final _lng = TextEditingController();
+
+  /// Where the clinic sits. Null means nobody has placed it — importable, but
+  /// the clinic lands outside every territory until someone does.
+  MapCoordinate? _point;
+
+  /// What reverse geocoding said is at [_point] after it was moved by hand.
+  String? _pinAddress;
+  bool _geocoding = false;
 
   @override
   void initState() {
@@ -298,8 +306,6 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
       _postalCode,
       _phone,
       _email,
-      _lat,
-      _lng,
     ]) {
       c.dispose();
     }
@@ -321,8 +327,11 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
         _postalCode.text = preview.postalCode ?? '';
         _phone.text = preview.phoneNumber ?? '';
         _email.text = preview.email ?? '';
-        _lat.text = _coordinate(preview.latitude);
-        _lng.text = _coordinate(preview.longitude);
+        final lat = preview.latitude;
+        final lng = preview.longitude;
+        _point = lat == null || lng == null
+            ? null
+            : MapCoordinate(longitude: lng, latitude: lat);
       });
     } on CnesFacilityImportException catch (e) {
       if (!mounted) return;
@@ -350,10 +359,8 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
           'postalCode': _nullIfBlank(_postalCode.text),
           'phoneNumber': _nullIfBlank(_phone.text),
           'email': _nullIfBlank(_email.text),
-          if (double.tryParse(_lat.text.trim()) != null)
-            'lat': double.parse(_lat.text.trim()),
-          if (double.tryParse(_lng.text.trim()) != null)
-            'lng': double.parse(_lng.text.trim()),
+          if (_point != null) 'lat': _point!.latitude,
+          if (_point != null) 'lng': _point!.longitude,
         });
       }
 
@@ -382,10 +389,89 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     }
   }
 
-  /// Six decimals is roughly 11 cm. CNES ships up to fourteen, which overflows
-  /// a half-width field and reads as truncated data rather than a long number.
-  String _coordinate(double? value) =>
-      value == null ? '' : value.toStringAsFixed(6);
+  bool get _hasAddressToGeocode =>
+      _street.text.trim().isNotEmpty || _postalCode.text.trim().isNotEmpty;
+
+  /// Address → pin. The server does this, not the app: it runs the CEP lookup
+  /// and the candidate scoring, so the wizard lands where the backfill would.
+  Future<void> _geocodeFromAddress() async {
+    final preview = _preview;
+    if (preview == null || _geocoding) return;
+
+    setState(() => _geocoding = true);
+    try {
+      final point = await widget.repository.geocodeAddress(
+        streetAddress: _street.text,
+        streetNumber: _number.text,
+        neighborhood: _neighborhood.text,
+        city: preview.municipalityName,
+        state: preview.stateAbbreviation,
+        postalCode: _postalCode.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _geocoding = false;
+        if (point != null) {
+          _point = MapCoordinate(
+            longitude: point.longitude,
+            latitude: point.latitude,
+          );
+          // Derived from what is already in the fields, so echoing it back
+          // would just repeat the form at the reader.
+          _pinAddress = null;
+        }
+      });
+      if (point == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não encontramos esse endereço no mapa. Marque o ponto à mão.',
+            ),
+          ),
+        );
+      }
+    } on CnesFacilityImportException catch (e) {
+      if (!mounted) return;
+      setState(() => _geocoding = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
+  /// one fact, so moving the pin rewrites the address rather than leaving it
+  /// describing where the clinic used to be.
+  /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
+  /// one fact, so moving the pin rewrites the address rather than leaving it
+  /// describing where the clinic used to be.
+  ///
+  /// The picker resolves the address before it returns and refuses to confirm a
+  /// point it cannot name, so what comes back is always a place — there is no
+  /// second lookup here, and no window where the new coordinates sit beside the
+  /// old address.
+  Future<void> _pickOnMap() async {
+    final picked = await FacilityPinPickerScreen.show(
+      context,
+      initial: _point,
+      title: widget.candidate.name,
+      resolve: (lat, lng) =>
+          widget.repository.reverseGeocode(latitude: lat, longitude: lng),
+    );
+    if (picked == null || !mounted) return;
+
+    final address = picked.address;
+    setState(() {
+      _point = picked.point;
+      _pinAddress = address.fullAddress;
+      if (address.streetAddress != null) _street.text = address.streetAddress!;
+      if (address.streetNumber != null) _number.text = address.streetNumber!;
+      if (address.neighborhood != null) {
+        _neighborhood.text = address.neighborhood!;
+      }
+      if (address.postalCode != null) _postalCode.text = address.postalCode!;
+    });
+  }
 
   String? _nullIfBlank(String value) {
     final trimmed = value.trim();
@@ -454,7 +540,9 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
                   height: 48,
                   child: FilledButton(
                     key: const ValueKey('cnes-import-submit'),
-                    onPressed: _submitting ? null : _submit,
+                    // Also off while a pin is being described: importing then
+                    // would send the new coordinates with the old address.
+                    onPressed: _submitting || _geocoding ? null : _submit,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.navyBright,
                       shape: RoundedRectangleBorder(
@@ -599,42 +687,137 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
           ],
         ),
       ),
-      const SizedBox(height: 16),
-      _field(_name, 'Nome'),
-      _field(_street, 'Logradouro'),
-      _field(_number, 'Número'),
-      _field(_neighborhood, 'Bairro'),
-      _field(_postalCode, 'CEP'),
-      _field(_phone, 'Telefone'),
-      _field(_email, 'E-mail'),
-      const SizedBox(height: 16),
-      /*
-       * The point is load-bearing and the user should be told so: territory
-       * ownership is geometric, so the pin decides which manager zone the clinic
-       * falls in and whether it sits inside a rep's patch. A pin on the wrong
-       * side of a street is not a cosmetic error.
-       */
-      Text(
-        preview.requiresLocation
-            ? 'O CNES não informou a localização desta clínica. Informe as '
-                  'coordenadas — elas definem o território responsável.'
-            : 'Localização informada pelo CNES. Corrija se estiver errada: ela '
-                  'define o território responsável.',
-        style: const TextStyle(
-          fontSize: 12,
-          color: AppColors.gray500,
-          height: 1.4,
-        ),
+      const SizedBox(height: 20),
+      const _StepHeader(
+        number: 1,
+        title: 'Identificação',
+        detail: 'Como a clínica aparece para a equipe.',
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 12),
+      _field(_name, 'Nome'),
+      const SizedBox(height: 20),
+      const _StepHeader(
+        number: 2,
+        title: 'Endereço e contato',
+        detail: 'O que o CNES trouxe. Corrija o que estiver errado.',
+      ),
+      const SizedBox(height: 12),
+      // Número beside Logradouro: they are one line of an address, and stacking
+      // them made the form look longer than it is.
       Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _field(_lat, 'Latitude', numeric: true)),
-          const SizedBox(width: 12),
-          Expanded(child: _field(_lng, 'Longitude', numeric: true)),
+          Expanded(flex: 3, child: _field(_street, 'Logradouro')),
+          const SizedBox(width: 10),
+          Expanded(child: _field(_number, 'Número')),
         ],
       ),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 2, child: _field(_neighborhood, 'Bairro')),
+          const SizedBox(width: 10),
+          Expanded(child: _field(_postalCode, 'CEP')),
+        ],
+      ),
+      _field(_phone, 'Telefone'),
+      _field(_email, 'E-mail'),
+      const SizedBox(height: 20),
+      /*
+       * Its own section, and a map rather than two number boxes. The point is
+       * load-bearing — territory ownership is geometric, so the pin decides
+       * which manager zone the clinic falls in and whether it sits inside a
+       * rep's patch — and the old form asked for that by having someone type
+       * "-23.550520" into a text field.
+       */
+      const _StepHeader(
+        number: 3,
+        title: 'Localização',
+        detail: 'O pino define o território responsável pela clínica.',
+      ),
+      const SizedBox(height: 12),
+      FacilityLocationCard(
+        point: _point,
+        addressLabel: _pinAddress,
+        geocoding: _geocoding,
+        canUseAddress: _hasAddressToGeocode,
+        note: preview.requiresLocation && _point == null
+            ? 'O CNES não informou onde fica esta clínica. Sem um pino ela '
+                  'entra sem território — dá para importar assim e ajustar '
+                  'depois.'
+            : null,
+        onUseAddress: _geocodeFromAddress,
+        onPickOnMap: _pickOnMap,
+      ),
     ];
+  }
+}
+
+/// A numbered section heading.
+///
+/// The wizard was one unbroken column of identical boxes — name, street,
+/// number, bairro, CEP, phone, email, two coordinates — so nothing told you how
+/// much was left or which parts belong together.
+class _StepHeader extends StatelessWidget {
+  const _StepHeader({
+    required this.number,
+    required this.title,
+    required this.detail,
+  });
+
+  final int number;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.navyDeep,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$number',
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                detail,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.gray500,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

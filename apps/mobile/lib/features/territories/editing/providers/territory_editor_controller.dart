@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territ
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/save_error_message.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_state.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -536,7 +537,10 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState>
       state = state.copyWith(
         saving: false,
         saveError: error is TerritoryApiException
-            ? error.message
+            ? describeTerritorySaveError(
+                statusCode: error.statusCode,
+                message: error.message,
+              )
             : 'Não foi possível salvar. Tente novamente.',
       );
       return false;

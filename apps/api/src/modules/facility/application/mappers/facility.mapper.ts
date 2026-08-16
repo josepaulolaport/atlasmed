@@ -8,6 +8,24 @@ import { applyVerticalProfileContext } from "../utils/facility-vertical-scope.ut
  */
 
 /**
+ * An ISO string from a value the driver may hand back as either a `Date` or a
+ * string, or undefined when there is nothing usable.
+ *
+ * The repository is where the coercion belongs and now does it, but this is the
+ * function that actually broke: `lastVisitAt?.toISOString()` on a string is a
+ * `TypeError`, `?.` guards only the null, and one such row 500'd the whole
+ * page — every clinic list and every Desempenho drilldown. Serialising a list
+ * should not be able to fail on the shape of one field.
+ */
+export function toIsoString(
+  value: Date | string | null | undefined,
+): string | undefined {
+  if (value == null) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+/**
  * Calcula a próxima data estimada de compra com base na última compra e o intervalo.
  * Retorna null quando não há data de última compra.
  */
@@ -97,9 +115,9 @@ export function serializeFacility(
         }
       : {}),
     professionalCount: list.professionalCount ?? 0,
-    lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
+    lastVisitAt: toIsoString(list.lastVisitAt),
     consultantName: clinic.consultantName,
-    consultantSince: clinic.consultantSince?.toISOString() ?? undefined,
+    consultantSince: toIsoString(clinic.consultantSince),
     managerName: clinic.managerName,
     imageUrl: clinic.imageUrl ?? undefined,
     imageBlurhash: clinic.imageBlurhash ?? undefined,

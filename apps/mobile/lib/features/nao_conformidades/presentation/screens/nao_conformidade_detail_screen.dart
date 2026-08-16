@@ -5,8 +5,8 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Detail for one field-change suggestion.
@@ -36,7 +36,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
-        appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+        appBar: const SubscreenAppBar(title: 'Não conformidade'),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
@@ -50,7 +50,13 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
           ),
         ),
       ),
-      error: (_, _) => _NotFound(onBack: () => context.pop()),
+      // A request that failed is not a suggestion that does not exist. This
+      // rendered "Sugestão não encontrada" for a dropped connection, which
+      // sends the reviewer looking for the wrong problem.
+      error: (_, _) => _DetailMessage(
+        message: 'Não foi possível carregar esta sugestão.',
+        onBack: () => context.pop(),
+      ),
       data: (suggestion) {
         final owned =
             suggestion?.isOwnedBy(
@@ -78,18 +84,34 @@ class _NotFound extends StatelessWidget {
   final VoidCallback onBack;
 
   @override
+  Widget build(BuildContext context) =>
+      _DetailMessage(message: 'Sugestão não encontrada', onBack: onBack);
+}
+
+/// The whole screen reduced to one sentence and a way back.
+class _DetailMessage extends StatelessWidget {
+  const _DetailMessage({required this.message, required this.onBack});
+
+  final String message;
+  final VoidCallback onBack;
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      appBar: const SubscreenAppBar(title: 'Não conformidade'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const Expanded(
+            Expanded(
               child: Center(
-                child: Text(
-                  'Sugestão não encontrada',
-                  style: TextStyle(color: AppColors.gray500),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.gray500),
+                  ),
                 ),
               ),
             ),
@@ -113,7 +135,7 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      appBar: const SubscreenAppBar(title: 'Não conformidade'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
@@ -232,11 +254,13 @@ class _DetailBody extends ConsumerWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!context.mounted) return;
+      // The exception was interpolated into this line. It names Dart types,
+      // not anything the reviewer can act on.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Falha ao aceitar: $e'),
+        const SnackBar(
+          content: Text('Não foi possível aceitar. Tente de novo.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -268,11 +292,11 @@ class _DetailBody extends ConsumerWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Falha ao rejeitar: $e'),
+        const SnackBar(
+          content: Text('Não foi possível rejeitar. Tente de novo.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -299,6 +323,12 @@ class _RejectSuggestionDialog extends StatefulWidget {
 class _RejectSuggestionDialogState extends State<_RejectSuggestionDialog> {
   late final TextEditingController _controller = TextEditingController();
 
+  /// The note is what the sender is told, so rejecting without one is not a
+  /// thing this dialog can do. It used to pop `''` on an empty field, which
+  /// the caller silently discarded — so the dialog closed exactly as if the
+  /// rejection had been recorded, and nothing had happened.
+  bool _canReject = false;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -310,9 +340,14 @@ class _RejectSuggestionDialogState extends State<_RejectSuggestionDialog> {
     return AlertDialog(
       title: const Text('Rejeitar sugestão'),
       content: TextField(
+        key: const Key('nc-reject-note'),
         controller: _controller,
         autofocus: true,
         maxLines: 3,
+        onChanged: (value) {
+          final can = value.trim().isNotEmpty;
+          if (can != _canReject) setState(() => _canReject = can);
+        },
         decoration: const InputDecoration(
           hintText: 'Motivo da rejeição',
           border: OutlineInputBorder(),
@@ -324,7 +359,10 @@ class _RejectSuggestionDialogState extends State<_RejectSuggestionDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          key: const Key('nc-reject-submit'),
+          onPressed: _canReject
+              ? () => Navigator.of(context).pop(_controller.text.trim())
+              : null,
           child: const Text('Rejeitar'),
         ),
       ],
@@ -723,11 +761,32 @@ class _RejectNoteBanner extends StatelessWidget {
   }
 }
 
-class _DecisionBar extends StatelessWidget {
+/// Accept or reject, once.
+///
+/// Both stayed live for the duration of their request, so a second tap during
+/// a slow accept posted a second decision on the same suggestion.
+class _DecisionBar extends StatefulWidget {
   const _DecisionBar({required this.onAccept, required this.onReject});
 
-  final VoidCallback onAccept;
-  final VoidCallback onReject;
+  final Future<void> Function() onAccept;
+  final Future<void> Function() onReject;
+
+  @override
+  State<_DecisionBar> createState() => _DecisionBarState();
+}
+
+class _DecisionBarState extends State<_DecisionBar> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -741,7 +800,8 @@ class _DecisionBar extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: onReject,
+              key: const Key('nc-decision-reject'),
+              onPressed: _busy ? null : () => _run(widget.onReject),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.red100),
@@ -759,18 +819,28 @@ class _DecisionBar extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: FilledButton(
-              onPressed: onAccept,
+              key: const Key('nc-decision-accept'),
+              onPressed: _busy ? null : () => _run(widget.onAccept),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.green600,
+                disabledBackgroundColor: AppColors.gray200,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Aceitar',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.gray500,
+                      ),
+                    )
+                  : const Text(
+                      'Aceitar',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
             ),
           ),
         ],

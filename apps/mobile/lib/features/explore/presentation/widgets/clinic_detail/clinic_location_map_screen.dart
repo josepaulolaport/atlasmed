@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen, single-pin map of just this establishment's own location —
@@ -101,7 +102,10 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
                     },
                     onMapLoadErrorListener: (_) =>
                         setState(() => _mapUnavailable = true),
-                    onStyleLoadedListener: (_) => _addPin(),
+                    onStyleLoadedListener: (_) async {
+                      await useFlatProjection(_mapboxMap);
+                      await _addPin();
+                    },
                   ),
           ),
         ],

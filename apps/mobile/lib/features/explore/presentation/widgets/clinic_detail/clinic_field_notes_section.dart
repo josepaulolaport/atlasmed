@@ -251,10 +251,13 @@ class _AddFieldNoteSheet extends StatefulWidget {
 class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
   late final TextEditingController _controller;
 
+  bool get _canSave => _controller.text.trim().isNotEmpty;
+
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText ?? '');
+    _controller.addListener(() => setState(() {}));
   }
 
   @override
@@ -309,12 +312,22 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
+            // Dead until there is a note to save.
+            //
+            // It popped whatever was typed, empty included, and the caller
+            // discards an empty string — so pressing Salvar over a blank field
+            // closed the sheet exactly as a successful save does, and no note
+            // was written. Nothing on screen said so.
             child: FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(_controller.text.trim()),
+              key: const Key('field-note-save'),
+              onPressed: _canSave
+                  ? () => Navigator.of(context).pop(_controller.text.trim())
+                  : null,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.navyBright,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.gray200,
+                disabledForegroundColor: AppColors.gray400,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

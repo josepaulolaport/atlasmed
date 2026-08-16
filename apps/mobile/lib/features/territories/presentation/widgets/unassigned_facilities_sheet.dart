@@ -78,13 +78,21 @@ class _UnassignedFacilitiesSheetState
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Clínicas na zona sem responsável. Toque para abrir e atribuir.',
-                style: TextStyle(
+                // "sem responsável" was a second word for the consultant named
+                // in the title above it, and "na zona" was wrong whenever this
+                // opens with no zone selected — which is how the toolbar
+                // button opens it.
+                widget.managerZoneId == null
+                    ? 'Clínicas sem consultor atribuído. '
+                          'Toque para abrir e atribuir.'
+                    : 'Clínicas desta zona sem consultor atribuído. '
+                          'Toque para abrir e atribuir.',
+                style: const TextStyle(
                   fontSize: 13.5,
                   height: 1.35,
                   color: AppColors.gray600,
@@ -135,11 +143,28 @@ class _UnassignedFacilitiesSheetState
                 return ListView.separated(
                   shrinkWrap: true,
                   padding: EdgeInsets.fromLTRB(0, 8, 0, 12 + bottom),
-                  itemCount: clinics.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, indent: 20, endIndent: 20),
+                  // A header row for the count, which the sheet never gave —
+                  // "how many are uncovered" is the question it exists for.
+                  itemCount: clinics.length + 1,
+                  separatorBuilder: (_, index) => index == 0
+                      ? const SizedBox.shrink()
+                      : const Divider(height: 1, indent: 20, endIndent: 20),
                   itemBuilder: (context, index) {
-                    final clinic = clinics[index];
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                        child: Text(
+                          '${clinics.length} '
+                          '${clinics.length == 1 ? 'clínica' : 'clínicas'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                      );
+                    }
+                    final clinic = clinics[index - 1];
                     return ListTile(
                       title: Text(
                         clinic.displayName,

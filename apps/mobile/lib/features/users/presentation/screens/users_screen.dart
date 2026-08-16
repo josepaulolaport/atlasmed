@@ -121,17 +121,36 @@ class _UsersList extends ConsumerStatefulWidget {
 }
 
 class _UsersListState extends ConsumerState<_UsersList> {
+  /// Owned here. The field built a fresh `TextEditingController.fromValue`
+  /// inside `build`, so every keystroke allocated and abandoned one and forced
+  /// the caret back to the end of the text — you could not edit the middle of
+  /// what you had typed.
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(usersListProvider);
     final notifier = ref.read(usersListProvider.notifier);
+
+    // Only when something else changed the term — clearing it, say. Writing
+    // on every build is what moved the caret.
+    if (_searchController.text != state.filter.search) {
+      _searchController.text = state.filter.search;
+    }
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: _SearchBar(
-            value: state.filter.search,
+            controller: _searchController,
+            hasText: state.filter.search.isNotEmpty,
             filterCount: state.filter.activeCount,
             onChanged: notifier.setSearch,
             onFilter: () => _showFilterSheet(context, state, notifier),
@@ -158,6 +177,12 @@ class _UsersListState extends ConsumerState<_UsersList> {
                   itemCount: 8,
                   itemBuilder: (_, _) => const UsersSkeletonRow(),
                 )
+              // The notifier has always set `error` and nothing has ever
+              // rendered it: a failed request fell through to the empty state,
+              // so a dropped connection told an admin they had no users and
+              // invited them to start inviting people.
+              : state.error != null && state.items.isEmpty
+              ? _UsersLoadFailed(onRetry: notifier.load)
               : state.items.isEmpty
               ? UsersEmptyState(query: state.filter.search)
               : NotificationListener<ScrollNotification>(
@@ -175,6 +200,9 @@ class _UsersListState extends ConsumerState<_UsersList> {
                     onRefresh: notifier.load,
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
+                      // Room for the "Convidar" button, which floats over this
+                      // list and sat squarely on the last row's e-mail.
+                      padding: const EdgeInsets.only(bottom: 88),
                       itemCount:
                           state.items.length + (state.loadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
@@ -213,15 +241,78 @@ class _UsersListState extends ConsumerState<_UsersList> {
   }
 }
 
+/// The roster could not be fetched — which is not the same as there being
+/// nobody on it.
+class _UsersLoadFailed extends StatelessWidget {
+  const _UsersLoadFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.gray100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 32,
+                color: AppColors.gray400,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Não foi possível carregar os usuários',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Verifique a conexão e tente de novo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.gray500,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              key: const Key('users-retry'),
+              onPressed: onRetry,
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
-    required this.value,
+    required this.controller,
+    required this.hasText,
     required this.filterCount,
     required this.onChanged,
     required this.onFilter,
   });
 
-  final String value;
+  final TextEditingController controller;
+  final bool hasText;
   final int filterCount;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilter;
@@ -256,14 +347,8 @@ class _SearchBar extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    controller: TextEditingController.fromValue(
-                      TextEditingValue(
-                        text: value,
-                        selection: TextSelection.collapsed(
-                          offset: value.length,
-                        ),
-                      ),
-                    ),
+                    key: const Key('users-search'),
+                    controller: controller,
                     onChanged: onChanged,
                     style: const TextStyle(
                       fontSize: 14,
@@ -278,7 +363,7 @@ class _SearchBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (value.isNotEmpty)
+                if (hasText)
                   GestureDetector(
                     onTap: () => onChanged(''),
                     child: Container(

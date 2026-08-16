@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/clinic_assignment_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/team_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,10 +33,14 @@ class AssignClinicScreen extends ConsumerStatefulWidget {
 
 class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
   final _repository = ClinicAssignmentRepository();
-  final _searchController = TextEditingController();
   Timer? _debounce;
 
   bool _searchMode = false;
+
+  /// What is typed right now.
+  String _searchInput = '';
+
+  /// What the last request was made with.
   String _search = '';
   bool _loading = true;
   String? _error;
@@ -49,7 +56,6 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -86,8 +92,10 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
   }
 
   void _onSearchChanged(String value) {
+    setState(() => _searchInput = value);
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
       setState(() => _search = value);
       _load();
     });
@@ -106,7 +114,7 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
               setState(() {
                 _searchMode = value;
                 _search = '';
-                _searchController.clear();
+                _searchInput = '';
                 _rows = const [];
                 _total = 0;
               });
@@ -116,23 +124,13 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
           if (_searchMode)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: TextField(
-                controller: _searchController,
+              // The same search field Explorar uses. This had its own, a
+              // shorter dense TextField with a different radius and border.
+              child: SearchBarWidget(
+                value: _searchInput,
                 onChanged: _onSearchChanged,
+                hintText: 'Buscar clínica por nome',
                 autofocus: true,
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: 'Buscar clínica por nome',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: AppColors.surfaceSecondary,
-                    ),
-                  ),
-                ),
               ),
             ),
           Expanded(child: _body()),
@@ -162,16 +160,17 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
       );
     }
     if (_rows.isEmpty) {
-      return _Message(
-        icon: Icons.check_circle_outline_rounded,
-        title: _searchMode
-            ? 'Nenhuma clínica encontrada'
-            : 'Nenhuma clínica livre no território',
-        detail: _searchMode
-            ? 'Tente outro nome.'
-            : 'Todas as clínicas dentro dos patches já têm representante. '
-                  'Use "Buscar em toda a linha" para atribuir fora do território.',
-      );
+      // Explorar's empty state. Searching the whole linha and finding nothing
+      // is the same event here as there, and it should not look different.
+      return _searchMode
+          ? EmptyState(query: _search, kind: 'clinic')
+          : const _Message(
+              icon: Icons.check_circle_outline_rounded,
+              title: 'Nenhuma clínica livre no território',
+              detail:
+                  'Todas as clínicas dentro dos patches já têm representante. '
+                  'Use "Todas" para atribuir fora do território.',
+            );
     }
 
     return ListView.builder(
@@ -189,9 +188,37 @@ class _AssignClinicScreenState extends ConsumerState<AssignClinicScreen> {
             ),
           );
         }
-        return _ClinicRow(
-          clinic: _rows[index],
-          onTap: () => _confirm(_rows[index]),
+        final clinic = _rows[index];
+        // Explorar's row, not a private copy of it. `/assignable` returns no
+        // doctor count and no clinical focus, so this is the summary form —
+        // same tile, name, location line and divider, minus the meta it would
+        // otherwise have had to invent.
+        return ClinicRow.summary(
+          name: clinic.name,
+          location: clinic.locationLabel,
+          badges: [
+            if (clinic.currentRepName != null)
+              _Tag(
+                icon: Icons.person_outline_rounded,
+                label: 'Com ${clinic.currentRepName}',
+                color: AppColors.gray500,
+              ),
+            if (clinic.requiresReason)
+              const _Tag(
+                icon: Icons.explore_off_outlined,
+                label: 'Fora do território',
+                color: AppColors.amber,
+              ),
+          ],
+          trailing: const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Icon(
+              Icons.add_circle_outline_rounded,
+              size: 20,
+              color: AppColors.navyBright,
+            ),
+          ),
+          onTap: () => _confirm(clinic),
         );
       },
     );
@@ -255,82 +282,11 @@ class _DoorSelector extends StatelessWidget {
       child: SegmentedButton<bool>(
         segments: const [
           ButtonSegment(value: false, label: Text('No território')),
-          ButtonSegment(value: true, label: Text('Toda a linha')),
+          ButtonSegment(value: true, label: Text('Todas')),
         ],
         selected: {searchMode},
         showSelectedIcon: false,
         onSelectionChanged: (values) => onChanged(values.first),
-      ),
-    );
-  }
-}
-
-class _ClinicRow extends StatelessWidget {
-  const _ClinicRow({required this.clinic, required this.onTap});
-
-  final AssignableClinic clinic;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    clinic.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    clinic.locationLabel,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.gray500,
-                    ),
-                  ),
-                  if (clinic.currentRepName != null) ...[
-                    const SizedBox(height: 5),
-                    _Tag(
-                      icon: Icons.person_outline_rounded,
-                      label: 'Com ${clinic.currentRepName}',
-                      color: AppColors.gray500,
-                    ),
-                  ],
-                  if (clinic.requiresReason) ...[
-                    const SizedBox(height: 5),
-                    const _Tag(
-                      icon: Icons.explore_off_outlined,
-                      label: 'Fora do território',
-                      color: AppColors.amber,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.add_circle_outline_rounded,
-              size: 20,
-              color: AppColors.navyBright,
-            ),
-          ],
-        ),
       ),
     );
   }

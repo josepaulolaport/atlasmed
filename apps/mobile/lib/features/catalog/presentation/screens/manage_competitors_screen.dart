@@ -69,9 +69,31 @@ class ManageCompetitorsScreen extends ConsumerWidget {
           .unlinkCompetitor(variantId, row.id);
       invalidateCatalog(ref, variantId: variantId);
       if (!context.mounted) return;
+      // Two things need saying at once, and only one snackbar fits: that the
+      // clinic numbers move overnight rather than now, and that the unlink can
+      // be taken back. Re-linking is otherwise a round trip through the
+      // "adicionar" sheet.
       showNightlyRecomputeNotice(
         context,
         prefix: '“${row.label}” desvinculado.',
+        action: SnackBarAction(
+          label: 'Desfazer',
+          onPressed: () async {
+            try {
+              await ref
+                  .read(catalogRepositoryProvider)
+                  .linkCompetitor(variantId, row.id);
+              invalidateCatalog(ref, variantId: variantId);
+            } catch (_) {
+              if (!context.mounted) return;
+              showCatalogSnack(
+                context,
+                'Não foi possível desfazer.',
+                isError: true,
+              );
+            }
+          },
+        ),
       );
     } catch (error) {
       if (!context.mounted) return;

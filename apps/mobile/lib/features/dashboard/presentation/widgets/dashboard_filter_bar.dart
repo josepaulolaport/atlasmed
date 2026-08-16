@@ -46,7 +46,7 @@ class DashboardFilterBar extends ConsumerWidget {
                     _apply(ref, scope.copyWith(municipalityIds: const [])),
               ),
               FilterChipButton(
-                label: 'Gestor',
+                label: 'Gerente',
                 selectedCount: scope.managerIds.length,
                 onTap: () => _pickManager(context, ref, available),
                 onClear: () => _clearManager(ref, available),
@@ -147,7 +147,7 @@ class DashboardFilterBar extends ConsumerWidget {
   ) async {
     final picked = await FilterDrawer.show(
       context,
-      title: 'Gestor',
+      title: 'Gerente',
       options: available.managers,
       selectedIds: scope.managerIds,
     );

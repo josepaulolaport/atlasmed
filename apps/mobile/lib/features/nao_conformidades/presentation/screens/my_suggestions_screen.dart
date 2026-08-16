@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -28,9 +29,19 @@ class MySuggestionsScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceTertiary,
         elevation: 0,
         foregroundColor: AppColors.gray900,
+        // Counts what is pending, which is what the clinic card counts too.
+        // Counting every suggestion here meant a clinic whose card read "Em
+        // dia" opened a screen titled "Não Conformidades · 3".
         title: Text(
           asyncItems.maybeWhen(
-            data: (items) => 'Não Conformidades · ${items.length}',
+            data: (items) {
+              final pending = items
+                  .where((e) => e.status == NaoConformidadeStatus.pending)
+                  .length;
+              return pending == 0
+                  ? 'Não Conformidades'
+                  : 'Não Conformidades · $pending';
+            },
             orElse: () => 'Não Conformidades',
           ),
         ),
@@ -80,16 +91,33 @@ class MySuggestionsScreen extends ConsumerWidget {
                   color: AppColors.navyDeep,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                pending == 0
-                    ? 'Nenhuma sugestão aguardando análise'
-                    : '$pending aguardando análise',
-                style: const TextStyle(fontSize: 13, color: AppColors.gray500),
-              ),
+              // One statement about the state of the list, not two. An empty
+              // list used to say "Nenhuma sugestão aguardando análise" and
+              // then, in a card below it, "Você ainda não enviou não
+              // conformidades para este perfil" — two sentences answering
+              // slightly different questions, neither of which was asked.
+              if (items.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  pending == 0
+                      ? 'Nenhuma sugestão aguardando análise'
+                      : '$pending aguardando análise',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               if (items.isEmpty)
-                const _EmptyCard()
+                const ClinicaEmptySection(
+                  margin: EdgeInsets.zero,
+                  icon: Icons.rate_review_outlined,
+                  title: 'Nenhuma não conformidade',
+                  description:
+                      'Ao corrigir um campo da clínica, a sugestão aparece aqui '
+                      'até ser revisada.',
+                )
               else
                 for (final (i, item) in items.indexed) ...[
                   if (i > 0) const SizedBox(height: 8),
@@ -108,27 +136,6 @@ class MySuggestionsScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: const Text(
-        'Você ainda não enviou não conformidades para este perfil.',
-        style: TextStyle(fontSize: 13, color: AppColors.gray400),
       ),
     );
   }

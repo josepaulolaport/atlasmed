@@ -105,10 +105,10 @@ class _Legend extends StatelessWidget {
         children: [
           _Key(
             colour: const Color(0xFF2563EB),
-            label: isRep ? 'Área desta pessoa' : 'Zonas deste gestor',
+            label: isRep ? 'Área desta pessoa' : 'Zonas deste gerente',
           ),
           if (map.context.isNotEmpty)
-            const _Key(colour: Color(0xFF0F172A), label: 'Zona do gestor'),
+            const _Key(colour: Color(0xFF0F172A), label: 'Zona do gerente'),
           if (map.taken.isNotEmpty)
             const _Key(colour: Color(0xFF6B7280), label: 'Já ocupado'),
         ],

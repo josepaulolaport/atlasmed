@@ -34,7 +34,9 @@ void main() {
     expect(find.text('Reviscon'), findsOneWidget);
     expect(find.text('Fabricante: '), findsOneWidget);
     expect(find.text('VSY'), findsOneWidget);
-    expect(find.textContaining('a partir de'), findsOneWidget);
+    // The card no longer carries a presentation count or a "from" price:
+    // both belong to the presentation the detail screen makes you pick.
+    expect(find.textContaining('a partir de'), findsNothing);
   });
 
   testWidgets('product detail resolves any variant id in the API family', (

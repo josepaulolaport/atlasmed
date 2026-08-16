@@ -73,6 +73,11 @@ class OrderDetail {
   final String placedAt;
   final String? updatedAt;
   final String clinic;
+
+  /// So the clinic named on the order can be opened. The screen named it and
+  /// stopped there, which is the one place in the app where a clinic's name is
+  /// not a way to reach the clinic.
+  final int facilityId;
   final String? seller;
   final OrderStatus status;
 
@@ -84,6 +89,11 @@ class OrderDetail {
   final String currency;
   final List<OrderDetailItem> items;
   final double itemsTotal;
+
+  /// Charged on top of the lines. It is 1.00 on every imported order — a
+  /// placeholder rather than a real shipping cost — but it is inside [total],
+  /// so hiding it left a Subtotal and a Total on screen that did not add up.
+  final double freight;
   final double total;
 
   const OrderDetail({
@@ -92,6 +102,7 @@ class OrderDetail {
     required this.placedAt,
     required this.updatedAt,
     required this.clinic,
+    required this.facilityId,
     required this.seller,
     required this.status,
     required this.type,
@@ -99,6 +110,7 @@ class OrderDetail {
     required this.currency,
     required this.items,
     required this.itemsTotal,
+    required this.freight,
     required this.total,
   });
 }

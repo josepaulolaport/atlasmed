@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/brasindice_date.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart'
@@ -458,6 +459,32 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     setState(() => _brasindiceUpdatedAt = picked);
   }
 
+  /// True when the prices were edited but the date beside them was not.
+  ///
+  /// The date is the admin's to state, so the form does not move it for them
+  /// (see `brasindice_date.dart`). It does say when the two have drifted apart,
+  /// which is the moment the old date stops being true and nothing else in the
+  /// screen would mention it.
+  bool get _brasindiceDateLooksStale {
+    final existing = widget.existing;
+    if (existing == null) return false;
+    if (_brasindiceUpdatedAt != existing.brasindiceUpdatedAt) return false;
+    return brasindicePricesChanged(
+      current: [
+        parseBrlNumber(_price.text),
+        parseBrlNumber(_price17.text),
+        parseBrlNumber(_price18.text),
+        parseBrlNumber(_price20.text),
+      ],
+      saved: [
+        existing.price,
+        existing.price17,
+        existing.price18,
+        existing.price20,
+      ],
+    );
+  }
+
   Future<void> _submit() async {
     if (!_isValid || _saving) return;
     setState(() {
@@ -492,9 +519,11 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       price17: price(_price17),
       price18: price(_price18),
       price20: price(_price20),
-      // The admin's date, not `DateTime.now()`. This field records when the
-      // *Brasíndice* record was published; stamping today on every save turned
-      // it into "when someone last opened this form".
+      // The admin's date, not `DateTime.now()` and not one derived from whether
+      // a price moved. This field records when the *Brasíndice* record was
+      // published; stamping today on every save turned it into "when someone
+      // last opened this form", and inferring it from a price edit would make
+      // it "when someone last retyped a number".
       brasindiceUpdatedAt: _brasindiceUpdatedAt,
       isActive: _isActive,
       // Ignored by `PATCH` (spec 0016 §6.7); sent only on create.
@@ -891,6 +920,13 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                           ? null
                           : () => setState(() => _brasindiceUpdatedAt = null),
                     ),
+                    if (_brasindiceDateLooksStale) ...[
+                      const SizedBox(height: 8),
+                      const _FieldHint(
+                        'Os preços mudaram e esta data não. Se vieram de uma '
+                        'nova tabela Brasíndice, atualize-a.',
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     const CatalogFieldLabel('TISS'),
                     const SizedBox(height: 6),
@@ -1119,6 +1155,42 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A quiet note under a field.
+///
+/// Deliberately not an error: nothing here blocks the save, and the admin may
+/// have a good reason. It points at a disagreement between two fields and
+/// leaves the decision where it belongs.
+class _FieldHint extends StatelessWidget {
+  const _FieldHint(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.info_outline_rounded,
+          size: 14,
+          color: AppColors.gray500,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: AppColors.gray500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

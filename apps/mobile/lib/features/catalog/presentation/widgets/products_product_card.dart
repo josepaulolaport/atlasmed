@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Compact family card for the Produtos list — brand-level introduction with
@@ -37,31 +36,21 @@ class ProductsProductCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.surfaceSecondary),
-                ),
-                child: const Icon(
-                  Icons.medication_liquid_outlined,
-                  size: 34,
-                  color: AppColors.gray300,
-                ),
-              ),
-              const SizedBox(width: 12),
+              // No thumbnail. `CatalogFamily` has no image field and never
+              // has, so this was a 72pt grey pill icon repeated down the
+              // list — a quarter of the card's width spent on nothing, and
+              // the reason every product name was cut off after one line.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       family.name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14,
+                        height: 1.25,
                         fontWeight: FontWeight.w700,
                         color: AppColors.navyDeep,
                         letterSpacing: -0.1,
@@ -81,15 +70,10 @@ class ProductsProductCard extends StatelessWidget {
                         value: family.countryOfOrigin,
                       ),
                     ],
-                    const SizedBox(height: 6),
-                    Text(
-                      '${family.variants.length} ${family.variants.length == 1 ? 'apresentação' : 'apresentações'} · a partir de ${brl(family.minPrice)}',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyBright,
-                      ),
-                    ),
+                    // No "N apresentações · a partir de R$ X" line. Both
+                    // figures belong to the presentation the detail screen
+                    // makes you choose anyway, and a blue strapline under two
+                    // grey meta rows made every card end on a shout.
                   ],
                 ),
               ),

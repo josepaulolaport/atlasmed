@@ -24,6 +24,7 @@ import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
@@ -566,6 +567,8 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     if (mapboxMap == null || !mounted) return;
 
     try {
+      await useFlatProjection(mapboxMap);
+
       _polygonManager = await mapboxMap.annotations
           .createPolygonAnnotationManager();
       _borderManager = await mapboxMap.annotations
@@ -745,7 +748,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                     'vinculadas a ela ficarão sem uma zona associada.'
               : [
                   if (holderName != null && holderName.isNotEmpty)
-                    '$holderName ficará sem território: sai da equipe do gestor '
+                    '$holderName ficará sem território: sai da equipe do gerente '
                         'e deixa de poder receber clínicas.'
                   else
                     'Esta área de representante será excluída permanentemente.',
@@ -1147,7 +1150,10 @@ class _TerritoryActionBar extends ConsumerWidget {
                 ),
                 _ActionButton(
                   icon: Icons.person_outline,
-                  label: 'Responsável',
+                  // The same word this card and the detail sheet use for the
+                  // person. It was "Responsável" here, "Gerente:" two lines
+                  // above it, and "Gerente responsável" in the sheet behind it.
+                  label: roleLabel,
                   onTap: onAssign,
                 ),
                 _ActionButton(

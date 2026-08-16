@@ -5,8 +5,8 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 
 /// "Tabela Brasíndice/Simpro" screen — the complete price index: every
 /// AtlasMed product and every competitor product in the catalog, flattened
@@ -71,7 +71,7 @@ class _CatalogPriceIndexScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Produtos'),
+      appBar: const SubscreenAppBar(title: 'Tabela completa'),
       body: SafeArea(
         child: Column(
           children: [

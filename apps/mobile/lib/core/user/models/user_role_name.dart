@@ -17,6 +17,25 @@ extension UserRoleNameX on UserRoleName {
     }
   }
 
+  /// What the role lets someone do, in the app's own language.
+  ///
+  /// `roles.description` is seeded in English — "Field representative",
+  /// "Territory manager" — and the role picker printed it verbatim under the
+  /// Portuguese label, so a sheet titled "Alterar função" listed four English
+  /// subtitles.
+  String get description {
+    switch (this) {
+      case UserRoleName.admin:
+        return 'Acesso total, incluindo usuários e configurações';
+      case UserRoleName.manager:
+        return 'Gerencia uma zona e os representantes dela';
+      case UserRoleName.rep:
+        return 'Atua em campo nos territórios atribuídos';
+      case UserRoleName.ops:
+        return 'Cuida de cadastros, pedidos e não conformidades';
+    }
+  }
+
   Color get color {
     switch (this) {
       case UserRoleName.admin:

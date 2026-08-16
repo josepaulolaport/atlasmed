@@ -103,7 +103,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         title: const Text(
-          'Fontes Pagadoras',
+          'Fontes pagadoras',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         actions: [
@@ -972,7 +972,13 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
-                        _pool.isEmpty
+                        // An empty catalogue is not an exhausted one: the first
+                        // clinic to need a payer source was told everything had
+                        // "already been added" when nothing existed at all.
+                        _catalog.isEmpty
+                            ? 'O catálogo ainda não tem fontes pagadoras. '
+                                  'Crie a primeira abaixo.'
+                            : _pool.isEmpty
                             ? 'Todas as fontes do catálogo já foram adicionadas. '
                                   'Crie uma nova abaixo.'
                             : query.isEmpty

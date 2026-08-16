@@ -18,14 +18,18 @@ final cadastroReviewQueueProvider =
       }
     });
 
+/// One submission out of the loaded queue, as an [AsyncValue].
+///
+/// This returned a bare nullable before, so a queue that had not arrived yet
+/// was indistinguishable from a submission that is not in it — and the detail
+/// screen rendered "Submissão não encontrada" for the whole of the load.
 final cadastroReviewByIdProvider = Provider.autoDispose
-    .family<CadastroReviewSubmission?, int>((ref, id) {
-      final queue = ref.watch(cadastroReviewQueueProvider).valueOrNull;
-      if (queue == null) return null;
-      for (final item in queue) {
-        if (item.id == id) return item;
-      }
-      return null;
+    .family<AsyncValue<CadastroReviewSubmission?>, int>((ref, id) {
+      return ref
+          .watch(cadastroReviewQueueProvider)
+          .whenData(
+            (queue) => queue.where((item) => item.id == id).firstOrNull,
+          );
     });
 
 final cadastroReviewActionsProvider = Provider<CadastroReviewActions>((ref) {

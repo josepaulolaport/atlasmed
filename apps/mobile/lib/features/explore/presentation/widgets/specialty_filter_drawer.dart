@@ -61,6 +61,17 @@ class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
       empty: 'Nenhum tipo de unidade disponível no seu escopo.',
       notFound: 'Nenhum tipo de unidade encontrado.',
     ),
+    // A clinic's is a *foco clínico*, which is what every row and every chip
+    // in the app calls it ("Sem foco clínico"). Only the filter called it a
+    // specialty, so the same field had two names one screen apart — and beside
+    // the doctors filter, which lists actual medical specialties, it read as
+    // though they were the same list.
+    'clinic' => (
+      title: 'Foco clínico',
+      hint: 'Buscar foco clínico…',
+      empty: 'Nenhum foco clínico disponível no seu escopo.',
+      notFound: 'Nenhum foco clínico encontrado.',
+    ),
     _ => (
       title: 'Especialidade',
       hint: 'Buscar especialidade…',

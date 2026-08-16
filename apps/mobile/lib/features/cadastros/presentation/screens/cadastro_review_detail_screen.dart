@@ -6,8 +6,8 @@ import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_mode
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 
 /// Review one Cadastro submission: clinic snapshot + document + decide.
 class CadastroReviewDetailScreen extends ConsumerWidget {
@@ -17,20 +17,36 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final submission = ref.watch(cadastroReviewByIdProvider(submissionId));
+    final submissionAsync = ref.watch(cadastroReviewByIdProvider(submissionId));
 
+    // A queue still in flight is not a missing submission. This screen used to
+    // say "Submissão não encontrada" for the whole of the load, with a Voltar
+    // button under it, and then quietly become the document.
+    if (submissionAsync.isLoading) {
+      return const Scaffold(
+        appBar: SubscreenAppBar(title: 'Cadastro'),
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final submission = submissionAsync.valueOrNull;
     if (submission == null) {
       return Scaffold(
-        appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+        appBar: const SubscreenAppBar(title: 'Cadastro'),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
               const Expanded(
                 child: Center(
-                  child: Text(
-                    'Submissão não encontrada',
-                    style: TextStyle(color: AppColors.gray500),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      'Esta submissão não está na fila selecionada.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.gray500),
+                    ),
                   ),
                 ),
               ),
@@ -49,7 +65,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
-      appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+      appBar: const SubscreenAppBar(title: 'Cadastro'),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
@@ -235,11 +251,13 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         ),
       );
       context.pop();
-    } catch (error) {
+    } catch (_) {
       if (!context.mounted) return;
+      // The raw exception went on screen here. It names Dart types, not
+      // anything the reviewer can do about it.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
+        const SnackBar(
+          content: Text('Não foi possível aprovar. Tente de novo.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -277,11 +295,11 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         ),
       );
       context.pop();
-    } catch (error) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
+        const SnackBar(
+          content: Text('Não foi possível rejeitar. Tente de novo.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -308,6 +326,11 @@ class _RejectNoteSheet extends StatefulWidget {
 
 class _RejectNoteSheetState extends State<_RejectNoteSheet> {
   late final TextEditingController _noteController = TextEditingController();
+
+  /// The note is what the rep is told to fix, so it is required — and the
+  /// button says so rather than accepting the tap and doing nothing, which is
+  /// what `if (text.isEmpty) return;` did.
+  bool _canReject = false;
 
   @override
   void dispose() {
@@ -351,9 +374,14 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: const Key('cadastro-reject-note'),
             controller: _noteController,
             maxLines: 4,
             autofocus: true,
+            onChanged: (value) {
+              final can = value.trim().isNotEmpty;
+              if (can != _canReject) setState(() => _canReject = can);
+            },
             decoration: InputDecoration(
               hintText: 'Ex.: Documento ilegível, envie nova foto…',
               filled: true,
@@ -380,12 +408,17 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: () {
-                    final text = _noteController.text.trim();
-                    if (text.isEmpty) return;
-                    Navigator.of(context).pop(text);
-                  },
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+                  key: const Key('cadastro-reject-submit'),
+                  onPressed: _canReject
+                      ? () => Navigator.of(
+                          context,
+                        ).pop(_noteController.text.trim())
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.red,
+                    disabledBackgroundColor: AppColors.gray200,
+                    disabledForegroundColor: AppColors.gray500,
+                  ),
                   child: const Text('Rejeitar'),
                 ),
               ),
@@ -603,11 +636,33 @@ class _RejectNoteBanner extends StatelessWidget {
   }
 }
 
-class _DecisionBar extends StatelessWidget {
+/// Approve or reject, once.
+///
+/// Both buttons stayed live for the whole of the request, so a second tap
+/// during a slow approve opened the confirmation again and posted a second
+/// decision on the same document.
+class _DecisionBar extends StatefulWidget {
   const _DecisionBar({required this.onApprove, required this.onReject});
 
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
+  final Future<void> Function() onApprove;
+  final Future<void> Function() onReject;
+
+  @override
+  State<_DecisionBar> createState() => _DecisionBarState();
+}
+
+class _DecisionBarState extends State<_DecisionBar> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +677,8 @@ class _DecisionBar extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: onReject,
+              key: const Key('cadastro-decision-reject'),
+              onPressed: _busy ? null : () => _run(widget.onReject),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.red,
                 side: const BorderSide(color: AppColors.red100),
@@ -637,16 +693,26 @@ class _DecisionBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: FilledButton(
-              onPressed: onApprove,
+              key: const Key('cadastro-decision-approve'),
+              onPressed: _busy ? null : () => _run(widget.onApprove),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.greenDark,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.gray200,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Aprovar'),
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.gray500,
+                      ),
+                    )
+                  : const Text('Aprovar'),
             ),
           ),
         ],

@@ -318,3 +318,66 @@ describe("FacilityGeocodingService", () => {
     expect(facilityRepository.update).not.toHaveBeenCalled();
   });
 });
+
+describe("describePointParts", () => {
+  function serviceWith(port: Partial<GeocodingPort> | undefined) {
+    return new FacilityGeocodingService({
+      facilityRepository: {} as FacilityRepository,
+      geocodingPort: port as GeocodingPort | undefined,
+    });
+  }
+
+  it("splits a dropped pin into the fields the form has", async () => {
+    const service = serviceWith({
+      reverseGeocode: mock(async () => ({
+        latitude: -23.5505,
+        longitude: -46.6333,
+        fullAddress: "Rua Augusta, 100 - Consolação, São Paulo - SP",
+        parts: {
+          streetAddress: "Rua Augusta",
+          streetNumber: "100",
+          neighborhood: "Consolação",
+          postalCode: "01305-000",
+          city: "São Paulo",
+          state: "SP",
+        },
+      })),
+    });
+
+    const result = await service.describePointParts({
+      lat: -23.5505,
+      lng: -46.6333,
+    });
+
+    expect(result?.parts.streetAddress).toBe("Rua Augusta");
+    expect(result?.parts.streetNumber).toBe("100");
+    expect(result?.parts.neighborhood).toBe("Consolação");
+    expect(result?.parts.postalCode).toBe("01305-000");
+    expect(result?.fullAddress).toContain("Rua Augusta");
+  });
+
+  it("blanks a part the provider left empty rather than writing whitespace", async () => {
+    const service = serviceWith({
+      reverseGeocode: mock(async () => ({
+        latitude: -23.5,
+        longitude: -46.6,
+        parts: { streetAddress: "  ", streetNumber: "" },
+      })),
+    });
+
+    const result = await service.describePointParts({ lat: -23.5, lng: -46.6 });
+
+    expect(result?.parts.streetAddress).toBeNull();
+    expect(result?.parts.streetNumber).toBeNull();
+  });
+
+  it("returns null when geocoding is not configured, so the pin still stands", async () => {
+    const service = serviceWith(undefined);
+    expect(await service.describePointParts({ lat: 1, lng: 2 })).toBeNull();
+  });
+
+  it("returns null when the provider places nothing there", async () => {
+    const service = serviceWith({ reverseGeocode: mock(async () => null) });
+    expect(await service.describePointParts({ lat: 1, lng: 2 })).toBeNull();
+  });
+});

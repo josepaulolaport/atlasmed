@@ -209,12 +209,12 @@ class _MetricGrid extends ConsumerWidget {
       ),
       if (canSeeUnassigned)
         DashboardMetricCard<DashboardCountMetric>(
-          title: 'Clínicas não atribuídas',
+          title: 'Clínicas sem consultor',
           repository: ref.watch(unassignedClinicsMetricProvider(scope)),
           onTap: () => _openBreakdown(context, 'unassigned-clinics', scope),
           builder: (context, value) => MetricValue(
             value: '${value.value}',
-            caption: 'sem representante',
+            caption: 'aguardando atribuição',
             color: value.value > 0 ? const Color(0xFFb45309) : null,
           ),
         ),

@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/features/users/data/repositories/users_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,7 +80,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
                       (_selectedRoleId ?? widget.user.role.id) == role.id;
                   return _RoleOption(
                     label: role.name.label,
-                    description: role.description,
+                    description: role.name.description,
                     color: role.name.color,
                     selected: selected,
                     onTap: () => setState(() => _selectedRoleId = role.id),
@@ -119,20 +120,63 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
       Navigator.of(context).pop();
       return;
     }
+
+    final roles = ref.read(rolesProvider).valueOrNull ?? const [];
+    final target = roles.where((r) => r.id == roleId).firstOrNull;
+    final confirmed = await _confirmRoleChange(target?.name.label ?? 'a nova');
+    if (!confirmed || !mounted) return;
+
     setState(() => _saving = true);
     try {
       await ref
           .read(usersRepositoryProvider)
           .changeUserRole(widget.user.id, roleId);
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       setState(() => _saving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível alterar a função.')),
+          SnackBar(
+            content: Text(
+              error is UsersApiException && error.statusCode == 403
+                  ? 'Você não pode atribuir essa função.'
+                  : 'Não foi possível alterar a função.',
+            ),
+          ),
         );
       }
     }
+  }
+
+  /// Changing a role revokes every session the person has and bumps their
+  /// token version — they are signed out of the app mid-task, on every device,
+  /// the moment this saves. That happened on one tap with nothing in between.
+  Future<bool> _confirmRoleChange(String newRoleLabel) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Tornar ${widget.user.displayName} $newRoleLabel?'),
+        content: Text(
+          // Phrased around the session, not the person: the app does not know
+          // anyone's gender, and "será desconectado" guesses one.
+          'A sessão de ${widget.user.displayName} será encerrada em todos os '
+          'dispositivos, e será preciso entrar de novo. O que a pessoa '
+          'enxerga no app muda junto com a função.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('change-role-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Alterar função'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 }
 

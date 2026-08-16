@@ -77,6 +77,43 @@ class UserDetailScreen extends ConsumerWidget {
     );
   }
 
+  /// Names the person and says what they lose, rather than asking "tem
+  /// certeza?" over an action the reader has to remember the meaning of.
+  Future<bool?> _confirmLifecycle(
+    BuildContext context, {
+    required User user,
+    required bool deactivating,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          deactivating
+              ? 'Desativar ${user.displayName}?'
+              : 'Suspender ${user.displayName}?',
+        ),
+        content: Text(
+          deactivating
+              ? 'A conta perde o acesso ao aplicativo. Os territórios e as '
+                    'clínicas sob esta pessoa continuam como estão.'
+              : 'A conta perde o acesso até a suspensão ser cancelada.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('user-lifecycle-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: Text(deactivating ? 'Desativar' : 'Suspender'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showLifecycleSheet(
     BuildContext context,
     WidgetRef ref,
@@ -90,12 +127,21 @@ class UserDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (canAdmin)
+            if (canAdmin) ...[
               ListTile(
                 leading: const Icon(Icons.badge_outlined),
                 title: const Text('Alterar função'),
                 onTap: () => Navigator.pop(sheetContext, 'role'),
               ),
+              // Lives here since the "Linhas comerciais" card came off the
+              // screen — its "Gerenciar" was the only way into the
+              // assignments editor.
+              ListTile(
+                leading: const Icon(Icons.workspaces_outline),
+                title: const Text('Linhas comerciais'),
+                onTap: () => Navigator.pop(sheetContext, 'verticals'),
+              ),
+            ],
             if (user.status.name == 'inactive')
               ListTile(
                 leading: const Icon(
@@ -142,6 +188,25 @@ class UserDetailScreen extends ConsumerWidget {
       ref.invalidate(userDetailProvider(userId));
       await ref.read(usersListProvider.notifier).refreshRow(userId);
       return;
+    }
+
+    if (action == 'verticals') {
+      await UserAssignmentsRoute(id: userId).push(context);
+      ref.invalidate(userAssignmentsProvider(userId));
+      return;
+    }
+
+    // Suspending or deactivating someone takes their access away, and both
+    // were one tap on a sheet row with nothing in between. Every other
+    // destructive action in the app asks first — deleting a territory, taking
+    // a clinic out of the field.
+    if (action == 'suspend' || action == 'deactivate') {
+      final confirmed = await _confirmLifecycle(
+        context,
+        user: user,
+        deactivating: action == 'deactivate',
+      );
+      if (confirmed != true || !context.mounted) return;
     }
 
     final repository = ref.read(usersRepositoryProvider);
@@ -450,54 +515,25 @@ class _AssignmentsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final verticalAssignments = assignments.verticalAssignments;
 
+    // No "Linhas comerciais" card. It listed the sector names as chips
+    // directly above a card per sector, each already titled with that name —
+    // the same list twice, one of them unable to say anything more. Managing
+    // them moved to the ⋮ menu, which was its only entry point.
+    if (verticalAssignments.isEmpty) {
+      return const _SectionCard(
+        title: 'Linhas comerciais',
+        child: Text(
+          'Nenhuma linha comercial atribuída.',
+          style: TextStyle(fontSize: 13, color: AppColors.gray400),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionCard(
-          title: 'Linhas comerciais',
-          trailing: canManage
-              ? TextButton(
-                  onPressed: () async {
-                    await UserAssignmentsRoute(id: user.id).push(context);
-                    ref.invalidate(userAssignmentsProvider(user.id));
-                  },
-                  child: const Text('Gerenciar'),
-                )
-              : null,
-          child: verticalAssignments.isEmpty
-              ? const Text(
-                  'Nenhuma linha comercial atribuída.',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray400),
-                )
-              : Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: verticalAssignments
-                      .map(
-                        (a) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.gray100,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            a.verticalName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.gray700,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-        ),
-        for (final assignment in verticalAssignments) ...[
-          const SizedBox(height: 12),
+        for (final (index, assignment) in verticalAssignments.indexed) ...[
+          if (index > 0) const SizedBox(height: 12),
           _VerticalAssignmentCard(
             userId: user.id,
             assignment: assignment,
@@ -558,6 +594,25 @@ class _VerticalAssignmentCardState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// The manager's own user id, when exactly one manager covers this sector.
+  /// Null with none — or with several, where one row cannot stand for one
+  /// person.
+  int? get _managerUserId {
+    final managers = assignment.managers.where((m) => m.id > 0).toList();
+    return managers.length == 1 ? managers.single.id : null;
+  }
+
+  /// Named for the person, so it opens the person. With nobody assigned yet
+  /// there is no profile to open and the row is the way to choose one.
+  void _openManagerOrPick() {
+    final managerId = _managerUserId;
+    if (managerId == null) {
+      if (widget.canManage) _pickZone();
+      return;
+    }
+    UserDetailRoute(id: managerId).push(context);
   }
 
   Future<void> _pickZone() async {
@@ -644,16 +699,10 @@ class _VerticalAssignmentCardState
         children: [
           if (_busy) const LinearProgressIndicator(minHeight: 2),
           if (_busy) const SizedBox(height: 10),
+          // No "Zona do gerente" heading. The card is already titled with the
+          // sector, and inside one sector the zone adds nothing the reader
+          // needs — who the manager is, is the fact.
           if (widget.showManager) ...[
-            const Text(
-              'Zona do gerente',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.gray500,
-              ),
-            ),
-            const SizedBox(height: 8),
             if (canManage)
               Material(
                 color: AppColors.background,
@@ -662,26 +711,33 @@ class _VerticalAssignmentCardState
                   side: const BorderSide(color: AppColors.gray200),
                 ),
                 child: InkWell(
-                  onTap: _busy ? null : _pickZone,
+                  // Opens the manager, not their territory. This used to open
+                  // the zone picker, so the only thing you could do with your
+                  // manager's name was look at the ground they cover.
+                  //
+                  // Changing who the manager is still has to be possible —
+                  // without a zone a rep cannot be given any patch at all —
+                  // so it moved to "Alterar" beside the name.
+                  onTap: _busy ? null : _openManagerOrPick,
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
                     child: Row(
                       children: [
+                        // A person, not a map.
                         const Icon(
-                          Icons.map_outlined,
+                          Icons.person_outline_rounded,
                           size: 20,
                           color: AppColors.navyDeep,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            assignment.managerZoneName ??
-                                assignment.managerDisplayName ??
-                                'Selecionar zona',
+                            // Never the zone's name. It is an internal handle
+                            // — "orto-mz-su" — and this fell back to it
+                            // before the person.
+                            assignment.managerDisplayName ??
+                                'Selecionar gerente',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -689,10 +745,32 @@ class _VerticalAssignmentCardState
                             ),
                           ),
                         ),
+                        // Always offered, because the case that most needs it
+                        // is the one that used to hide it. A rep can have a
+                        // manager on record and still no zone, and then the
+                        // row led to the manager's profile, "Editar" under
+                        // Territórios answered "Selecione a zona do gerente
+                        // primeiro", and nothing on the screen could set one.
+                        TextButton(
+                          key: const Key('assignment-change-manager'),
+                          onPressed: _busy ? null : _pickZone,
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: Text(
+                            assignment.managerZoneId == null
+                                ? 'Definir'
+                                : 'Alterar',
+                          ),
+                        ),
                         if (assignment.managerZoneId != null)
+                          // Still the only way to leave a rep with no manager
+                          // at all, which is a different act from swapping one.
                           IconButton(
                             onPressed: _busy ? null : _clearZone,
                             visualDensity: VisualDensity.compact,
+                            tooltip: 'Remover gerente',
                             icon: const Icon(
                               Icons.close_rounded,
                               size: 18,
@@ -700,53 +778,23 @@ class _VerticalAssignmentCardState
                             ),
                           )
                         else
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: AppColors.gray400,
-                          ),
+                          const SizedBox(width: 8),
                       ],
                     ),
                   ),
                 ),
               )
-            else ...[
-              if (assignment.managers.length > 1) ...[
-                const Text(
-                  'Gerentes',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray500,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ...assignment.managers.map(
-                  (m) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      m.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray900,
-                      ),
-                    ),
-                  ),
-                ),
-                if (assignment.managerZoneName != null) ...[
-                  const SizedBox(height: 4),
-                  _DetailRow(label: 'Zona', value: assignment.managerZoneName!),
-                ],
-              ] else
-                _DetailRow(
-                  label: 'Zona / gerente',
-                  value:
-                      assignment.managerName ??
-                      assignment.managerZoneName ??
-                      assignment.managerDisplayName ??
-                      'Sem zona',
-                ),
-            ],
+            // Read-only viewers get the same fact: who the manager is. The
+            // zone was a row of its own here, and the single-manager case was
+            // labelled "Zona / gerente" and fell back to the zone's slug.
+            else
+              _DetailRow(
+                label: assignment.managers.length > 1 ? 'Gerentes' : 'Gerente',
+                value:
+                    assignment.managerDisplayName ??
+                    assignment.managerName ??
+                    'Sem gerente',
+              ),
             const SizedBox(height: 12),
           ],
           Row(
@@ -792,16 +840,22 @@ class _VerticalAssignmentCardState
                   final territory = assignment.territories[index];
                   return Stack(
                     children: [
+                      // Tapping opens the territory full-screen, where
+                      // "Editar" is. It used to go straight to the picker, so
+                      // the only way to look at a patch was the same tap that
+                      // changed it.
                       TerritoryMapCard(
                         assignment: TerritoryAssignment.fromOption(territory),
                         width: 220,
                         mapHeight: 120,
-                        onTap: canManage ? _pickTerritories : null,
+                        onEdit: canManage ? _pickTerritories : null,
                       ),
+                      // Top-left: the expand hint now sits top-right, and the
+                      // two were landing on each other.
                       if (canManage)
                         Positioned(
-                          top: 28,
-                          right: 4,
+                          top: 8,
+                          left: 8,
                           child: Material(
                             color: Colors.white,
                             shape: const CircleBorder(),
@@ -834,11 +888,10 @@ class _VerticalAssignmentCardState
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child, this.trailing});
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -865,7 +918,6 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              ?trailing,
             ],
           ),
           const SizedBox(height: 10),

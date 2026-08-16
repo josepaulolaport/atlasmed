@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 
 /// The member's territory, drawn the same way at both sizes (spec 0015 §6).
 ///
@@ -105,7 +106,10 @@ class _MemberTerritoryViewState extends State<MemberTerritoryView> {
         styleUri: MapboxStyles.STANDARD,
         viewport: _viewport,
         onMapCreated: (created) => _map = created,
-        onStyleLoadedListener: (_) => _configure(),
+        onStyleLoadedListener: (_) async {
+          await useFlatProjection(_map);
+          await _configure();
+        },
         onMapLoadErrorListener: (_) {
           if (mounted) setState(() => _unavailable = true);
         },

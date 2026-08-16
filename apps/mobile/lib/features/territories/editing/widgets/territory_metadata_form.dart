@@ -9,6 +9,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+/// Names what still has to be filled in, in the order the fields appear.
+///
+/// "Continuar para o mapa" is the gate into the whole create flow, and it went
+/// dead on three separate conditions without naming any of them.
+String territoryMetadataMissingLabel({
+  required bool hasName,
+  required bool hasVertical,
+  required bool needsManagerZone,
+  required bool hasManagerZone,
+}) {
+  final missing = <String>[
+    if (!hasName) 'o nome',
+    if (!hasVertical) 'a linha comercial',
+    if (needsManagerZone && !hasManagerZone) 'a zona de gerente',
+  ];
+  if (missing.isEmpty) return '';
+  if (missing.length == 1) return 'Falta informar ${missing.single}.';
+  final last = missing.removeLast();
+  return 'Falta informar ${missing.join(', ')} e $last.';
+}
+
 class TerritoryMetadataForm extends ConsumerStatefulWidget {
   final TerritoryDraft? initial;
   final TerritoryKind initialKind;
@@ -83,6 +104,13 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
       _nameController.text.trim().isNotEmpty &&
       _verticalId != null &&
       (!_isPatch || _managerTerritoryId != null);
+
+  String get _missingLabel => territoryMetadataMissingLabel(
+    hasName: _nameController.text.trim().isNotEmpty,
+    hasVertical: _verticalId != null,
+    needsManagerZone: _isPatch,
+    hasManagerZone: _managerTerritoryId != null,
+  );
 
   void _setVertical(int? verticalId) {
     if (verticalId == _verticalId) return;
@@ -194,6 +222,31 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                 ],
               ),
             ),
+            if (!_isValid)
+              // The button is the gate into the whole create flow, and it went
+              // dead on three separate conditions without naming any of them.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: AppColors.gray500,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _missingLabel,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: FilledButton(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_clinic_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
@@ -74,6 +75,22 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
+  /// Tapping the card for the filter already applied clears it, so the strip
+  /// is a way back to everything and not a one-way trip.
+  void _selectFilterByLabel(String label) {
+    final target = label == selectedFilter ? 'Todos' : label;
+    _selectFilter(_filters.firstWhere((filter) => filter.label == target));
+  }
+
+  Future<void> _pickClinic(OrderFacilityFilter? current) async {
+    final chosen = await showOrderClinicFilterSheet(context, current: current);
+    if (chosen == null || !mounted) return;
+    await ref
+        .read(ordersListProvider.notifier)
+        .setFacility(chosen.id == 0 ? null : chosen);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ordersAsync = ref.watch(ordersListProvider);
@@ -102,8 +119,22 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _SummaryStrip(counts: listState?.statusCounts ?? const {}),
+                    _SummaryStrip(
+                      counts: listState?.statusCounts ?? const {},
+                      selectedFilter: selectedFilter,
+                      onSelect: _selectFilterByLabel,
+                    ),
                     const SizedBox(height: 18),
+                    _ClinicFilterRow(
+                      facility: listState?.facility,
+                      onTap: () => _pickClinic(listState?.facility),
+                      onClear: listState?.facility == null
+                          ? null
+                          : () => ref
+                                .read(ordersListProvider.notifier)
+                                .setFacility(null),
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       height: 36,
                       child: ListView.separated(
@@ -149,11 +180,16 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                   ),
                 ],
                 data: (state) => state.orders.isEmpty
-                    ? const [
+                    ? [
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: _EmptyState(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _EmptyState(
+                              facility: state.facility,
+                              statusLabel: selectedFilter == 'Todos'
+                                  ? null
+                                  : selectedFilter,
+                            ),
                           ),
                         ),
                       ]
@@ -196,6 +232,80 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
 
 /// "20 de 1131 pedidos" — the count the screen could never show before, since
 /// it discarded `pagination` and had no way to say more existed.
+/// Search for a clinic, or say which one the list is currently narrowed to.
+///
+/// A row of its own rather than another status chip: it answers a different
+/// question ("which clinic") from the ones beside it ("which state"), and the
+/// two combine — a clinic's rejected orders is a reasonable thing to ask for.
+class _ClinicFilterRow extends StatelessWidget {
+  const _ClinicFilterRow({
+    required this.facility,
+    required this.onTap,
+    this.onClear,
+  });
+
+  final OrderFacilityFilter? facility;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = facility != null;
+    return Material(
+      color: selected ? AppColors.blue50 : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        key: const Key('orders-clinic-filter'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.navyBright : AppColors.gray200,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.local_hospital_rounded : Icons.search_rounded,
+                size: 18,
+                color: selected ? AppColors.navyBright : AppColors.gray400,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  facility?.name ?? 'Buscar pedidos de uma clínica',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? AppColors.navyDeep : AppColors.gray500,
+                  ),
+                ),
+              ),
+              if (onClear != null)
+                IconButton(
+                  key: const Key('orders-clinic-filter-clear'),
+                  tooltip: 'Mostrar pedidos de todas as clínicas',
+                  onPressed: onClear,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.navyBright,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ResultCount extends StatelessWidget {
   const _ResultCount({required this.shown, required this.total});
 
@@ -256,40 +366,64 @@ class _ListFooter extends StatelessWidget {
 /// These were counted from the loaded page, and mislabelled on top of it:
 /// APPROVED read "Em trânsito" and INVOICED read "Entregue", neither of which
 /// is what those statuses mean. Nothing in the system tracks a delivery.
+///
+/// Each card carries the same label as one of the chips below it, so tapping
+/// the number applies that chip. They were inert before, which made three
+/// button-shaped things on the busiest screen in the app do nothing.
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.counts});
+  const _SummaryStrip({
+    required this.counts,
+    required this.selectedFilter,
+    required this.onSelect,
+  });
 
   final Map<String, int> counts;
+  final String selectedFilter;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final pending = (counts['DRAFT'] ?? 0) + (counts['PENDING'] ?? 0);
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryCard(
-            label: 'Faturados',
-            count: counts['INVOICED'] ?? 0,
-            color: AppColors.green,
+    // IntrinsicHeight, not a bare stretch: this Row sits in a sliver with no
+    // height to inherit, so `CrossAxisAlignment.stretch` alone hands the cards
+    // h=Infinity and the screen throws on layout.
+    return IntrinsicHeight(
+      child: Row(
+        // "Sem faturamento" wraps to two lines and the other two do not, so
+        // the cards were three different heights on a shared baseline.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _SummaryCard(
+              label: 'Faturados',
+              count: counts['INVOICED'] ?? 0,
+              color: AppColors.green,
+              selected: selectedFilter == 'Faturados',
+              onTap: () => onSelect('Faturados'),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SummaryCard(
-            label: 'Sem faturamento',
-            count: counts['NO_BILLING'] ?? 0,
-            color: AppColors.navyDeep,
+          const SizedBox(width: 10),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Sem faturamento',
+              count: counts['NO_BILLING'] ?? 0,
+              color: AppColors.navyDeep,
+              selected: selectedFilter == 'Sem faturamento',
+              onTap: () => onSelect('Sem faturamento'),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SummaryCard(
-            label: 'Pendentes',
-            count: pending,
-            color: AppColors.amber,
+          const SizedBox(width: 10),
+          Expanded(
+            child: _SummaryCard(
+              label: 'Pendentes',
+              count: pending,
+              color: AppColors.amber,
+              selected: selectedFilter == 'Pendentes',
+              onTap: () => onSelect('Pendentes'),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -298,43 +432,61 @@ class _SummaryCard extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _SummaryCard({
     required this.label,
     required this.count,
     required this.color,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        key: Key('orders-summary-$label'),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: color,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? color : AppColors.surfaceSecondary,
+              width: selected ? 1.5 : 1,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.gray500,
-              fontWeight: FontWeight.w500,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  height: 1.2,
+                  color: selected ? AppColors.gray700 : AppColors.gray500,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -381,87 +533,134 @@ class _OrderCard extends StatelessWidget {
 
   const _OrderCard({required this.order, required this.onTap});
 
+  /// "Adriana Oliveira · 1 item", or whichever half exists.
+  ///
+  /// "1 itens" before, and the count sat on a line of its own under a divider.
+  String get _subtitle => [
+    if (order.seller != null) order.seller!,
+    '${order.items} ${order.items == 1 ? 'item' : 'itens'}',
+  ].join(' · ');
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.surfaceSecondary),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              // PED-1234 for an imported order — the number a rep reads back
-              // over the phone. This was the raw database id.
-              '${order.displayId} • ${order.date}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.gray400,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.surfaceSecondary),
+          ),
+          // Three rows, not five. The status chip and the item count each had
+          // a line to themselves — with a divider between — so twenty orders
+          // was a very long scroll for very little on it.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      // PED-1234 for an imported order — the number a rep
+                      // reads back over the phone. This was the database id.
+                      '${order.displayId} · ${order.date}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.gray400,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PStatusChip(status: order.status),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              order.clinic,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.gray800,
-              ),
-            ),
-            if (order.seller != null) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: 8),
               Text(
-                order.seller!,
-                style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+                order.clinic,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.gray500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    order.value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                  // A chevron rather than "toque para detalhes" printed on
+                  // every card — the house signal for a row that opens.
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.gray400,
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: 10),
-            PStatusChip(status: order.status),
-            const SizedBox(height: 12),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.surfaceSecondary,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Text(
-                  '${order.items} itens · toque para detalhes',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray400,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  order.value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Says why the list is empty.
+///
+/// It read "Nenhum pedido ainda / Os pedidos registrados aparecerão aqui"
+/// whatever was in effect, so a clinic with no rejected orders looked like a
+/// rep with no orders at all.
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({this.facility, this.statusLabel});
+
+  final OrderFacilityFilter? facility;
+
+  /// The chip in effect, or null when it is "Todos".
+  final String? statusLabel;
+
+  String get _title {
+    if (facility == null && statusLabel == null) return 'Nenhum pedido ainda';
+    return 'Nenhum pedido encontrado';
+  }
+
+  String get _subtitle {
+    final status = statusLabel?.toLowerCase();
+    if (facility != null && status != null) {
+      return 'Nenhum pedido "$status" para ${facility!.name}.';
+    }
+    if (facility != null) {
+      return 'Nenhum pedido registrado para ${facility!.name}.';
+    }
+    if (status != null) return 'Nenhum pedido "$status" no seu território.';
+    return 'Os pedidos registrados aparecerão aqui.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -486,9 +685,9 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nenhum pedido ainda',
-            style: TextStyle(
+          Text(
+            _title,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.gray800,
@@ -496,9 +695,9 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Os pedidos registrados aparecerão aqui.',
+            _subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
         ],
       ),

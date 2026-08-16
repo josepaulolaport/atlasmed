@@ -83,16 +83,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
+  bool get _canSubmit =>
+      _emailController.text.trim().isNotEmpty &&
+      _passwordController.text.isNotEmpty;
+
   Future<void> _login(SessionEnvironment repository) async {
-    if (_isLoading) return;
+    if (_isLoading || !_canSubmit) return;
 
     setState(() {
       _isLoading = true;
       _errorKind = null;
     });
 
+    // Trimmed: an address pasted or autofilled with a trailing space came
+    // back as "E-mail ou senha incorretos", which points at the wrong thing.
     final result = await repository.login(
-      email: _emailController.text,
+      email: _emailController.text.trim(),
       password: _passwordController.text,
     );
 
@@ -155,140 +161,157 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               builder: (_, _) {
                                 return Transform.translate(
                                   offset: Offset(_shakeAnimation.value, 0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Bem-vindo',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.4,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Entre com sua conta para acessar o portal.',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.7,
+                                  // Groups the two fields so iOS and Android
+                                  // offer a saved login for the pair, and
+                                  // offer to save a new one after it works.
+                                  child: AutofillGroup(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Bem-vindo',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.4,
                                           ),
-                                          fontSize: 14,
                                         ),
-                                      ),
-                                      const SizedBox(height: 28),
-                                      GlassInput(
-                                        label: 'E-mail corporativo',
-                                        icon: const Icon(
-                                          Icons.email_outlined,
-                                          size: 18,
-                                        ),
-                                        value: _emailController.text,
-                                        onChanged: (v) {
-                                          setState(() {
-                                            _emailController.text = v;
-                                            _emailController.selection =
-                                                TextSelection.collapsed(
-                                                  offset: v.length,
-                                                );
-                                            _errorKind = null;
-                                          });
-                                        },
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                        textInputAction: TextInputAction.next,
-                                        error: hasInputError,
-                                        enabled: !isBlocked && !_isLoading,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      GlassInput(
-                                        label: 'Senha',
-                                        icon: const Icon(
-                                          Icons.lock_outline,
-                                          size: 18,
-                                        ),
-                                        value: _passwordController.text,
-                                        onChanged: (v) {
-                                          setState(() {
-                                            _passwordController.text = v;
-                                            _passwordController.selection =
-                                                TextSelection.collapsed(
-                                                  offset: v.length,
-                                                );
-                                            _errorKind = null;
-                                          });
-                                        },
-                                        obscureText: true,
-                                        textInputAction: TextInputAction.done,
-                                        error: hasInputError,
-                                        enabled: !isBlocked && !_isLoading,
-                                      ),
-                                      if (_errorKind != null) ...[
-                                        const SizedBox(height: 12),
+                                        const SizedBox(height: 6),
                                         Text(
-                                          _errorMessage(_errorKind!),
-                                          style: const TextStyle(
-                                            color: AppColors.red100,
+                                          'Entre com sua conta para acessar o portal.',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.7,
+                                            ),
                                             fontSize: 14,
-                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                      ],
-                                      const SizedBox(height: 32),
-                                      Row(
-                                        children: [
-                                          TextButton(
-                                            onPressed: widget.onRegisterInvite,
-                                            style: TextButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 4,
-                                                  ),
-                                            ),
-                                            child: Text(
-                                              'Tenho um convite',
-                                              style: TextStyle(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.85,
-                                                ),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
+                                        const SizedBox(height: 28),
+                                        GlassInput(
+                                          label: 'E-mail corporativo',
+                                          icon: const Icon(
+                                            Icons.email_outlined,
+                                            size: 18,
                                           ),
-                                          const Spacer(),
-                                          TextButton(
-                                            onPressed: widget.onForgotPassword,
-                                            style: TextButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 4,
-                                                  ),
-                                            ),
-                                            child: Text(
-                                              'Esqueci minha senha',
-                                              style: TextStyle(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.85,
-                                                ),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                                          value: _emailController.text,
+                                          onChanged: (v) {
+                                            setState(() {
+                                              _emailController.text = v;
+                                              _emailController.selection =
+                                                  TextSelection.collapsed(
+                                                    offset: v.length,
+                                                  );
+                                              _errorKind = null;
+                                            });
+                                          },
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          textInputAction: TextInputAction.next,
+                                          error: hasInputError,
+                                          enabled: !isBlocked && !_isLoading,
+                                          autofillHints: const [
+                                            AutofillHints.username,
+                                            AutofillHints.email,
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        GlassInput(
+                                          label: 'Senha',
+                                          icon: const Icon(
+                                            Icons.lock_outline,
+                                            size: 18,
+                                          ),
+                                          value: _passwordController.text,
+                                          onChanged: (v) {
+                                            setState(() {
+                                              _passwordController.text = v;
+                                              _passwordController.selection =
+                                                  TextSelection.collapsed(
+                                                    offset: v.length,
+                                                  );
+                                              _errorKind = null;
+                                            });
+                                          },
+                                          obscureText: true,
+                                          textInputAction: TextInputAction.done,
+                                          error: hasInputError,
+                                          enabled: !isBlocked && !_isLoading,
+                                          autofillHints: const [
+                                            AutofillHints.password,
+                                          ],
+                                        ),
+                                        if (_errorKind != null) ...[
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            _errorMessage(_errorKind!),
+                                            style: const TextStyle(
+                                              color: AppColors.red100,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      PrimaryButton(
-                                        label: 'Entrar',
-                                        loading: _isLoading,
-                                        disabled: _isLoading,
-                                        trailingIcon: Icons.arrow_forward,
-                                        onPressed: () => _login(repository),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 32),
+                                        Row(
+                                          children: [
+                                            TextButton(
+                                              onPressed:
+                                                  widget.onRegisterInvite,
+                                              style: TextButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                              ),
+                                              child: Text(
+                                                'Tenho um convite',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.85),
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            TextButton(
+                                              onPressed:
+                                                  widget.onForgotPassword,
+                                              style: TextButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                              ),
+                                              child: Text(
+                                                'Esqueci minha senha',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.85),
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        PrimaryButton(
+                                          label: 'Entrar',
+                                          loading: _isLoading,
+                                          // Submitting empty fields spent a
+                                          // round trip to be told "E-mail ou
+                                          // senha incorretos", which blames the
+                                          // credentials for a form that was
+                                          // simply blank.
+                                          disabled: _isLoading || !_canSubmit,
+                                          trailingIcon: Icons.arrow_forward,
+                                          onPressed: () => _login(repository),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },

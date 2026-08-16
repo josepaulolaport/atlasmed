@@ -251,7 +251,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
            * clinics the user already works. It hides itself for roles that may
            * not import, and the API enforces the same rule independently.
            */
-          if (isClinic)
+          // Hidden while the list is empty, because the empty state carries
+          // the same offer (spec 0015 §6.0 — not finding a clinic is the
+          // moment the import exists for). Both were rendering at once, so a
+          // fruitless search showed "Buscar no CNES" twice, a screen apart.
+          if (isClinic && clinicTotal != 0)
             Align(
               alignment: Alignment.centerRight,
               child: Padding(

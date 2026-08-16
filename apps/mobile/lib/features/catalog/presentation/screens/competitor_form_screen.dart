@@ -181,9 +181,10 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       price18: parseBrlNumber(_price18.text),
       price20: parseBrlNumber(_price20.text),
       isActive: _isActive,
-      // Not stamped with `DateTime.now()`: this column records when the
-      // *Brasíndice* record was published, and no competitor product has one
-      // (spec 0013 §2). Whatever the row already carries is preserved.
+      // Not stamped, and not derived from whether a price moved either: this
+      // column records when the *Brasíndice* record was published, and no
+      // competitor product has one (spec 0013 §2). Whatever the row already
+      // carries is preserved.
     );
 
     try {

@@ -260,10 +260,16 @@ class OrdersRepository extends Repository<OrdersPage>
     int page = 1,
     int limit = 20,
     List<String>? statuses,
+    int? facilityId,
   }) async {
     final query = <String, String>{'page': '$page', 'limit': '$limit'};
     if (statuses != null && statuses.isNotEmpty) {
       query['status'] = statuses.join(',');
+    }
+    // The route has always accepted this; nothing on the client asked for it,
+    // so "every order for this clinic" was a question the list could not answer.
+    if (facilityId != null) {
+      query['facilityId'] = '$facilityId';
     }
     final response = await client.call(
       request: RepositoryHttpRequest(

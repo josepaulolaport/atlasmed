@@ -91,11 +91,13 @@ class EditorToolbar extends StatelessWidget {
             ),
             _IconButton(
               icon: Icons.undo_rounded,
+              label: 'Desfazer',
               enabled: canUndo,
               onTap: onUndo,
             ),
             _IconButton(
               icon: Icons.redo_rounded,
+              label: 'Refazer',
               enabled: canRedo,
               onTap: onRedo,
             ),
@@ -131,33 +133,41 @@ class _ModeButton extends StatelessWidget {
         : selected
         ? AppColors.navyDeep
         : AppColors.gray500;
-    return Material(
-      color: selected && enabled ? AppColors.blue50 : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
+    // Only the selected tool shows its label, so the other three are bare
+    // icons — and a disabled one is a bare grey icon with no way to ask what
+    // it is or why it is off.
+    return Tooltip(
+      message: enabled
+          ? label
+          : '$label — disponível depois de adicionar a primeira área',
+      child: Material(
+        color: selected && enabled ? AppColors.blue50 : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: selected ? 10 : 8,
-            vertical: 8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: iconColor),
-              if (selected) ...[
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: iconColor,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: selected ? 10 : 8,
+              vertical: 8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: iconColor),
+                if (selected) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: iconColor,
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -167,26 +177,31 @@ class _ModeButton extends StatelessWidget {
 
 class _IconButton extends StatelessWidget {
   final IconData icon;
+  final String label;
   final bool enabled;
   final VoidCallback onTap;
 
   const _IconButton({
     required this.icon,
+    required this.label,
     required this.enabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(
-          icon,
-          size: 19,
-          color: enabled ? AppColors.gray700 : AppColors.gray300,
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            icon,
+            size: 19,
+            color: enabled ? AppColors.gray700 : AppColors.gray300,
+          ),
         ),
       ),
     );

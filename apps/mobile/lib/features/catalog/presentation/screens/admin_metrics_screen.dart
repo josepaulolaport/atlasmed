@@ -141,8 +141,11 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton(
+          // Red text, not a filled button: the destructive choice should not be
+          // the one the eye lands on first.
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Remover'),
           ),
         ],

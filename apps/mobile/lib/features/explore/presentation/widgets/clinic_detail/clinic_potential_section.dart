@@ -365,6 +365,9 @@ class _NoOtherBrandsClaim extends StatelessWidget {
           SizedBox(
             width: 28,
             height: 28,
+            // Material's default checkbox draws a black square with the
+            // seed-derived tick colour, which is the only control on this page
+            // not in the app's blue.
             child: Checkbox(
               key: const Key('potential-no-other-brands'),
               value: item.noOtherBrands,
@@ -372,6 +375,12 @@ class _NoOtherBrandsClaim extends StatelessWidget {
                   ? null
                   : (value) => onChanged!(value ?? false),
               visualDensity: VisualDensity.compact,
+              activeColor: AppColors.navyBright,
+              checkColor: Colors.white,
+              side: const BorderSide(color: AppColors.gray300, width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5),
+              ),
             ),
           ),
           const SizedBox(width: 8),

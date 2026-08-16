@@ -10,10 +10,15 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 ///
 /// [isError] is the only variant. A failure that looks exactly like a success
 /// is how an admin walks away from an edit that did not happen.
+///
+/// [action] offers a way back from the edit that was just made — an undo, in
+/// practice. It buys the toast a longer life, because a button nobody has time
+/// to reach for is the same as no button.
 void showCatalogSnack(
   BuildContext context,
   String message, {
   bool isError = false,
+  SnackBarAction? action,
 }) {
   ScaffoldMessenger.of(context)
     // Editing several rows in a row otherwise queues toasts that land long
@@ -23,7 +28,14 @@ void showCatalogSnack(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: isError ? AppColors.error : AppColors.gray900,
-        duration: Duration(seconds: isError ? 5 : 3),
+        duration: Duration(
+          seconds: isError
+              ? 5
+              : action == null
+              ? 3
+              : 7,
+        ),
+        action: action,
         content: Row(
           children: [
             Icon(
@@ -55,11 +67,17 @@ void showCatalogSnack(
 /// unchanged number, concludes the edit failed, and does it again. One function
 /// rather than the string repeated at four call sites, so the four cannot start
 /// promising slightly different things.
-void showNightlyRecomputeNotice(BuildContext context, {String? prefix}) {
+/// [action] rides along for the unlink case, where the notice and a way back
+/// are both wanted and only one snackbar can be on screen at a time.
+void showNightlyRecomputeNotice(
+  BuildContext context, {
+  String? prefix,
+  SnackBarAction? action,
+}) {
   final message = prefix == null
       ? 'Os números das clínicas são atualizados no próximo processamento '
             'noturno.'
       : '$prefix Os números das clínicas são atualizados no próximo '
             'processamento noturno.';
-  showCatalogSnack(context, message);
+  showCatalogSnack(context, message, action: action);
 }

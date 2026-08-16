@@ -432,7 +432,22 @@ async function loadLastVisitAt(
   const rows = await db
     .select({
       facilityId: visits.facilityId,
-      lastVisitAt: sql<Date>`max(${visits.visitedAt})`,
+      /*
+       * `sql<Date>` asserts a type; it does not produce one. Drizzle only
+       * decodes what it can tie to a column, and a bare template gets no
+       * decoder — so `max(visited_at)` arrives as the driver's string. The
+       * declared `Map<number, Date>` then carried strings, and
+       * `serializeFacility` called `.toISOString()` on them:
+       *
+       *   TypeError: list.lastVisitAt?.toISOString is not a function
+       *
+       * `?.` did not help — the value is a non-null string, so it steps
+       * straight into a method that is not there. It 500'd `/facilities` and
+       * every `/dashboard/metrics/*\/clinics` drilldown for any reader whose
+       * page held a clinic they had visited, which is why it never showed up
+       * on a local database with no visits.
+       */
+      lastVisitAt: sql<Date | string>`max(${visits.visitedAt})`,
     })
     .from(visits)
     .where(
@@ -443,7 +458,19 @@ async function loadLastVisitAt(
     )
     .groupBy(visits.facilityId);
 
-  return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
+  return new Map(
+    rows.flatMap((row) => {
+      const at = toDate(row.lastVisitAt);
+      return at ? [[row.facilityId, at] as [number, Date]] : [];
+    }),
+  );
+}
+
+/** A `Date` from whatever the driver handed back, or null if it is unusable. */
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**

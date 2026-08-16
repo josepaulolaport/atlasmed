@@ -351,12 +351,55 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
     );
     if (picked == null || !mounted) return;
+
+    // The API takes either chosen areas or a drawn one, never both, so this
+    // throws the draft away. Drawing it was real work in the map editor, and
+    // nothing said it was about to go.
+    if (assignment.newPatch != null) {
+      final confirmed = await _confirmReplaceArea(
+        title: 'Descartar a área desenhada?',
+        message:
+            'A área "${assignment.newPatch!.name}" que você desenhou será '
+            'substituída pela seleção. Para tê-la de volta será preciso '
+            'desenhar de novo.',
+      );
+      if (!confirmed || !mounted) return;
+    }
+
     setState(() {
       _verticalAssignments[assignment.verticalId] = assignment.copyWith(
         territories: picked,
         clearNewPatch: true,
       );
     });
+  }
+
+  /// Choosing areas and drawing one are mutually exclusive on the wire, so
+  /// each replaces the other. Both did it silently.
+  Future<bool> _confirmReplaceArea({
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('invite-replace-area-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Substituir'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   Future<void> _drawNewPatch(InviteVerticalAssignment assignment) async {
@@ -380,6 +423,22 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       ),
     );
     if (draft == null || !mounted) return;
+
+    // Same swap the other way round: keeping the drawn area means dropping
+    // whatever was already chosen.
+    final replaced =
+        (_verticalAssignments[verticalId] ?? assignment).territories;
+    if (replaced.isNotEmpty) {
+      final confirmed = await _confirmReplaceArea(
+        title: replaced.length == 1
+            ? 'Substituir a área escolhida?'
+            : 'Substituir as ${replaced.length} áreas escolhidas?',
+        message:
+            'A área que você desenhou entra no lugar de '
+            '${replaced.map((t) => t.name).join(', ')}.',
+      );
+      if (!confirmed || !mounted) return;
+    }
 
     setState(() {
       final current = _verticalAssignments[verticalId] ?? assignment;
@@ -558,9 +617,39 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                       ),
                     ),
                   ),
+                  // How far in, and how far to go. The wizard runs to four
+                  // steps and said neither, so every "Continuar" was a step
+                  // into an unknown number of them.
+                  if (steps.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Text(
+                        '${_stepIndex + 1} de ${steps.length}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
+            if (steps.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: (_stepIndex + 1) / steps.length,
+                    minHeight: 3,
+                    backgroundColor: AppColors.gray200,
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.navyBright,
+                    ),
+                  ),
+                ),
+              ),
             Expanded(
               child: _loadingInvitation
                   ? const Center(child: CircularProgressIndicator())
