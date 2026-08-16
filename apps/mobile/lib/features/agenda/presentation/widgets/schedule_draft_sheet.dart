@@ -104,6 +104,25 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
     facility: _kind == CalendarEventKind.interaction ? _facility : null,
   );
 
+  /// Choosing the clinic names the visit, unless the rep already named it.
+  ///
+  /// The sheet used to demand a typed title even once a clinic was chosen —
+  /// the same question, asked twice, with the answer already on screen. A title
+  /// counts as still automatic while it is empty or exactly what the previous
+  /// clinic would have produced, so swapping clinics moves it and anything
+  /// typed by hand survives.
+  void _chooseFacility(CalendarIdentity? facility) {
+    final previous = _facility;
+    final automatic =
+        _title.text.trim().isEmpty ||
+        (previous != null && _title.text == visitTitleForFacility(previous.name));
+
+    _facility = facility;
+    if (!automatic) return;
+    _title.text = facility == null ? '' : visitTitleForFacility(facility.name);
+    _title.selection = TextSelection.collapsed(offset: _title.text.length);
+  }
+
   bool get _canSave =>
       _title.text.trim().isNotEmpty &&
       (_kind == CalendarEventKind.personalBlock || _facility != null);
@@ -217,9 +236,9 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
                     selected: _facility,
                     onPick: () async {
                       final picked = await showClinicPicker(context);
-                      if (picked != null) setState(() => _facility = picked);
+                      if (picked != null) setState(() => _chooseFacility(picked));
                     },
-                    onClear: () => setState(() => _facility = null),
+                    onClear: () => setState(() => _chooseFacility(null)),
                   ),
                 ],
                 if (widget.clashes.isNotEmpty) ...[

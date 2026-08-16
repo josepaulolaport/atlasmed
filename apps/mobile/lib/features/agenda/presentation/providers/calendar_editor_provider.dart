@@ -278,14 +278,33 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
     ),
   );
   void setTitle(String value) => _setDraft(state.draft.copyWith(title: value));
-  void setFacility(CalendarIdentity? facility) => _setDraft(
-    facility == null
-        ? state.draft.copyWith(clearFacility: true)
-        : state.draft.copyWith(
-            facilityId: facility.id,
-            facilityName: facility.name,
-          ),
-  );
+  /// Picking the clinic names the visit, unless the rep has named it themselves.
+  ///
+  /// "Still automatic" means empty, or exactly the title the previous clinic
+  /// would have produced — so changing the clinic moves the title with it, and
+  /// anything typed by hand survives both.
+  void setFacility(CalendarIdentity? facility) {
+    final draft = state.draft;
+    final previous = draft.facilityName;
+    final automatic =
+        draft.title.trim().isEmpty ||
+        (previous != null && draft.title == visitTitleForFacility(previous));
+
+    _setDraft(
+      facility == null
+          ? draft.copyWith(
+              clearFacility: true,
+              title: automatic ? '' : draft.title,
+            )
+          : draft.copyWith(
+              facilityId: facility.id,
+              facilityName: facility.name,
+              title: automatic
+                  ? visitTitleForFacility(facility.name)
+                  : draft.title,
+            ),
+    );
+  }
   void setModality(CalendarModality value) =>
       _setDraft(state.draft.copyWith(modality: value));
   void setStartsAt(DateTime value) =>

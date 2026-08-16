@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 import 'package:flutter/material.dart';
 
 /// Where a rep says when they actually work — spec 0016 §15.5.5.
@@ -31,14 +32,21 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
   Future<void> _pick(
     String? value,
     String fallback,
+    String title,
     void Function(String) set,
   ) async {
     final parts = (value ?? fallback).split(':');
-    final chosen = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: int.tryParse(parts.first) ?? 8,
-        minute: int.tryParse(parts.last) ?? 0,
+    // The house wheel, like every other time in the app. It was the Material
+    // dial, which rendered in English and looked nothing like the rest.
+    final chosen = await showTimeWheelPicker(
+      context,
+      title: title,
+      initial: DateTime(
+        2000,
+        1,
+        1,
+        int.tryParse(parts.first) ?? 8,
+        int.tryParse(parts.last) ?? 0,
       ),
     );
     if (chosen == null) return;
@@ -84,6 +92,7 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               onPick: () => _pick(
                 _start,
                 _linhaDefaults.start,
+                'Começo do dia',
                 (v) => setState(() => _start = v),
               ),
               onClear: _start == null
@@ -97,6 +106,7 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               onPick: () => _pick(
                 _end,
                 _linhaDefaults.end,
+                'Fim do dia',
                 (v) => setState(() => _end = v),
               ),
               onClear: _end == null ? null : () => setState(() => _end = null),
@@ -108,6 +118,7 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               onPick: () => _pick(
                 _lunch,
                 _linhaDefaults.lunch,
+                'Começo do almoço',
                 (v) => setState(() => _lunch = v),
               ),
               onClear: _lunch == null

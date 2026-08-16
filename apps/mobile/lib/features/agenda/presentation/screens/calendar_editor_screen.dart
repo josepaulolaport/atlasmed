@@ -70,6 +70,16 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
         ? notifier.validationErrors
         : const <String, String>{};
     final draft = state.draft;
+    // The notifier names the visit when the clinic is chosen, and the field has
+    // to show it. Safe against fighting the rep's typing: `onChanged` writes the
+    // controller's own text into the draft, so the two are already equal on
+    // every keystroke and this only fires when something else moved the title.
+    if (_titleController.text != draft.title) {
+      _titleController.value = TextEditingValue(
+        text: draft.title,
+        selection: TextSelection.collapsed(offset: draft.title.length),
+      );
+    }
 
     return PopScope(
       canPop: state.isSaved,

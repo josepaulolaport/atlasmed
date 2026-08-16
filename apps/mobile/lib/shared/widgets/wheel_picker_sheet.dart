@@ -153,6 +153,7 @@ String _two(int value) => value.toString().padLeft(2, '0');
 Future<DateTime?> showTimeWheelPicker(
   BuildContext context, {
   required DateTime initial,
+  String title = 'Horário',
 }) async {
   const minuteStep = 5;
   var hour = initial.hour;
@@ -171,7 +172,7 @@ Future<DateTime?> showTimeWheelPicker(
     ),
     builder: (_) => StatefulBuilder(
       builder: (context, setState) => WheelPickerSheet(
-        title: 'Horário',
+        title: title,
         valueLabel: '${_two(hour)}:${_two(minute)}',
         columns: [
           WheelPickerColumn(
@@ -208,6 +209,7 @@ Future<int?> showDurationWheelPicker(
   BuildContext context, {
   required int initial,
   required List<int> options,
+  String subtitle = 'Quanto tempo a visita deve ocupar na agenda',
 }) async {
   var index = options.indexOf(initial);
   if (index < 0) index = 0;
@@ -223,7 +225,7 @@ Future<int?> showDurationWheelPicker(
     builder: (_) => StatefulBuilder(
       builder: (context, setState) => WheelPickerSheet(
         title: 'Duração',
-        subtitle: 'Quanto tempo a visita deve ocupar na agenda',
+        subtitle: subtitle,
         valueLabel: formatDurationLabel(options[index]),
         columns: [
           WheelPickerColumn(

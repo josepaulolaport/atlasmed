@@ -947,6 +947,15 @@ String formatAgendaDay(DateTime date) {
   return '${weekdays[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]}';
 }
 
+/// What a visit is called when the rep has not said otherwise.
+///
+/// Choosing the clinic already names the appointment; asking for a title after
+/// that is asking the same question twice, and "Visita" typed by hand is what
+/// reps were going to write anyway. Kept in one place so the quick sheet and
+/// the full editor agree on the string — that agreement is what lets either of
+/// them recognise a title as still automatic and replace it.
+String visitTitleForFacility(String facilityName) => 'Visita · $facilityName';
+
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
 

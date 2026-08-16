@@ -84,7 +84,62 @@ CalendarOccurrence _occurrence({
   'canMutate': true,
 });
 
+CalendarEditorNotifier _creating() => CalendarEditorNotifier(
+  repository: _FakeCalendarRepository(),
+  target: const CalendarEditorTarget.creating(),
+  now: () => DateTime(2026, 8, 3, 9, 17),
+  timeZoneResolver: (_) => 'America/Sao_Paulo',
+);
+
 void main() {
+  group('naming a visit from its clinic', () {
+    test('choosing the clinic names the visit', () {
+      // The choice already answers "what is this"; asking again for a title is
+      // the same question twice with the answer on screen.
+      final notifier = _creating()
+        ..setFacility(const CalendarIdentity(id: 7, name: 'Clínica Central'));
+
+      expect(notifier.state.draft.title, 'Visita · Clínica Central');
+      expect(notifier.validationErrors.containsKey('title'), isFalse);
+    });
+
+    test('changing the clinic moves the name with it', () {
+      final notifier = _creating()
+        ..setFacility(const CalendarIdentity(id: 7, name: 'Clínica Central'))
+        ..setFacility(const CalendarIdentity(id: 8, name: 'Hospital Sul'));
+
+      expect(notifier.state.draft.title, 'Visita · Hospital Sul');
+    });
+
+    test('a title the rep typed survives a change of clinic', () {
+      final notifier = _creating()
+        ..setFacility(const CalendarIdentity(id: 7, name: 'Clínica Central'))
+        ..setTitle('Reunião com o comprador')
+        ..setFacility(const CalendarIdentity(id: 8, name: 'Hospital Sul'));
+
+      expect(notifier.state.draft.title, 'Reunião com o comprador');
+    });
+
+    test('clearing the clinic clears a name it had given', () {
+      // Leaving "Visita · Clínica Central" on an appointment with no clinic
+      // would save a title that names somewhere the rep just removed.
+      final notifier = _creating()
+        ..setFacility(const CalendarIdentity(id: 7, name: 'Clínica Central'))
+        ..setFacility(null);
+
+      expect(notifier.state.draft.title, isEmpty);
+    });
+
+    test('clearing the clinic leaves a typed name alone', () {
+      final notifier = _creating()
+        ..setTitle('Almoço com o Dr. Silva')
+        ..setFacility(const CalendarIdentity(id: 7, name: 'Clínica Central'))
+        ..setFacility(null);
+
+      expect(notifier.state.draft.title, 'Almoço com o Dr. Silva');
+    });
+  });
+
   test(
     'new editor defaults to interaction, in-person, 60 minutes and no recurrence',
     () {

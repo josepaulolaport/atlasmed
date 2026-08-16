@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/roteiro/data/roteiro.dart';
 import 'package:atlasmed_mobile_app/features/roteiro/domain/roteiro_schedule.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 import 'package:flutter/material.dart';
 
 String _hhmm(DateTime at) =>
@@ -240,66 +241,27 @@ class _TimeControls extends StatelessWidget {
   final ValueChanged<int>? onDurationChanged;
   final ValueChanged<DateTime>? onTimeChanged;
 
+  // Both pickers are the house wheel, the same one the payer percentages and
+  // the appointment editor use. A time is one of a short ordered list, and a
+  // rep changing 14:30 to 15:00 on a bus should be able to nudge it.
   Future<void> _pickDuration(BuildContext context) async {
-    final chosen = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: AppColors.cardBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Text(
-                'Quanto tempo nesta clínica?',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.gray900,
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                'As visitas seguintes se ajustam ao que você escolher.',
-                style: TextStyle(fontSize: 12, color: AppColors.gray500),
-              ),
-            ),
-            for (final minutes in kRoteiroDurationChoices)
-              ListTile(
-                dense: true,
-                title: Text(_durationLabel(minutes)),
-                trailing: minutes == scheduled.durationMinutes
-                    ? const Icon(
-                        Icons.check,
-                        size: 18,
-                        color: AppColors.navyBright,
-                      )
-                    : null,
-                onTap: () => Navigator.of(sheetContext).pop(minutes),
-              ),
-          ],
-        ),
-      ),
+    final chosen = await showDurationWheelPicker(
+      context,
+      initial: scheduled.durationMinutes,
+      options: kRoteiroDurationChoices,
+      subtitle: 'As visitas seguintes se ajustam ao que você escolher.',
     );
     if (chosen != null) onDurationChanged?.call(chosen);
   }
 
   Future<void> _pickTime(BuildContext context) async {
-    final chosen = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(scheduled.startsAt),
-      helpText: 'Começar a visita às',
+    final chosen = await showTimeWheelPicker(
+      context,
+      initial: scheduled.startsAt,
+      title: 'Começar a visita às',
     );
     if (chosen == null) return;
-    final day = scheduled.startsAt;
-    onTimeChanged?.call(
-      DateTime(day.year, day.month, day.day, chosen.hour, chosen.minute),
-    );
+    onTimeChanged?.call(chosen);
   }
 
   @override
