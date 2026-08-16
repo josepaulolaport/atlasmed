@@ -332,6 +332,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildTerritory(TerritoryStats stats) {
     final assignmentsAsync = ref.watch(profileAssignmentsProvider);
     final managers = assignmentsAsync.valueOrNull?.managers ?? const [];
+    final territories = assignmentsAsync.valueOrNull?.territories ?? const [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +404,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             children: [
               // Map preview
-              _TerritoryMapPreview(height: 150),
+              _TerritoryMapPreview(
+                height: 150,
+                label: territories.isEmpty
+                    ? null
+                    : territories.map((t) => t.territoryName).join(' · '),
+              ),
               // Stats row
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
@@ -1183,7 +1189,12 @@ class _StatCell extends StatelessWidget {
 // ── Territory map preview ────────────────────────────────────
 class _TerritoryMapPreview extends StatelessWidget {
   final double height;
-  const _TerritoryMapPreview({this.height = 150});
+  const _TerritoryMapPreview({this.height = 150, this.label});
+
+  /// The rep's own territory. Null hides the chip — better than the mockup's
+  /// hardcoded "São Paulo · Zona Oeste", which a Rio rep read as a claim about
+  /// where they work.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -1199,43 +1210,52 @@ class _TerritoryMapPreview extends StatelessWidget {
           // Simplified map SVG
           CustomPaint(size: Size.infinite, painter: _MapPainter()),
           // Region label
-          Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x14000000), blurRadius: 4),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.navyDeep,
+          if (label != null)
+            Positioned(
+              top: 10,
+              left: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 4,
+                ),
+                constraints: const BoxConstraints(maxWidth: 220),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x14000000), blurRadius: 4),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.navyDeep,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'São Paulo · Zona Oeste',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navyDeep,
-                      letterSpacing: 0.3,
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        label!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           // Expand button
           Positioned(
             bottom: 10,

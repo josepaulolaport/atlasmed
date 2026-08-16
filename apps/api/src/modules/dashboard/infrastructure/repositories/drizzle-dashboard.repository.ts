@@ -3,6 +3,7 @@ import {
   facilityVerticalProfiles,
   facilityVerticalRepAssignments,
   personFacilities,
+  personHealthcareProfiles,
   facilities,
   municipalities,
   orders,
@@ -817,11 +818,21 @@ export class DrizzleDashboardRepository {
       )
       .where(and(...profileScopeConditions(filter)));
 
+    // Only people who are actually healthcare professionals.
+    //
+    // The card says "médicos" and this counted everybody linked to the clinic —
+    // administrators, buyers, contacts. For Adriana's 146 clinics that is 214
+    // people against 184 doctors, and Perfil (which reads the professionals
+    // list) has been printing the correct 184 beside this one all along.
     const [row] = await db
       .select({
         n: sql<number>`COUNT(DISTINCT ${personFacilities.personId})::int`,
       })
       .from(personFacilities)
+      .innerJoin(
+        personHealthcareProfiles,
+        eq(personHealthcareProfiles.personId, personFacilities.personId),
+      )
       .where(
         and(
           isNull(personFacilities.endedAt),
