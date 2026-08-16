@@ -217,6 +217,12 @@ Lists `ownership = OWN`, active and inactive together. Filters: Linha, state, se
 
 Full CRUD: create, read, update, deactivate, and delete under the conditions in §6.2.
 
+**Tapping a row opens the edit page**, not an intermediate sheet. The first build reused the
+rep-facing quick-view sheet — a read-only copy of the first screenful of the form, with an
+"editar" button inside it. On the admin panel that is a tap that buys nothing: the one thing to do
+with a row here is edit it. The links the sheet carried (produtos concorrentes, comparativo de
+preços, the family's Brasíndice/Simpro publication dates) moved into the page.
+
 **Detail screen** — three sections:
 
 1. **Dados** — every editable column, grouped: identity (`name`, `code`, `brand`, `description`),
@@ -225,7 +231,8 @@ Full CRUD: create, read, update, deactivate, and delete under the conditions in 
    `productClassification`, `internalClassification`, `manufacturer`, `countryOfOrigin`,
    `requiresSterilization`), pricing (`price`, `price17`, `price18`, `price20`,
    `brasindiceUpdatedAt`), unidades (`unit`, plus `metricUnits` **read-only**), Linhas
-   (`verticalIds`, **editable only while creating** — §6.7), state (`isActive`).
+   (`verticalIds`, **editable only while creating** — §6.7), state (`isActive`), and the
+   **imagem** (see below).
 2. **Equivalências** — the competitor products linked to this one, add/remove. This is
    `ManageCompetitorsScreen`, rehomed; the "add" sheet keeps its current shape (pick from
    unlinked, or create a competitor inline via `CompetitorFormScreen`).
@@ -233,6 +240,29 @@ Full CRUD: create, read, update, deactivate, and delete under the conditions in 
    (`PUT /products/:id/potential-definition`, `DELETE …/:definitionId`). One metric per Linha is a
    schema invariant (`product_potential_links_product_vertical_key`), so this renders as one
    picker per Linha, not a multi-select.
+
+**The picture is uploaded, not typed.** `products.picture_url` and `picture_blurhash` have existed
+since the Emultec import with no way to fill them: the column was writable through
+`PATCH /products/:id` as a bare string, which only helps someone who already has a URL.
+
+- `POST /products/:id/picture` — multipart, field `picture`, JPEG/PNG/WebP up to 5 MB. Stores the
+  object, derives the blurhash from the bytes, writes both columns.
+- `DELETE /products/:id/picture` — clears both and deletes the object.
+- `GET /products/pictures/*` — serves the bytes behind `read CATALOG`, because the bucket is
+  private and a signed URL would expire inside a page the admin left open.
+
+`pictureUrl` is **removed** from the product request body as part of this. It names an object this
+API stores, so as a free-text field it let a product point anywhere on the internet, and the
+blurhash beside it is derived rather than typed — the two are written together or not at all.
+
+One picture, not a gallery: the schema has one column, and a product is a thing with one
+representative image. Facilities have a gallery because a clinic is a place you photograph from
+several angles.
+
+It saves **on selection**, not on "Salvar" — it is a separate endpoint and a separate object, and
+a picture lost because the admin backed out over an unrelated field is worse than one saved a
+moment early. A product being created has no id to hang an object off yet, so the section says so
+rather than accepting a file it would silently drop.
 
 `metricUnits` renders as a **read-only** row with a helper line naming the unit from the linked
 metric's label — *"1 unidade deste produto equivale a N ampolas/mês"* — because the number is

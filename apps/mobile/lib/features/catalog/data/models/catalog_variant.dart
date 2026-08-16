@@ -44,6 +44,8 @@ class CatalogVariant {
     this.requiresSterilization = false,
     this.idProdutoEmultec,
     this.metricUnits = 1,
+    this.pictureUrl,
+    this.pictureBlurhash,
   });
 
   final int id;
@@ -108,6 +110,18 @@ class CatalogVariant {
   /// and the API has no writer for this column.
   final double metricUnits;
 
+  /// The product's picture, as a path this API serves
+  /// (`/api/v1/products/pictures/...`), or null.
+  ///
+  /// **Not part of the save payload.** It is written by
+  /// `POST`/`DELETE /products/:id/picture` and stripped from the product body,
+  /// so an admin cannot point a product at an arbitrary URL and the blurhash
+  /// beside it stays derived from the bytes rather than typed.
+  final String? pictureUrl;
+
+  /// Placeholder gradient for [pictureUrl], computed server-side on upload.
+  final String? pictureBlurhash;
+
   /// Full label used inside comparison tables, e.g. "REVISCON 1.0% - 20MG / 2ML".
   String get comparisonLabel =>
       presentation.isEmpty ? name : '$name - $presentation';
@@ -165,6 +179,8 @@ class CatalogVariant {
           ? null
           : readCrmId(json['idProdutoEmultec'], 'idProdutoEmultec'),
       metricUnits: readPrice(json['metricUnits'] ?? 1),
+      pictureUrl: readOptional(json['pictureUrl']),
+      pictureBlurhash: readOptional(json['pictureBlurhash']),
     );
   }
 
@@ -207,6 +223,9 @@ class CatalogVariant {
     int? idProdutoEmultec,
     bool clearIdProdutoEmultec = false,
     double? metricUnits,
+    String? pictureUrl,
+    String? pictureBlurhash,
+    bool clearPicture = false,
   }) {
     return CatalogVariant(
       id: id ?? this.id,
@@ -246,6 +265,10 @@ class CatalogVariant {
           ? null
           : idProdutoEmultec ?? this.idProdutoEmultec,
       metricUnits: metricUnits ?? this.metricUnits,
+      pictureUrl: clearPicture ? null : pictureUrl ?? this.pictureUrl,
+      pictureBlurhash: clearPicture
+          ? null
+          : pictureBlurhash ?? this.pictureBlurhash,
     );
   }
 }

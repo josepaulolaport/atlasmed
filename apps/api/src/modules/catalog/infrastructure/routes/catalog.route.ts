@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { catalogUseCases } from "../../composition";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { competitorProductsRoute } from "./competitor-products.route";
 import { productComparisonsRoute } from "./product-comparisons.route";
 
@@ -151,7 +151,9 @@ const productWritableFields = {
   anvisaRegistration: t.Optional(t.Nullable(t.String())),
   requiresSterilization: t.Optional(t.Boolean()),
   idProdutoEmultec: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
-  pictureUrl: t.Optional(t.Nullable(t.String())),
+  // `pictureUrl` is absent by decision: it names an object this API stores, so
+  // it is written by `POST`/`DELETE /products/:id/picture` and by nothing else.
+  // As a body field it let a product point at any URL on the internet.
   simproCode: t.Optional(t.Nullable(t.String())),
   brasindiceCode: t.Optional(t.Nullable(t.String())),
   tissCode: t.Optional(t.Nullable(t.String())),
@@ -224,6 +226,91 @@ const deleteProductRoute = new Elysia()
     {
       detail: {
         summary: "Delete a product that nothing references",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    }
+  );
+
+/**
+ * The product picture (spec 0016 §4.2).
+ *
+ * Registered **before** `/products/:id` so `pictures` is not routed as a
+ * product id — the same ordering `facilities.route.ts` documents for
+ * `clinical-focuses`.
+ *
+ * Read permission rather than CATALOG-update: reps see the picture in the
+ * product list, and gating the bytes behind an admin permission would show
+ * them a broken image.
+ */
+const downloadProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CATALOG"))
+  .get(
+    "/products/pictures/*",
+    async ({ params, set }) => {
+      const key = params["*"];
+      if (typeof key !== "string") {
+        throw new ValidationError([
+          { field: "key", message: "Invalid product picture key" },
+        ]);
+      }
+      const result = await catalogUseCases
+        .downloadProductPicture()
+        .execute({ storageKey: key });
+      set.headers["content-type"] = result.contentType;
+      set.headers["cache-control"] = "private, max-age=3600";
+      return result.bytes;
+    },
+    {
+      detail: {
+        summary: "Download a product picture by storage key",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const uploadProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CATALOG"))
+  .post(
+    "/products/:id/picture",
+    async ({ params, body }) => {
+      const picture = body.picture;
+      if (!(picture instanceof File)) {
+        throw new ValidationError([
+          { field: "picture", message: "Picture file is required" },
+        ]);
+      }
+      return catalogUseCases
+        .uploadProductPicture()
+        .execute({ productId: params.id, file: picture });
+    },
+    {
+      detail: {
+        summary: "Upload the picture of a product",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      body: t.Object({
+        picture: t.File({ description: "JPEG, PNG, or WebP image up to 5 MB" }),
+      }),
+    }
+  );
+
+const removeProductPictureRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CATALOG"))
+  .delete(
+    "/products/:id/picture",
+    async ({ params }) =>
+      catalogUseCases.removeProductPicture().execute({ productId: params.id }),
+    {
+      detail: {
+        summary: "Remove the picture of a product",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
@@ -404,10 +491,14 @@ export const catalogRoute = new Elysia()
   .use(createBusinessVerticalRoute)
   .use(updateBusinessVerticalRoute)
   .use(listProductsRoute)
+  // Before `/products/:id` so `pictures` is not captured as a product id.
+  .use(downloadProductPictureRoute)
   .use(getProductRoute)
   .use(createProductRoute)
   .use(updateProductRoute)
   .use(deleteProductRoute)
+  .use(uploadProductPictureRoute)
+  .use(removeProductPictureRoute)
   .use(listHealthcareProvidersRoute)
   .use(createHealthcareProviderRoute)
   .use(updateHealthcareProviderRoute)

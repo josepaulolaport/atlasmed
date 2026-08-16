@@ -56,6 +56,7 @@ const product: ProductRecord = {
   idProdutoEmultec: null,
   verticalIds: [1],
   pictureUrl: "https://cdn.example.com/atlas-gel.png",
+  pictureBlurhash: null,
   simproCode: "SIM-1",
   brasindiceCode: "BRA-1",
   tissCode: "TISS-1",

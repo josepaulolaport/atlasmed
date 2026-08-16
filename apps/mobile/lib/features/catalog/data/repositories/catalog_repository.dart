@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -431,6 +435,82 @@ class CatalogRepository {
     return ProductDeletability.fromJson(decoded);
   }
 
+  /// Uploads the product's picture and returns the saved pair.
+  ///
+  /// Multipart, field name `picture` — the same shape as the facility photo
+  /// and profile avatar uploads, because a second upload convention is a
+  /// support question nobody can answer.
+  ///
+  /// The bearer token is attached by hand: [RepositoryHttpClient] speaks JSON
+  /// bodies, and a multipart request is not one.
+  Future<({String url, String? blurhash})> uploadProductPicture(
+    int productId, {
+    required String filename,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    final token = SessionEnvironment.instance.currentValue?.token;
+    if (token == null || token.isEmpty) {
+      throw const CatalogApiException(
+        statusCode: 401,
+        code: 'SESSION_EXPIRED',
+        message: 'Sua sessão expirou. Entre novamente.',
+      );
+    }
+
+    final request =
+        http.MultipartRequest('POST', _uri('/products/$productId/picture'))
+          ..headers['Authorization'] = 'Bearer $token'
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              'picture',
+              Uint8List.fromList(bytes),
+              filename: filename,
+              contentType: MediaType.parse(contentType),
+            ),
+          );
+
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw CatalogApiException(
+        statusCode: response.statusCode,
+        code: 'PICTURE_UPLOAD_FAILED',
+        message: _pictureMessageFor(response.statusCode),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
+    if (data is! Map<String, dynamic> || data['pictureUrl'] is! String) {
+      throw const CatalogApiException(
+        statusCode: 502,
+        code: 'INVALID_RESPONSE',
+        message: 'A resposta do servidor é inválida.',
+      );
+    }
+    return (
+      url: data['pictureUrl'] as String,
+      blurhash: data['pictureBlurhash'] as String?,
+    );
+  }
+
+  /// Clears the product's picture and deletes the stored object.
+  Future<void> removeProductPicture(int productId) async {
+    final response = await _send(
+      _uri('/products/$productId/picture'),
+      RepositoryHttpMethod.delete,
+    );
+    _throwIfError(response);
+  }
+
+  String _pictureMessageFor(int statusCode) => switch (statusCode) {
+    400 || 422 => 'Escolha uma imagem JPG, PNG ou WebP de até 5 MB.',
+    401 => 'Sua sessão expirou. Entre novamente.',
+    403 => 'Você não tem permissão para alterar produtos.',
+    404 => 'Este produto não existe mais.',
+    _ => 'Não foi possível enviar a imagem. Tente novamente.',
+  };
+
   Future<ProductDeletability> getCompetitorDeletability(int competitorId) async {
     final response = await _get(_uri('/competitor-products/$competitorId'));
     _throwIfError(response);
@@ -595,6 +675,9 @@ class CatalogRepository {
 /// - `verticalIds` — create-only, because a product's Linhas are immutable
 ///   after creation (spec 0016 §6.7) and `PATCH /products/:id` rejects them.
 /// - `metricUnits` — informative, no writer anywhere (§7.1).
+/// - `pictureUrl` — written only by `POST`/`DELETE /products/:id/picture`. As
+///   a body field it let a product point at any URL on the internet, and the
+///   blurhash beside it is derived from the bytes rather than typed.
 ///
 /// A top-level function rather than a private method so the contract can be
 /// asserted without a live HTTP client; it is the one place three separate spec

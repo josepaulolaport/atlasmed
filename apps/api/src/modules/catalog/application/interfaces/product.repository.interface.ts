@@ -21,6 +21,7 @@ export interface ProductRecord {
   idProdutoEmultec: number | null;
   verticalIds: number[];
   pictureUrl: string | null;
+  pictureBlurhash: string | null;
   /** Null when the product has no pricing-table code — see spec 0013 §2. */
   simproCode: string | null;
   brasindiceCode: string | null;
@@ -72,7 +73,6 @@ export interface ProductWritableFields {
   anvisaRegistration: string | null;
   requiresSterilization: boolean;
   idProdutoEmultec: number | null;
-  pictureUrl: string | null;
   simproCode: string | null;
   brasindiceCode: string | null;
   tissCode: string | null;
@@ -142,6 +142,20 @@ export interface ProductRepository {
   create(data: CreateProductInput): Promise<ProductRecord>;
 
   update(id: number, data: UpdateProductInput): Promise<ProductRecord>;
+
+  /**
+   * Sets or clears the picture, as a pair.
+   *
+   * Separate from [update] because `pictureUrl` is deliberately **not** an
+   * admin-writable field: it names an object this API stores, so a free-text
+   * body field would let a product point anywhere, and the blurhash beside it
+   * is derived from the bytes rather than typed. Both are set here or by
+   * nothing.
+   */
+  updatePicture(
+    id: number,
+    picture: { pictureUrl: string | null; pictureBlurhash: string | null }
+  ): Promise<void>;
 
   /** What still points at this product. Empty ⇒ it can be deleted. */
   findReferences(id: number): Promise<ProductReferences>;

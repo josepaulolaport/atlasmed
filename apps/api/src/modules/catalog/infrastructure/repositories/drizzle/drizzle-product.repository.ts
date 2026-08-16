@@ -38,6 +38,7 @@ function mapProduct(row: {
   requiresSterilization: boolean;
   idProdutoEmultec: number | null;
   pictureUrl: string | null;
+  pictureBlurhash: string | null;
   simproCode: string | null;
   brasindiceCode: string | null;
   tissCode: string | null;
@@ -71,6 +72,7 @@ function mapProduct(row: {
     idProdutoEmultec: row.idProdutoEmultec,
     verticalIds,
     pictureUrl: row.pictureUrl,
+    pictureBlurhash: row.pictureBlurhash,
     simproCode: row.simproCode,
     brasindiceCode: row.brasindiceCode,
     tissCode: row.tissCode,
@@ -117,6 +119,7 @@ const productColumns = {
   requiresSterilization: products.requiresSterilization,
   idProdutoEmultec: products.idProdutoEmultec,
   pictureUrl: products.pictureUrl,
+  pictureBlurhash: products.pictureBlurhash,
   simproCode: products.simproCode,
   brasindiceCode: products.brasindiceCode,
   tissCode: products.tissCode,
@@ -249,7 +252,6 @@ export class DrizzleProductRepository implements ProductRepository {
           anvisaRegistration: data.anvisaRegistration ?? null,
           requiresSterilization: data.requiresSterilization ?? false,
           idProdutoEmultec: data.idProdutoEmultec ?? null,
-          pictureUrl: data.pictureUrl ?? null,
           simproCode: data.simproCode ?? null,
           brasindiceCode: data.brasindiceCode ?? null,
           tissCode: data.tissCode ?? null,
@@ -317,6 +319,18 @@ export class DrizzleProductRepository implements ProductRepository {
       const verticalMap = await fetchVerticalIds([id]);
       return mapProduct(product, verticalMap.get(id) ?? []);
     });
+  }
+
+  async updatePicture(
+    id: number,
+    picture: { pictureUrl: string | null; pictureBlurhash: string | null }
+  ): Promise<void> {
+    // `IS_OWN` for the same reason as `update`: this repository is the products
+    // side, and a competitor's picture is the competitor repository's business.
+    await db
+      .update(products)
+      .set({ ...picture, updatedAt: new Date() })
+      .where(and(eq(products.id, id), IS_OWN));
   }
 
   async findReferences(id: number): Promise<ProductReferences> {

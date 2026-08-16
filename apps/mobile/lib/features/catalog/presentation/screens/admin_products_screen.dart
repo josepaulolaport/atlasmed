@@ -4,17 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
-import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/variant_form_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
-import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/variant_info_card.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/product_thumbnail.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
     show isAdminProvider;
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// `Administração › Produtos` (spec 0016 §4.2) — the admin's flat list of
 /// every product of ours, with create, edit and "produtos concorrentes"
@@ -95,48 +93,26 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
-  void _openQuickView(
+  /// Straight into the form.
+  ///
+  /// This used to open a quick-view sheet with an "editar" button inside it —
+  /// the same sheet the rep-facing product list uses. On the admin panel that
+  /// was a tap that bought nothing: the one thing to do with a row here is
+  /// edit it, and the sheet showed a read-only copy of the first screenful of
+  /// the form it was hiding.
+  Future<void> _openEditor(
     CatalogVariant variant,
-    CatalogFamily family,
     List<CatalogFamily> families,
-  ) {
-    final isAdmin = ref.read(isAdminProvider);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _VariantQuickView(
-        variant: variant,
-        family: family,
-        onViewComparison: () {
-          Navigator.pop(sheetContext);
-          CatalogComparisonRoute(variantId: variant.id).push(context);
-        },
-        onEdit: !isAdmin
-            ? null
-            : () {
-                Navigator.pop(sheetContext);
-                VariantFormScreen.show(
-                  context,
-                  existing: variant,
-                  families: families,
-                );
-              },
-        onManageCompetitors: !isAdmin
-            ? null
-            : () {
-                Navigator.pop(sheetContext);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ManageCompetitorsScreen(
-                      variantId: variant.id,
-                      variantLabel: variant.comparisonLabel,
-                    ),
-                  ),
-                );
-              },
-      ),
+  ) async {
+    final saved = await VariantFormScreen.show(
+      context,
+      existing: variant,
+      families: families,
     );
+    if (saved == null || !mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${saved.name} atualizado')));
   }
 
   Future<void> _openNewProductForm(List<CatalogFamily> families) async {
@@ -208,8 +184,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             final (variant, family) = entries[index];
                             return _ProductRow(
                               variant: variant,
-                              onTap: () =>
-                                  _openQuickView(variant, family, families),
+                              onTap: () => _openEditor(variant, families),
                             );
                           },
                         );
@@ -248,18 +223,9 @@ class _ProductRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.blue50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.medication_liquid_outlined,
-                  size: 20,
-                  color: AppColors.navyDeep,
-                ),
+              ProductThumbnail(
+                pictureUrl: variant.pictureUrl,
+                blurhash: variant.pictureBlurhash,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -350,141 +316,4 @@ class _InactiveChip extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Quick-view sheet opened by tapping a [_ProductRow] — the full detail
-/// (thumbnail, price, SIMPRO/BRASÍNDICE/TISS codes, publication dates, the
-/// link to the comparativo) without leaving the list behind: dismiss it and
-/// you're right back where you were, ready to tap the next product.
-class _VariantQuickView extends StatelessWidget {
-  final CatalogVariant variant;
-  final CatalogFamily family;
-  final VoidCallback onViewComparison;
-  final VoidCallback? onEdit;
-  final VoidCallback? onManageCompetitors;
-
-  const _VariantQuickView({
-    required this.variant,
-    required this.family,
-    required this.onViewComparison,
-    this.onEdit,
-    this.onManageCompetitors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 10, bottom: 4),
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.gray200,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-              VariantInfoCard(
-                variant: variant,
-                bordered: false,
-                onViewComparison: onViewComparison,
-                onEdit: onEdit,
-                onManageCompetitors: onManageCompetitors,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: _PublicationFooter(
-                  brasindiceDate: family.brasindicePublishedAt,
-                  simproDate: family.simproPublishedAt,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Small label/value panel showing when the Brasíndice/Simpro tables for
-/// this product's family were last published — styled like the codes panel
-/// in [VariantInfoCard] so it reads as part of the same product detail.
-class _PublicationFooter extends StatelessWidget {
-  /// Null when the family ships without a Brasíndice/Simpro record.
-  final DateTime? brasindiceDate;
-  final DateTime? simproDate;
-
-  const _PublicationFooter({
-    required this.brasindiceDate,
-    required this.simproDate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'PUBLICAÇÃO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Brasíndice: ${brasindiceDate == null ? '—' : formatDate(brasindiceDate!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray500,
-                  ),
-                ),
-                Text(
-                  'Simpro: ${simproDate == null ? '—' : formatDate(simproDate!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => showComingSoonSnack(context, 'Editar publicação'),
-            icon: const Icon(
-              Icons.edit_outlined,
-              size: 16,
-              color: AppColors.gray400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

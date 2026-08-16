@@ -1032,3 +1032,91 @@ disposable; none of it is committed.
 Final totals: **API 1585 passing across 189 files**, **mobile 730 passing**;
 `tsc`, `eslint`, `flutter analyze` clean, `drizzle-kit check` reports
 "Everything's fine".
+
+---
+
+## Phase 8 — the product page, and a picture that can actually be uploaded
+
+**Shipped:** tapping a product in `Administração › Produtos` opens its edit page
+directly, and that page can set and clear the product's picture.
+
+### The sheet had to go
+
+`_openQuickView` opened the same bottom sheet the rep-facing product list uses:
+a read-only copy of the first screenful of the form, with an "editar" button
+inside it. On the admin panel the one thing to do with a row is edit it, so the
+sheet was a tap that bought nothing — the same finding as the competitor list in
+Phase 3.
+
+Three things lived only in that sheet and moved into the form rather than being
+dropped:
+
+| Was in the sheet | Now |
+|---|---|
+| "Gerenciar outras marcas" | `RELACIONADOS › Produtos concorrentes` |
+| "Ver comparativo de preços" | `RELACIONADOS › Ver comparativo de preços` |
+| Brasíndice/Simpro publication dates | a read-only panel under the same heading |
+
+The publication panel carried an "editar publicação" pencil that only raised a
+"coming soon" snackbar. Inside a form where every other control writes, that is
+worse than no button, so it is gone.
+
+### The picture
+
+`products.picture_url` and `picture_blurhash` have existed since the Emultec
+import. Nothing could fill them: the column was writable through
+`PATCH /products/:id` as a bare string, which only helps an admin who already
+has a URL.
+
+| Layer | File | What it holds |
+|---|---|---|
+| Use cases | `application/use-cases/product-picture.use-cases.ts` | upload / remove / download, mirroring `facility-photo.use-cases.ts` |
+| Routes | `infrastructure/routes/catalog.route.ts` | `POST`/`DELETE /products/:id/picture`, `GET /products/pictures/*` |
+| Contract | `application/interfaces/product.repository.interface.ts` | `updatePicture`, separate from `update` |
+| Client | `data/repositories/catalog_repository.dart` | multipart `picture` field, hand-attached bearer token |
+| UI | `presentation/widgets/product_thumbnail.dart` | one thumbnail, used by the list row and the form |
+
+**Four decisions worth the words:**
+
+1. **`pictureUrl` left the request body.** It names an object this API stores,
+   so as a free-text field it let a product point anywhere on the internet, and
+   the blurhash beside it is derived from the bytes rather than typed. Both
+   columns are now written by `updatePicture` or by nothing.
+2. **The row points at the new object before the old one is deleted.** The other
+   order leaves a product whose picture 404s if the update fails; an orphaned
+   object costs a few kilobytes. A failed delete is swallowed for the same
+   reason — a leak is not worth failing an upload that worked.
+3. **A URL this module did not write is never deleted.** Rows imported from
+   Emultec carry external URLs, and deriving a storage key from one would delete
+   an unrelated object.
+4. **The download key is validated against a pattern, not just used.** It is the
+   `*` of a route, so it is a path the caller controls: `products/1/../../…` is
+   a different object.
+
+No migration — both columns already existed.
+
+### Testing Phase 8 on screen
+
+**1 · The page replaces the sheet**
+- `Administração › Produtos`, tap any row. Expect *"Editar produto"*, not a
+  sheet. Scroll to the bottom: `RELACIONADOS` with both links, and the
+  publication panel with the family's dates.
+
+**2 · Upload**
+- `Imagem › Adicionar imagem › Escolher da galeria`. The thumbnail fills while
+  the sheet is still closing, the label becomes *"Trocar imagem"*, and the row
+  in the list behind it shows the same picture.
+- `select picture_url, picture_blurhash from products where id = <id>` — both
+  set, the URL under `/api/v1/products/pictures/products/<id>/`.
+
+**3 · Save does not clear it**
+- Press `Salvar` and re-open. The picture is still there: it is not in the
+  request body, and the response carries it back.
+
+**4 · Remove**
+- `Trocar imagem › Remover imagem`. The placeholder icon returns and both
+  columns are null.
+
+**5 · A new product**
+- `Novo produto`. The Imagem section reads *"Salve o produto primeiro"* — there
+  is no id yet to hang an object off.

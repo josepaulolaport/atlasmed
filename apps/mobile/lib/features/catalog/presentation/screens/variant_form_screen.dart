@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
@@ -7,8 +8,11 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletab
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart'
     show formatDate;
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/product_thumbnail.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -24,6 +28,11 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 ///   correctness (spec 0013 §2); an empty field saves as `null`, not `""`.
 /// - **`metricUnits` is read-only** (§7.1) — displayed with its unit, never
 ///   editable, because the metric calculation uses raw quantities.
+/// - **The picture is uploaded, not typed** (§4.2). `pictureUrl` is not a body
+///   field: it names an object this API stores, so it is written by
+///   `POST`/`DELETE /products/:id/picture` and saved the moment it is chosen,
+///   before "Salvar". A new product has no id to hang an object off yet, so the
+///   section says so instead of pretending to accept one.
 /// - **Linhas are chosen once** (§6.7). On an existing product they render as
 ///   plain text with the reason, because moving a product between Linhas
 ///   changes which profiles its orders join to.
@@ -121,6 +130,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
   bool _saving = false;
   String? _error;
 
+  /// The picture is written by its own endpoint the moment it is chosen, so it
+  /// lives outside the draft the "Salvar" button sends.
+  late String? _pictureUrl = widget.existing?.pictureUrl;
+  late String? _pictureBlurhash = widget.existing?.pictureBlurhash;
+  bool _pictureBusy = false;
+
   bool get _isEditing => widget.existing != null;
 
   List<TextEditingController> get _controllers => [
@@ -161,6 +176,136 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       controller.addListener(_onFieldChanged);
     }
     if (_isEditing) _loadDeletability();
+  }
+
+  Future<void> _pickPicture(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      // Catalogue pictures are shown at thumbnail and card sizes; a 12 MP
+      // camera original would be rejected by the 5 MB limit for no gain.
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _pictureBusy = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final saved = await ref
+          .read(catalogRepositoryProvider)
+          .uploadProductPicture(
+            widget.existing!.id,
+            filename: picked.name,
+            bytes: bytes,
+            contentType: _contentTypeFor(picked.name, picked.mimeType),
+          );
+      invalidateCatalog(ref);
+      if (!mounted) return;
+      setState(() {
+        _pictureUrl = saved.url;
+        _pictureBlurhash = saved.blurhash;
+        _pictureBusy = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _pictureBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is CatalogApiException
+                ? error.message
+                : 'Não foi possível enviar a imagem.',
+          ),
+        ),
+      );
+    }
+  }
+
+  /// The picker reports the MIME type on some platforms and not others, so the
+  /// extension is the fallback. Sending the wrong one is a 422 from a route
+  /// that only accepts JPEG, PNG and WebP.
+  String _contentTypeFor(String name, String? mimeType) {
+    if (mimeType != null && mimeType.startsWith('image/')) return mimeType;
+    final extension = name.toLowerCase().split('.').last;
+    return switch (extension) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
+  }
+
+  Future<void> _removePicture() async {
+    setState(() => _pictureBusy = true);
+    try {
+      await ref
+          .read(catalogRepositoryProvider)
+          .removeProductPicture(widget.existing!.id);
+      invalidateCatalog(ref);
+      if (!mounted) return;
+      setState(() {
+        _pictureUrl = null;
+        _pictureBlurhash = null;
+        _pictureBusy = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _pictureBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is CatalogApiException
+                ? error.message
+                : 'Não foi possível remover a imagem.',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openPictureOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher da galeria'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickPicture(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickPicture(ImageSource.camera);
+              },
+            ),
+            if (_pictureUrl != null)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.error,
+                ),
+                title: const Text(
+                  'Remover imagem',
+                  style: TextStyle(color: AppColors.error),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _removePicture();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadDeletability() async {
@@ -374,6 +519,17 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     final familyNames = <String>{
       for (final family in widget.families) family.name,
     }.toList()..sort();
+    // The family carries the *table* publication dates, which are a different
+    // thing from this product's `brasindiceUpdatedAt` and were previously only
+    // visible in the quick-view sheet this screen replaced.
+    final family = _isEditing
+        ? widget.families
+              .where(
+                (candidate) =>
+                    candidate.variants.any((v) => v.id == widget.existing!.id),
+              )
+              .firstOrNull
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -402,6 +558,20 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 children: [
+                  const _FieldLabel('Imagem'),
+                  const SizedBox(height: 6),
+                  _PictureField(
+                    // A new product has no id yet, and the upload route takes
+                    // one. Rather than buffer the bytes through the save, the
+                    // section says what to do — the alternative is a form that
+                    // accepts a picture and silently drops it.
+                    enabled: _isEditing,
+                    busy: _pictureBusy,
+                    pictureUrl: _pictureUrl,
+                    blurhash: _pictureBlurhash,
+                    onTap: _openPictureOptions,
+                  ),
+                  const SizedBox(height: 16),
                   const _FieldLabel('Nome do produto'),
                   const SizedBox(height: 6),
                   _TextInput(
@@ -838,6 +1008,38 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       ),
                     ],
                   ),
+                  if (_isEditing) ...[
+                    const SizedBox(height: 20),
+                    const _SectionLabel('RELACIONADOS'),
+                    const SizedBox(height: 4),
+                    _LinkRow(
+                      icon: Icons.storefront_outlined,
+                      label: 'Produtos concorrentes',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ManageCompetitorsScreen(
+                            variantId: widget.existing!.id,
+                            variantLabel: widget.existing!.comparisonLabel,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _LinkRow(
+                      icon: Icons.bar_chart_rounded,
+                      label: 'Ver comparativo de preços',
+                      onTap: () =>
+                          CatalogComparisonRoute(
+                            variantId: widget.existing!.id,
+                          ).push(context),
+                    ),
+                    if (family != null) ...[
+                      const SizedBox(height: 12),
+                      _PublicationFooter(
+                        brasindiceDate: family.brasindicePublishedAt,
+                        simproDate: family.simproPublishedAt,
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 20),
                   const _SectionLabel('ESTADO'),
                   SwitchListTile.adaptive(
@@ -1109,6 +1311,209 @@ class _SuggestionChip extends StatelessWidget {
               color: selected ? Colors.white : AppColors.gray700,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The product picture: a tappable thumbnail that is also the empty state.
+///
+/// Saved on selection rather than on "Salvar" — it is a separate endpoint and
+/// a separate object in storage, and a picture that vanished because the admin
+/// backed out of an unrelated field is worse than one saved a moment early.
+class _PictureField extends StatelessWidget {
+  const _PictureField({
+    required this.enabled,
+    required this.busy,
+    required this.pictureUrl,
+    required this.blurhash,
+    required this.onTap,
+  });
+
+  final bool enabled;
+  final bool busy;
+  final String? pictureUrl;
+  final String? blurhash;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = pictureUrl?.trim();
+    final hasImage = url != null && url.isNotEmpty;
+
+    return Row(
+      children: [
+        busy
+            ? Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            : ProductThumbnail(
+                pictureUrl: pictureUrl,
+                blurhash: blurhash,
+                size: 84,
+                borderRadius: 12,
+                placeholderIconSize: 28,
+              ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: enabled
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: busy ? null : onTap,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        hasImage ? 'Trocar imagem' : 'Adicionar imagem',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'JPG, PNG ou WebP, até 5 MB. Salva na hora, sem esperar '
+                      'o botão Salvar.',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                    ),
+                  ],
+                )
+              : const Text(
+                  'Salve o produto primeiro; depois a imagem pode ser enviada '
+                  'por aqui.',
+                  style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// When the Brasíndice/Simpro tables for this product's *family* were last
+/// published — a different thing from this product's own `brasindiceUpdatedAt`
+/// field above.
+///
+/// Read-only. It carried an "editar publicação" pencil that only raised a
+/// "coming soon" snackbar; inside a form where every other pencil writes, that
+/// is worse than no button.
+class _PublicationFooter extends StatelessWidget {
+  /// Null when the family ships without a Brasíndice/Simpro record.
+  final DateTime? brasindiceDate;
+  final DateTime? simproDate;
+
+  const _PublicationFooter({
+    required this.brasindiceDate,
+    required this.simproDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.surfaceSecondary),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'PUBLICAÇÃO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray400,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Brasíndice: ${brasindiceDate == null ? '—' : formatDate(brasindiceDate!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                Text(
+                  'Simpro: ${simproDate == null ? '—' : formatDate(simproDate!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A navigation row inside the form — the two places an admin goes *from* a
+/// product without leaving the product.
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.navyDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navyDeep,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.gray400,
+            ),
+          ],
         ),
       ),
     );

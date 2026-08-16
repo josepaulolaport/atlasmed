@@ -68,6 +68,7 @@ function serializeProduct(row: ProductRecord) {
     idProdutoEmultec: row.idProdutoEmultec,
     verticalIds: row.verticalIds,
     pictureUrl: row.pictureUrl,
+    pictureBlurhash: row.pictureBlurhash,
     simproCode: row.simproCode,
     brasindiceCode: row.brasindiceCode,
     tissCode: row.tissCode,
