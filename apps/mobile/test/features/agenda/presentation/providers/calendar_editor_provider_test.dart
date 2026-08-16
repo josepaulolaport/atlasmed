@@ -483,6 +483,31 @@ void main() {
     expect(notifier.state.errorMessage, isNotNull);
   });
 
+  test('the failure reason is readable the moment submit returns', () async {
+    // The day grid's quick sheet is not a ConsumerWidget, so it used to read
+    // this off `stream` — which delivers asynchronously. `await submit()`
+    // returned before the listener had run, and the sheet showed "Não foi
+    // possível salvar." over a conflict the server had just explained.
+    final repository = _FakeCalendarRepository()
+      ..submitError = const CalendarNetworkException('Sem conexão.');
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          facilityId: 1,
+          facilityName: 'Clínica Central',
+          kind: CalendarEventKind.interaction,
+        ),
+      ),
+      now: () => DateTime.utc(2026, 8, 3, 9),
+      timeZoneResolver: (_) => 'Etc/UTC',
+    )..setTitle('Visita');
+
+    expect(await notifier.submit(), isFalse);
+
+    expect(notifier.errorMessage, 'Sem conexão.');
+  });
+
   test('shows first conflict in pt-BR and keeps draft', () async {
     final repository = _FakeCalendarRepository()
       ..submitError = CalendarConflictException(

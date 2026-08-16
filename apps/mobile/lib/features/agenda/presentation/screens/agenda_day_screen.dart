@@ -241,13 +241,6 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       ),
     );
 
-    // `state` is protected on a StateNotifier, so the error is read through
-    // the stream the notifier already exposes rather than by reaching inside.
-    String? lastError;
-    final subscription = notifier.stream.listen(
-      (value) => lastError = value.errorMessage,
-    );
-
     try {
       final saved = await notifier.submit();
       if (!mounted) return;
@@ -269,10 +262,11 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       }
       setState(() {
         _saving = false;
-        _error = lastError ?? 'Não foi possível salvar.';
+        // Read straight off the notifier: the conflict the server explained is
+        // the whole value of this message.
+        _error = notifier.errorMessage ?? 'Não foi possível salvar.';
       });
     } finally {
-      await subscription.cancel();
       notifier.dispose();
     }
   }

@@ -217,6 +217,16 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
   /// conflict the rep could only escape by leaving the screen.
   String? _pendingCancelKey;
 
+  /// Why the last attempt failed, or null.
+  ///
+  /// Callers outside a `ConsumerWidget` — the day grid's quick sheet — used to
+  /// read this off `stream`, which delivers asynchronously: `await submit()`
+  /// returned before the listener had run, so the sheet fell back to "Não foi
+  /// possível salvar." and threw away the conflict the server had just
+  /// explained. A read-only getter is the notifier's own API, not a reach
+  /// inside it.
+  String? get errorMessage => state.errorMessage;
+
   Map<String, String> get validationErrors {
     final errors = <String, String>{};
     final draft = state.draft;
