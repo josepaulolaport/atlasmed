@@ -216,9 +216,19 @@ export const roteiros = pgTable(
       "roteiros_anchor_matches_reach_mode_check",
       sql`(${t.reachMode} = 'ANCORA') = (${t.anchorProfileId} is not null)`,
     ),
+    /**
+     * A confirmed roteiro carries the instant it was confirmed — but a roteiro
+     * that *was* confirmed and has since been replaced still carries it too.
+     *
+     * This was an equality, which read as "only a CONFIRMED row may have a
+     * confirmed_at" and made SUPERSEDED unreachable from CONFIRMED: replanning
+     * a day the rep had already saved failed the check and returned a 500. An
+     * implication keeps the half that matters — CONFIRMED always knows when —
+     * and lets the row keep its own history when the plan moves on.
+     */
     check(
       "roteiros_confirmed_metadata_check",
-      sql`(${t.status} = 'CONFIRMED') = (${t.confirmedAt} is not null)`,
+      sql`${t.status} <> 'CONFIRMED' or ${t.confirmedAt} is not null`,
     ),
     check(
       "roteiros_discarded_metadata_check",

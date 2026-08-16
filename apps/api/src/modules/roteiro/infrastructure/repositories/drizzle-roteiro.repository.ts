@@ -290,12 +290,21 @@ export class DrizzleRoteiroRepository implements RoteiroRepository {
 
   async createDraft(input: CreateRoteiroInput): Promise<StoredRoteiro> {
     return db.transaction(async (tx) => {
-      // Regenerating replaces the live draft rather than colliding with the
-      // partial unique index that allows one per agent per day.
+      // Regenerating replaces whatever plan is live for that day rather than
+      // colliding with the partial unique index that allows one per agent per
+      // day.
+      //
+      // CONFIRMED counts as live, and used not to. The index covers DRAFT and
+      // CONFIRMED, so once a rep saved a roteiro the row stayed and the next
+      // generate for the same day violated it — a 500 on the plainest path
+      // there is: build the day, save it, open the roteiro again. Superseding
+      // costs nothing the rep can see: the visits it wrote are real
+      // appointments and stay in the calendar, where the new plan reads them as
+      // commitments to route around.
       await tx.execute(sql`
         update roteiros set status = 'SUPERSEDED', updated_at = now()
         where user_id = ${input.userId} and scope_date = ${input.scopeDate}::date
-          and status = 'DRAFT'
+          and status in ('DRAFT', 'CONFIRMED')
       `);
 
       const inserted = (await tx.execute(sql`

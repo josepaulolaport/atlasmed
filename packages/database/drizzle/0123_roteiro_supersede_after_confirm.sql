@@ -1,0 +1,2 @@
+ALTER TABLE "roteiros" DROP CONSTRAINT "roteiros_confirmed_metadata_check";--> statement-breakpoint
+ALTER TABLE "roteiros" ADD CONSTRAINT "roteiros_confirmed_metadata_check" CHECK ("roteiros"."status" <> 'CONFIRMED' or "roteiros"."confirmed_at" is not null);

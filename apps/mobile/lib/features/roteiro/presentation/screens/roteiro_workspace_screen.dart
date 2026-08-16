@@ -227,19 +227,63 @@ class _RoteiroWorkspaceScreenState
       scopeDate: _scopeDate,
     );
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await ref.read(roteiroWorkspaceProvider(key).notifier).save();
+    final notifier = ref.read(roteiroWorkspaceProvider(key).notifier);
+
+    // What the rep is looking at, before the server re-plans it.
+    //
+    // Saving is not a write of this slate: the engine runs again with the
+    // rep's overrides so travel and conflicts are resolved authoritatively, and
+    // it can come back with a different set. Making one stop three hours long
+    // pushed the day past the working hours and the engine dropped a clinic —
+    // and the app still said "sua agenda foi montada" and walked away. A rep
+    // who reads five names, approves them, and gets four has been told
+    // something untrue about their own day.
+    final approved = state.roteiro == null
+        ? const <int>{}
+        : {
+            for (final stop in notifier.visibleStops(state.roteiro!))
+              stop.facilityVerticalProfileId,
+          };
+
+    final ok = await notifier.save();
     if (!mounted) return;
-    final error = ref.read(roteiroWorkspaceProvider(key)).error;
+    final after = ref.read(roteiroWorkspaceProvider(key));
+    final error = after.error;
+
+    if (!ok) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            error?.toString() ?? 'Não foi possível salvar o roteiro.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final kept = {
+      for (final stop in after.roteiro?.stops ?? const []) stop.facilityVerticalProfileId,
+    };
+    final dropped = approved.difference(kept);
+
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          ok
+          dropped.isEmpty
               ? 'Roteiro salvo — sua agenda foi montada.'
-              : (error?.toString() ?? 'Não foi possível salvar o roteiro.'),
+              : dropped.length == 1
+              ? 'Roteiro salvo, mas 1 clínica não coube no dia e ficou de fora.'
+              : 'Roteiro salvo, mas ${dropped.length} clínicas não couberam '
+                    'no dia e ficaram de fora.',
         ),
+        duration: dropped.isEmpty
+            ? const Duration(seconds: 4)
+            : const Duration(seconds: 8),
       ),
     );
-    if (ok && mounted) Navigator.of(context).pop();
+    // Stays put when the saved day is not the one that was approved: the list
+    // behind this sheet is now the saved one, so the rep can see what changed.
+    if (dropped.isEmpty && mounted) Navigator.of(context).pop();
   }
 
   Widget _body(RoteiroWorkspaceState state, RoteiroWorkspaceNotifier notifier) {
