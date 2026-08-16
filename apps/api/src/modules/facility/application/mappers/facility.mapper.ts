@@ -123,6 +123,7 @@ export function serializeFacility(
     imageBlurhash: clinic.imageBlurhash ?? undefined,
     cnesCode: clinic.cnesCode ?? undefined,
     unitTypeId: clinic.unitTypeId ?? undefined,
+    unitTypeName: clinic.unitTypeName ?? undefined,
     unitSubtypeId: clinic.unitSubtypeId ?? undefined,
     distanceKm: list.distanceKm ?? undefined,
     clinicalFocuses: clinic.clinicalFocuses ?? [],

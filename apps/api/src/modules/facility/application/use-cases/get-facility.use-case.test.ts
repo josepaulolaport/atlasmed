@@ -60,6 +60,7 @@ function ortoOnlyFacility(): FacilityRecord {
     commercialStatus: null,
     cnesCode: null,
     unitTypeId: null,
+    unitTypeName: null,
     unitSubtypeId: null,
     deactivatedAt: null,
     createdAt: now,

@@ -104,6 +104,7 @@ class Facility {
       registration: FacilityRegistration(
         legalDocumentType: dto.legalDocumentType,
         legalDocument: dto.legalDocument,
+        unitTypeName: nonEmpty(dto.unitTypeName),
         responsiblePerson: nonEmpty(dto.responsibleName),
         openingHours: nonEmpty(dto.openingHours),
         registeredSince: dto.registeredSince != null
@@ -251,6 +252,11 @@ class FacilityTerritory {
 class FacilityRegistration {
   final String? legalDocumentType;
   final String? legalDocument;
+
+  /// The CNES unit type in words — "Consultório Isolado", "Clínica/Centro de
+  /// Especialidade". Sits with the legal type because they answer the same
+  /// question about the establishment: what kind of thing it is.
+  final String? unitTypeName;
   final String? responsiblePerson;
   final String? openingHours;
   final DateTime? registeredSince;
@@ -258,6 +264,7 @@ class FacilityRegistration {
   const FacilityRegistration({
     this.legalDocumentType,
     this.legalDocument,
+    this.unitTypeName,
     this.responsiblePerson,
     this.openingHours,
     this.registeredSince,

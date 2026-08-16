@@ -114,6 +114,7 @@ export function mapFacility(
     city?: string | null;
     state?: string | null;
     clinicalFocuses?: FacilityClinicalFocus[];
+    unitTypeName?: string | null;
     consultantName?: string | null;
     consultantSince?: Date | null;
     managerName?: string | null;
@@ -163,6 +164,7 @@ export function mapFacility(
     imageBlurhash: facility.imageBlurhash ?? null,
     cnesCode: facility.cnesCode ?? null,
     unitTypeId: facility.unitTypeId ?? null,
+    unitTypeName: options.unitTypeName ?? null,
     unitSubtypeId: facility.unitSubtypeId ?? null,
     deactivatedAt: facility.deactivatedAt,
     createdAt: facility.createdAt,
@@ -518,6 +520,25 @@ async function loadProfessionalCounts(
     .groupBy(personFacilities.facilityId);
 
   return new Map(rows.map((row) => [row.facilityId, row.count]));
+}
+
+/**
+ * The name behind `facilities.unit_type_id`.
+ *
+ * Its own lookup rather than a join on `facilityGeoSelect`, because that select
+ * is shared with the list query and every other caller — widening it would make
+ * every clinic list pay for a column only the detail header reads.
+ */
+async function loadUnitTypeName(
+  unitTypeId: number | null | undefined,
+): Promise<string | null> {
+  if (unitTypeId == null) return null;
+  const [row] = await db
+    .select({ name: unitTypes.name })
+    .from(unitTypes)
+    .where(eq(unitTypes.id, unitTypeId))
+    .limit(1);
+  return row?.name ?? null;
 }
 
 /** Batch-load clinical focuses, alphabetical for UI chips. */
@@ -1156,11 +1177,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const profiles = profilesByFacility.get(id) ?? [];
     const territoryId = deriveProfileTerritoryId(profiles);
 
-    const [clinicalFocusesByFacility, consultantMap, territoryNameById] =
+    const [clinicalFocusesByFacility, consultantMap, territoryNameById, unitTypeName] =
       await Promise.all([
         loadClinicalFocusesByFacilityIds([id]),
         loadConsultantInfo([id]),
         loadTerritoryNames([territoryId]),
+        loadUnitTypeName(facility.unitTypeId),
       ]);
 
     const consultant = consultantMap.get(id);
@@ -1178,6 +1200,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         : null,
       commercialStatus: derived.commercialStatus,
       verticalProfiles: profiles,
+      unitTypeName: unitTypeName ?? null,
     });
   }
 

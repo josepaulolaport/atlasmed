@@ -10,10 +10,9 @@ class ClinicServiceChips extends StatelessWidget {
     required this.focuses,
     this.maxVisible = 6,
     this.onNavy = false,
-    this.onEdit,
   }) : emptyLabel = null;
 
-  const ClinicServiceChips.empty({super.key, this.onNavy = false, this.onEdit})
+  const ClinicServiceChips.empty({super.key, this.onNavy = false})
     : focuses = const [],
       maxVisible = 0,
       emptyLabel = 'Sem foco clínico';
@@ -22,11 +21,6 @@ class ClinicServiceChips extends StatelessWidget {
   final int maxVisible;
   final bool onNavy;
   final String? emptyLabel;
-
-  /// Opens the focus editor. Null where the row is a read-only summary — the
-  /// Explorar card, for one, where a pencil would be a target the size of the
-  /// chip beside it.
-  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +34,6 @@ class ClinicServiceChips extends StatelessWidget {
             onNavy: onNavy,
             muted: true,
           ),
-          if (onEdit != null) _EditChip(onNavy: onNavy, onTap: onEdit!),
         ],
       );
     }
@@ -59,51 +52,7 @@ class ClinicServiceChips extends StatelessWidget {
             onNavy: onNavy,
           ),
         if (overflow > 0) _Chip(label: '+$overflow', onNavy: onNavy),
-        if (onEdit != null) _EditChip(onNavy: onNavy, onTap: onEdit!),
       ],
-    );
-  }
-}
-
-/// The affordance that opens the editor, shaped as a chip so it sits in the row
-/// rather than as a pencil floating beside the heading — the chips are the
-/// thing being edited, and a control detached from them reads as editing the
-/// clinic.
-class _EditChip extends StatelessWidget {
-  const _EditChip({required this.onNavy, required this.onTap});
-
-  final bool onNavy;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = onNavy ? Colors.white : AppColors.navyBright;
-    return Material(
-      color: onNavy ? Colors.white.withValues(alpha: 0.12) : AppColors.gray100,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        key: const Key('clinic-focus-edit'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.add_rounded, size: 14, color: fg),
-              const SizedBox(width: 4),
-              Text(
-                'Editar',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: fg,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

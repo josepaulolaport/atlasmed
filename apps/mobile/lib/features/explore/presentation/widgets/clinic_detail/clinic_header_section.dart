@@ -9,11 +9,6 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinical_focuses_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/tag_selection_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tag_editor_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
@@ -80,6 +75,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     final legalDocumentType = parseFacilityLegalDocumentType(
       detail.registration?.legalDocumentType,
     );
+    final unitTypeName = _nonEmpty(detail.registration?.unitTypeName);
     final phone = _nonEmpty(detail.contact?.phone);
     final whatsapp = _nonEmpty(detail.contact?.whatsapp);
     final email = _nonEmpty(detail.contact?.email);
@@ -156,6 +152,28 @@ class ClinicHeaderSection extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
+                          // The CNES unit type, under the legal type: both say
+                          // what kind of establishment this is, and the app
+                          // held the id without ever showing the words.
+                          //
+                          // Its own line rather than appended to the one above,
+                          // because "Estabelecimento CNPJ · Clínica/Centro de
+                          // Especialidade" runs past the avatar and ellipses
+                          // away exactly the half that is new.
+                          if (unitTypeName != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              unitTypeName,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.3,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0x99FFFFFF),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -167,13 +185,9 @@ class ClinicHeaderSection extends ConsumerWidget {
                     focuses: orderedFocuses,
                     maxVisible: 4,
                     onNavy: true,
-                    onEdit: () => _editClinicalFocuses(context, ref),
                   )
                 else
-                  ClinicServiceChips.empty(
-                    onNavy: true,
-                    onEdit: () => _editClinicalFocuses(context, ref),
-                  ),
+                  ClinicServiceChips.empty(onNavy: true),
                 const SizedBox(height: 10),
                 Builder(
                   builder: (context) {
@@ -263,61 +277,6 @@ class ClinicHeaderSection extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Opens the focus editor and refreshes the detail once it saves.
-  ///
-  /// Applied straight away rather than filed as a suggestion — a foco clínico
-  /// is a catalogue tag learned on site, not one of the identity fields the
-  /// review queue exists to guard.
-  Future<void> _editClinicalFocuses(BuildContext context, WidgetRef ref) async {
-    final catalog = ref.read(clinicalFocusesRepositoryProvider);
-    final List<ClinicalFocusOption> options;
-    try {
-      options = await catalog.currentValueOrResolve() ?? const [];
-    } catch (error) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível carregar os focos clínicos: $error'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-    if (!context.mounted) return;
-
-    final saved = await TagEditorSheet.show(
-      context,
-      copy: TagEditorCopy.clinicalFocus,
-      options: [
-        for (final option in options)
-          TagOption(id: option.id, label: option.label),
-      ],
-      selectedIds: detail.clinicalFocuses.map((f) => f.id).toSet(),
-      primaryId: detail.clinicalFocuses
-          .where((f) => f.isPrimary)
-          .map((f) => f.id)
-          .firstOrNull,
-      onSave: (result) => TagSelectionRepository().saveClinicalFocuses(
-        facilityId: detail.id,
-        focuses: [
-          for (final id in result.selectedIds)
-            TagSelection(id: id, isPrimary: id == result.primaryId),
-        ],
-      ),
-    );
-
-    if (saved == null || !context.mounted) return;
-    // The chips read from the detail payload, so the write is only visible once
-    // it is refetched.
-    ref.invalidate(clinicDetailRepositoryProvider(detail.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Focos clínicos atualizados'),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
