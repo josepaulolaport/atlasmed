@@ -1,5 +1,7 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/pending_captures_banner.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/visit_actions.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -32,12 +34,18 @@ class TodayAppointmentsCard extends ConsumerWidget {
       ),
     );
 
-    final all = agenda.valueOrNull;
-    if (all == null) return const SizedBox.shrink();
+    // Checked before the agenda, not after it: a rep who pressed Cheguei with no
+    // signal usually has no agenda either, and the queue is exactly what they
+    // need to see. The snackbar is long gone by then, and without this the only
+    // place that admits the press is still waiting is the agenda's day screen.
+    final waiting = ref.watch(captureQueueProvider).pending > 0;
+
+    final all = agenda.valueOrNull ?? const <CalendarOccurrence>[];
+    if (all.isEmpty && !waiting) return const SizedBox.shrink();
 
     final upcoming = appointmentsStillAhead(all, at);
     final doneCount = all.length - upcoming.length;
-    if (upcoming.isEmpty) return const SizedBox.shrink();
+    if (upcoming.isEmpty && !waiting) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -80,6 +88,7 @@ class TodayAppointmentsCard extends ConsumerWidget {
               ],
             ),
           ),
+          const PendingCapturesBanner(rounded: true),
           for (final occurrence in upcoming)
             _AppointmentRow(occurrence: occurrence),
           if (doneCount > 0)

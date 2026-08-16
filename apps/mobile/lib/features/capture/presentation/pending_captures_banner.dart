@@ -10,7 +10,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// button. Invisible when there is nothing waiting — the common case must not
 /// carry a permanent reminder that offline exists.
 class PendingCapturesBanner extends ConsumerWidget {
-  const PendingCapturesBanner({super.key});
+  const PendingCapturesBanner({super.key, this.rounded = false});
+
+  /// Rounded and inset, for sitting inside a card rather than spanning a screen.
+  final bool rounded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,7 +26,13 @@ class PendingCapturesBanner extends ConsumerWidget {
 
     return Container(
       key: const Key('pending-captures-banner'),
-      color: AppColors.amber.withValues(alpha: 0.12),
+      margin: rounded
+          ? const EdgeInsets.fromLTRB(12, 0, 12, 8)
+          : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.12),
+        borderRadius: rounded ? BorderRadius.circular(10) : null,
+      ),
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
       child: Row(
         children: [
