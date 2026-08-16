@@ -6,6 +6,8 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dar
 import 'package:atlasmed_mobile_app/features/capture/presentation/capture_queue_provider.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/missed_visit_sheet.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/pending_captures_banner.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/push_the_day.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/running_late.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/visit_actions.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -94,6 +96,8 @@ class TodayAppointmentsCard extends ConsumerWidget {
             ),
           ),
           const PendingCapturesBanner(rounded: true),
+          if (runningLate(stops, at) case final late?)
+            _RunningLateBanner(late: late),
           if (stops.isNotEmpty)
             SizedBox(
               height: 132,
@@ -134,6 +138,87 @@ String _hhmm(DateTime value) {
   final local = value.toLocal();
   return '${local.hour.toString().padLeft(2, '0')}:'
       '${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// **The day is behind, and the rep can still do something about it.**
+///
+/// An overrun used to be invisible until each later stop quietly became a miss
+/// at its own window's end (§15.7.7). Warn-and-offer rather than shift on its
+/// own: a booked visit is a promise to somebody else, so moving it is the rep's
+/// call, not the app's.
+class _RunningLateBanner extends ConsumerStatefulWidget {
+  const _RunningLateBanner({required this.late});
+
+  final RunningLate late;
+
+  @override
+  ConsumerState<_RunningLateBanner> createState() => _RunningLateBannerState();
+}
+
+class _RunningLateBannerState extends ConsumerState<_RunningLateBanner> {
+  bool _pushing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = widget.late.waiting.length;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.running_with_errors_rounded, size: 18, color: AppColors.amber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Atrasado ${formatOverrun(widget.late.by)} · '
+              '$waiting ${waiting == 1 ? "parada depois" : "paradas depois"} desta',
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray800),
+            ),
+          ),
+          if (_pushing)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: SizedBox.square(
+                dimension: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            TextButton(
+              key: const Key('today-push-day'),
+              onPressed: _push,
+              child: const Text('Empurrar o dia'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _push() async {
+    setState(() => _pushing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await pushTheDay(
+      repository: ref.read(calendarMutationRepositoryProvider),
+      stops: widget.late.waiting,
+      by: widget.late.by,
+    );
+    if (!mounted) return;
+    setState(() => _pushing = false);
+    ref.invalidate(agendaProvider);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          result.blocked.isEmpty
+              ? '${result.moved} ${result.moved == 1 ? "compromisso movido" : "compromissos movidos"}.'
+              : '${result.moved} movidos · ${result.blocked.join(", ")} não coube',
+        ),
+      ),
+    );
+  }
 }
 
 class _StopCard extends ConsumerWidget {
