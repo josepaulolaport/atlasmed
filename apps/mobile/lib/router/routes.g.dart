@@ -730,6 +730,11 @@ mixin $AgendaNewRoute on GoRouteData {
       state.uri.queryParameters,
       int.tryParse,
     ),
+    personalBlock: _$convertMapValue(
+      'personal-block',
+      state.uri.queryParameters,
+      _$boolConverter,
+    ),
   );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
@@ -746,6 +751,8 @@ mixin $AgendaNewRoute on GoRouteData {
       if (_self.startsAt != null) 'starts-at': _self.startsAt,
       if (_self.durationMinutes != null)
         'duration-minutes': _self.durationMinutes!.toString(),
+      if (_self.personalBlock != null)
+        'personal-block': _self.personalBlock!.toString(),
     },
   );
 
@@ -761,6 +768,17 @@ mixin $AgendaNewRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }
 
 RouteBase get $agendaEditRoute => GoRouteData.$route(
@@ -972,17 +990,6 @@ mixin $MemberTerritoryRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
 }
 
 RouteBase get $outOfTerritoryRoute => GoRouteData.$route(

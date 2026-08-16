@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/calendar_editor_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_day_grid.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/schedule_draft_sheet.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_speed_dial.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -277,17 +278,50 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     ).push(context);
   }
 
+  /// Where a new appointment on [day] should open.
+  ///
+  /// The rep navigated into a day; the form used to ignore that and open on
+  /// today's next half hour, so planning next Tuesday from Tuesday's own grid
+  /// quietly booked this afternoon. On today the next half hour is still the
+  /// right answer; on any other day it is the start of their working day.
+  DateTime _newAppointmentStart(DateTime day) {
+    final now = DateTime.now();
+    if (day.year == now.year && day.month == now.month && day.day == now.day) {
+      final rounded = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        now.hour,
+        now.minute < 30 ? 30 : 0,
+      );
+      return now.minute >= 30
+          ? rounded.add(const Duration(hours: 1))
+          : rounded;
+    }
+    final prefs = ref.read(userPreferencesValueProvider).valueOrNull;
+    final startMinutes =
+        parseHhMmMinutes(prefs?.workdayStart) ?? kLinhaWorkdayStartMinutes;
+    return day.add(Duration(minutes: startMinutes));
+  }
+
   Widget _dial(BuildContext context, DateTime day) => AgendaSpeedDial(
     actions: [
       AgendaAction(
         label: 'Interação',
         icon: Icons.event_outlined,
-        onTap: () => const AgendaNewRoute().push(context),
+        onTap: () => AgendaNewRoute(
+          startsAt: _newAppointmentStart(day).toIso8601String(),
+        ).push(context),
       ),
       AgendaAction(
         label: 'Bloqueio pessoal',
         icon: Icons.block_outlined,
-        onTap: () => const AgendaNewRoute().push(context),
+        // Both actions used to push the same bare route, so choosing a block
+        // opened a form set to Interação with a clinic field to dismiss.
+        onTap: () => AgendaNewRoute(
+          personalBlock: true,
+          startsAt: _newAppointmentStart(day).toIso8601String(),
+        ).push(context),
       ),
       AgendaAction(
         label: 'Roteiro do dia',

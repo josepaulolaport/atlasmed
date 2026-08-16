@@ -89,7 +89,17 @@ void main() {
       'Visita · Centro Reumatologico Botafogo',
     );
 
-    // Opened from the agenda's own "+", it carries nothing.
+    // A personal block says so in the URL, for the same reason. The agenda's
+    // speed dial offers it as its own action and used to push the identical
+    // bare route, so choosing it opened a form set to Interação.
+    expect(
+      Uri.parse(
+        const AgendaNewRoute(personalBlock: true).location,
+      ).queryParameters['personal-block'],
+      'true',
+    );
+
+    // Opened without a seed, it carries nothing.
     expect(const AgendaNewRoute().location, '/agenda/new');
 
     // From a doctor: the person travels instead of a clinic, so the editor can

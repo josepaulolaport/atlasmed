@@ -487,6 +487,7 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
     this.personName,
     this.startsAt,
     this.durationMinutes,
+    this.personalBlock,
   });
 
   // Query parameters, not `$extra`.
@@ -516,6 +517,14 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
   final String? startsAt;
   final int? durationMinutes;
 
+  /// Opens the form on a personal block rather than an interaction.
+  ///
+  /// The agenda's speed dial offers "Interação" and "Bloqueio pessoal" as
+  /// separate actions, and both used to arrive here identically — so choosing
+  /// a block opened a form set to Interação, with a clinic field the rep then
+  /// had to dismiss by flipping a toggle they had already answered.
+  final bool? personalBlock;
+
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
@@ -523,11 +532,13 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
     final drawnStartsAt = startsAt == null
         ? null
         : DateTime.tryParse(startsAt!);
+    final isBlock = personalBlock ?? false;
     final seeded =
         facilityId != null ||
         title != null ||
         personId != null ||
-        drawnStartsAt != null;
+        drawnStartsAt != null ||
+        isBlock;
     return AgendaEditorRouteGuard(
       target: CalendarEditorTarget.creating(
         prefill: !seeded
@@ -535,12 +546,14 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
             : CalendarEditorPrefill(
                 // Only interactions carry a clinic; a personal block cannot be
                 // seeded from one.
-                kind: CalendarEventKind.interaction,
-                facilityId: facilityId,
-                facilityName: facilityName,
+                kind: isBlock
+                    ? CalendarEventKind.personalBlock
+                    : CalendarEventKind.interaction,
+                facilityId: isBlock ? null : facilityId,
+                facilityName: isBlock ? null : facilityName,
                 title: title,
-                personId: personId,
-                personName: personName,
+                personId: isBlock ? null : personId,
+                personName: isBlock ? null : personName,
                 startsAt: drawnStartsAt,
                 durationMinutes: durationMinutes,
                 facilityChoice: facilityId != null
