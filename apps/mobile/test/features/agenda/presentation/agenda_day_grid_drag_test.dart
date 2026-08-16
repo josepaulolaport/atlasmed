@@ -156,4 +156,31 @@ void main() {
     expect(state.draft.startMinutes, 17 * 60 + 30);
     expect(state.draft.endMinutes, 18 * 60);
   });
+
+  testWidgets('the bottom edge grows by what was dragged, not a multiple', (
+    tester,
+  ) async {
+    // The handle read the finger's offset inside its own box — but the box is
+    // positioned by the value being dragged, so it slid down as the block grew,
+    // while Flutter kept measuring against the transform captured at
+    // touch-down. Every frame re-added growth that had already been applied.
+    // On the device a 32px pull stretched an hour into three.
+    final state = await _pumpGrid(tester, oneHourAtFive);
+
+    final corner = _blockTopLeft(tester, '17:00–18:00');
+    // The bottom edge of a 60-minute block is one hour-height below the top.
+    final gesture = await tester.startGesture(
+      corner.translate(30, kHourHeight),
+    );
+    for (var i = 0; i < 4; i += 1) {
+      await gesture.moveBy(const Offset(0, _framePixels));
+      await tester.pump();
+    }
+    await gesture.up();
+    await tester.pump();
+
+    // 32px is half an hour. Not two, not three.
+    expect(state.draft.startMinutes, 17 * 60);
+    expect(state.draft.endMinutes, 18 * 60 + 30);
+  });
 }

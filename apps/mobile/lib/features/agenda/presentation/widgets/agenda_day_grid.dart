@@ -55,6 +55,11 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
   DayGridDraft? _moveAnchor;
   double _moveFrom = 0;
 
+  /// The same, for whichever edge is being dragged. Only one gesture runs at a
+  /// time, so the two handles share it.
+  DayGridDraft? _edgeAnchor;
+  double _edgeFrom = 0;
+
   DateTime get day => widget.day;
   List<CalendarOccurrence> get occurrences => widget.occurrences;
   ValueChanged<CalendarOccurrence>? get onOccurrenceTap =>
@@ -278,12 +283,16 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
           _handle(
             centreY: _handleTouchRadius,
             colour: colour,
-            onDrag: (dy) => resizeStart(active, top + dy),
+            active: active,
+            resize: (anchor, dy) =>
+                resizeStart(anchor, offsetFromMinutes(anchor.startMinutes) + dy),
           ),
           _handle(
             centreY: _handleTouchRadius + height,
             colour: colour,
-            onDrag: (dy) => resizeEnd(active, top + dy),
+            active: active,
+            resize: (anchor, dy) =>
+                resizeEnd(anchor, offsetFromMinutes(anchor.endMinutes) + dy),
           ),
         ],
       ),
@@ -293,7 +302,8 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
   Widget _handle({
     required double centreY,
     required Color colour,
-    required DayGridDraft Function(double localDy) onDrag,
+    required DayGridDraft active,
+    required DayGridDraft Function(DayGridDraft anchor, double dy) resize,
   }) {
     return Positioned(
       top: centreY - _handleTouchRadius,
@@ -311,21 +321,36 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
       width: _handleTouchRadius * 2,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        // As with the move: the edge follows the finger from the moment it
-        // touches down, rather than eighteen pixels behind it for ever.
+        // Anchored exactly like the move, and for a sharper reason.
+        //
+        // This read `details.localPosition` — the finger's offset inside the
+        // handle's own box. But the box is positioned by the value being
+        // dragged, so it slid down as the block grew, and Flutter keeps the
+        // transform it captured at touch-down: every frame measured against the
+        // original box and re-added growth that had already been applied. A
+        // 32px pull on the bottom edge stretched the block by two hours.
+        //
+        // Against a fixed anchor there is nothing to compound: the edge lands
+        // where it started plus how far the finger has moved, however many
+        // frames that took.
         dragStartBehavior: DragStartBehavior.down,
+        onVerticalDragStart: onDraftChanged == null
+            ? null
+            : (details) {
+                _edgeAnchor = active;
+                _edgeFrom = details.globalPosition.dy;
+              },
         onVerticalDragUpdate: onDraftChanged == null
             ? null
             : (details) {
-                // The handle's own box is the frame of reference; the draft
-                // maths works in grid coordinates, so the press is converted
-                // back before it is used.
-                //
-                // Absolute, unlike the move: each update asks "where is the
-                // finger now", so nothing is lost to rounding between frames.
-                final gridDy = details.localPosition.dy - _handleTouchRadius;
-                onDraftChanged!(onDrag(centreY - _handleTouchRadius + gridDy));
+                final anchor = _edgeAnchor;
+                if (anchor == null) return;
+                onDraftChanged!(
+                  resize(anchor, details.globalPosition.dy - _edgeFrom),
+                );
               },
+        onVerticalDragEnd: (_) => _edgeAnchor = null,
+        onVerticalDragCancel: () => _edgeAnchor = null,
         child: Align(
           alignment: Alignment.centerLeft,
           child: Padding(
