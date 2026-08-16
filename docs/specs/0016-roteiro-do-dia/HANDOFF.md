@@ -136,18 +136,31 @@ device: 10:00 stored, picker and speed dial both followed it.
   rule. It does not run the conflict check: arriving somewhere is a fact, and
   refusing to record it because the rep's own calendar disagrees is the failure
   the spec describes. Verified against Postgres.
-- **Offline stamping — half done.** The correctness half is built: start,
-  complete and arrival accept an instant from the device, and
-  `resolveClientInstant` decides whether to believe it (absent means now, small
-  skew is clamped, the future and anything over a day old are refused). Verified
-  against Postgres: a 90-minute-old arrival anchors to the hour the rep was
-  there and a completion an hour later reports 60 minutes, not the queue's
-  latency.
+- ~~**Offline stamping.**~~ Done, both halves.
 
-  **There is still no offline queue.** Nothing is recorded offline yet — the
-  request simply fails, which is the spec's other permitted answer. What exists
-  now is the contract that makes a queue correct when it is built: persisting
-  requests, replaying them, and showing the rep what is still pending.
+  **The contract**: start, complete and arrival accept an instant from the
+  device, and `resolveClientInstant` decides whether to believe it — absent
+  means now, small skew is clamped, the future and anything over a day old are
+  refused. Verified against Postgres: a 90-minute-old arrival anchors to the
+  hour the rep was there and a completion an hour later reports 60 minutes, not
+  the queue's latency.
+
+  **The queue**: `CaptureQueue` persists the press with its stamp in Hive and
+  replays it when there is a network. Oldest first, and one unreachable entry
+  halts the drain rather than being skipped — an arrival closes whichever visit
+  the rep left open, so sending the second past a stuck first would close the
+  wrong one. A refusal is dropped and reported rather than retried for ever, and
+  so is a stamp too old for the server to accept. Each entry replays under the
+  key it was queued with. A banner on the day screen counts what is waiting.
+
+  Covers arrival, start and complete. Planning is deliberately not queued: a
+  create needs the server's answer about conflicts.
+
+  ⚠️ **Not yet driven on the simulator.** The restored database has different
+  sessions, so the app is back at the login screen and I do not have (and will
+  not ask for) credentials. Log in and the flow to exercise is: stop the API,
+  press *Cheguei*, expect the banner; start the API, press *Enviar agora*,
+  expect the visit to land with the earlier stamp.
 - **Push reminder with an "Iniciar" action.** `firebase_messaging` is absent,
   there is no device-token store, and nothing reads `pushNotificationsEnabled`.
 - **Geofence arrival/exit.** `geolocator` is one-shot and foreground, permission
