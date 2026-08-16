@@ -166,7 +166,54 @@ device: 10:00 stored, picker and speed dial both followed it.
 - **Geofence arrival/exit.** `geolocator` is one-shot and foreground, permission
   is When-In-Use, no background mode declared.
 
-### 5. Where the audit stopped
+### 5. Found by the full simulator sweep (2026-08-16)
+
+Driven on the iPhone 17 against the restored book, with every write checked in
+Postgres. Four defects, three of them invisible until the capture loop was used
+for the first time.
+
+**The capture loop could never have worked from the app.** `start`, `complete`,
+`outcome` and `arrival` never sent `Content-Type: application/json`, so Elysia
+parsed no body and rejected fields that had plainly been sent — 400 with
+`"found": {}`. The calendar mutations always set it; these four never did.
+This reframes "nobody has pressed *Iniciar interação*": part of it is that the
+button could not work. No test caught it because none crosses the real HTTP
+layer — the repository tests assert against a recording client that accepts a
+body no server would parse.
+
+**Explorar 500s once a rep has actually visited anything.** `loadLastVisitAt`
+declared `sql<Date>` over a `max()` aggregate — an assertion, not a conversion —
+and the mapper called `.toISOString()` on the string postgres returned. It could
+only fire for a facility with a `visits` row, and none existed until then. Two
+arrivals in, the clinic list died and the rep's whole book became a retry
+button.
+
+**Editing a series ate the weeks before the one you opened.** The form seeded
+from the tapped occurrence and the server writes `startsAt` as the series
+anchor, so changing only a duration on week three deleted weeks one and two.
+The list DTO now carries `anchorLocalDate`/`anchorLocalTime`.
+
+**The arrival confirmation never went away.** `SnackBar.persist` defaults to
+`action != null` and the dismiss timer returns early on it, so any snackbar with
+an action stays until something replaces it.
+
+⚠️ **Still open — a completed visit draws the plan, not what was measured.** See
+the task list. An arrival's 60-minute placeholder means three improvised visits
+five minutes apart render as three overlapping hour-long blocks. The arrival
+commit's claim that nothing reads the placeholder was wrong: the day grid does.
+
+**Verified working**: drag-to-create, resize, drag-by-middle, clash warnings,
+"Mais opções" carrying date/time/kind, the 409 with its detailed message,
+recurrence creation and month expansion, the occurrence-vs-series chooser,
+"Editar toda a série", clinic search scoped to Rio, Rota, the drawer→Perfil
+chevron, Desempenho and Explorar on the real book, Cheguei writing IN_PROGRESS
+with the press instant, close-on-next-arrival closing the previous visit
+COMPLETED/MEASURED with a `visits` row and a SYSTEM event, and the "Hoje" badge.
+
+**Not reached**: outcome questions, the offline queue drain, roteiro,
+cancellation, the notes composer, working hours.
+
+### 6. Where the earlier audit stopped
 
 Covered by reading: month view, day grid, overlap layout, role scoping, taps,
 the editor's date bounds and recurrence validation, the slot picker.
