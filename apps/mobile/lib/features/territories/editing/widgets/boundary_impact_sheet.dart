@@ -150,7 +150,14 @@ class _BoundaryImpactSheetState extends State<BoundaryImpactSheet> {
                     onPressed: _allAccepted
                         ? () => Navigator.of(context).pop(true)
                         : null,
-                    child: const Text('Aceitar e salvar'),
+                    // With a long list the button just sat there dead and the
+                    // remaining clinic was somewhere off screen. Say how many
+                    // are still unticked.
+                    child: Text(
+                      _allAccepted
+                          ? 'Aceitar e salvar'
+                          : 'Faltam ${clinics.length - _accepted.length}',
+                    ),
                   ),
                 ),
               ],

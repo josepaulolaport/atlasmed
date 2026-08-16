@@ -1406,6 +1406,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            // The irreversible half of the choice, painted like the safe half.
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Descartar'),
           ),
         ],
@@ -1432,6 +1434,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Excluir'),
           ),
         ],
