@@ -558,9 +558,39 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                       ),
                     ),
                   ),
+                  // How far in, and how far to go. The wizard runs to four
+                  // steps and said neither, so every "Continuar" was a step
+                  // into an unknown number of them.
+                  if (steps.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Text(
+                        '${_stepIndex + 1} de ${steps.length}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
+            if (steps.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: (_stepIndex + 1) / steps.length,
+                    minHeight: 3,
+                    backgroundColor: AppColors.gray200,
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.navyBright,
+                    ),
+                  ),
+                ),
+              ),
             Expanded(
               child: _loadingInvitation
                   ? const Center(child: CircularProgressIndicator())

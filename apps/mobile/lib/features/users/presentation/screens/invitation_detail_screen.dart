@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/confirm_revoke_dialog.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
@@ -102,6 +103,14 @@ class InvitationDetailScreen extends ConsumerWidget {
     UserInvitation invitation,
     String action,
   ) async {
+    if (action == 'revoke') {
+      final confirmed = await confirmRevokeInvitation(
+        context,
+        inviteeName: invitation.displayName,
+      );
+      if (!confirmed || !context.mounted) return;
+    }
+
     final repository = ref.read(invitationsRepositoryProvider);
     try {
       if (action == 'resend') {
