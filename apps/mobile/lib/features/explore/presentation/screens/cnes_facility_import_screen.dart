@@ -442,54 +442,35 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
   /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
   /// one fact, so moving the pin rewrites the address rather than leaving it
   /// describing where the clinic used to be.
+  /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
+  /// one fact, so moving the pin rewrites the address rather than leaving it
+  /// describing where the clinic used to be.
+  ///
+  /// The picker resolves the address before it returns and refuses to confirm a
+  /// point it cannot name, so what comes back is always a place — there is no
+  /// second lookup here, and no window where the new coordinates sit beside the
+  /// old address.
   Future<void> _pickOnMap() async {
     final picked = await FacilityPinPickerScreen.show(
       context,
       initial: _point,
       title: widget.candidate.name,
+      resolve: (lat, lng) =>
+          widget.repository.reverseGeocode(latitude: lat, longitude: lng),
     );
     if (picked == null || !mounted) return;
 
-    // Marked busy across the lookup, and the submit button reads the same flag.
-    // Confirming a pin and importing straight away used to send the new
-    // coordinates with the old address — the pair spec 0009 decision 4 exists
-    // to keep together, split by a request that had not come back yet.
+    final address = picked.address;
     setState(() {
-      _point = picked;
-      _geocoding = true;
-    });
-
-    try {
-      final described = await widget.repository.reverseGeocode(
-        latitude: picked.latitude,
-        longitude: picked.longitude,
-      );
-      if (!mounted) return;
-      if (described == null || described.isEmpty) {
-        setState(() => _geocoding = false);
-        return;
+      _point = picked.point;
+      _pinAddress = address.fullAddress;
+      if (address.streetAddress != null) _street.text = address.streetAddress!;
+      if (address.streetNumber != null) _number.text = address.streetNumber!;
+      if (address.neighborhood != null) {
+        _neighborhood.text = address.neighborhood!;
       }
-      setState(() {
-        _geocoding = false;
-        _pinAddress = described.fullAddress;
-        if (described.streetAddress != null) {
-          _street.text = described.streetAddress!;
-        }
-        if (described.streetNumber != null) {
-          _number.text = described.streetNumber!;
-        }
-        if (described.neighborhood != null) {
-          _neighborhood.text = described.neighborhood!;
-        }
-        if (described.postalCode != null) {
-          _postalCode.text = described.postalCode!;
-        }
-      });
-    } on CnesFacilityImportException {
-      // The pin is authoritative and it is already set. A failed lookup leaves
-      // the address as typed rather than blocking the move.
-      if (mounted) setState(() => _geocoding = false);
-    }
+      if (address.postalCode != null) _postalCode.text = address.postalCode!;
+    });
   }
 
   String? _nullIfBlank(String value) {

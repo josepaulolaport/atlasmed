@@ -78,6 +78,12 @@ export class MapboxGeocodingAdapter implements GeocodingPort {
       latitude: input.latitude,
       longitude: input.longitude,
       limit: input.limit ?? 1,
+      // Same as the forward path, and not only for tidiness: the untranslated
+      // records carry rubbish the Portuguese ones do not. Copacabana's main
+      // avenue comes back as "Avenida Nossa Senhora De Copacabana]" — with the
+      // bracket — until you ask for pt, and that string was landing in the
+      // logradouro field of a clinic.
+      language: "pt",
     });
 
     if (!result) {

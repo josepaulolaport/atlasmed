@@ -96,6 +96,26 @@ describe("MapboxGeocodingAdapter address parts", () => {
     expect(hits[0]?.parts?.streetNumber).toBe("1578");
   });
 
+  it("asks for Portuguese, because the untranslated records are dirtier", async () => {
+    let sent: Record<string, unknown> | undefined;
+    const adapter = new MapboxGeocodingAdapter({
+      reverseGeocode: async (params: Record<string, unknown>) => {
+        sent = params;
+        return {
+          latitude: -22.97,
+          longitude: -43.18,
+          raw: feature(paulista),
+        };
+      },
+    } as unknown as IMapboxClient);
+
+    await adapter.reverseGeocode({ latitude: -22.97, longitude: -43.18 });
+
+    // Without it, Copacabana's main avenue comes back with a stray "]" in the
+    // street name and lands in a clinic's logradouro.
+    expect(sent?.language).toBe("pt");
+  });
+
   it("survives a feature with no context at all", async () => {
     const adapter = new MapboxGeocodingAdapter(clientReturning(feature({})));
 

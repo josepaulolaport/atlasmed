@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
@@ -5,30 +8,55 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
-/// Full-screen pin placement: tap the map to move it, confirm to keep it.
+/// A confirmed pin, and the address that sits at it.
+class PickedLocation {
+  const PickedLocation({required this.point, required this.address});
+
+  final MapCoordinate point;
+  final ReverseGeocodedAddress address;
+}
+
+/// Full-screen pin placement: move the map under the pin, confirm to keep it.
 ///
 /// Opened from [FacilityLocationCard]. Separate from the card because placing a
 /// pin accurately needs the whole screen — the card's job is to show where the
 /// clinic currently sits, and a 160pt-tall map is not somewhere anyone can aim.
+///
+/// The pin has to land on an address. A clinic's point decides which manager
+/// zone and rep patch it falls into, and a coordinate in the middle of the
+/// Atlantic satisfies that question with an answer nobody can act on — so the
+/// screen resolves whatever is under the pin as the map settles and will not
+/// confirm a place it cannot name.
 class FacilityPinPickerScreen extends StatefulWidget {
   const FacilityPinPickerScreen({
     super.key,
     required this.initial,
     required this.title,
+    required this.resolve,
   });
 
   final MapCoordinate? initial;
   final String title;
 
-  static Future<MapCoordinate?> show(
+  /// Describes what sits at a point, or returns null when nothing does.
+  final Future<ReverseGeocodedAddress?> Function(double lat, double lng)
+  resolve;
+
+  static Future<PickedLocation?> show(
     BuildContext context, {
     MapCoordinate? initial,
     required String title,
+    required Future<ReverseGeocodedAddress?> Function(double lat, double lng)
+    resolve,
   }) {
-    return Navigator.of(context).push<MapCoordinate>(
+    return Navigator.of(context).push<PickedLocation>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => FacilityPinPickerScreen(initial: initial, title: title),
+        builder: (_) => FacilityPinPickerScreen(
+          initial: initial,
+          title: title,
+          resolve: resolve,
+        ),
       ),
     );
   }
@@ -58,6 +86,20 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   late bool _placed;
   bool _mapUnavailable = false;
 
+  /// What sits under the pin, once the map has settled.
+  ReverseGeocodedAddress? _address;
+  bool _resolving = false;
+
+  /// The lookup came back with nothing — open water, or somewhere the provider
+  /// has no address for.
+  bool _nowhere = false;
+
+  Timer? _settle;
+
+  /// Guards against a slow lookup for an old position landing after a newer
+  /// one, which would let a stale address unlock the button.
+  int _resolveToken = 0;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +107,63 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
     _readout = _pin;
     _placed = widget.initial != null;
     MapboxOptions.setAccessToken(AppConfig.mapboxAccessToken);
+    if (widget.initial != null) _scheduleResolve();
+  }
+
+  @override
+  void dispose() {
+    _settle?.cancel();
+    super.dispose();
+  }
+
+  /// Waits for the map to stop before asking. Resolving mid-drag would be one
+  /// request per frame and every answer but the last one is thrown away.
+  void _scheduleResolve() {
+    _settle?.cancel();
+    setState(() {
+      _address = null;
+      _nowhere = false;
+      _resolving = true;
+    });
+    _settle = Timer(const Duration(milliseconds: 450), _resolveNow);
+  }
+
+  Future<void> _resolveNow() async {
+    final token = ++_resolveToken;
+    final at = _pin;
+    try {
+      final found = await widget.resolve(at.latitude, at.longitude);
+      if (!mounted || token != _resolveToken) return;
+      setState(() {
+        _resolving = false;
+        if (found == null || found.isEmpty) {
+          _address = null;
+          _nowhere = true;
+        } else {
+          _address = found;
+          _nowhere = false;
+        }
+      });
+    } catch (_) {
+      if (!mounted || token != _resolveToken) return;
+      // A failed lookup is not the same as open water: say it could not be
+      // checked rather than claiming there is nothing there.
+      setState(() {
+        _resolving = false;
+        _address = null;
+        _nowhere = false;
+      });
+    }
+  }
+
+  bool get _canConfirm => _placed && _address != null;
+
+  String get _confirmLabel {
+    if (!_placed) return 'Posicione o pino';
+    if (_resolving) return 'Verificando…';
+    if (_nowhere) return 'Sem endereço aqui';
+    if (_address == null) return 'Tente de novo';
+    return 'Confirmar local';
   }
 
   /// The marker is painted over the middle of the map, so the middle of the
@@ -85,12 +184,14 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
     // map moves, and only the readout below the map shows it.
     _pin = moved;
     if (_readout != _pin) setState(() => _readout = _pin);
+    if (_placed) _scheduleResolve();
   }
 
   /// A gesture, rather than the camera settling after we moved it ourselves.
   void _onUserGesture() {
     if (_placed) return;
     setState(() => _placed = true);
+    _scheduleResolve();
   }
 
   void _onMapTap(MapContentGestureContext context) {
@@ -128,36 +229,14 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
         children: [
           Container(
             width: double.infinity,
-            color: AppColors.blue50,
+            color: _nowhere ? AppColors.amber50 : AppColors.blue50,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _placed
-                      ? 'Arraste o mapa ou toque para posicionar o pino. O '
-                            'endereço é atualizado a partir dele.'
-                      : 'Arraste o mapa até a clínica ficar sob o pino, ou '
-                            'toque onde ela fica.',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.blueDarker,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // The live coordinate, so what will be confirmed is on screen
-                // rather than inferred from where the marker looks like it is.
-                Text(
-                  '${_readout.latitude.toStringAsFixed(6)}, '
-                  '${_readout.longitude.toStringAsFixed(6)}',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.gray600,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
+            child: _PinStatus(
+              placed: _placed,
+              resolving: _resolving,
+              nowhere: _nowhere,
+              address: _address,
+              point: _readout,
             ),
           ),
           Expanded(
@@ -223,12 +302,12 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.navyDeep,
                       ),
-                      onPressed: _placed
-                          ? () => Navigator.of(context).pop(_pin)
+                      onPressed: _canConfirm
+                          ? () => Navigator.of(context).pop(
+                              PickedLocation(point: _pin, address: _address!),
+                            )
                           : null,
-                      child: Text(
-                        _placed ? 'Confirmar local' : 'Posicione o pino',
-                      ),
+                      child: Text(_confirmLabel),
                     ),
                   ),
                 ],
@@ -463,6 +542,142 @@ class _MiniMapState extends State<_MiniMap> {
           color: Colors.transparent,
           child: InkWell(onTap: widget.onTap),
         ),
+      ],
+    );
+  }
+}
+
+/// What is under the pin right now: the address if there is one, the reason
+/// there is not, or the coordinate while it is being checked.
+class _PinStatus extends StatelessWidget {
+  const _PinStatus({
+    required this.placed,
+    required this.resolving,
+    required this.nowhere,
+    required this.address,
+    required this.point,
+  });
+
+  final bool placed;
+  final bool resolving;
+  final bool nowhere;
+  final ReverseGeocodedAddress? address;
+  final MapCoordinate point;
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinates = Text(
+      '${point.latitude.toStringAsFixed(6)}, '
+      '${point.longitude.toStringAsFixed(6)}',
+      style: const TextStyle(
+        fontSize: 11.5,
+        color: AppColors.gray600,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
+    );
+
+    if (!placed) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Arraste o mapa até a clínica ficar sob o pino, ou toque onde '
+            'ela fica.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.blueDarker,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 4),
+          coordinates,
+        ],
+      );
+    }
+
+    if (resolving) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 13,
+            height: 13,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Verificando o endereço deste ponto…',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.blueDarker),
+                ),
+                const SizedBox(height: 2),
+                coordinates,
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (nowhere) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Não há endereço neste ponto.',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.amberDark,
+            ),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Mova o pino para uma rua. O ponto define o território da '
+            'clínica, e um lugar sem endereço não pertence a nenhum.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.gray700,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 4),
+          coordinates,
+        ],
+      );
+    }
+
+    final resolved = address;
+    if (resolved == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Não foi possível verificar este ponto agora.',
+            style: TextStyle(fontSize: 12.5, color: AppColors.gray700),
+          ),
+          const SizedBox(height: 4),
+          coordinates,
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          resolved.fullAddress ?? 'Endereço encontrado',
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.blueDarker,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 4),
+        coordinates,
       ],
     );
   }
