@@ -118,6 +118,19 @@ function boundFailures(failures: PurchaseRecurrenceFailure[]): PurchaseRecurrenc
   ];
 }
 
+/**
+ * The union of the three selectors, keyset-paged.
+ *
+ * Each selector returns at most `limit` ids above the cursor, so one that comes
+ * back *full* knows nothing beyond its last id — and the cursor only ever moves
+ * forward, so a page that ran past that point would skip the ids it never got to
+ * report.
+ *
+ * It cannot. A full selector contributes `limit` ids of its own, all at or below
+ * its last one, so the union already holds `limit` ids there and the slice below
+ * can never reach past it. Adding a fourth selector keeps that property; making
+ * one return *more* than its limit would break it.
+ */
 export function selectReconcileFacilityIds(input: {
   changedOrderIds: readonly number[];
   dueTransitionIds: readonly number[];
@@ -373,13 +386,24 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         return facilityIds.map((facilityId) => ({ facilityId, changed: false, document: null }));
       }
 
+      /**
+       * Ordered by id, and the update loop below follows the same order.
+       *
+       * The page is one transaction, so every row it updates stays locked until
+       * commit — and since splitting the daily sweep onto its own schedule id,
+       * two runs of this activity really can overlap (`SKIP` only serialises a
+       * schedule with itself, and the Emultec import starts a third). Two
+       * transactions taking the same row locks in different orders deadlock;
+       * taking them in a total order cannot.
+       */
       const profiles = await tx
         .select()
         .from(facilityVerticalProfiles)
         .where(and(
           inArray(facilityVerticalProfiles.facilityId, aliveIds),
           eq(facilityVerticalProfiles.isActive, true),
-        ));
+        ))
+        .orderBy(asc(facilityVerticalProfiles.id));
       const profileIds = profiles.map((profile) => profile.id);
 
       const [purchaseDates, repRows, focusRows] = await Promise.all([

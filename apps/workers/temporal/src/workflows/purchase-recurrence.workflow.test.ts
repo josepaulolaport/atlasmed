@@ -107,6 +107,24 @@ describe("purchase recurrence workflow", () => {
     expect(commits).toEqual(["2026-07-22T00:00:00.000Z"]);
   });
 
+  /**
+   * The hourly schedule passes `fullSweep: false` explicitly, so a `??` chain
+   * here never reaches the plan and the 24-hour escalation could not fire at
+   * all — the one case where the incremental window is least trustworthy.
+   */
+  test("escalates to a sweep even though the schedule passes fullSweep: false", async () => {
+    const recalculatedInputs: unknown[] = [];
+    await runPurchaseRecurrenceWorkflow({ mode: "RECONCILE", fullSweep: false }, {
+      claimWindow: async () => ({ since: "2026-07-01T00:00:00.000Z", fullSweep: true }),
+      commitWindow: async () => {},
+      recalculate: async (input) => { recalculatedInputs.push(input); return emptyPage; },
+      rebuild: async () => {}, logLifecycle: async () => {},
+      continueAsNew: async () => { throw new Error("unexpected"); },
+      startedAt: new Date("2026-07-22T00:00:00.000Z"), now: () => Date.parse("2026-07-22T00:00:00.000Z"),
+    });
+    expect(recalculatedInputs[0]).toMatchObject({ fullSweep: true });
+  });
+
   test("honours a sweep the watermark plan asks for when it has fallen far behind", async () => {
     const recalculatedInputs: unknown[] = [];
     await runPurchaseRecurrenceWorkflow({ mode: "RECONCILE" }, {
@@ -131,6 +149,71 @@ describe("purchase recurrence workflow", () => {
       startedAt: new Date("2026-07-22T00:00:00.000Z"), now: () => Date.parse("2026-07-22T00:00:00.000Z"),
     })).rejects.toThrow("database unavailable");
     expect(commitWindow).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The child the Emultec import starts arrives with its own `since`/`until`,
+   * and its `until` is six hours in the *future*. Committing that would park the
+   * shared watermark ahead of anything covered, and every hourly run for those
+   * six hours would fall back to the fixed lookback the watermark replaced.
+   */
+  test("a caller-supplied window neither claims nor advances the watermark", async () => {
+    const claimWindow = mock(async () => ({ since: "unused", fullSweep: false }));
+    const commitWindow = mock(async () => {});
+    await runPurchaseRecurrenceWorkflow({
+      mode: "RECONCILE",
+      since: "2026-07-22T01:55:00.000Z",
+      until: "2026-07-22T08:00:00.000Z",
+    }, {
+      claimWindow,
+      commitWindow,
+      recalculate: async () => emptyPage,
+      rebuild: async () => {}, logLifecycle: async () => {},
+      continueAsNew: async () => { throw new Error("unexpected"); },
+      startedAt: new Date("2026-07-22T02:00:00.000Z"), now: () => Date.parse("2026-07-22T02:00:00.000Z"),
+    });
+    expect(claimWindow).not.toHaveBeenCalled();
+    expect(commitWindow).not.toHaveBeenCalled();
+  });
+
+  test("a continued run still commits the window its first run claimed", async () => {
+    const claimWindow = mock(async () => ({ since: "unused", fullSweep: false }));
+    const commits: string[] = [];
+    await runPurchaseRecurrenceWorkflow({
+      mode: "RECONCILE",
+      since: "2026-07-21T22:00:00.000Z",
+      until: "2026-07-22T00:00:00.000Z",
+      // What the first run threaded through `continueAsNew`.
+      ownsWatermark: true,
+    }, {
+      claimWindow,
+      commitWindow: async ({ until }) => { commits.push(until); },
+      recalculate: async () => emptyPage,
+      rebuild: async () => {}, logLifecycle: async () => {},
+      continueAsNew: async () => { throw new Error("unexpected"); },
+      startedAt: new Date("2026-07-22T02:00:00.000Z"), now: () => Date.parse("2026-07-22T02:00:00.000Z"),
+    });
+    expect(claimWindow).not.toHaveBeenCalled();
+    expect(commits).toEqual(["2026-07-22T00:00:00.000Z"]);
+  });
+
+  test("carries watermark ownership across continue-as-new", async () => {
+    const continued: unknown[] = [];
+    let cursor = 0;
+    await runPurchaseRecurrenceWorkflow({ mode: "RECONCILE" }, {
+      ...freshWindow,
+      recalculate: async () => {
+        cursor += 500;
+        return { processed: 500, updated: 0, failed: 0, nextCursor: cursor, failures: [] };
+      },
+      rebuild: async () => {}, logLifecycle: async () => {},
+      continueAsNew: async (next) => {
+        continued.push(next);
+        return undefined as never;
+      },
+      startedAt: new Date("2026-07-22T00:00:00.000Z"), now: () => Date.parse("2026-07-22T00:00:00.000Z"),
+    });
+    expect(continued[0]).toMatchObject({ ownsWatermark: true });
   });
 
   test("re-uses an already resolved window instead of re-claiming after continue-as-new", async () => {

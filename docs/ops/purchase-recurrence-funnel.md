@@ -104,11 +104,49 @@ and profile filters will under-match until they exist.
 curl -XPOST "$API/sync" -H 'content-type: application/json' -d '{"entity":"facilities"}'
 ```
 
+## Deploying a change to these workflows
+
+**Terminate any in-flight execution before the new worker picks it up.** This is
+not optional and it fails in the worst way if skipped.
+
+A workflow whose code changed shape — a new activity call, a call in a different
+order — cannot replay against a history written by the old code. The new worker
+raises a non-determinism error, the workflow task retries forever, and the
+execution stays **Running**. Overlap policy is `SKIP`, so every subsequent firing
+is skipped: the funnel silently stops updating and nothing errors at the schedule
+level. The watermark is what makes it visible, not the schedule.
+
+```bash
+for id in facility-purchase-recurrence-hourly \
+          facility-purchase-recurrence-daily-sweep \
+          facility-metric-snapshot-hourly \
+          facility-metric-snapshot-nightly; do
+  temporal workflow terminate --workflow-id "$id" --reason "worker deploy" || true
+done
+```
+
+Safe to terminate at any point: nothing is lost. The watermark only advances on
+completion, so the terminated window is re-covered by the next firing, and the
+recalculation itself is idempotent.
+
+Check for a stuck run:
+
+```bash
+temporal workflow list --query \
+  "WorkflowType='purchaseRecurrenceWorkflow' AND ExecutionStatus='Running'"
+```
+
+An hourly execution still Running well into the next hour is either a genuinely
+slow sweep or a workflow task failing on replay. `temporal workflow describe`
+distinguishes them — a replay failure shows repeated `WorkflowTaskFailed` with no
+activity progress.
+
 ## Log events
 
 | event | meaning |
 |---|---|
 | `facility_purchase_recurrence.window_planned` | the window a run claimed, and whether it escalated to a sweep |
+| `facility_metric_snapshot.window_planned` / `.window_committed` | the same pair for the metric-snapshot reconciler, which shares the table |
 | `facility_purchase_recurrence.window_committed` | the watermark advanced — a run finished |
 | `facility_purchase_recurrence.reconcile_batch_completed` | one page |
 | `facility_purchase_recurrence.batch_failed` | page failed; retryable, cursor does not advance |
@@ -117,6 +155,11 @@ curl -XPOST "$API/sync" -H 'content-type: application/json' -d '{"entity":"facil
 
 A run that logs `window_planned` and never `window_committed` did not finish, and
 its window will be re-covered.
+
+Only a run that **claimed** its own window commits one. The child the Emultec
+import starts arrives with an explicit `since`/`until` — and an `until` six hours
+in the future — so it recalculates but does not touch the watermark. Committing
+that would park the watermark ahead of anything actually covered.
 
 ## Diagnostics
 

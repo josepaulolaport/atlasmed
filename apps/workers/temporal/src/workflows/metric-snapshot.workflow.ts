@@ -38,6 +38,14 @@ export interface MetricSnapshotWorkflowInput {
   cursor?: number | null;
   since?: string;
   until?: string;
+  /**
+   * Whether this run is the one allowed to advance the reconcile watermark.
+   *
+   * Set when a run claims a window of its own, and carried through
+   * `continueAsNew` so a long run still commits at the end of the chain rather
+   * than leaving the watermark where it started.
+   */
+  ownsWatermark?: boolean;
   totals?: MetricSnapshotWorkflowTotals;
   lifecycleStartedAt?: string;
 }
@@ -89,8 +97,10 @@ export async function runMetricSnapshotWorkflow(
    *
    * Already resolved on a `continueAsNew`; NIGHTLY and TRIGGER have no window.
    */
+  const ownsWatermark =
+    input.ownsWatermark ?? (input.mode === "RECONCILE" && input.since === undefined);
   const claimed =
-    input.mode === "RECONCILE" && input.since === undefined
+    ownsWatermark && input.since === undefined
       ? await dependencies.claimWindow({ until })
       : null;
   const since =
@@ -140,6 +150,7 @@ export async function runMetricSnapshotWorkflow(
         ...input,
           since,
         until,
+        ownsWatermark,
         cursor,
         totals,
         lifecycleStartedAt,
@@ -149,7 +160,7 @@ export async function runMetricSnapshotWorkflow(
 
   // After the last page, never before: the watermark records what has actually
   // been covered, so a run that dies mid-way leaves its window for the next one.
-  if (input.mode === "RECONCILE") {
+  if (ownsWatermark) {
     await dependencies.commitWindow({ until });
   }
 

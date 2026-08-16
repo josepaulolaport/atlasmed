@@ -546,8 +546,6 @@ async function upsertOneOrder(
     orderId = existing.id;
     if (!emultecOrderRowUnchanged(existing, desired)) {
       changed = true;
-      const displaced = displacedProfileId(existing, desired);
-      await db.update(orders).set(desired).where(eq(orders.id, orderId));
       /**
        * Re-keying an order leaves its old clinic holding a purchase it no longer
        * has.
@@ -563,7 +561,16 @@ async function upsertOneOrder(
        * Clearing the timestamp is the same sentinel the recalculation already
        * treats as "must write", and `listInvalidatedFacilityIds` selects on it,
        * so the next reconcile picks the clinic up within the hour.
+       *
+       * Invalidated **before** the order moves, deliberately. These are two
+       * statements with no transaction around them — the importer writes the
+       * order and its items the same way — so the process can die between them.
+       * In this order a crash leaves a profile marked for a recalculation it did
+       * not need, which the next reconcile performs and discards. In the other
+       * order it leaves the order moved and the origin never marked, which is
+       * precisely the bug this closes and would survive until the daily sweep.
        */
+      const displaced = displacedProfileId(existing, desired);
       if (displaced !== null) {
         await db
           .update(facilityVerticalProfiles)
@@ -575,6 +582,7 @@ async function upsertOneOrder(
           toProfileId: desired.facilityVerticalProfileId,
         });
       }
+      await db.update(orders).set(desired).where(eq(orders.id, orderId));
     }
   } else {
     const [inserted] = await db

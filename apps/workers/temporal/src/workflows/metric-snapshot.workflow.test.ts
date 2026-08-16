@@ -116,6 +116,27 @@ describe("runMetricSnapshotWorkflow", () => {
     expect(harness.calls[0]!.since).toBe("2026-03-15T04:00:00.000Z");
   });
 
+  test("a continued run still commits the window its first run claimed", async () => {
+    const harness = createDependencies([page()]);
+    await runMetricSnapshotWorkflow({
+      mode: "RECONCILE",
+      since: "2026-03-15T08:00:00.000Z",
+      until: "2026-03-15T10:00:00.000Z",
+      ownsWatermark: true,
+    }, harness.dependencies);
+    expect(harness.commits).toEqual(["2026-03-15T10:00:00.000Z"]);
+  });
+
+  test("a caller-supplied window does not advance the watermark", async () => {
+    const harness = createDependencies([page()]);
+    await runMetricSnapshotWorkflow({
+      mode: "RECONCILE",
+      since: "2026-03-15T08:00:00.000Z",
+      until: "2026-03-15T10:00:00.000Z",
+    }, harness.dependencies);
+    expect(harness.commits).toEqual([]);
+  });
+
   test("does not advance the watermark when a page fails", async () => {
     const harness = createDependencies([]);
     await expect(runMetricSnapshotWorkflow({ mode: "RECONCILE" }, {

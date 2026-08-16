@@ -542,7 +542,8 @@ since aged out of the rolling 90-day window is simply gone, and `differed` will 
 because there is nothing left to differ against.
 
 `ops.reconcile_watermark`, row `name = 'metric_snapshot'`, advances only after a run completes and
-never moves backwards. A failed or abandoned run re-covers its window. The purchase-recurrence
+never moves backwards, and only for a run that claimed its own window — a caller that supplies
+`since`/`until` recomputes without moving it. A failed or abandoned run re-covers its window. The purchase-recurrence
 reconciler keeps its own row in the same table; `claimMetricSnapshotWindow` logs
 `facility_metric_snapshot.window_planned` and `commitMetricSnapshotWindow` logs
 `facility_metric_snapshot.window_committed`, so a run that plans a window and never commits one did

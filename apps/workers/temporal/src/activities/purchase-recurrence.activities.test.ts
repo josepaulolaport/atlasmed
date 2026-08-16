@@ -67,6 +67,42 @@ describe("purchase recurrence batch selection", () => {
     })).toEqual([2, 4]);
   });
 
+  /**
+   * The property that makes the keyset safe with several selectors: a full
+   * selector cannot be overrun. It contributes `limit` ids of its own at or
+   * below its last one, so the page fills before reaching past it and the
+   * cursor never skips the ids it did not get to report.
+   */
+  test("RECONCILE never pages past a selector that came back full", () => {
+    // `changedOrderIds` is full at 3 and may hold more between 3 and 900.
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 2, 3],
+      dueTransitionIds: [500, 900],
+      invalidatedIds: [],
+      cursor: null,
+      limit: 3,
+    })).toEqual([1, 2, 3]);
+
+    // Two full selectors, interleaved: the page still stops inside both.
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 4],
+      dueTransitionIds: [2, 8],
+      invalidatedIds: [],
+      cursor: null,
+      limit: 2,
+    })).toEqual([1, 2]);
+  });
+
+  test("RECONCILE takes the whole union when no selector was truncated", () => {
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 2],
+      dueTransitionIds: [500, 900],
+      invalidatedIds: [7],
+      cursor: null,
+      limit: 10,
+    })).toEqual([1, 2, 7, 500, 900]);
+  });
+
   test("RECONCILE asks all three selectors", async () => {
     const store = createStore({ listBackfillFacilityIds: async () => [] });
     const activity = createPurchaseRecurrenceBatchActivity({ store, updateSearchDocuments: async () => {} });
