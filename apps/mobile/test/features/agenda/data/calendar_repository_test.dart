@@ -166,6 +166,41 @@ void main() {
     expect(versionError.expectedVersion, 4);
   });
 
+  test('a scope refusal reaches the rep in their own language', () async {
+    // "Resource outside scope: facility" is written for whoever reads the logs.
+    // A rep pressing Cheguei on a visit pointing at a clinic outside their book
+    // was shown exactly that, in English, on the day screen.
+    final error = await _capturedError(
+      _response(403, {
+        'error': {
+          'code': 'FORBIDDEN',
+          'message': 'Resource outside scope: facility',
+        },
+      }),
+    );
+
+    expect(
+      (error as CalendarForbiddenException).message,
+      'Isso está fora da sua carteira. Fale com seu gerente.',
+    );
+  });
+
+  test('a message already written for the rep is left alone', () async {
+    final error = await _capturedError(
+      _response(409, {
+        'error': {
+          'code': 'INTERACTION_INVALID_TRANSITION',
+          'message': 'Esta visita já foi encerrada.',
+        },
+      }),
+    );
+
+    expect(
+      (error as CalendarApiException).message,
+      'Esta visita já foi encerrada.',
+    );
+  });
+
   test(
     'maps forbidden and network failures without losing their type',
     () async {

@@ -466,9 +466,25 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     }
   }
 
+  /// A rep-readable sentence for the one error code whose messages are not.
+  ///
+  /// Every `ForbiddenError` the API raises carries developer text — "Resource
+  /// outside scope: facility", "Only the agent may confirm their own roteiro" —
+  /// and it goes straight to the screen. A rep pressing Cheguei on a visit
+  /// pointing at a clinic outside their book was told that, in English, on the
+  /// day screen. Deliberately narrow: every other code's message is written for
+  /// the rep and in their language, so nothing else is second-guessed here.
+  static String? _repReadable(String? code, String serverMessage) {
+    if (code != 'FORBIDDEN') return null;
+    return serverMessage.contains('outside scope')
+        ? 'Isso está fora da sua carteira. Fale com seu gerente.'
+        : 'Você não tem permissão para fazer isso.';
+  }
+
   Never _throwIfError(RepositoryHttpResponse response) {
     final payload = _errorPayload(response.body);
-    final message = payload.message;
+    final message =
+        _repReadable(payload.code, payload.message) ?? payload.message;
     switch (response.statusCode) {
       case 400:
       case 422:

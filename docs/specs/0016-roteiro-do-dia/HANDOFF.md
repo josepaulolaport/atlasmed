@@ -1,7 +1,7 @@
 # Roteiro do dia — handoff
 
-Branch `feature/roteiro-do-dia-p1-20260815`, 58 commits ahead of `main`, tree
-clean and pushed. Last commit `831f1073`.
+Branch `feature/roteiro-do-dia-p1-20260815`, tree clean. Last commit on
+2026-08-16 after a second full simulator sweep.
 
 Spec: `requirements.md` in this folder. Section numbers below refer to it.
 
@@ -112,10 +112,15 @@ live. Flagged repeatedly; never done.
 
 ### 2. Nobody has used any of this
 
-`visits` is empty; every interaction is `SCHEDULED`. No rep has pressed
-*Iniciar interação*, and no rep has seen a generated slate. Everything above was
-validated against a database and a simulator by the agent alone. The riskiest
-assumption in the feature — that reps want it in this shape — is untested.
+Every path now works and has been driven end to end — but by an agent on a
+simulator, twice, not by a rep. Everything below the surface has been checked
+against a real database; the riskiest assumption in the feature, that reps want
+it in this shape, is still untested and cannot be tested from here.
+
+Worth knowing when reading the earlier sweeps: part of why `visits` was empty
+was that the capture loop *could not work* — start, complete, outcome and
+arrival never sent `Content-Type`, so the server parsed no body. That is fixed,
+and the loop has since been exercised many times.
 
 Note what this gates: aderência, conversão and validated potential (the rest of
 P5) are all waiting on usage, not on code.
@@ -156,15 +161,23 @@ device: 10:00 stored, picker and speed dial both followed it.
   Covers arrival, start and complete. Planning is deliberately not queued: a
   create needs the server's answer about conflicts.
 
-  ⚠️ **Not yet driven on the simulator.** The restored database has different
-  sessions, so the app is back at the login screen and I do not have (and will
-  not ask for) credentials. Log in and the flow to exercise is: stop the API,
-  press *Cheguei*, expect the banner; start the API, press *Enviar agora*,
-  expect the visit to land with the earlier stamp.
-- **Push reminder with an "Iniciar" action.** `firebase_messaging` is absent,
-  there is no device-token store, and nothing reads `pushNotificationsEnabled`.
-- **Geofence arrival/exit.** `geolocator` is one-shot and foreground, permission
-  is When-In-Use, no background mode declared.
+  ✅ **Driven on 2026-08-16.** With the API stopped, two presses queued and the
+  banner read "2 registros aguardando envio". With it back, *Enviar agora*
+  drained them: the visit starts at 06:57:36 — the instant the button was
+  pressed — against a lifecycle event stamped 06:59:10, ninety-four seconds
+  later. That gap is the whole feature. The duplicate second press was refused
+  and dropped rather than retried for ever.
+- **Push reminder with an "Iniciar" action.** Still not built, and not
+  buildable from here: `firebase_messaging` is absent, there is no device-token
+  store, nothing reads `pushNotificationsEnabled` — and standing it up needs a
+  Firebase project and an APNs key, which are the account holder's to create.
+  That is the blocker, not the code.
+- **Geofence arrival/exit.** Still not built. `geolocator` is one-shot and
+  foreground, permission is When-In-Use, no background mode declared. Beyond the
+  code, this one needs a product decision first: continuous background location
+  is a battery and privacy cost a rep has to agree to, and App Store review asks
+  why. Worth doing only once reps say the manual *Cheguei* is too much friction
+  — which nobody has used enough to know.
 
 ### 5. Found by the full simulator sweep (2026-08-16)
 
@@ -197,10 +210,7 @@ The list DTO now carries `anchorLocalDate`/`anchorLocalTime`.
 `action != null` and the dismiss timer returns early on it, so any snackbar with
 an action stays until something replaces it.
 
-⚠️ **Still open — a completed visit draws the plan, not what was measured.** See
-the task list. An arrival's 60-minute placeholder means three improvised visits
-five minutes apart render as three overlapping hour-long blocks. The arrival
-commit's claim that nothing reads the placeholder was wrong: the day grid does.
+~~**Still open — a completed visit draws the plan.**~~ Fixed; see §7.
 
 **Verified working**: drag-to-create, resize, drag-by-middle, clash warnings,
 "Mais opções" carrying date/time/kind, the 409 with its detailed message,
@@ -210,8 +220,9 @@ chevron, Desempenho and Explorar on the real book, Cheguei writing IN_PROGRESS
 with the press instant, close-on-next-arrival closing the previous visit
 COMPLETED/MEASURED with a `visits` row and a SYSTEM event, and the "Hoje" badge.
 
-**Not reached**: outcome questions, the offline queue drain, roteiro,
-cancellation, the notes composer, working hours.
+~~**Not reached**: outcome questions, the offline queue drain, roteiro,
+cancellation, the notes composer, working hours.~~ All driven on 2026-08-16;
+see §7.
 
 ### 6. Where the earlier audit stopped
 
@@ -232,19 +243,82 @@ test saw it; the app went to a red screen on the first press.
 occurrence (the screen opens and reads correctly; the write was not exercised),
 cancelling a whole series, and the month view's own controls.
 
-**Noticed, not acted on** — these are yours to call:
+~~**Noticed, not acted on**~~ — all four were done on 2026-08-16; see §7.
 
-- `facility_notes` carries 1,445 rows reading *"Nenhuma observação registrada!"*,
-  one per clinic, bulk-inserted. They render as real notes beside real ones.
-  The string is nowhere in the repo, so it came in with the data.
-- `showTimePicker` in `working_hours_sheet.dart` renders in **English**
-  ("Select time", "Cancel", "OK"). The editor's pickers pass explicit pt-BR
-  labels and read correctly, so the app has no Material localization delegate
-  and each caller is papering over it.
-- The quick sheet demands a typed title even once a clinic is chosen, while the
-  editor auto-titles *"Visita · <clinic>"* from the same choice.
-- Perfil reports 184 médicos and "São Paulo · Zona Oeste"; Desempenho reports
-  214 and "Patch Adriana Oliveira" over Rio. Same rep, same session.
+---
+
+### 7. The second sweep (2026-08-16)
+
+Everything §5 listed as *not reached* has now been driven on the iPhone 17
+against the restored book, with every write checked in Postgres: the two
+outcome questions, the offline queue drain, roteiro generation and saving,
+cancellation of an occurrence and of a whole series, the notes composer, and
+working hours.
+
+**Six defects, three of them on paths a rep uses every day.**
+
+- **A finished visit was drawn as long as it was booked.** An arrival's
+  60-minute placeholder meant three improvised visits five minutes apart drew
+  as three overlapping hours. Fixed in the renderer (`drawnExtent`), not the
+  data: COMPLETED draws `actualStartedAt`/`actualEndedAt`, everything else
+  keeps the plan, and the gap between them stays measurable (§15.6.3). The
+  interaction screen had the same defect and now leads with the measured span,
+  keeping "previsto 08:00–09:00" underneath.
+- **Today's agenda was pinned in memory.** "Meus compromissos hoje" watches the
+  same provider key as the day screen and Desempenho never leaves the tree, so
+  the autoDispose family never disposed. The day screen insisted on two
+  appointments across a back-and-forth, an app switch and a relaunch while the
+  server returned four. Desempenho's pull-to-refresh now invalidates the agenda
+  and the day screen has a refresh button.
+- **Editing a series of visits had no way in.** The day grid's action sheet
+  intercepts every tap on an interaction and offered only Cheguei, Encerrar and
+  Abrir detalhes, so the occurrence-vs-series chooser — and with it cancelling a
+  weekly series — was unreachable. The sheet now offers Editar while the visit
+  is still a plan.
+- **Saving a roteiro twice for the same day returned a 500.** The partial unique
+  index covers DRAFT and CONFIRMED; `createDraft` superseded only DRAFT.
+  Superseding a confirmed one then failed `roteiros_confirmed_metadata_check`,
+  an equality that made SUPERSEDED unreachable from CONFIRMED. Migration 0123
+  relaxes it to an implication, so the row keeps its `confirmed_at`.
+- **The saved roteiro came back stripped.** `save()` returned the confirm
+  response — the stored row — so five approved cards became five reading
+  "Clínica" with no distances and "0 min" of travel. Confirm is now called for
+  its effect; the day shown afterwards is the day that was planned.
+- **The save could drop a stop and say nothing.** Saving re-plans server-side
+  with the rep's overrides, so a three-hour visit pushed the day past working
+  hours and the engine dropped a clinic — five approved, four written, and the
+  app still said "sua agenda foi montada". It now names how many did not fit and
+  stays on the screen.
+
+**The four "noticed, not acted on" items are done.** `flutter_localizations`
+and a pt-BR locale replace the English Material pickers (and the last two
+`showTimePicker` callers now use the house wheel); choosing a clinic titles the
+appointment in both the quick sheet and the editor; Desempenho's "médicos"
+counted every person linked to a clinic and now joins
+`person_healthcare_profiles` (146/184, matching Perfil); Perfil's territory
+caption was a mockup string and now shows the rep's own territories. The
+imported *"Nenhuma observação registrada!"* rows are filtered on read, with
+`packages/database/scripts/purge-imported-empty-facility-notes.sql` for when
+somebody decides they should be gone.
+
+**Verified working, end to end against Postgres**: Cheguei from the Desempenho
+card and from the day grid; Encerrar closing MEASURED with a `visits` row; the
+two outcome questions saving `VAI_AVALIAR` + `DIAS_30`; the offline queue
+holding two presses with no server and draining with the *press* instant
+(06:57:36) against a lifecycle event 94 seconds later, the duplicate refused
+rather than retried; cancelling a weekly series taking the calendar row and all
+three occurrences with its reason; roteiro generation with its notices, the
+duration ripple and the working-hours overrun warning; saving five visits into
+the agenda; the notes composer; and working hours stored at 09:25 from the wheel.
+
+**Still worth a look, deliberately not changed:**
+
+- The engine places visits at second precision (`14:05:06`), while the rest of
+  the calendar snaps to half hours and the wheel picker steps by five minutes.
+  A rep who edits a roteiro-made visit will nudge it by a minute without meaning
+  to. Changing it would change route packing, so it is a product call.
+- Perfil's *cobertura* is distinct clinics visited this week; Desempenho's is
+  the purchase funnel. Two meanings, one word.
 
 ---
 
