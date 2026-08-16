@@ -217,6 +217,11 @@ void main() {
     expect(body['name'], 'CLINICA CORRIGIDA');
     // Never sent: the API refuses a client-supplied CNPJ for a pessoa jurídica.
     expect(body.containsKey('legalDocument'), isFalse);
+    // The pin CNES supplied has to survive the trip. It decides which manager
+    // zone and rep patch the clinic lands in, and dropping it silently is a
+    // clinic nobody owns.
+    expect(body['lat'], -23.55);
+    expect(body['lng'], -46.63);
   });
 
   testWidgets('shows the field error the server named', (tester) async {
@@ -268,6 +273,34 @@ void main() {
     // Spec 0009 R5: the pin decides the territory, so a missing one is a screen
     // the user must answer rather than a field that quietly stays blank.
     await _scrollToBottom(tester);
-    expect(find.textContaining('não informou a localização'), findsOneWidget);
+    expect(find.textContaining('não informou onde fica'), findsOneWidget);
+    // And it says what importing without one costs, since importing without one
+    // is allowed.
+    expect(find.textContaining('sem território'), findsOneWidget);
+  });
+
+  testWidgets('offers the map rather than asking for coordinates', (
+    tester,
+  ) async {
+    final client = RecordingClient((request) {
+      if (request.url.path.contains('/cnes-candidates/9990001')) {
+        return _json(_preview(requiresLocation: true));
+      }
+      return handler(request);
+    });
+    await _pump(tester, client: client);
+
+    await tester.tap(find.byKey(const ValueKey('cnes-candidate-9990001')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+
+    // Typing "-23.550520" into a text box is what this replaced.
+    expect(find.text('Latitude'), findsNothing);
+    expect(find.text('Longitude'), findsNothing);
+    expect(find.byKey(const Key('facility-location-pick')), findsOneWidget);
+    expect(
+      find.byKey(const Key('facility-location-use-address')),
+      findsOneWidget,
+    );
   });
 }

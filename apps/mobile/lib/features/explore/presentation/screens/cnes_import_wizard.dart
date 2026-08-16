@@ -282,7 +282,15 @@ class _CnesImportWizardState extends State<CnesImportWizard> {
             ],
           ),
         ),
-        body: _buildBody(),
+        body: Column(
+          children: [
+            // Three steps named only in the app bar's subtitle told you where
+            // you were but never how much was left — the same gap the invite
+            // wizard had, fixed the same way.
+            _StepProgress(step: _step, total: _stepTitles.length),
+            Expanded(child: _buildBody()),
+          ],
+        ),
         bottomNavigationBar: _buildFooter(),
       ),
     );
@@ -1021,6 +1029,46 @@ class _ReviewStep extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Passo 2 de 3" and a bar, so the wizard says how much is left.
+class _StepProgress extends StatelessWidget {
+  const _StepProgress({required this.step, required this.total});
+
+  final int step;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Passo ${step + 1} de $total',
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray500,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: (step + 1) / total,
+              minHeight: 4,
+              backgroundColor: AppColors.surfaceSecondary,
+              valueColor: const AlwaysStoppedAnimation(AppColors.navyBright),
+            ),
+          ),
+        ],
       ),
     );
   }

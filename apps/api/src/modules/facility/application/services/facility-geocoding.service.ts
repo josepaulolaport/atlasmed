@@ -314,6 +314,49 @@ export class FacilityGeocodingService {
     return hit?.fullAddress ?? null;
   }
 
+  /**
+   * The address a point sits at, as separate fields.
+   *
+   * [describePoint] hands back one formatted line, which is right for an audit
+   * note and wrong for a form: the import wizard has to put the street, the
+   * number, the bairro and the CEP in four boxes, and splitting a formatted
+   * string back apart is guesswork.
+   *
+   * Null when geocoding is unavailable — the pin stays authoritative and a
+   * failed lookup must not block the move.
+   */
+  async describePointParts(input: {
+    lat: number;
+    lng: number;
+  }): Promise<{ fullAddress: string | null; parts: AddressParts } | null> {
+    if (!this.deps.geocodingPort) {
+      return null;
+    }
+
+    const hit = await this.deps.geocodingPort.reverseGeocode({
+      latitude: input.lat,
+      longitude: input.lng,
+      limit: 1,
+    });
+
+    if (!hit) {
+      return null;
+    }
+
+    const parts = hit.parts ?? {};
+    return {
+      fullAddress: hit.fullAddress ?? null,
+      parts: {
+        streetAddress: trimPart(parts.streetAddress),
+        streetNumber: trimPart(parts.streetNumber),
+        neighborhood: trimPart(parts.neighborhood),
+        postalCode: trimPart(parts.postalCode),
+        city: trimPart(parts.city),
+        state: trimPart(parts.state),
+      },
+    };
+  }
+
   async geocodeAddress(
     parts: AddressParts
   ): Promise<{ lat: number; lng: number } | null> {

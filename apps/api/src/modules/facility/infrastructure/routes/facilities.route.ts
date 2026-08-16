@@ -8,6 +8,7 @@ import { ResourceNotFoundError, ValidationError } from "../../../../shared/error
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroDocumentsRoute } from "./cadastro-documents.route";
 import { createCnesFacilityImportRoutes } from "./cnes-facility-import.route";
+import { facilityGeocodingRoute } from "./facility-geocoding.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 import { facilityBookmarksRoute } from "./facility-bookmarks.route";
@@ -999,6 +1000,8 @@ const downloadFacilityPhotoRoute = new Elysia()
 export const facilitiesRoute = new Elysia()
   .use(cadastroDocumentsRoute)
   .use(mapFacilitiesRoute)
+  // Before `/facilities/:id`, or "geocode" is captured as a facility id.
+  .use(facilityGeocodingRoute)
   .use(personProjectionsRoute)
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
