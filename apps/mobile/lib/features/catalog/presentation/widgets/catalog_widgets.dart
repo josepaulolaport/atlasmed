@@ -681,16 +681,20 @@ class _FilterOptionRow extends StatelessWidget {
   }
 }
 
-/// Which peer view of the Catálogo section is active — used by
+/// Which peer view of the Produtos section is active — used by
 /// [CatalogTabBar] so switching between them feels like flipping a tab
 /// instead of drilling into a nested screen.
 enum CatalogTab { produtos, tabelaCompleta }
 
-/// Segmented control pinned below [AtlasTopBar] on every top-level catalog
-/// screen (the flat product list and the full Brasíndice/Simpro table).
-/// Selecting a segment replaces the current route with [context.go], so
-/// flipping back and forth never piles up the back stack — it behaves like
-/// a tab, not a pushed detail screen.
+/// Segmented control pinned below [AtlasTopBar] on both rep-facing product
+/// screens: the product list (`/products`) and the full Brasíndice/Simpro
+/// table (`/price-index`). Selecting a segment replaces the current route with
+/// [context.go], so flipping back and forth never piles up the back stack — it
+/// behaves like a tab, not a pushed detail screen.
+///
+/// Both targets live in the same shell branch (spec 0016 §3.4), so the drawer
+/// stays available on either. It used to point at `/catalog`, an admin screen
+/// nothing else linked to — which made this tab bar that screen's only way in.
 class CatalogTabBar extends StatelessWidget {
   final CatalogTab active;
   const CatalogTabBar({super.key, required this.active});
@@ -711,14 +715,14 @@ class CatalogTabBar extends StatelessWidget {
               child: _segment(
                 label: 'Produtos',
                 selected: active == CatalogTab.produtos,
-                onTap: () => const CatalogHomeRoute().go(context),
+                onTap: () => const ProductsRoute().go(context),
               ),
             ),
             Expanded(
               child: _segment(
                 label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
-                onTap: () => const CatalogPriceIndexRoute().go(context),
+                onTap: () => const PriceIndexRoute().go(context),
               ),
             ),
           ],

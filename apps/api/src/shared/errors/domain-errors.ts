@@ -239,6 +239,27 @@ export class ResourceConflictError extends AppError {
   }
 }
 
+/**
+ * A row cannot be deleted because something still points at it (spec 0016 §6.2).
+ *
+ * Carries *what* blocks it, not just that something does. The whole reason
+ * delete is conditional rather than absolute is that the alternatives are
+ * unacceptable — a forced delete cascades over equivalences a rep's picker
+ * depends on, and letting the foreign key fire produces an opaque 23503 — so
+ * the caller has to be able to say "3 pedidos e 1 equivalência" and offer
+ * deactivation instead.
+ */
+export class ResourceInUseError extends AppError {
+  constructor(resource: string, blockedBy: Record<string, number>) {
+    super(
+      'RESOURCE_IN_USE',
+      409,
+      `${resource} is referenced by existing records and cannot be deleted`,
+      { resource, blockedBy }
+    );
+  }
+}
+
 export class EmailAlreadyExistsError extends AppError {
   constructor(email: string) {
     super(

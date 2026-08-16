@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -54,6 +56,8 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
     text: widget.existing != null ? brlNumber(widget.existing!.price20) : null,
   );
 
+  late bool _isActive = widget.existing?.isActive ?? true;
+
   bool _saving = false;
   String? _error;
 
@@ -69,11 +73,56 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
     _price20,
   ];
 
+  /// Null until the answer arrives; see [CatalogDeleteButton].
+  ProductDeletability? _deletability;
+
   @override
   void initState() {
     super.initState();
     for (final controller in _controllers) {
       controller.addListener(_onFieldChanged);
+    }
+    if (_isEditing) _loadDeletability();
+  }
+
+  Future<void> _loadDeletability() async {
+    try {
+      final answer = await ref
+          .read(catalogRepositoryProvider)
+          .getCompetitorDeletability(widget.existing!.id);
+      if (!mounted) return;
+      setState(() => _deletability = answer);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _deletability = ProductDeletability.unknown);
+    }
+  }
+
+  Future<void> _delete() async {
+    final existing = widget.existing!;
+    final confirmed = await confirmCatalogDelete(
+      context,
+      name: existing.name,
+      kind: 'produto',
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await ref
+          .read(catalogRepositoryProvider)
+          .deleteCompetitorProduct(existing.id);
+      invalidateCatalog(ref);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${existing.name} excluído')));
+    } catch (error) {
+      if (!mounted) return;
+      showDeleteFailure(
+        context,
+        blockedTitle: 'Este produto não pode ser excluído',
+        error: error,
+      );
     }
   }
 
@@ -114,7 +163,10 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       price17: parseBrlNumber(_price17.text),
       price18: parseBrlNumber(_price18.text),
       price20: parseBrlNumber(_price20.text),
-      brasindiceUpdatedAt: DateTime.now(),
+      isActive: _isActive,
+      // Not stamped with `DateTime.now()`: this column records when the
+      // *Brasíndice* record was published, and no competitor product has one
+      // (spec 0013 §2). Whatever the row already carries is preserved.
     );
 
     try {
@@ -144,7 +196,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
     price17: 0,
     price18: 0,
     price20: 0,
-    brasindiceUpdatedAt: DateTime.now(),
+    brasindiceUpdatedAt: null,
   );
 
   @override
@@ -157,9 +209,17 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
         scrolledUnderElevation: 0,
         foregroundColor: AppColors.gray950,
         title: Text(
-          _isEditing ? 'Editar marca' : 'Nova marca',
+          _isEditing ? 'Editar produto' : 'Novo produto',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
+        actions: [
+          if (_isEditing)
+            CatalogDeleteButton(
+              deletability: _deletability,
+              onDelete: _delete,
+              blockedTitle: 'Este produto não pode ser excluído',
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -271,6 +331,28 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  const _CompSectionLabel('ESTADO'),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: _isActive,
+                    onChanged: (value) => setState(() => _isActive = value),
+                    title: const Text(
+                      'Ativo',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Um produto inativo deixa de aparecer no comparativo e no '
+                      'seletor do representante. As quantidades já registradas '
+                      'nas clínicas continuam valendo.',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                    ),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),

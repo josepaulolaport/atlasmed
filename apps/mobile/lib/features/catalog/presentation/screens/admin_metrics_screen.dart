@@ -6,17 +6,21 @@ import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Admin: CRUD potential metric definitions per Linha + link products.
-class PotentialDefinitionsAdminScreen extends ConsumerStatefulWidget {
-  const PotentialDefinitionsAdminScreen({super.key});
+/// `Administração › Métricas` (spec 0016 §4.4) — CRUD of the potential metric
+/// definitions of one Linha, and which of our products count toward each.
+///
+/// Was `PotentialDefinitionsAdminScreen` at `/catalog/potential-definitions`,
+/// reachable only from `/catalog`, which nothing linked to (spec 0016 §1.1).
+class AdminMetricsScreen extends ConsumerStatefulWidget {
+  const AdminMetricsScreen({super.key});
 
   @override
-  ConsumerState<PotentialDefinitionsAdminScreen> createState() =>
-      _PotentialDefinitionsAdminScreenState();
+  ConsumerState<AdminMetricsScreen> createState() =>
+      _AdminMetricsScreenState();
 }
 
-class _PotentialDefinitionsAdminScreenState
-    extends ConsumerState<PotentialDefinitionsAdminScreen> {
+class _AdminMetricsScreenState
+    extends ConsumerState<AdminMetricsScreen> {
   final _repo = PotentialDefinitionsRepository();
   final _catalog = CatalogRepository();
 
@@ -56,32 +60,11 @@ class _PotentialDefinitionsAdminScreenState
   Future<void> _createDefinition() async {
     final verticalId = _verticalId;
     if (verticalId == null) return;
-    final controller = TextEditingController();
-    final label = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Novo campo de potencial'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Label',
-            hintText: 'Ex.: Ampolas/mês',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Criar'),
-          ),
-        ],
-      ),
+    final label = await _askForLabel(
+      title: 'Novo campo de potencial',
+      confirmLabel: 'Criar',
+      hintText: 'Ex.: Ampolas/mês',
     );
-    controller.dispose();
     if (label == null || label.isEmpty) return;
     try {
       await _repo.create(verticalId: verticalId, label: label);
@@ -94,26 +77,36 @@ class _PotentialDefinitionsAdminScreenState
     }
   }
 
-  Future<void> _editDefinition(PotentialDefinition def) async {
-    final controller = TextEditingController(text: def.label);
-    final label = await showDialog<String>(
+  /// The dialog owns its own `TextEditingController`, in [_LabelDialog].
+  ///
+  /// It used to be created here and disposed on the line after `showDialog`
+  /// returned, which crashed the app on every save: `showDialog`'s future
+  /// completes when the route is *popped*, not when its widgets are gone, so
+  /// the still-mounted `TextField` was left holding a disposed controller —
+  /// `'_dependents.isEmpty': is not true`, a red screen instead of a metric.
+  Future<String?> _askForLabel({
+    required String title,
+    required String confirmLabel,
+    String? initialValue,
+    String? hintText,
+  }) {
+    return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Editar label'),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Salvar'),
-          ),
-        ],
+      builder: (_) => _LabelDialog(
+        title: title,
+        confirmLabel: confirmLabel,
+        initialValue: initialValue,
+        hintText: hintText,
       ),
     );
-    controller.dispose();
+  }
+
+  Future<void> _editDefinition(PotentialDefinition def) async {
+    final label = await _askForLabel(
+      title: 'Editar label',
+      confirmLabel: 'Salvar',
+      initialValue: def.label,
+    );
     if (label == null || label.isEmpty || label == def.label) return;
     try {
       await _repo.update(id: def.id, label: label);
@@ -132,7 +125,9 @@ class _PotentialDefinitionsAdminScreenState
       builder: (ctx) => AlertDialog(
         title: const Text('Remover campo?'),
         content: Text(
-          'Soft-delete de “${def.label}”. Valores e links ficam, campo some das listas.',
+          '“${def.label}” deixa de aparecer nas listas e no cadastro das '
+          'clínicas. Os valores já preenchidos e os produtos vinculados '
+          'continuam guardados.',
         ),
         actions: [
           TextButton(
@@ -176,13 +171,14 @@ class _PotentialDefinitionsAdminScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Potencial'),
+      appBar: const AtlasAppBar(page: 'Métricas'),
       floatingActionButton: _verticalId == null
           ? null
           : FloatingActionButton.extended(
               backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Novo campo'),
+              label: const Text('Nova métrica'),
               onPressed: _createDefinition,
             ),
       body: SafeArea(
@@ -192,7 +188,7 @@ class _PotentialDefinitionsAdminScreenState
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
-                'Campos de potencial por linha',
+                'Métricas de potencial por linha',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -329,6 +325,15 @@ class _DefinitionProductsScreen extends StatefulWidget {
 
 class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
   List<LinkedPotentialProduct> _linked = const [];
+
+  /// The other brands that count toward this metric.
+  ///
+  /// Read-only by design (spec 0013 §4.6, restated in 0016 §4.4): nothing links
+  /// a competitor product to a metric, and nothing should — it would be a second
+  /// list able to disagree with this one. A brand appears here when it is the
+  /// equivalent of one of our products above, so it is edited from the
+  /// equivalences of that product, never from here.
+  List<LinkedPotentialProduct> _derivedBrands = const [];
   bool _loading = true;
 
   @override
@@ -341,9 +346,13 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
     setState(() => _loading = true);
     try {
       final linked = await widget.repo.listProducts(widget.definition.id);
+      final brands = await widget.repo.listCompetitorProducts(
+        widget.definition.id,
+      );
       if (!mounted) return;
       setState(() {
         _linked = linked;
+        _derivedBrands = brands;
         _loading = false;
       });
     } catch (_) {
@@ -400,6 +409,15 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
         definitionId: widget.definition.id,
       );
       await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Os números das clínicas são atualizados no próximo processamento '
+            'noturno.',
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -412,13 +430,53 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
     }
   }
 
+  /// Unlinking is not a cosmetic change, so it asks first and says what it does.
+  ///
+  /// Spec 0013 §4.6: the read joins `product_potential_links`, so unlinking
+  /// stops *every* quantity a rep recorded for this product counting, at every
+  /// clinic. The rows are kept, not deleted — relinking brings them back — and
+  /// the confirmation must not claim otherwise.
   Future<void> _unlink(LinkedPotentialProduct p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desvincular produto?'),
+        content: Text(
+          '“${p.name}” deixa de contar para “${widget.definition.label}” em '
+          'todas as clínicas. As quantidades já registradas não são apagadas — '
+          'voltam a contar se o produto for vinculado de novo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Desvincular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await widget.repo.unlinkProduct(
         productId: p.productId,
         definitionId: widget.definition.id,
       );
       await _load();
+      if (!mounted) return;
+      // Spec 0013 §4.6 backlogs the catalogue fan-out: recompute is per-profile
+      // and nothing recomputes every clinic holding this product. Saying so is
+      // the difference between "it worked" and an admin repeating the edit.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Os números das clínicas são atualizados no próximo processamento '
+            'noturno.',
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -442,23 +500,147 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _linked.isEmpty
-          ? const Center(child: Text('Nenhum produto vinculado'))
-          : ListView.separated(
-              itemCount: _linked.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final p = _linked[index];
-                return ListTile(
-                  title: Text(p.name),
-                  subtitle: Text(p.code),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.link_off_rounded),
-                    onPressed: () => _unlink(p),
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 32),
+                children: [
+                  const _MetricSectionHeader('Nossos produtos'),
+                  if (_linked.isEmpty)
+                    const _MetricEmptyRow('Nenhum produto vinculado')
+                  else
+                    for (final p in _linked)
+                      ListTile(
+                        title: Text(p.name),
+                        subtitle: Text(p.code),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.link_off_rounded),
+                          tooltip: 'Desvincular',
+                          onPressed: () => _unlink(p),
+                        ),
+                      ),
+                  const _MetricSectionHeader('Outras marcas que contam'),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      'Esta lista é derivada, não editável: uma marca conta '
+                      'para a métrica quando é equivalente a um dos nossos '
+                      'produtos acima. Para incluir ou remover uma marca, '
+                      'edite as equivalências do produto correspondente.',
+                      style: TextStyle(fontSize: 12, color: AppColors.gray400),
+                    ),
                   ),
-                );
-              },
+                  if (_derivedBrands.isEmpty)
+                    const _MetricEmptyRow(
+                      'Nenhum produto concorrente equivalente aos produtos acima',
+                    )
+                  else
+                    for (final brand in _derivedBrands)
+                      ListTile(
+                        dense: true,
+                        leading: const Icon(
+                          Icons.storefront_outlined,
+                          size: 20,
+                          color: AppColors.gray400,
+                        ),
+                        title: Text(brand.name),
+                        subtitle: brand.code.isEmpty ? null : Text(brand.code),
+                      ),
+                ],
+              ),
             ),
+    );
+  }
+}
+
+class _MetricSectionHeader extends StatelessWidget {
+  const _MetricSectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+    child: Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: AppColors.navyDeep,
+      ),
+    ),
+  );
+}
+
+class _MetricEmptyRow extends StatelessWidget {
+  const _MetricEmptyRow(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+    child: Text(
+      message,
+      style: const TextStyle(fontSize: 12.5, color: AppColors.gray400),
+    ),
+  );
+}
+
+/// The label prompt behind "Novo campo de potencial" and "Editar label".
+///
+/// A `StatefulWidget` purely so the controller's lifetime is the dialog's own —
+/// see `_askForLabel` for what the alternative cost.
+class _LabelDialog extends StatefulWidget {
+  const _LabelDialog({
+    required this.title,
+    required this.confirmLabel,
+    this.initialValue,
+    this.hintText,
+  });
+
+  final String title;
+  final String confirmLabel;
+  final String? initialValue;
+  final String? hintText;
+
+  @override
+  State<_LabelDialog> createState() => _LabelDialogState();
+}
+
+class _LabelDialogState extends State<_LabelDialog> {
+  late final _controller = TextEditingController(text: widget.initialValue);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: 'Label',
+          hintText: widget.hintText,
+        ),
+        onSubmitted: (value) => Navigator.pop(context, value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(widget.confirmLabel),
+        ),
+      ],
     );
   }
 }

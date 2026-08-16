@@ -14,11 +14,20 @@ class CatalogApiException implements Exception {
     required this.statusCode,
     required this.code,
     required this.message,
+    this.blockedBy = const {},
   });
 
   final int statusCode;
   final String code;
   final String message;
+
+  /// What blocks a refused delete, by relation (spec 0016 §6.2) — populated
+  /// only for `RESOURCE_IN_USE`. Empty for every other error.
+  ///
+  /// The API allow-lists this key onto the client payload deliberately: a
+  /// refusal that says only "cannot be deleted" leaves the admin with no next
+  /// step, while "3 pedidos" tells them the answer is to deactivate instead.
+  final Map<String, int> blockedBy;
 
   /// Parses the error response body; falls back to a generic message if
   /// the body isn't the expected shape (e.g. a raw 5xx from a proxy).
@@ -28,10 +37,18 @@ class CatalogApiException implements Exception {
       final error = decoded['error'] as Map<String, dynamic>?;
       final message = error?['message'] as String?;
       if (message != null && message.isNotEmpty) {
+        final blockedBy = error?['blockedBy'];
         return CatalogApiException(
           statusCode: response.statusCode,
           code: error?['code'] as String? ?? 'UNKNOWN_ERROR',
           message: message,
+          blockedBy: blockedBy is Map
+              ? {
+                  for (final entry in blockedBy.entries)
+                    if (entry.value is num)
+                      '${entry.key}': (entry.value as num).toInt(),
+                }
+              : const {},
         );
       }
     } catch (_) {

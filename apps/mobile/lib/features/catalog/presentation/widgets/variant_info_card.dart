@@ -155,7 +155,7 @@ class VariantInfoCard extends StatelessWidget {
               children: [
                 if (onManageCompetitors != null)
                   _CardLink(
-                    label: 'Gerenciar outras marcas',
+                    label: 'Produtos concorrentes',
                     icon: Icons.compare_arrows_rounded,
                     onTap: onManageCompetitors!,
                   ),
@@ -195,7 +195,7 @@ class VariantInfoCard extends StatelessWidget {
 }
 
 /// Small text+icon action used for both the "Ver comparativo" and
-/// admin-only "Gerenciar outras marcas" links at the bottom of the card.
+/// admin-only "Produtos concorrentes" links at the bottom of the card.
 class _CardLink extends StatelessWidget {
   final String label;
   final IconData icon;

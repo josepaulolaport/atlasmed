@@ -31,6 +31,19 @@ class CatalogVariant {
     required this.brasindiceUpdatedAt,
     this.isActive = true,
     this.verticalIds = const [],
+    this.productGroup,
+    this.description,
+    this.brand,
+    this.unit,
+    this.barcode,
+    this.ncm,
+    this.anvisaRegistration,
+    this.commercialCode,
+    this.internalClassification,
+    this.productClassification,
+    this.requiresSterilization = false,
+    this.idProdutoEmultec,
+    this.metricUnits = 1,
   });
 
   final int id;
@@ -60,9 +73,40 @@ class CatalogVariant {
   final bool isActive;
 
   /// Commercial sectors this product belongs to (`verticalIds` on the
-  /// `products` table) — required, non-empty when creating a product on
-  /// the real API.
+  /// `products` table).
+  ///
+  /// Chosen once, at creation, and immutable afterwards — spec 0016 §6.7. The
+  /// API's `PATCH /products/:id` no longer accepts them.
   final List<int> verticalIds;
+
+  /// The `product_group` column, which is what groups presentations into a
+  /// family. Read straight from the API rather than derived, because the admin
+  /// form edits it: [familyName] is the *display* fallback and cannot be sent
+  /// back without renaming products that have no group.
+  final String? productGroup;
+
+  final String? description;
+  final String? brand;
+  final String? unit;
+  final String? barcode;
+  final String? ncm;
+  final String? anvisaRegistration;
+  final String? commercialCode;
+  final String? internalClassification;
+  final String? productClassification;
+  final bool requiresSterilization;
+
+  /// The Emultec product id — how the order importer matches a line to a
+  /// product. Setting it is how an admin resolves a dead-lettered order
+  /// (spec 0013 §5).
+  final int? idProdutoEmultec;
+
+  /// How many metric units one product unit represents.
+  ///
+  /// **Read-only** (spec 0016 §7.1). Shown on the detail screen and never
+  /// editable: the metric calculation uses raw quantities since spec 0013 §4.6,
+  /// and the API has no writer for this column.
+  final double metricUnits;
 
   /// Full label used inside comparison tables, e.g. "REVISCON 1.0% - 20MG / 2ML".
   String get comparisonLabel =>
@@ -77,17 +121,19 @@ class CatalogVariant {
     // Coding columns are nullable by design (spec 0013 §2) — the API sends
     // JSON null for a product without them, never a string.
     String readCode(Object? value) => (value as String?)?.trim() ?? '';
+    String? readOptional(Object? value) {
+      final text = (value as String?)?.trim();
+      return (text == null || text.isEmpty) ? null : text;
+    }
 
-    final productGroup = json['productGroup'] as String?;
+    final productGroup = readOptional(json['productGroup']);
     final name = json['name'] as String;
 
     return CatalogVariant(
       id: readCrmId(json['id'], 'id'),
       code: readCode(json['code']),
       name: name,
-      familyName: (productGroup?.trim().isNotEmpty ?? false)
-          ? productGroup!.trim()
-          : name,
+      familyName: productGroup ?? name,
       // Never populated separately by the real API — see [presentation].
       presentation: '',
       manufacturer: json['manufacturer'] as String,
@@ -104,9 +150,30 @@ class CatalogVariant {
       ),
       isActive: json['isActive'] as bool? ?? true,
       verticalIds: readCrmIdList(json['verticalIds'], 'verticalIds'),
+      productGroup: productGroup,
+      description: readOptional(json['description']),
+      brand: readOptional(json['brand']),
+      unit: readOptional(json['unit']),
+      barcode: readOptional(json['barcode']),
+      ncm: readOptional(json['ncm']),
+      anvisaRegistration: readOptional(json['anvisaRegistration']),
+      commercialCode: readOptional(json['commercialCode']),
+      internalClassification: readOptional(json['internalClassification']),
+      productClassification: readOptional(json['productClassification']),
+      requiresSterilization: json['requiresSterilization'] as bool? ?? false,
+      idProdutoEmultec: json['idProdutoEmultec'] == null
+          ? null
+          : readCrmId(json['idProdutoEmultec'], 'idProdutoEmultec'),
+      metricUnits: readPrice(json['metricUnits'] ?? 1),
     );
   }
 
+  /// Field-by-field copy.
+  ///
+  /// Every nullable field takes a `clear<Field>` companion, because `null`
+  /// already means "leave it alone" in a `copyWith` and the admin form has to
+  /// be able to *empty* a code — which is the whole point of spec 0013 §2
+  /// making them nullable.
   CatalogVariant copyWith({
     int? id,
     String? code,
@@ -123,8 +190,23 @@ class CatalogVariant {
     double? price18,
     double? price20,
     DateTime? brasindiceUpdatedAt,
+    bool clearBrasindiceUpdatedAt = false,
     bool? isActive,
     List<int>? verticalIds,
+    String? productGroup,
+    String? description,
+    String? brand,
+    String? unit,
+    String? barcode,
+    String? ncm,
+    String? anvisaRegistration,
+    String? commercialCode,
+    String? internalClassification,
+    String? productClassification,
+    bool? requiresSterilization,
+    int? idProdutoEmultec,
+    bool clearIdProdutoEmultec = false,
+    double? metricUnits,
   }) {
     return CatalogVariant(
       id: id ?? this.id,
@@ -141,9 +223,29 @@ class CatalogVariant {
       price17: price17 ?? this.price17,
       price18: price18 ?? this.price18,
       price20: price20 ?? this.price20,
-      brasindiceUpdatedAt: brasindiceUpdatedAt ?? this.brasindiceUpdatedAt,
+      brasindiceUpdatedAt: clearBrasindiceUpdatedAt
+          ? null
+          : brasindiceUpdatedAt ?? this.brasindiceUpdatedAt,
       isActive: isActive ?? this.isActive,
       verticalIds: verticalIds ?? this.verticalIds,
+      productGroup: productGroup ?? this.productGroup,
+      description: description ?? this.description,
+      brand: brand ?? this.brand,
+      unit: unit ?? this.unit,
+      barcode: barcode ?? this.barcode,
+      ncm: ncm ?? this.ncm,
+      anvisaRegistration: anvisaRegistration ?? this.anvisaRegistration,
+      commercialCode: commercialCode ?? this.commercialCode,
+      internalClassification:
+          internalClassification ?? this.internalClassification,
+      productClassification:
+          productClassification ?? this.productClassification,
+      requiresSterilization:
+          requiresSterilization ?? this.requiresSterilization,
+      idProdutoEmultec: clearIdProdutoEmultec
+          ? null
+          : idProdutoEmultec ?? this.idProdutoEmultec,
+      metricUnits: metricUnits ?? this.metricUnits,
     );
   }
 }

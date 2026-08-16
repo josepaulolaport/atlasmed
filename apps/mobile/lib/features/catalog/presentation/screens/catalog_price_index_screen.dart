@@ -11,8 +11,13 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// "Tabela Brasíndice/Simpro" screen — the complete price index: every
 /// AtlasMed product and every competitor product in the catalog, flattened
 /// into a single searchable, sortable list. Unlike [CatalogComparisonScreen],
-/// this is not scoped to any one product. It's a peer tab of the flat
-/// product list ([CatalogHomeScreen]), not a screen you drill into.
+/// this is not scoped to any one product.
+///
+/// Rep-facing, not administrative (`read CATALOG`, which REP and MANAGER both
+/// hold). It is a peer tab of the product list at `/products`, in the same
+/// shell branch — so the drawer is available on both. Before spec 0016 §3.4 it
+/// sat at `/catalog/price-index`, whose only way in was the tab bar on an admin
+/// screen nothing linked to.
 class CatalogPriceIndexScreen extends ConsumerStatefulWidget {
   const CatalogPriceIndexScreen({super.key});
 
@@ -66,7 +71,7 @@ class _CatalogPriceIndexScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Catálogo'),
+      appBar: const AtlasAppBar(page: 'Produtos'),
       body: SafeArea(
         child: Column(
           children: [

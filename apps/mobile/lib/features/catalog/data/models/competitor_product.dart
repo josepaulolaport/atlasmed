@@ -13,6 +13,8 @@ class CompetitorProduct {
     required this.price18,
     required this.price20,
     required this.brasindiceUpdatedAt,
+    this.isActive = true,
+    this.equivalenceCount,
   });
 
   final int id;
@@ -27,6 +29,18 @@ class CompetitorProduct {
   /// Null when the competitor has no Brasíndice record — every competitor
   /// row in production ships without one, so this must never be a hard parse.
   final DateTime? brasindiceUpdatedAt;
+
+  /// Retired brands are kept, not deleted (spec 0016 §6.2), and the admin list
+  /// shows them alongside active ones (§4).
+  final bool isActive;
+
+  /// How many of our products this brand is equivalent to (spec 0016 §5.3).
+  ///
+  /// Null on reads that do not compute it — the comparison table and the picker
+  /// have no use for it — so "not asked" stays distinguishable from "none". A
+  /// brand at **zero** is one a rep cannot record quantities for (spec 0013 §7),
+  /// which is exactly what the list needs to make visible.
+  final int? equivalenceCount;
 
   factory CompetitorProduct.fromJson(Map<String, dynamic> json) {
     double readPrice(Object? value) => switch (value) {
@@ -47,6 +61,11 @@ class CompetitorProduct {
       brasindiceUpdatedAt: DateTime.tryParse(
         json['brasindiceUpdatedAt'] as String? ?? '',
       ),
+      isActive: json['isActive'] as bool? ?? true,
+      equivalenceCount: switch (json['equivalenceCount']) {
+        final num value => value.toInt(),
+        _ => null,
+      },
     );
   }
 
@@ -60,6 +79,7 @@ class CompetitorProduct {
     double? price18,
     double? price20,
     DateTime? brasindiceUpdatedAt,
+    bool? isActive,
   }) {
     return CompetitorProduct(
       id: id ?? this.id,
@@ -71,6 +91,8 @@ class CompetitorProduct {
       price18: price18 ?? this.price18,
       price20: price20 ?? this.price20,
       brasindiceUpdatedAt: brasindiceUpdatedAt ?? this.brasindiceUpdatedAt,
+      isActive: isActive ?? this.isActive,
+      equivalenceCount: equivalenceCount,
     );
   }
 }

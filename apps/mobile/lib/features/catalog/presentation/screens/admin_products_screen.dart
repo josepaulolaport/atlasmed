@@ -16,20 +16,29 @@ import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
-/// Entry point for the Catálogo de Produtos section, designed like a store
-/// catalog rather than a filing cabinet: a search box and a family filter
-/// (via the search bar's filter button) narrow one flat, scannable list of
-/// every product below — there is no folder to open, family is just a
-/// filter. Tapping a product opens a quick-view sheet with its full detail
-/// instead of a new screen.
-class CatalogHomeScreen extends ConsumerStatefulWidget {
-  const CatalogHomeScreen({super.key});
+/// `Administração › Produtos` (spec 0016 §4.2) — the admin's flat list of
+/// every product of ours, with create, edit and "produtos concorrentes"
+/// behind it.
+///
+/// A search box and a family filter (via the search bar's filter button)
+/// narrow one flat, scannable list — there is no folder to open, family is
+/// just a filter. Tapping a product opens a quick-view sheet with its full
+/// detail instead of a new screen.
+///
+/// This screen used to be `CatalogHomeScreen` at `/catalog`, a route nothing
+/// in the app linked to — its only inbound link was the tab bar it rendered
+/// itself. Spec 0016 §1.1 found it unreachable and §3.4 retired that route in
+/// favour of this one. The rep-facing browse surface is `/products`
+/// (`ProductsHomeScreen`); this is the editing surface, and per §6.4 there is
+/// exactly one of those.
+class AdminProductsScreen extends ConsumerStatefulWidget {
+  const AdminProductsScreen({super.key});
 
   @override
-  ConsumerState<CatalogHomeScreen> createState() => _CatalogHomeScreenState();
+  ConsumerState<AdminProductsScreen> createState() => _AdminProductsScreenState();
 }
 
-class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
+class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   ProductFilterSelection _filter = const ProductFilterSelection();
@@ -141,7 +150,9 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final familiesAsync = ref.watch(catalogFamiliesProvider);
+    // Inactive products included (spec 0016 §4): the panel is the one place you
+    // go *because* something is retired and you want it back.
+    final familiesAsync = ref.watch(adminCatalogFamiliesProvider);
     final isAdmin = ref.watch(isAdminProvider);
     final families = familiesAsync.valueOrNull ?? const [];
 
@@ -150,27 +161,19 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
               icon: const Icon(Icons.add_rounded),
               label: const Text('Novo produto'),
               onPressed: () => _openNewProductForm(families),
             )
           : null,
-      appBar: AtlasAppBar(
-        page: 'Catálogo',
-        actions: [
-          if (isAdmin)
-            IconButton(
-              tooltip: 'Campos de potencial',
-              icon: const Icon(Icons.insights_outlined),
-              onPressed: () =>
-                  const CatalogPotentialDefinitionsRoute().push(context),
-            ),
-        ],
-      ),
+      // No metrics shortcut in the app bar: Métricas is a peer destination on
+      // the Administração hub, one tap away, and a second door to it here
+      // would need its own state to stay honest about which Linha is selected.
+      appBar: const AtlasAppBar(page: 'Produtos'),
       body: SafeArea(
         child: Column(
           children: [
-            const CatalogTabBar(active: CatalogTab.produtos),
             CatalogSearchBar(
               controller: _searchController,
               onChanged: (value) => setState(() => _query = value),
@@ -182,7 +185,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
               child: familiesAsync.when(
                 loading: () => const ProductListSkeleton(),
                 error: (error, _) => CatalogErrorState(
-                  onRetry: () => ref.invalidate(catalogFamiliesProvider),
+                  onRetry: () => ref.invalidate(adminCatalogFamiliesProvider),
                 ),
                 data: (families) {
                   final entries = _filtered(families);
@@ -264,16 +267,28 @@ class _ProductRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      variant.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
-                        letterSpacing: -0.1,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            variant.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: variant.isActive
+                                  ? AppColors.gray900
+                                  : AppColors.gray400,
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                        ),
+                        if (!variant.isActive) ...[
+                          const SizedBox(width: 6),
+                          const _InactiveChip(),
+                        ],
+                      ],
                     ),
                     if (variant.presentation.isNotEmpty) ...[
                       const SizedBox(height: 2),
@@ -311,6 +326,30 @@ class _ProductRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Marks a retired row. The admin lists show inactive products alongside active
+/// ones (spec 0016 §4), so something has to say which is which — dimming alone
+/// reads as a rendering artefact.
+class _InactiveChip extends StatelessWidget {
+  const _InactiveChip();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceSecondary,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: const Text(
+      'Inativo',
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: AppColors.gray700,
+      ),
+    ),
+  );
 }
 
 /// Quick-view sheet opened by tapping a [_ProductRow] — the full detail

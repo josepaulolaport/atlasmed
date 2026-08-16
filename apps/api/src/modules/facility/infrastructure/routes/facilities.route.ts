@@ -11,6 +11,8 @@ import { createCnesFacilityImportRoutes } from "./cnes-facility-import.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 import { facilityBookmarksRoute } from "./facility-bookmarks.route";
+import { createSimpleCatalogWriteRoutes } from "../../../../shared/catalog/simple-catalog.route";
+import { clinicalFocusCatalog } from "../../../../shared/catalog/support-catalogs";
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -85,7 +87,13 @@ const listClinicalFocusesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities/clinical-focuses",
-    async () => {
+    async ({ query }) => {
+      // Active only by default — the filter and the clinic form both want a
+      // picker. `Administração › Catálogos` opts into the retired ones so an
+      // admin can bring one back (spec 0016 §4).
+      if (query.includeInactive === "true") {
+        return { data: await clinicalFocusCatalog.listAll() };
+      }
       return facilityUseCases.listClinicalFocuses().execute();
     },
     {
@@ -94,8 +102,25 @@ const listClinicalFocusesRoute = new Elysia()
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
+      query: t.Object({ includeInactive: t.Optional(t.String()) }),
     },
   );
+
+/**
+ * Admin writes for the clinical focus catalogue (spec 0016 §5.2).
+ *
+ * The read above keeps `read FACILITY` because a rep needs the picker; these
+ * are `create` / `update CATALOG`, which only an ADMIN holds.
+ */
+const clinicalFocusWritesRoute = createSimpleCatalogWriteRoutes({
+  path: "facilities/clinical-focuses",
+  resource: "ClinicalFocus",
+  tag: "Clinics",
+  repository: clinicalFocusCatalog,
+  // The CNES code, when the focus maps to one. Nullable and unique-where-present,
+  // so a locally-created focus simply has none.
+  extraField: { name: "cnesCode" },
+});
 
 const listFacilityUnitTypesRoute = new Elysia()
   .use(auth)
@@ -477,13 +502,107 @@ const listConformityRequirementsRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/conformity/requirements",
-    async () => facilityUseCases.listConformityRequirements().execute(),
+    async ({ query }) =>
+      facilityUseCases.listConformityRequirements().execute({
+        // Active only by default — this feeds a clinic's checklist, and a
+        // retired requirement leaking in would ask a rep for a document nobody
+        // wants. `Administração › Requisitos` opts into the full catalogue,
+        // which also carries the upload limits and the two behavioural flags.
+        includeInactive: query.includeInactive === "true",
+      }),
     {
       detail: {
         summary: "List conformity requirements",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      query: t.Object({ includeInactive: t.Optional(t.String()) }),
+    }
+  );
+
+/**
+ * The cadastro catalogue — what every clinic must submit (spec 0016 §4.7).
+ *
+ * The read above keeps `read FACILITY` because a rep needs the checklist; these
+ * are `CATALOG`, which only an ADMIN holds.
+ *
+ * ⚠️ Creating an **active** requirement immediately makes every clinic in scope
+ * non-conformant. It is the widest-reaching write in the panel, which is why
+ * `verticalId` and `appliesToLegalDocumentType` exist and why the client warns
+ * before saving one.
+ */
+const requirementBody = {
+  name: t.String({ minLength: 1 }),
+  description: t.Optional(t.Nullable(t.String())),
+  /** Null means every Linha. */
+  verticalId: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
+  /** Null means every clinic, CNPJ or CPF. */
+  appliesToLegalDocumentType: t.Optional(
+    t.Nullable(t.Union([t.Literal("CNPJ"), t.Literal("CPF")]))
+  ),
+  isActive: t.Optional(t.Boolean()),
+  allowedMimeTypes: t.Optional(t.Array(t.String({ minLength: 1 }), { minItems: 1 })),
+  maxFiles: t.Optional(t.Number({ minimum: 1 })),
+  maxFileSizeBytes: t.Optional(t.Number({ minimum: 1 })),
+  maxCombinedSizeBytes: t.Optional(t.Number({ minimum: 1 })),
+  requiresFrontAndBack: t.Optional(t.Boolean()),
+  requiresValidityDate: t.Optional(t.Boolean()),
+} as const;
+
+const createConformityRequirementRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("create", "CATALOG"))
+  .post(
+    "/conformity/requirements",
+    async ({ body }) => facilityUseCases.createConformityRequirement().execute(body),
+    {
+      detail: {
+        summary: "Create a conformity requirement",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        ...requirementBody,
+        // Derived from the name when omitted. Chosen once: it is the key every
+        // cadastro DTO travels under, so `PATCH` does not accept it.
+        slug: t.Optional(t.String({ minLength: 1 })),
+      }),
+    }
+  );
+
+const updateConformityRequirementRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CATALOG"))
+  .patch(
+    "/conformity/requirements/:id",
+    async ({ params, body }) =>
+      facilityUseCases.updateConformityRequirement().execute({ id: params.id, ...body }),
+    {
+      detail: {
+        summary: "Update a conformity requirement",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      // No `slug`: it is the stable key, and `name` is the label to change.
+      body: t.Object({ ...requirementBody, name: t.Optional(t.String({ minLength: 1 })) }),
+    }
+  );
+
+const deleteConformityRequirementRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "CATALOG"))
+  .delete(
+    "/conformity/requirements/:id",
+    async ({ params }) =>
+      facilityUseCases.deleteConformityRequirement().execute({ id: params.id }),
+    {
+      detail: {
+        summary: "Delete a conformity requirement no clinic has answered",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -1003,6 +1122,9 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  // Same reason, and `PATCH /facilities/clinical-focuses/:id` must not be
+  // routed as `PATCH /facilities/:id` either.
+  .use(clinicalFocusWritesRoute)
   // Same reason: `cnes-candidates` must not be captured as a facility id.
   .use(createCnesFacilityImportRoutes())
   // Same reason — `unit-types` must not be routed as `/facilities/:id`.
@@ -1025,6 +1147,9 @@ export const facilitiesRoute = new Elysia()
   .use(unassignVerticalRepRoute)
   .use(deactivateFacilityVerticalRoute)
   .use(listConformityRequirementsRoute)
+  .use(createConformityRequirementRoute)
+  .use(updateConformityRequirementRoute)
+  .use(deleteConformityRequirementRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)
   .use(getFacilityCadastroRoute)

@@ -820,6 +820,13 @@
       "when": 1786744335612,
       "tag": "0116_ortopedia_managers_and_zone_geometry",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1786843185271,
+      "tag": "0117_admin_editable_specialties_and_unique_payers",
+      "breakpoints": true
     }
   ]
 }

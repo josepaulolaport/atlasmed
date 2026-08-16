@@ -29,6 +29,9 @@ import {
 import {
   CreateFacilityConformityRecordUseCase,
   ListConformityRequirementsUseCase,
+  CreateConformityRequirementUseCase,
+  UpdateConformityRequirementUseCase,
+  DeleteConformityRequirementUseCase,
   ListFacilityConformityRecordsUseCase,
 } from "./application/use-cases/conformity.use-cases";
 import {
@@ -327,6 +330,18 @@ export const facilityUseCases = {
     }),
   listConformityRequirements: () =>
     new ListConformityRequirementsUseCase({
+      conformityRepository: facilityRepositories.conformity,
+    }),
+  createConformityRequirement: () =>
+    new CreateConformityRequirementUseCase({
+      conformityRepository: facilityRepositories.conformity,
+    }),
+  updateConformityRequirement: () =>
+    new UpdateConformityRequirementUseCase({
+      conformityRepository: facilityRepositories.conformity,
+    }),
+  deleteConformityRequirement: () =>
+    new DeleteConformityRequirementUseCase({
       conformityRepository: facilityRepositories.conformity,
     }),
   listFacilityConformityRecords: () =>

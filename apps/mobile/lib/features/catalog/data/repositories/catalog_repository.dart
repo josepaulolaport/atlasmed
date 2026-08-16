@@ -7,6 +7,10 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_busines
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/conformity_requirement.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/healthcare_provider.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/support_catalog.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
@@ -21,7 +25,7 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 /// [RepositoryHttpClient] with bearer-token injection via
 /// [SessionEnvironment], `_get`/`_send` helpers, and [CatalogApiException]
 /// for structured error surfacing — no reactive caching, every call hits
-/// the network directly, matching how [CatalogHomeScreen] already
+/// the network directly, matching how [AdminProductsScreen] already
 /// refetches through `invalidateCatalog` after any admin mutation.
 class CatalogRepository {
   CatalogRepository({String? baseUrl})
@@ -68,9 +72,14 @@ class CatalogRepository {
   /// [CatalogFamily] entries. The catalog is small enough that a single
   /// generously-limited page covers the whole thing — there is no
   /// dedicated "all products" endpoint on the API.
-  Future<List<CatalogFamily>> getFamilies() async {
+  Future<List<CatalogFamily>> getFamilies({bool includeInactive = false}) async {
     final response = await _get(
-      _uri('/products', const {'limit': '500', 'isActive': 'true'}),
+      _uri('/products', {
+        'limit': '500',
+        // Omitted entirely means "both" on the API. The rep-facing list keeps
+        // asking for active only; the admin list asks for both (spec 0016 §4).
+        if (!includeInactive) 'isActive': 'true',
+      }),
     );
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -174,25 +183,12 @@ class CatalogRepository {
   /// has no dedicated column on the API, so it's folded into the name sent
   /// to the server (see [CatalogVariant.comparisonLabel]).
   Future<CatalogVariant> createVariant(CatalogVariant draft) async {
-    final body = <String, dynamic>{
-      'code': draft.code,
-      'name': draft.comparisonLabel,
+    final response = await _send(_uri('/products'), RepositoryHttpMethod.post, {
+      ...productRequestBody(draft),
+      // Create-only, and required: a product with no Linha is invisible to
+      // every rep and counts toward no metric (spec 0016 §7.2).
       'verticalIds': draft.verticalIds,
-      'simproCode': draft.simproCode,
-      'brasindiceCode': draft.brasindiceCode,
-      'tissCode': draft.tissCode,
-      'manufacturer': draft.manufacturer,
-      'countryOfOrigin': draft.countryOfOrigin,
-      'price': draft.price,
-      'price17': draft.price17,
-      'price18': draft.price18,
-      'price20': draft.price20,
-    };
-    final response = await _send(
-      _uri('/products'),
-      RepositoryHttpMethod.post,
-      _withBrasindiceDate(body, draft.brasindiceUpdatedAt),
-    );
+    });
     _throwIfError(response);
     return CatalogVariant.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -204,20 +200,7 @@ class CatalogRepository {
     final response = await _send(
       _uri('/products/${variant.id}'),
       RepositoryHttpMethod.patch,
-      _withBrasindiceDate({
-        'code': variant.code,
-        'name': variant.comparisonLabel,
-        'verticalIds': variant.verticalIds,
-        'simproCode': variant.simproCode,
-        'brasindiceCode': variant.brasindiceCode,
-        'tissCode': variant.tissCode,
-        'manufacturer': variant.manufacturer,
-        'countryOfOrigin': variant.countryOfOrigin,
-        'price': variant.price,
-        'price17': variant.price17,
-        'price18': variant.price18,
-        'price20': variant.price20,
-      }, variant.brasindiceUpdatedAt),
+      productRequestBody(variant),
     );
     _throwIfError(response);
     return CatalogVariant.fromJson(
@@ -225,12 +208,269 @@ class CatalogRepository {
     );
   }
 
+  // ── Requisitos de cadastro (spec 0016 §4.7) ──────────────────────────
+  // The catalogue the cadastro pipeline reads. The list is `read FACILITY`
+  // because a rep needs the checklist; the writes are `CATALOG`, ADMIN only.
+
+  Future<List<ConformityRequirement>> getConformityRequirements({
+    bool includeInactive = false,
+  }) async {
+    final response = await _get(
+      _uri('/conformity/requirements', {
+        if (includeInactive) 'includeInactive': 'true',
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map(
+          (row) =>
+              ConformityRequirement.fromJson(Map<String, dynamic>.from(row)),
+        )
+        .toList(growable: false);
+  }
+
+  /// The body both writes send. `slug` is create-only — it is the key every
+  /// cadastro DTO travels under, so `PATCH` rejects it.
+  Map<String, dynamic> _requirementBody(ConformityRequirement requirement) => {
+    'name': requirement.name,
+    'description': requirement.description,
+    'verticalId': requirement.verticalId,
+    'appliesToLegalDocumentType': requirement.appliesToLegalDocumentType?.wire,
+    'isActive': requirement.isActive,
+    'allowedMimeTypes': requirement.allowedMimeTypes,
+    'maxFiles': requirement.maxFiles,
+    'maxFileSizeBytes': requirement.maxFileSizeBytes,
+    'maxCombinedSizeBytes': requirement.maxCombinedSizeBytes,
+    'requiresFrontAndBack': requirement.requiresFrontAndBack,
+    'requiresValidityDate': requirement.requiresValidityDate,
+  };
+
+  Future<ConformityRequirement> createConformityRequirement(
+    ConformityRequirement draft, {
+    String? slug,
+  }) async {
+    final response = await _send(
+      _uri('/conformity/requirements'),
+      RepositoryHttpMethod.post,
+      {
+        ..._requirementBody(draft),
+        // Omitted means the API derives it from the name.
+        if (_nullIfBlank(slug) != null) 'slug': _nullIfBlank(slug),
+      },
+    );
+    _throwIfError(response);
+    return ConformityRequirement.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<ConformityRequirement> updateConformityRequirement(
+    ConformityRequirement requirement,
+  ) async {
+    final response = await _send(
+      _uri('/conformity/requirements/${requirement.id}'),
+      RepositoryHttpMethod.patch,
+      _requirementBody(requirement),
+    );
+    _throwIfError(response);
+    return ConformityRequirement.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  /// Answers 409 `RESOURCE_IN_USE` when a clinic has already answered it.
+  Future<void> deleteConformityRequirement(int id) async {
+    final response = await _send(
+      _uri('/conformity/requirements/$id'),
+      RepositoryHttpMethod.delete,
+    );
+    _throwIfError(response);
+  }
+
+  // ── Catálogos de apoio (spec 0016 §4.6) ──────────────────────────────
+  // Same three verbs against three endpoints that differ only in their path and
+  // their second field, so one set of methods rather than nine.
+
+  Future<List<SupportCatalogEntry>> getSupportCatalog(
+    SupportCatalog catalog, {
+    bool includeInactive = false,
+  }) async {
+    final response = await _get(
+      _uri('/${catalog.path}', {
+        // The pickers elsewhere in the app keep asking for active only, because
+        // they omit this parameter entirely.
+        if (includeInactive) 'includeInactive': 'true',
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map(
+          (row) => SupportCatalogEntry.fromJson(Map<String, dynamic>.from(row)),
+        )
+        .toList(growable: false);
+  }
+
+  Future<SupportCatalogEntry> createSupportCatalogEntry(
+    SupportCatalog catalog, {
+    required String name,
+    String? extra,
+    bool isActive = true,
+  }) async {
+    final response = await _send(
+      _uri('/${catalog.path}'),
+      RepositoryHttpMethod.post,
+      {
+        'name': name,
+        'isActive': isActive,
+        if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
+      },
+    );
+    _throwIfError(response);
+    return SupportCatalogEntry.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<SupportCatalogEntry> updateSupportCatalogEntry(
+    SupportCatalog catalog, {
+    required int id,
+    required String name,
+    String? extra,
+    required bool isActive,
+  }) async {
+    final response = await _send(
+      _uri('/${catalog.path}/$id'),
+      RepositoryHttpMethod.patch,
+      {
+        'name': name,
+        'isActive': isActive,
+        if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
+      },
+    );
+    _throwIfError(response);
+    return SupportCatalogEntry.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  // ── Fontes pagadoras (spec 0016 §4.5) ────────────────────────────────
+  // The list is `read FACILITY` because a rep needs the picker when editing a
+  // clinic's payer mix; the writes are `create`/`update CATALOG`, which only an
+  // ADMIN holds. Same asymmetry the API documents on the route itself.
+
+  /// Every fonte pagadora. [includeInactive] omits the filter, which the API
+  /// reads as "both" — the admin list asks for both (spec 0016 §4).
+  Future<List<HealthcareProvider>> getHealthcareProviders({
+    bool includeInactive = false,
+  }) async {
+    final response = await _get(
+      _uri('/healthcare-providers', {
+        'limit': '200',
+        if (!includeInactive) 'isActive': 'true',
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return (decoded['data'] as List<dynamic>)
+        .map((row) => HealthcareProvider.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<HealthcareProvider> createHealthcareProvider({
+    required String name,
+    required HealthcareProviderType type,
+    required bool isActive,
+  }) async {
+    final response = await _send(
+      _uri('/healthcare-providers'),
+      RepositoryHttpMethod.post,
+      {'name': name, 'type': type.wire, 'isActive': isActive},
+    );
+    _throwIfError(response);
+    return HealthcareProvider.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<HealthcareProvider> updateHealthcareProvider(
+    HealthcareProvider provider,
+  ) async {
+    final response = await _send(
+      _uri('/healthcare-providers/${provider.id}'),
+      RepositoryHttpMethod.patch,
+      {
+        'name': provider.name,
+        'type': provider.type.wire,
+        'isActive': provider.isActive,
+      },
+    );
+    _throwIfError(response);
+    return HealthcareProvider.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  /// Whether a product can be hard-deleted, and what stops it (spec 0016 §6.2).
+  ///
+  /// Read from `GET /products/:id` so the trash button can be disabled with a
+  /// reason instead of offered and then failing — a rule the admin can see
+  /// beats a 409 they have to provoke. The delete itself still handles the
+  /// refusal, because an order can land between the two calls.
+  Future<ProductDeletability> getProductDeletability(int productId) async {
+    final response = await _get(_uri('/products/$productId'));
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return ProductDeletability.fromJson(decoded);
+  }
+
+  Future<ProductDeletability> getCompetitorDeletability(int competitorId) async {
+    final response = await _get(_uri('/competitor-products/$competitorId'));
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return ProductDeletability.fromJson(decoded);
+  }
+
+  /// Hard-deletes a product. Answers 409 `RESOURCE_IN_USE` — surfaced as a
+  /// [CatalogApiException] carrying `blockedBy` — when anything references it.
+  Future<void> deleteVariant(int productId) async {
+    final response = await _send(
+      _uri('/products/$productId'),
+      RepositoryHttpMethod.delete,
+    );
+    _throwIfError(response);
+  }
+
+  Future<void> deleteCompetitorProduct(int competitorId) async {
+    final response = await _send(
+      _uri('/competitor-products/$competitorId'),
+      RepositoryHttpMethod.delete,
+    );
+    _throwIfError(response);
+  }
+
   /// Every competitor product in the catalog, regardless of whether it's
   /// linked to any AtlasMed variant yet — backs the admin "gerenciar
-  /// outras marcas" picker.
-  Future<List<CompetitorProduct>> getAllCompetitorProducts() async {
+  /// outras marcas" picker and the `Administração › Concorrentes` list.
+  ///
+  /// [includeInactive] omits the `isActive` filter entirely, which the API
+  /// reads as "both". The admin list asks for both (spec 0016 §4): the panel is
+  /// the one place you go *because* something is inactive.
+  Future<List<CompetitorProduct>> getAllCompetitorProducts({
+    bool includeInactive = false,
+  }) async {
     final response = await _get(
-      _uri('/competitor-products', const {'limit': '500', 'isActive': 'true'}),
+      _uri('/competitor-products', {
+        'limit': '500',
+        if (!includeInactive) 'isActive': 'true',
+      }),
     );
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -256,6 +496,7 @@ class CatalogRepository {
         'price17': draft.price17,
         'price18': draft.price18,
         'price20': draft.price20,
+        'isActive': draft.isActive,
       }, draft.brasindiceUpdatedAt),
     );
     _throwIfError(response);
@@ -280,6 +521,7 @@ class CatalogRepository {
         'price17': competitor.price17,
         'price18': competitor.price18,
         'price20': competitor.price20,
+        'isActive': competitor.isActive,
       }, competitor.brasindiceUpdatedAt),
     );
     _throwIfError(response);
@@ -328,9 +570,10 @@ class CatalogRepository {
   /// has no Brasíndice record.
   String? _dateOnly(DateTime? date) => date?.toIso8601String().split('T').first;
 
-  /// Adds `brasindiceUpdatedAt` to [body], omitting the key entirely when the
-  /// date is null — the API's PATCH schema is `t.Optional(t.String())`, which
-  /// rejects an explicit JSON `null`.
+  /// Adds `brasindiceUpdatedAt` to [body], omitting the key when the date is
+  /// null. Competitor products only — no competitor row has a Brasíndice
+  /// record, so there is nothing to clear; products go through
+  /// [productRequestBody], which sends the key even when null.
   Map<String, dynamic> _withBrasindiceDate(
     Map<String, dynamic> body,
     DateTime? brasindiceUpdatedAt,
@@ -339,4 +582,59 @@ class CatalogRepository {
     if (date == null) return body;
     return {...body, 'brasindiceUpdatedAt': date};
   }
+}
+
+/// The columns both product writes send, in the shape the API expects.
+///
+/// Blank text becomes JSON `null`, not `""`. The coding columns are
+/// partial-unique where not null (spec 0013 §2), so two products saved with an
+/// empty SIMPRO field would collide on `""` while two saved with `null` do not
+/// — and `""` is not a code anyone can look up.
+///
+/// Two fields are absent by decision:
+/// - `verticalIds` — create-only, because a product's Linhas are immutable
+///   after creation (spec 0016 §6.7) and `PATCH /products/:id` rejects them.
+/// - `metricUnits` — informative, no writer anywhere (§7.1).
+///
+/// A top-level function rather than a private method so the contract can be
+/// asserted without a live HTTP client; it is the one place three separate spec
+/// rules are encoded together.
+Map<String, dynamic> productRequestBody(CatalogVariant variant) => {
+  'code': _nullIfBlank(variant.code),
+  'name': variant.comparisonLabel,
+  'productGroup': variant.productGroup,
+  'description': variant.description,
+  'brand': variant.brand,
+  'unit': variant.unit,
+  'barcode': variant.barcode,
+  'ncm': variant.ncm,
+  'anvisaRegistration': variant.anvisaRegistration,
+  'commercialCode': variant.commercialCode,
+  'internalClassification': variant.internalClassification,
+  'productClassification': variant.productClassification,
+  'requiresSterilization': variant.requiresSterilization,
+  'idProdutoEmultec': variant.idProdutoEmultec,
+  'simproCode': _nullIfBlank(variant.simproCode),
+  'brasindiceCode': _nullIfBlank(variant.brasindiceCode),
+  'tissCode': _nullIfBlank(variant.tissCode),
+  'manufacturer': variant.manufacturer,
+  'countryOfOrigin': variant.countryOfOrigin,
+  'price': variant.price,
+  'price17': variant.price17,
+  'price18': variant.price18,
+  'price20': variant.price20,
+  // Sent even when null: the route accepts `Nullable`, so this is how a
+  // Brasíndice date is cleared along with the code it belongs to.
+  'brasindiceUpdatedAt': _dateOnlyIso(variant.brasindiceUpdatedAt),
+  'isActive': variant.isActive,
+};
+
+/// `YYYY-MM-DD` — `brasindice_updated_at` is a SQL `date`, not a timestamp.
+String? _dateOnlyIso(DateTime? date) =>
+    date?.toIso8601String().split('T').first;
+
+/// Empty text is absence, not a value. See [productRequestBody].
+String? _nullIfBlank(String? value) {
+  final text = value?.trim();
+  return (text == null || text.isEmpty) ? null : text;
 }

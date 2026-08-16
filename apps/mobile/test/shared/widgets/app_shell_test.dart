@@ -117,6 +117,25 @@ void main() {
       );
     });
 
+    test('Administração is admin-only and pinned to branch 12', () {
+      // Spec 0016 §3.1/§3.2. The branch index is asserted because a branch's
+      // position *is* its index: inserting a branch above it in `routes.dart`
+      // would silently point this entry at someone else's screen.
+      final admin = appNavigationItems.singleWhere(
+        (item) => item.route == '/admin',
+      );
+
+      expect(admin.label, 'Administração');
+      expect(admin.branchIndex, 12);
+      expect(admin.visibleFor!(UserRoleName.admin), isTrue);
+      expect(admin.visibleFor!(UserRoleName.manager), isFalse);
+      expect(admin.visibleFor!(UserRoleName.rep), isFalse);
+      expect(admin.visibleFor!(UserRoleName.ops), isFalse);
+
+      // Last in the list: a maintenance destination, not daily work.
+      expect(appNavigationItems.last.route, '/admin');
+    });
+
     test('offers no way into Usuários — Equipe is the one roster', () {
       // The branch and the route still exist, so this is about the drawer only.
       // Asserted rather than left to a screenshot because the entry is one line

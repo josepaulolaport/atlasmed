@@ -74,7 +74,12 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                       ),
                     ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                  // Peer tab to the full Brasíndice/Simpro table. It moved here
+                  // from the retired `/catalog` (spec 0016 §3.4), which is why
+                  // the table had no way in that a rep could find.
+                  const SliverToBoxAdapter(
+                    child: CatalogTabBar(active: CatalogTab.produtos),
+                  ),
                   SliverToBoxAdapter(
                     child: CatalogSearchBar(
                       controller: _searchController,

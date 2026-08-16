@@ -11,10 +11,15 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/register_
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastro_review_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastros_review_list_screen.dart';
+import 'package:atlasmed_mobile_app/features/admin/presentation/screens/admin_home_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_competitor_products_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_conformity_requirements_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_healthcare_providers_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_metrics_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_products_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/admin_support_catalogs_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_comparison_screen.dart';
-import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_price_index_screen.dart';
-import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/potential_definitions_admin_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
@@ -250,9 +255,18 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
         TypedGoRoute<NonConformitiesRoute>(path: '/non-conformities'),
       ],
     ),
+    // Two routes in one branch: Produtos and the Tabela Brasíndice are peer
+    // tabs of the same section (spec 0016 §3.4), so they share a stack and the
+    // drawer stays available on both.
+    //
+    // `/price-index` is deliberately NOT `/products/price-index`:
+    // `/products/:familyId` would capture it, and `familyId` is an `int`, so
+    // the typed route would fail to parse it. Same trap the API documents at
+    // `facilities.route.ts:1004` for `clinical-focuses`.
     TypedStatefulShellBranch<ProductsBranch>(
       routes: <TypedRoute<RouteData>>[
         TypedGoRoute<ProductsRoute>(path: '/products'),
+        TypedGoRoute<PriceIndexRoute>(path: '/price-index'),
       ],
     ),
     TypedStatefulShellBranch<ProfileBranch>(
@@ -265,6 +279,10 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
     // branch after it. Display order lives in `appNavigationItems`.
     TypedStatefulShellBranch<TeamBranch>(
       routes: <TypedRoute<RouteData>>[TypedGoRoute<TeamRoute>(path: '/team')],
+    ),
+    // Appended for the same reason Equipe was (see the note above): branch 12.
+    TypedStatefulShellBranch<AdminBranch>(
+      routes: <TypedRoute<RouteData>>[TypedGoRoute<AdminRoute>(path: '/admin')],
     ),
   ],
 )
@@ -327,6 +345,10 @@ class ProfileBranch extends StatefulShellBranchData {
 
 class TeamBranch extends StatefulShellBranchData {
   const TeamBranch();
+}
+
+class AdminBranch extends StatefulShellBranchData {
+  const AdminBranch();
 }
 
 class DashboardRoute extends GoRouteData with $DashboardRoute {
@@ -415,6 +437,25 @@ class ProductsRoute extends GoRouteData with $ProductsRoute {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       const NoTransitionPage(child: ProductsHomeScreen());
+}
+
+/// The full Tabela Brasíndice/Simpro — a peer tab of Produtos, not an admin
+/// surface: it is `read CATALOG`, which REP and MANAGER both hold. It moved
+/// here from `/catalog/price-index` when spec 0016 §3.4 retired `/catalog`.
+class PriceIndexRoute extends GoRouteData with $PriceIndexRoute {
+  const PriceIndexRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      const NoTransitionPage(child: CatalogPriceIndexScreen());
+}
+
+class AdminRoute extends GoRouteData with $AdminRoute {
+  const AdminRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      const NoTransitionPage(child: AdminHomeScreen());
 }
 
 class ProfileRoute extends GoRouteData with $ProfileRoute {
@@ -1083,47 +1124,93 @@ class TerritoryCreatePtRoute extends GoRouteData with $TerritoryCreatePtRoute {
   }
 }
 
-@TypedGoRoute<CatalogHomeRoute>(
-  path: '/catalog',
-  routes: [
-    TypedGoRoute<CatalogPotentialDefinitionsRoute>(
-      path: 'potential-definitions',
-    ),
-    TypedGoRoute<CatalogPriceIndexRoute>(path: 'price-index'),
-    TypedGoRoute<CatalogComparisonRoute>(path: 'comparison/:variantId'),
-  ],
-)
-class CatalogHomeRoute extends GoRouteData with $CatalogHomeRoute {
-  const CatalogHomeRoute();
+// ---------------------------------------------------------------------------
+// Administração (spec 0016)
+//
+// The `/catalog` tree that used to live here is gone. It held the admin product
+// list, the potential-definitions admin and the price index, and nothing in the
+// app navigated to it — its only inbound link was the tab bar it rendered
+// itself (spec 0016 §1.1). The two admin screens moved under `/admin`; the
+// price index moved to `/price-index`, inside the Produtos branch, because it
+// is rep-facing rather than administrative.
+// ---------------------------------------------------------------------------
+
+@TypedGoRoute<AdminProductsRoute>(path: '/admin/produtos')
+class AdminProductsRoute extends GoRouteData with $AdminProductsRoute {
+  const AdminProductsRoute();
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const CatalogHomeScreen();
+      const AdminProductsScreen();
 }
 
-class CatalogPotentialDefinitionsRoute extends GoRouteData
-    with $CatalogPotentialDefinitionsRoute {
-  const CatalogPotentialDefinitionsRoute();
+@TypedGoRoute<AdminCompetitorProductsRoute>(path: '/admin/concorrentes')
+class AdminCompetitorProductsRoute extends GoRouteData
+    with $AdminCompetitorProductsRoute {
+  const AdminCompetitorProductsRoute();
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const PotentialDefinitionsAdminScreen();
+      const AdminCompetitorProductsScreen();
 }
 
-class CatalogPriceIndexRoute extends GoRouteData with $CatalogPriceIndexRoute {
-  const CatalogPriceIndexRoute();
+@TypedGoRoute<AdminHealthcareProvidersRoute>(path: '/admin/fontes-pagadoras')
+class AdminHealthcareProvidersRoute extends GoRouteData
+    with $AdminHealthcareProvidersRoute {
+  const AdminHealthcareProvidersRoute();
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const CatalogPriceIndexScreen();
+      const AdminHealthcareProvidersScreen();
 }
 
+@TypedGoRoute<AdminConformityRequirementsRoute>(path: '/admin/requisitos')
+class AdminConformityRequirementsRoute extends GoRouteData
+    with $AdminConformityRequirementsRoute {
+  const AdminConformityRequirementsRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AdminConformityRequirementsScreen();
+}
+
+@TypedGoRoute<AdminSupportCatalogsRoute>(path: '/admin/catalogos')
+class AdminSupportCatalogsRoute extends GoRouteData
+    with $AdminSupportCatalogsRoute {
+  const AdminSupportCatalogsRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AdminSupportCatalogsScreen();
+}
+
+@TypedGoRoute<AdminMetricsRoute>(path: '/admin/metricas')
+class AdminMetricsRoute extends GoRouteData with $AdminMetricsRoute {
+  const AdminMetricsRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AdminMetricsScreen();
+}
+
+/// The price comparison for one product — rep-facing, reached from the product
+/// detail. Unchanged by spec 0016 except for its path, which had to leave the
+/// retired `/catalog` tree.
+///
+/// Two segments, so it does not collide with `/products/:familyId`.
+@TypedGoRoute<CatalogComparisonRoute>(path: '/products/:variantId/comparativo')
 class CatalogComparisonRoute extends GoRouteData with $CatalogComparisonRoute {
   const CatalogComparisonRoute({required this.variantId});
 

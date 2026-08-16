@@ -59,8 +59,9 @@ const updateBusinessVerticalRoute = new Elysia()
     {
       detail: { summary: "Update business vertical", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      // No `code`: it is immutable after creation (spec 0016 §4.1) — a stable
+      // key other data joins on by meaning.
       body: t.Object({
-        code: t.Optional(t.String()),
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
       }),
@@ -119,34 +120,64 @@ const getProductRoute = new Elysia()
     }
   );
 
+/**
+ * The columns an admin may set on a product.
+ *
+ * Nullable where the schema is nullable. Until spec 0016 §5.1 this route
+ * required `code`, `simproCode`, `brasindiceCode`, `tissCode` and
+ * `brasindiceUpdatedAt` as non-null strings — which spec 0013 §2 had already
+ * made nullable *on purpose*, so that the Emultec importer would stop inventing
+ * `EMULTEC-SIM-{id}` values to satisfy a constraint that guaranteed a string
+ * rather than a code. The migration landed and the route did not follow, so an
+ * admin registering a product by hand was forced to invent exactly the
+ * synthetic codes the spec removed.
+ *
+ * Two fields are absent by decision:
+ * - `metricUnits` — informative, no writer anywhere (spec 0016 §7.1).
+ * - `ownership` — chosen by the endpoint, never by a field (§6.1).
+ */
+const productWritableFields = {
+  code: t.Optional(t.Nullable(t.String())),
+  name: t.String({ minLength: 1 }),
+  description: t.Optional(t.Nullable(t.String())),
+  commercialCode: t.Optional(t.Nullable(t.String())),
+  productGroup: t.Optional(t.Nullable(t.String())),
+  productClassification: t.Optional(t.Nullable(t.String())),
+  internalClassification: t.Optional(t.Nullable(t.String())),
+  brand: t.Optional(t.Nullable(t.String())),
+  unit: t.Optional(t.Nullable(t.String())),
+  barcode: t.Optional(t.Nullable(t.String())),
+  ncm: t.Optional(t.Nullable(t.String())),
+  anvisaRegistration: t.Optional(t.Nullable(t.String())),
+  requiresSterilization: t.Optional(t.Boolean()),
+  idProdutoEmultec: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
+  pictureUrl: t.Optional(t.Nullable(t.String())),
+  simproCode: t.Optional(t.Nullable(t.String())),
+  brasindiceCode: t.Optional(t.Nullable(t.String())),
+  tissCode: t.Optional(t.Nullable(t.String())),
+  manufacturer: t.String({ minLength: 1 }),
+  countryOfOrigin: t.String({ minLength: 1 }),
+  price: t.Optional(t.Nullable(t.Number())),
+  price17: t.Optional(t.Number()),
+  price18: t.Optional(t.Number()),
+  price20: t.Optional(t.Number()),
+  brasindiceUpdatedAt: t.Optional(t.Nullable(t.String())),
+  isActive: t.Optional(t.Boolean()),
+} as const;
+
 const createProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "CATALOG"))
   .post(
     "/products",
-    async ({ body }) =>
-      catalogUseCases.createProduct().execute({
-        ...body,
-        verticalIds: body.verticalIds,
-      }),
+    async ({ body }) => catalogUseCases.createProduct().execute(body),
     {
       detail: { summary: "Create product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       body: t.Object({
-        code: t.String(),
-        name: t.String(),
+        ...productWritableFields,
+        // The only chance to choose: a product's Linhas are immutable after
+        // creation (spec 0016 §6.7), so `PATCH` does not accept them.
         verticalIds: t.Array(t.Number({ minimum: 1 }), { minItems: 1 }),
-        pictureUrl: t.Optional(t.Nullable(t.String())),
-        simproCode: t.String(),
-        brasindiceCode: t.String(),
-        tissCode: t.String(),
-        manufacturer: t.String(),
-        countryOfOrigin: t.String(),
-        price: t.Number(),
-        price17: t.Number(),
-        price18: t.Number(),
-        price20: t.Number(),
-        brasindiceUpdatedAt: t.String(),
-        isActive: t.Optional(t.Boolean()),
       }),
     }
   );
@@ -156,36 +187,47 @@ const updateProductRoute = new Elysia()
   .use(requirePermission("update", "CATALOG"))
   .patch(
     "/products/:id",
-    async ({ params, body }) => {
-      const { verticalIds: rawVerticalIds, ...rest } = body;
-      return catalogUseCases.updateProduct().execute({
-        productId: params.id,
-        ...rest,
-        ...(rawVerticalIds
-          ? { verticalIds: rawVerticalIds }
-          : {}),
-      });
-    },
+    async ({ params, body }) =>
+      catalogUseCases.updateProduct().execute({ productId: params.id, ...body }),
     {
       detail: { summary: "Update product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      // Every field optional, and no `verticalIds`: moving a product between
+      // Linhas is forbidden (spec 0016 §6.7) because orders key on
+      // `facility_vertical_profile_id` and `product_potential_links` is unique
+      // per (product, vertical) — so a move silently changes which profiles the
+      // product's sales join to and orphans its metric link.
       body: t.Object({
-        code: t.Optional(t.String()),
-        name: t.Optional(t.String()),
-        verticalIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { minItems: 1 })),
-        pictureUrl: t.Optional(t.Nullable(t.String())),
-        simproCode: t.Optional(t.String()),
-        brasindiceCode: t.Optional(t.String()),
-        tissCode: t.Optional(t.String()),
-        manufacturer: t.Optional(t.String()),
-        countryOfOrigin: t.Optional(t.String()),
-        price: t.Optional(t.Number()),
-        price17: t.Optional(t.Number()),
-        price18: t.Optional(t.Number()),
-        price20: t.Optional(t.Number()),
-        brasindiceUpdatedAt: t.Optional(t.String()),
-        isActive: t.Optional(t.Boolean()),
+        ...productWritableFields,
+        name: t.Optional(t.String({ minLength: 1 })),
+        manufacturer: t.Optional(t.String({ minLength: 1 })),
+        countryOfOrigin: t.Optional(t.String({ minLength: 1 })),
       }),
+    }
+  );
+
+/**
+ * Deletes a product, and only while nothing references it (spec 0016 §6.2).
+ *
+ * 409 `RESOURCE_IN_USE` when something does, carrying the counts, so the client
+ * can name what blocks it and offer deactivation instead. Not a soft delete:
+ * that is what `isActive` is for, and having both would be two ways to say the
+ * same thing.
+ */
+const deleteProductRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "CATALOG"))
+  .delete(
+    "/products/:id",
+    async ({ params }) =>
+      catalogUseCases.deleteProduct().execute({ productId: params.id }),
+    {
+      detail: {
+        summary: "Delete a product that nothing references",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -365,6 +407,7 @@ export const catalogRoute = new Elysia()
   .use(getProductRoute)
   .use(createProductRoute)
   .use(updateProductRoute)
+  .use(deleteProductRoute)
   .use(listHealthcareProvidersRoute)
   .use(createHealthcareProviderRoute)
   .use(updateHealthcareProviderRoute)

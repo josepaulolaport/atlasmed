@@ -13,6 +13,8 @@ import {
   GetProductUseCase,
   CreateProductUseCase,
   UpdateProductUseCase,
+  DeleteProductUseCase,
+  DeleteCompetitorProductUseCase,
   ListHealthcareProvidersUseCase,
   CreateHealthcareProviderUseCase,
   UpdateHealthcareProviderUseCase,
@@ -57,6 +59,7 @@ export const catalogUseCases = {
   getProduct: () => new GetProductUseCase({ productRepository: catalogRepositories.product }),
   createProduct: () => new CreateProductUseCase({ productRepository: catalogRepositories.product }),
   updateProduct: () => new UpdateProductUseCase({ productRepository: catalogRepositories.product }),
+  deleteProduct: () => new DeleteProductUseCase({ productRepository: catalogRepositories.product }),
   listHealthcareProviders: () =>
     new ListHealthcareProvidersUseCase({
       healthcareProviderRepository: catalogRepositories.healthcareProvider,
@@ -98,6 +101,10 @@ export const catalogUseCases = {
     }),
   updateCompetitorProduct: () =>
     new UpdateCompetitorProductUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  deleteCompetitorProduct: () =>
+    new DeleteCompetitorProductUseCase({
       competitorProductRepository: catalogRepositories.competitorProduct,
     }),
   getProductComparison: () =>

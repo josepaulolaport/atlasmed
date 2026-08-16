@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart'
+    show formatDate;
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -12,6 +16,17 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// or editing an existing one — mirrors [TerritoryInfoForm]'s shape
 /// (fullscreen dialog, labeled fields, bottom "Salvar" bar) so every
 /// admin-mutation form in the app reads the same way.
+///
+/// Spec 0016 §4.2 widened it to every editable column. Three rules are visible
+/// in the UI rather than only in the API:
+///
+/// - **Codes are optional.** SIMPRO / Brasíndice / TISS / código are nullable by
+///   correctness (spec 0013 §2); an empty field saves as `null`, not `""`.
+/// - **`metricUnits` is read-only** (§7.1) — displayed with its unit, never
+///   editable, because the metric calculation uses raw quantities.
+/// - **Linhas are chosen once** (§6.7). On an existing product they render as
+///   plain text with the reason, because moving a product between Linhas
+///   changes which profiles its orders join to.
 class VariantFormScreen extends ConsumerStatefulWidget {
   final CatalogVariant? existing;
   final List<CatalogFamily> families;
@@ -60,6 +75,28 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     text: widget.existing?.brasindiceCode,
   );
   late final _tissCode = TextEditingController(text: widget.existing?.tissCode);
+  late final _description = TextEditingController(
+    text: widget.existing?.description,
+  );
+  late final _brand = TextEditingController(text: widget.existing?.brand);
+  late final _unit = TextEditingController(text: widget.existing?.unit);
+  late final _barcode = TextEditingController(text: widget.existing?.barcode);
+  late final _ncm = TextEditingController(text: widget.existing?.ncm);
+  late final _anvisaRegistration = TextEditingController(
+    text: widget.existing?.anvisaRegistration,
+  );
+  late final _commercialCode = TextEditingController(
+    text: widget.existing?.commercialCode,
+  );
+  late final _productClassification = TextEditingController(
+    text: widget.existing?.productClassification,
+  );
+  late final _internalClassification = TextEditingController(
+    text: widget.existing?.internalClassification,
+  );
+  late final _idProdutoEmultec = TextEditingController(
+    text: widget.existing?.idProdutoEmultec?.toString(),
+  );
   late final _price = TextEditingController(
     text: widget.existing != null ? brlNumber(widget.existing!.price) : null,
   );
@@ -76,6 +113,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
   late final Set<int> _selectedVerticalIds = {
     ...widget.existing?.verticalIds ?? [],
   };
+  late bool _requiresSterilization =
+      widget.existing?.requiresSterilization ?? false;
+  late bool _isActive = widget.existing?.isActive ?? true;
+  late DateTime? _brasindiceUpdatedAt = widget.existing?.brasindiceUpdatedAt;
 
   bool _saving = false;
   String? _error;
@@ -92,11 +133,24 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     _simproCode,
     _brasindiceCode,
     _tissCode,
+    _description,
+    _brand,
+    _unit,
+    _barcode,
+    _ncm,
+    _anvisaRegistration,
+    _commercialCode,
+    _productClassification,
+    _internalClassification,
+    _idProdutoEmultec,
     _price,
     _price17,
     _price18,
     _price20,
   ];
+
+  /// Null until the answer arrives; see [CatalogDeleteButton].
+  ProductDeletability? _deletability;
 
   @override
   void initState() {
@@ -105,6 +159,48 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     // disables live instead of only after an unrelated rebuild.
     for (final controller in _controllers) {
       controller.addListener(_onFieldChanged);
+    }
+    if (_isEditing) _loadDeletability();
+  }
+
+  Future<void> _loadDeletability() async {
+    try {
+      final answer = await ref
+          .read(catalogRepositoryProvider)
+          .getProductDeletability(widget.existing!.id);
+      if (!mounted) return;
+      setState(() => _deletability = answer);
+    } catch (_) {
+      // A failed check leaves delete unavailable rather than assuming either
+      // answer. Nothing else on the form depends on it.
+      if (!mounted) return;
+      setState(() => _deletability = ProductDeletability.unknown);
+    }
+  }
+
+  Future<void> _delete() async {
+    final existing = widget.existing!;
+    final confirmed = await confirmCatalogDelete(
+      context,
+      name: existing.name,
+      kind: 'produto',
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await ref.read(catalogRepositoryProvider).deleteVariant(existing.id);
+      invalidateCatalog(ref, variantId: existing.id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${existing.name} excluído')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showDeleteFailure(
+        context,
+        blockedTitle: 'Este produto não pode ser excluído',
+        error: error,
+      );
     }
   }
 
@@ -122,19 +218,39 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     super.dispose();
   }
 
+  /// What the API actually requires (spec 0016 §5.1): a name, a manufacturer, a
+  /// country, at least one Linha, and prices that parse.
+  ///
+  /// Not `code`, `familyName` or the three pricing-table codes: those are
+  /// nullable by correctness (spec 0013 §2), and requiring them here is what
+  /// forced synthetic values into the catalogue in the first place. An empty
+  /// field is saved as `null`.
   bool get _isValid =>
       _name.text.trim().isNotEmpty &&
-      _code.text.trim().isNotEmpty &&
-      _familyName.text.trim().isNotEmpty &&
       _manufacturer.text.trim().isNotEmpty &&
       _countryOfOrigin.text.trim().isNotEmpty &&
       _selectedVerticalIds.isNotEmpty &&
-      parseBrlNumber(_price.text) != null &&
-      parseBrlNumber(_price17.text) != null &&
-      parseBrlNumber(_price18.text) != null &&
-      parseBrlNumber(_price20.text) != null;
+      _pricesParse &&
+      _emultecIdParses;
+
+  /// A blank price field means zero, which is what the column already holds for
+  /// products nobody has priced. Text that is *not* a number is a mistake.
+  bool get _pricesParse => [
+    _price,
+    _price17,
+    _price18,
+    _price20,
+  ].every((c) => c.text.trim().isEmpty || parseBrlNumber(c.text) != null);
+
+  bool get _emultecIdParses {
+    final text = _idProdutoEmultec.text.trim();
+    return text.isEmpty || int.tryParse(text) != null;
+  }
 
   void _toggleSector(int verticalId) {
+    // Linhas are chosen once (spec 0016 §6.7); on an existing product they are
+    // not rendered as chips at all, so this is unreachable there.
+    if (_isEditing) return;
     setState(() {
       if (_selectedVerticalIds.contains(verticalId)) {
         _selectedVerticalIds.remove(verticalId);
@@ -144,6 +260,18 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     });
   }
 
+  Future<void> _pickBrasindiceDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _brasindiceUpdatedAt ?? now,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) return;
+    setState(() => _brasindiceUpdatedAt = picked);
+  }
+
   Future<void> _submit() async {
     if (!_isValid || _saving) return;
     setState(() {
@@ -151,9 +279,22 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       _error = null;
     });
 
-    final draft = (widget.existing ?? _blankVariant()).copyWith(
-      name: _name.text.trim(),
+    String? optional(TextEditingController controller) {
+      final text = controller.text.trim();
+      return text.isEmpty ? null : text;
+    }
+
+    double price(TextEditingController controller) =>
+        parseBrlNumber(controller.text) ?? 0;
+
+    final base = widget.existing ?? _blankVariant();
+    final draft = CatalogVariant(
+      id: base.id,
+      // Rebuilt field by field rather than `copyWith`, because every optional
+      // column here has to be able to go back to null — and in a `copyWith`,
+      // null means "leave it alone".
       code: _code.text.trim(),
+      name: _name.text.trim(),
       familyName: _familyName.text.trim(),
       presentation: _presentation.text.trim(),
       manufacturer: _manufacturer.text.trim(),
@@ -161,12 +302,30 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       simproCode: _simproCode.text.trim(),
       brasindiceCode: _brasindiceCode.text.trim(),
       tissCode: _tissCode.text.trim(),
-      price: parseBrlNumber(_price.text),
-      price17: parseBrlNumber(_price17.text),
-      price18: parseBrlNumber(_price18.text),
-      price20: parseBrlNumber(_price20.text),
-      brasindiceUpdatedAt: DateTime.now(),
+      price: price(_price),
+      price17: price(_price17),
+      price18: price(_price18),
+      price20: price(_price20),
+      // The admin's date, not `DateTime.now()`. This field records when the
+      // *Brasíndice* record was published; stamping today on every save turned
+      // it into "when someone last opened this form".
+      brasindiceUpdatedAt: _brasindiceUpdatedAt,
+      isActive: _isActive,
+      // Ignored by `PATCH` (spec 0016 §6.7); sent only on create.
       verticalIds: _selectedVerticalIds.toList(),
+      productGroup: optional(_familyName),
+      description: optional(_description),
+      brand: optional(_brand),
+      unit: optional(_unit),
+      barcode: optional(_barcode),
+      ncm: optional(_ncm),
+      anvisaRegistration: optional(_anvisaRegistration),
+      commercialCode: optional(_commercialCode),
+      internalClassification: optional(_internalClassification),
+      productClassification: optional(_productClassification),
+      requiresSterilization: _requiresSterilization,
+      idProdutoEmultec: int.tryParse(_idProdutoEmultec.text.trim()),
+      metricUnits: base.metricUnits,
     );
 
     try {
@@ -203,7 +362,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     price17: 0,
     price18: 0,
     price20: 0,
-    brasindiceUpdatedAt: DateTime.now(),
+    // Null, not `now()`: a new product has no Brasíndice record until someone
+    // says it does.
+    brasindiceUpdatedAt: null,
     verticalIds: const [],
   );
 
@@ -225,6 +386,14 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
           _isEditing ? 'Editar produto' : 'Novo produto',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
+        actions: [
+          if (_isEditing)
+            CatalogDeleteButton(
+              deletability: _deletability,
+              onDelete: _delete,
+              blockedTitle: 'Este produto não pode ser excluído',
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -294,47 +463,142 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
+                  const _FieldLabel('Descrição'),
+                  const SizedBox(height: 6),
+                  _TextInput(
+                    controller: _description,
+                    hint: 'Opcional',
+                    capitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Marca'),
+                            const SizedBox(height: 6),
+                            _TextInput(controller: _brand, hint: 'Opcional'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Classificação'),
+                            const SizedBox(height: 6),
+                            _TextInput(
+                              controller: _productClassification,
+                              hint: 'Opcional',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const _FieldLabel('Classificação interna'),
+                  const SizedBox(height: 6),
+                  _TextInput(
+                    controller: _internalClassification,
+                    hint: 'Opcional',
+                  ),
+                  const SizedBox(height: 16),
                   const _FieldLabel('Linhas comerciais'),
                   const SizedBox(height: 6),
-                  sectorsAsync.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: SizedBox(
+                  if (_isEditing)
+                    // Spec 0016 §6.7: chosen once. Orders key on
+                    // `facility_vertical_profile_id` and `product_potential_links`
+                    // is unique per (product, vertical), so a move silently
+                    // changes which profiles this product's sales join to and
+                    // orphans its metric link. Shown, with the reason, rather
+                    // than hidden — an admin looking for it deserves an answer.
+                    sectorsAsync.when(
+                      loading: () => const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                    ),
-                    error: (_, _) => Text(
-                      'Não foi possível carregar as linhas comerciais.',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.error,
+                      error: (_, _) => const Text(
+                        'Não foi possível carregar as linhas comerciais.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.error,
+                        ),
                       ),
-                    ),
-                    data: (sectors) => sectors.isEmpty
-                        ? const Text(
-                            'Nenhuma linha comercial cadastrada.',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.gray400,
+                      data: (sectors) {
+                        final names = sectors
+                            .where((s) => _selectedVerticalIds.contains(s.id))
+                            .map((s) => s.name)
+                            .join(' · ');
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              names.isEmpty ? '—' : names,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.gray900,
+                              ),
                             ),
-                          )
-                        : Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final sector in sectors)
-                                _SuggestionChip(
-                                  label: sector.name,
-                                  selected: _selectedVerticalIds.contains(
-                                    sector.id,
+                            const SizedBox(height: 4),
+                            const Text(
+                              'A linha de um produto é definida no cadastro e '
+                              'não pode ser alterada: os pedidos já registrados '
+                              'estão ligados a ela.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.gray400,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    )
+                  else
+                    sectorsAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      error: (_, _) => const Text(
+                        'Não foi possível carregar as linhas comerciais.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.error,
+                        ),
+                      ),
+                      data: (sectors) => sectors.isEmpty
+                          ? const Text(
+                              'Nenhuma linha comercial cadastrada.',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.gray400,
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final sector in sectors)
+                                  _SuggestionChip(
+                                    label: sector.name,
+                                    selected: _selectedVerticalIds.contains(
+                                      sector.id,
+                                    ),
+                                    onTap: () => _toggleSector(sector.id),
                                   ),
-                                  onTap: () => _toggleSector(sector.id),
-                                ),
-                            ],
-                          ),
-                  ),
+                              ],
+                            ),
+                    ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -364,8 +628,30 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: _requiresSterilization,
+                    onChanged: (value) =>
+                        setState(() => _requiresSterilization = value),
+                    title: const Text(
+                      'Requer esterilização',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   const _SectionLabel('CÓDIGOS'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Todos opcionais. Um campo vazio é salvo como “sem código” '
+                    '— não invente um valor para preencher.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                  ),
                   const SizedBox(height: 10),
                   const _FieldLabel('SIMPRO'),
                   const SizedBox(height: 6),
@@ -374,10 +660,117 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                   const _FieldLabel('BRASÍNDICE'),
                   const SizedBox(height: 6),
                   _TextInput(controller: _brasindiceCode, hint: '024847'),
+                  const SizedBox(height: 10),
+                  // The date the Brasíndice record was published — not the date
+                  // someone saved this form, which is what it used to record.
+                  _DateField(
+                    label: 'Publicação Brasíndice',
+                    value: _brasindiceUpdatedAt,
+                    onPick: _pickBrasindiceDate,
+                    onClear: _brasindiceUpdatedAt == null
+                        ? null
+                        : () => setState(() => _brasindiceUpdatedAt = null),
+                  ),
                   const SizedBox(height: 16),
                   const _FieldLabel('TISS'),
                   const SizedBox(height: 6),
                   _TextInput(controller: _tissCode, hint: '0000094527'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('EAN / código de barras'),
+                            const SizedBox(height: 6),
+                            _TextInput(
+                              controller: _barcode,
+                              hint: '7891234567890',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('NCM'),
+                            const SizedBox(height: 6),
+                            _TextInput(controller: _ncm, hint: '3006.10.19'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Registro ANVISA'),
+                            const SizedBox(height: 6),
+                            _TextInput(
+                              controller: _anvisaRegistration,
+                              hint: 'Opcional',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Código comercial'),
+                            const SizedBox(height: 6),
+                            _TextInput(
+                              controller: _commercialCode,
+                              hint: 'Opcional',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const _FieldLabel('ID do produto no Emultec'),
+                  const SizedBox(height: 6),
+                  _TextInput(
+                    controller: _idProdutoEmultec,
+                    hint: 'Somente números',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'É por este id que o importador de pedidos reconhece o '
+                    'produto. Um pedido do Emultec que cita um id não '
+                    'cadastrado fica retido até o produto existir aqui.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                  ),
+                  const SizedBox(height: 20),
+                  const _SectionLabel('UNIDADES'),
+                  const SizedBox(height: 10),
+                  const _FieldLabel('Unidade'),
+                  const SizedBox(height: 6),
+                  _TextInput(controller: _unit, hint: 'Ex.: caixa, ampola'),
+                  const SizedBox(height: 12),
+                  // Read-only by decision (spec 0016 §7.1). Shown rather than
+                  // hidden, because the number is already used in reads and an
+                  // admin who cannot see it cannot notice it is wrong.
+                  _ReadOnlyRow(
+                    label: 'Unidades da métrica',
+                    value: brlNumber(
+                      widget.existing?.metricUnits ?? 1,
+                    ),
+                    note:
+                        'Quantas unidades da métrica valem uma unidade deste '
+                        'produto. Informativo: o cálculo de potencial usa as '
+                        'quantidades brutas, e este campo não é editável.',
+                  ),
                   const SizedBox(height: 20),
                   const _SectionLabel('PREÇOS'),
                   const SizedBox(height: 10),
@@ -444,6 +837,28 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  const _SectionLabel('ESTADO'),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: _isActive,
+                    onChanged: (value) => setState(() => _isActive = value),
+                    title: const Text(
+                      'Ativo',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Um produto inativo some das listas dos representantes e '
+                      'dos pedidos novos. Os pedidos e as métricas já '
+                      'registrados continuam válidos.',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                    ),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
@@ -563,6 +978,103 @@ class _TextInput extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide(color: AppColors.gray200),
         ),
+      ),
+    );
+  }
+}
+
+/// A date the admin picks, with a way to clear it. Used for the Brasíndice
+/// publication date, which is nullable because the code it belongs to is.
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.onPick,
+    this.onClear,
+  });
+
+  final String label;
+  final DateTime? value;
+  final VoidCallback onPick;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _FieldLabel(label),
+              const SizedBox(height: 4),
+              Text(
+                value == null ? 'Sem data' : formatDate(value!),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: value == null ? AppColors.gray400 : AppColors.gray900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (onClear != null)
+          IconButton(
+            tooltip: 'Limpar',
+            onPressed: onClear,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: AppColors.gray400,
+          ),
+        TextButton(onPressed: onPick, child: const Text('Escolher')),
+      ],
+    );
+  }
+}
+
+/// A value the form shows but never lets anyone change, with the reason.
+class _ReadOnlyRow extends StatelessWidget {
+  const _ReadOnlyRow({
+    required this.label,
+    required this.value,
+    required this.note,
+  });
+
+  final String label;
+  final String value;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSecondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _FieldLabel(label),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            note,
+            style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
+          ),
+        ],
       ),
     );
   }

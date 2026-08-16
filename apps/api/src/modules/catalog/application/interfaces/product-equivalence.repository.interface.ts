@@ -1,5 +1,12 @@
 import type { CompetitorProductRecord } from "./competitor-product.repository.interface";
 
+/**
+ * Equivalences are written in one direction only: from one of our products to
+ * the competitor's (spec 0016 §4.3, §6.5). A draft also exposed the reverse —
+ * open a competitor product, attach ours — and it was dropped: an equivalence is
+ * a statement about one of our products ("this is what competes with it"), and
+ * two places to make the same statement is how the two come to disagree.
+ */
 export interface ProductEquivalenceRepository {
   /** Competitor products currently linked to `productId` (via `product_equivalences`). */
   findLinkedByProduct(productId: number): Promise<CompetitorProductRecord[]>;
