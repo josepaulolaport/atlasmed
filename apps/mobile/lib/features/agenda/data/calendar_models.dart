@@ -625,6 +625,8 @@ class CalendarOccurrence extends Equatable {
     this.recurrenceUntil,
     this.recurrenceCount,
     this.recurrenceProvided = true,
+    this.anchorLocalDate,
+    this.anchorLocalTime,
   });
 
   final int calendarId;
@@ -650,6 +652,15 @@ class CalendarOccurrence extends Equatable {
   final String? recurrenceUntil;
   final int? recurrenceCount;
   final bool recurrenceProvided;
+
+  /// Where the *series* starts, `YYYY-MM-DD` and `HH:MM` in [timeZone].
+  ///
+  /// Editing a whole series must edit the series' own anchor. Seeding that form
+  /// from the occurrence the rep happened to tap re-anchored the series to that
+  /// date on save, silently dropping every occurrence before it — a rep who
+  /// opened the third week and changed only the duration lost the first two.
+  final String? anchorLocalDate;
+  final String? anchorLocalTime;
 
   factory CalendarOccurrence.fromInteraction(InteractionDetail detail) {
     final localStart = detail.occurrenceStartsAt.toLocal();
@@ -728,6 +739,8 @@ class CalendarOccurrence extends Equatable {
       calendarId: calendarId,
       occurrenceId: occurrenceId,
       recurrenceKey: (json['recurrenceKey'] as String?) ?? occurrenceId,
+      anchorLocalDate: json['anchorLocalDate'] as String?,
+      anchorLocalTime: json['anchorLocalTime'] as String?,
       kind: _enumFromApi(CalendarEventKind.values, json['kind']),
       title: json['title'] as String,
       owner: CalendarIdentity.fromJson(

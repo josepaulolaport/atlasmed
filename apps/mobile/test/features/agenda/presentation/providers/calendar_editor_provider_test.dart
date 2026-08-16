@@ -514,6 +514,47 @@ void main() {
     expect(notifier.errorMessage, 'Sem conexão.');
   });
 
+  test(
+    'editing a series opens on the series anchor, not the tapped week',
+    () async {
+      // Found on the simulator: opening the third week of a weekly block and
+      // changing only its duration moved the series anchor to that week, so the
+      // first two occurrences vanished without a word. `toUpdateCommand` sends
+      // `startsAt` and the server writes it as the anchor, so the form has to be
+      // seeded with the series' own start.
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': '3:2026-08-27T17:00[America/Sao_Paulo]',
+        'calendarId': 3,
+        'recurrenceKey': '2026-08-27T17:00[America/Sao_Paulo]',
+        'ownerUserId': 2,
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Bloqueio semanal',
+        'startsAt': '2026-08-27T20:00:00.000Z',
+        'endsAt': '2026-08-27T21:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'recurrence': 'WEEKLY',
+        'anchorLocalDate': '2026-08-20',
+        'anchorLocalTime': '17:00',
+        'version': 1,
+        'canMutate': true,
+      });
+
+      final series = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingSeries(occurrence),
+      );
+      expect(series.state.draft.startsAt, DateTime(2026, 8, 20, 17));
+
+      // One occurrence is still about that occurrence.
+      final single = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingOccurrence(occurrence),
+      );
+      expect(single.state.draft.startsAt.day, 27);
+    },
+  );
+
   test('shows first conflict in pt-BR and keeps draft', () async {
     final repository = _FakeCalendarRepository()
       ..submitError = CalendarConflictException(

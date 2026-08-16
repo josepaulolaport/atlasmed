@@ -466,6 +466,21 @@ final calendarEditorProvider = StateNotifierProvider.autoDispose
       return notifier;
     });
 
+/// Where a series edit should open: the series' own anchor, not the occurrence
+/// the rep happened to tap.
+///
+/// Seeding from the occurrence re-anchored the series to that date on save,
+/// because the update command sends `startsAt` and the server writes it as the
+/// anchor. A rep who opened the third week and changed only the duration lost
+/// the first two weeks without being told. Verified on the simulator.
+DateTime? _seriesAnchorStart(CalendarOccurrence occurrence) {
+  final date = occurrence.anchorLocalDate;
+  final time = occurrence.anchorLocalTime;
+  if (date == null || time == null) return null;
+  final parsed = DateTime.tryParse('${date}T$time:00');
+  return parsed;
+}
+
 CalendarEditorDraft _initialDraft(
   CalendarEditorTarget target,
   DateTime now,
@@ -479,7 +494,9 @@ CalendarEditorDraft _initialDraft(
       facilityId: occurrence.facility?.id ?? occurrence.interaction?.facilityId,
       facilityName: occurrence.facility?.name,
       modality: occurrence.modality ?? CalendarModality.inPerson,
-      startsAt: occurrence.startsAt.toLocal(),
+      startsAt: target.mode == CalendarEditorMode.series
+          ? (_seriesAnchorStart(occurrence) ?? occurrence.startsAt.toLocal())
+          : occurrence.startsAt.toLocal(),
       timeZone: occurrence.timeZone,
       durationMinutes: occurrence.durationMinutes,
       recurrence: occurrence.recurrence,
