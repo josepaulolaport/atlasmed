@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -237,19 +238,13 @@ class _OrderCard extends StatelessWidget {
   String _formatOrderDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+  /// The same vocabulary and colours Pedidos uses. This carried its own
+  /// four-case switch and fell through to the raw enum, so a clinic's history
+  /// showed "NO_BILLING" and "DRAFT" — two of the six statuses — as database
+  /// values, next to "Faturado" and "Pendente".
   (String, Color, Color) _style(String status) {
-    switch (status) {
-      case 'APPROVED':
-        return ('Aprovado', AppColors.green, AppColors.green50);
-      case 'INVOICED':
-        return ('Faturado', AppColors.navyBright, AppColors.blueLight);
-      case 'PENDING':
-        return ('Pendente', AppColors.amber, AppColors.amber50);
-      case 'REJECTED':
-        return ('Rejeitado', AppColors.red, AppColors.red50);
-      default:
-        return (status, AppColors.gray500, AppColors.gray100);
-    }
+    final parsed = orderStatusFromJson(status);
+    return (parsed.label, parsed.color, parsed.bg);
   }
 
   (String, Color, Color) _typeStyle(String type) {
