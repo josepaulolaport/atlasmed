@@ -694,16 +694,10 @@ class _VerticalAssignmentCardState
         children: [
           if (_busy) const LinearProgressIndicator(minHeight: 2),
           if (_busy) const SizedBox(height: 10),
+          // No "Zona do gerente" heading. The card is already titled with the
+          // sector, and inside one sector the zone adds nothing the reader
+          // needs — who the manager is, is the fact.
           if (widget.showManager) ...[
-            const Text(
-              'Zona do gerente',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.gray500,
-              ),
-            ),
-            const SizedBox(height: 8),
             if (canManage)
               Material(
                 color: AppColors.background,
@@ -729,9 +723,12 @@ class _VerticalAssignmentCardState
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            assignment.managerZoneName ??
-                                assignment.managerDisplayName ??
-                                'Selecionar zona',
+                            // The manager, not their zone. The zone's name is
+                            // an internal handle — "orto-mz-su" — and the row
+                            // fell back to it before the person.
+                            assignment.managerDisplayName ??
+                                assignment.managerZoneName ??
+                                'Selecionar gerente',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -842,16 +839,22 @@ class _VerticalAssignmentCardState
                   final territory = assignment.territories[index];
                   return Stack(
                     children: [
+                      // Tapping opens the territory full-screen, where
+                      // "Editar" is. It used to go straight to the picker, so
+                      // the only way to look at a patch was the same tap that
+                      // changed it.
                       TerritoryMapCard(
                         assignment: TerritoryAssignment.fromOption(territory),
                         width: 220,
                         mapHeight: 120,
-                        onTap: canManage ? _pickTerritories : null,
+                        onEdit: canManage ? _pickTerritories : null,
                       ),
+                      // Top-left: the expand hint now sits top-right, and the
+                      // two were landing on each other.
                       if (canManage)
                         Positioned(
-                          top: 28,
-                          right: 4,
+                          top: 8,
+                          left: 8,
                           child: Material(
                             color: Colors.white,
                             shape: const CircleBorder(),

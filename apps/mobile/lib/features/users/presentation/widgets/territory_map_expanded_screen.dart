@@ -14,19 +14,31 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// panning/zooming/rotating is enabled here. The user closes it (X button
 /// or system back gesture) to return to the screen they came from.
 class TerritoryMapExpandedScreen extends StatefulWidget {
-  const TerritoryMapExpandedScreen({super.key, required this.assignment});
+  const TerritoryMapExpandedScreen({
+    super.key,
+    required this.assignment,
+    this.onEdit,
+  });
 
   final TerritoryAssignment assignment;
+
+  /// Shown as "Editar" beside the close button. This is where changing the
+  /// assignment lives now: the card used to open the picker directly, which
+  /// meant the one way to *look* at a territory was also the one way to
+  /// change it.
+  final VoidCallback? onEdit;
 
   /// Pushes the expanded map as a full-screen dialog route.
   static Future<void> show(
     BuildContext context,
-    TerritoryAssignment assignment,
-  ) {
+    TerritoryAssignment assignment, {
+    VoidCallback? onEdit,
+  }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => TerritoryMapExpandedScreen(assignment: assignment),
+        builder: (_) =>
+            TerritoryMapExpandedScreen(assignment: assignment, onEdit: onEdit),
       ),
     );
   }
@@ -133,6 +145,29 @@ class _TerritoryMapExpandedScreenState
                       ),
                     ),
                     const SizedBox(width: 12),
+                    if (widget.onEdit != null) ...[
+                      TextButton.icon(
+                        key: const Key('territory-map-edit'),
+                        onPressed: () {
+                          Navigator.of(context).maybePop();
+                          widget.onEdit!();
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Editar'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0x33FFFFFF),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     _CloseButton(onTap: () => Navigator.of(context).maybePop()),
                   ],
                 ),

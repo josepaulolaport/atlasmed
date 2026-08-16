@@ -144,30 +144,38 @@ class TerritoryOption extends Equatable {
   /// not rely on local filtering of the full catalog for REP selection.
   final int? managerTerritoryId;
 
-  factory TerritoryOption.fromJson(Map<String, dynamic> json) =>
-      TerritoryOption(
-        id: readCrmId(json['id'], 'id'),
-        name: json['name'] as String,
-        verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
-        verticalName: json['verticalName'] as String?,
-        centroid: json['centroid'] == null
-            ? null
-            : MapCoordinate(
-                longitude: (json['centroid']['longitude'] as num).toDouble(),
-                latitude: (json['centroid']['latitude'] as num).toDouble(),
-              ),
-        boundary: json['boundary'] == null
-            ? null
-            : TerritoryGeometry.tryFromGeoJson(
-                json['boundary'] as Map<String, dynamic>,
-              ),
-        isOccupied: json['isOccupied'] as bool? ?? false,
-        assignedUserName: json['assignedUserName'] as String?,
-        managerTerritoryId: readCrmIdOrNull(
-          json['managerTerritoryId'],
-          'managerTerritoryId',
-        ),
-      );
+  factory TerritoryOption.fromJson(Map<String, dynamic> json) {
+    final boundary = json['boundary'] == null
+        ? null
+        : TerritoryGeometry.tryFromGeoJson(
+            json['boundary'] as Map<String, dynamic>,
+          );
+    return TerritoryOption(
+      id: readCrmId(json['id'], 'id'),
+      name: json['name'] as String,
+      verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
+      verticalName: json['verticalName'] as String?,
+      // Falls back to the boundary's own anchor. `GET
+      // /access/users/:id/assignments` sends the boundary and no centroid at
+      // all, and the map card refuses to render without one — so every
+      // territory minimap on the user detail screen was a grey placeholder
+      // with the geometry sitting right there unused. The picker endpoints
+      // already derive it the same way.
+      centroid: json['centroid'] == null
+          ? boundary?.labelAnchor
+          : MapCoordinate(
+              longitude: (json['centroid']['longitude'] as num).toDouble(),
+              latitude: (json['centroid']['latitude'] as num).toDouble(),
+            ),
+      boundary: boundary,
+      isOccupied: json['isOccupied'] as bool? ?? false,
+      assignedUserName: json['assignedUserName'] as String?,
+      managerTerritoryId: readCrmIdOrNull(
+        json['managerTerritoryId'],
+        'managerTerritoryId',
+      ),
+    );
+  }
 
   @override
   List<Object?> get props => [
