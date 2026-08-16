@@ -582,6 +582,13 @@ export const conformityRequirements = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
+    // The slug was unique and the name was not, so two requirements could carry
+    // the same name and the cadastro would ask a clinic for the same document
+    // twice — indistinguishable in the admin list, where the name is all that
+    // shows.
+    uniqueIndex("conformity_requirements_name_normalized_uidx").on(
+      sql`lower(trim(${t.name}))`
+    ),
     index("conformity_requirements_vertical_id_idx").on(t.verticalId),
     index("conformity_requirements_is_active_idx").on(t.isActive),
     index("conformity_requirements_applies_to_legal_document_type_idx").on(

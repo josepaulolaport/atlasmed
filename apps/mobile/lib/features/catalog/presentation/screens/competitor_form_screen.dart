@@ -75,6 +75,16 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
     _price20,
   ];
 
+  /// What the form looked like when it opened. See [CatalogUnsavedGuard].
+  late final String _openedWith = _snapshot();
+
+  String _snapshot() => [
+    for (final controller in _controllers) controller.text,
+    '$_isActive',
+  ].join('\u0000');
+
+  bool get _hasChanges => _snapshot() != _openedWith;
+
   /// Null until the answer arrives; see [CatalogDeleteButton].
   ProductDeletability? _deletability;
 
@@ -148,6 +158,13 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       parseBrlNumber(_price18.text) != null &&
       parseBrlNumber(_price20.text) != null;
 
+  String? get _missing {
+    if (_name.text.trim().isEmpty) return 'Informe o nome do produto.';
+    if (_manufacturer.text.trim().isEmpty) return 'Informe o fabricante.';
+    if (_countryOfOrigin.text.trim().isEmpty) return 'Informe o país.';
+    return 'Revise os preços: algum campo não é um número.';
+  }
+
   Future<void> _submit() async {
     if (!_isValid || _saving) return;
     setState(() {
@@ -201,148 +218,152 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CatalogFormAppBar(
-        title: _isEditing ? 'Editar produto' : 'Novo produto',
-        action: _isEditing
-            ? CatalogDeleteButton(
-                deletability: _deletability,
-                onDelete: _delete,
-                blockedTitle: 'Este produto não pode ser excluído',
-              )
-            : null,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                children: [
-                  const CatalogFieldLabel('Nome do produto'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _name,
-                    hint: 'Ex.: SINGJOINT 24MG / 2ML',
-                    capitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Marca (opcional)'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _brand,
-                    hint: 'Ex.: Synvisc',
-                    capitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Fabricante'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _manufacturer,
-                              hint: 'Hangzhou',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('País'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _countryOfOrigin,
-                              hint: 'China',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const CatalogSectionLabel('PREÇOS'),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 17%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price17,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
+    return CatalogUnsavedGuard(
+      hasChanges: _hasChanges,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: CatalogFormAppBar(
+          title: _isEditing ? 'Editar produto' : 'Novo produto',
+          action: _isEditing
+              ? CatalogDeleteButton(
+                  deletability: _deletability,
+                  onDelete: _delete,
+                  blockedTitle: 'Este produto não pode ser excluído',
+                )
+              : null,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  children: [
+                    const CatalogFieldLabel('Nome do produto'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _name,
+                      hint: 'Ex.: SINGJOINT 24MG / 2ML',
+                      capitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Marca (opcional)'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _brand,
+                      hint: 'Ex.: Synvisc',
+                      capitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Fabricante'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _manufacturer,
+                                hint: 'Hangzhou',
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 18%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price18,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('País'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _countryOfOrigin,
+                                hint: 'China',
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 20%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price20,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const CatalogSectionLabel('PREÇOS'),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 17%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price17,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const CatalogSectionLabel('ESTADO'),
-                  CatalogActiveSwitch(
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value),
-                    explanation:
-                        'Um produto inativo deixa de aparecer no comparativo e '
-                        'no seletor do representante. As quantidades já '
-                        'registradas nas clínicas continuam valendo.',
-                  ),
-                ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 18%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price18,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 20%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price20,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const CatalogSectionLabel('ESTADO'),
+                    CatalogActiveSwitch(
+                      value: _isActive,
+                      onChanged: (value) => setState(() => _isActive = value),
+                      explanation:
+                          'Um produto inativo deixa de aparecer no comparativo e '
+                          'no seletor do representante. As quantidades já '
+                          'registradas nas clínicas continuam valendo.',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            CatalogSaveBar(
-              onSave: _isValid ? _submit : null,
-              saving: _saving,
-              error: _error,
-            ),
-          ],
+              CatalogSaveBar(
+                onSave: _isValid ? _submit : null,
+                saving: _saving,
+                error: _error,
+                disabledReason: _missing,
+              ),
+            ],
+          ),
         ),
       ),
     );

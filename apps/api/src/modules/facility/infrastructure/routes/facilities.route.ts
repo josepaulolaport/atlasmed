@@ -1104,6 +1104,10 @@ const downloadFacilityPhotoRoute = new Elysia()
       });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";
+      // The stored object's bytes are whatever was uploaded. Without this a
+      // browser may sniff past the declared type and render them as something
+      // else entirely.
+      set.headers["x-content-type-options"] = "nosniff";
       return result.bytes;
     },
     {

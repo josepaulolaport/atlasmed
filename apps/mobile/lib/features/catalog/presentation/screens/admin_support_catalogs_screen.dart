@@ -96,13 +96,16 @@ class _AdminSupportCatalogsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Catálogos'),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navyDeep,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_catalog.newLabel),
-        onPressed: _openForm,
-      ),
+      // Nothing to add to a list that could not load — see the products screen.
+      floatingActionButton: entriesAsync.hasError
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: Text(_catalog.newLabel),
+              onPressed: _openForm,
+            ),
       body: SafeArea(
         child: Column(
           children: [
@@ -228,6 +231,12 @@ class _SupportCatalogFormState extends ConsumerState<_SupportCatalogForm> {
 
   bool get _isEditing => widget.existing != null;
 
+  late final String _openedWith = _snapshot();
+
+  String _snapshot() => '${_name.text}\u0000${_extra.text}\u0000$_isActive';
+
+  bool get _hasChanges => _snapshot() != _openedWith;
+
   bool get _isValid {
     if (_name.text.trim().isEmpty) return false;
     // The councils' `abbreviation` is NOT NULL on the column, so an empty one
@@ -305,6 +314,7 @@ class _SupportCatalogFormState extends ConsumerState<_SupportCatalogForm> {
           : widget.catalog.newLabel,
       saving: _saving,
       error: _error,
+      hasChanges: _hasChanges,
       onSave: _isValid ? _submit : null,
       children: [
         CatalogField(

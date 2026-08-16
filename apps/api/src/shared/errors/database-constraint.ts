@@ -13,13 +13,21 @@ const CONSTRAINT_VIOLATIONS = {
     status: 409,
     message: "A record with this value already exists.",
   },
-  // foreign_key_violation — either the referenced row is gone, or something
-  // still points at the row being removed.
+  // foreign_key_violation, on a DELETE — something still points at this row.
   "23503": {
     code: "RESOURCE_IN_USE",
     status: 409,
     message:
       "This record is linked to others and cannot be changed or removed while they exist.",
+  },
+  // foreign_key_violation, on an INSERT or UPDATE — the row being *referenced*
+  // does not exist. Same SQLSTATE, opposite meaning, and the caller's fix is the
+  // opposite too: "pick a Linha that exists", not "remove what points at this".
+  // Told apart by Postgres's own `detail`; see `toDatabaseConstraintError`.
+  "23503_missing": {
+    code: "RESOURCE_NOT_FOUND",
+    status: 400,
+    message: "One of the referenced records does not exist.",
   },
   // check_violation — a value the schema refuses, e.g. a non-positive quantity.
   "23514": {
@@ -66,14 +74,20 @@ export class DatabaseConstraintError extends AppError {
 /** The driver reports the SQLSTATE on the error, or on the error Drizzle wrapped. */
 function readPostgresError(
   error: unknown
-): { code?: string; constraint?: string } | null {
+): { code?: string; constraint?: string; detail?: string } | null {
   if (typeof error !== "object" || error === null) return null;
-  const candidate = error as { code?: unknown; constraint?: unknown; cause?: unknown };
+  const candidate = error as {
+    code?: unknown;
+    constraint?: unknown;
+    detail?: unknown;
+    cause?: unknown;
+  };
   if (typeof candidate.code === "string") {
     return {
       code: candidate.code,
       constraint:
         typeof candidate.constraint === "string" ? candidate.constraint : undefined,
+      detail: typeof candidate.detail === "string" ? candidate.detail : undefined,
     };
   }
   // Drizzle rewraps driver errors, so the SQLSTATE is one level down.
@@ -89,6 +103,19 @@ export function toDatabaseConstraintError(
 ): DatabaseConstraintError | null {
   const postgres = readPostgresError(error);
   if (!postgres?.code) return null;
+
+  // A foreign key fails in two opposite directions. Postgres phrases them
+  // differently in `detail`: "is not present in table" when the referenced row
+  // is missing, "is still referenced from table" when this row is the one being
+  // pointed at. Sending "cannot be removed while they exist" to an admin who
+  // picked a Linha that does not exist describes the wrong problem entirely.
+  if (
+    postgres.code === "23503" &&
+    postgres.detail?.includes("is not present in table")
+  ) {
+    return new DatabaseConstraintError("23503_missing", postgres.constraint);
+  }
+
   if (!(postgres.code in CONSTRAINT_VIOLATIONS)) return null;
   return new DatabaseConstraintError(
     postgres.code as keyof typeof CONSTRAINT_VIOLATIONS,

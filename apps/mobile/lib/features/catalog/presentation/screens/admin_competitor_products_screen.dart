@@ -76,13 +76,16 @@ class _AdminCompetitorProductsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Produtos concorrentes'),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navyDeep,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo produto'),
-        onPressed: _openForm,
-      ),
+      // Nothing to add to a list that could not load — see the products screen.
+      floatingActionButton: competitorsAsync.hasError
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Novo produto'),
+              onPressed: _openForm,
+            ),
       body: SafeArea(
         child: Column(
           children: [

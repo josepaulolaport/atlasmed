@@ -3,6 +3,9 @@ import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { catalogUseCases } from "../../composition";
 
+/// Same bound as the products route — `numeric(12,2)`, never negative.
+const PRICE = t.Number({ minimum: 0, maximum: 9999999999.99 });
+
 const listCompetitorProductsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "CATALOG"))
@@ -72,9 +75,9 @@ const createCompetitorProductRoute = new Elysia()
         manufacturer: t.String({ minLength: 1 }),
         brand: t.Optional(t.Nullable(t.String())),
         countryOfOrigin: t.String({ minLength: 1 }),
-        price17: t.Number(),
-        price18: t.Number(),
-        price20: t.Number(),
+        price17: PRICE,
+        price18: PRICE,
+        price20: PRICE,
         brasindiceUpdatedAt: t.Optional(t.Nullable(t.String())),
         isActive: t.Optional(t.Boolean()),
       }),
@@ -106,9 +109,9 @@ const updateCompetitorProductRoute = new Elysia()
         manufacturer: t.Optional(t.String()),
         brand: t.Optional(t.Nullable(t.String())),
         countryOfOrigin: t.Optional(t.String()),
-        price17: t.Optional(t.Number()),
-        price18: t.Optional(t.Number()),
-        price20: t.Optional(t.Number()),
+        price17: t.Optional(PRICE),
+        price18: t.Optional(PRICE),
+        price20: t.Optional(PRICE),
         brasindiceUpdatedAt: t.Optional(t.Nullable(t.String())),
         isActive: t.Optional(t.Boolean()),
       }),

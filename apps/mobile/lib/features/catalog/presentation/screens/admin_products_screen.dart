@@ -134,7 +134,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: isAdmin
+      // Hidden while the list could not load, as well as for a non-admin. The
+      // form needs the Linhas that came from the same failed request, so
+      // offering "Novo produto" there opens a form that cannot be completed and
+      // cannot say why.
+      floatingActionButton: isAdmin && !familiesAsync.hasError
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.navyDeep,
               foregroundColor: Colors.white,

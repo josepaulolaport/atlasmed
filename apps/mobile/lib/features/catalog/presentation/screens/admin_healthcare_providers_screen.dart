@@ -86,13 +86,16 @@ class _AdminHealthcareProvidersScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Fontes pagadoras'),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navyDeep,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova fonte'),
-        onPressed: _openForm,
-      ),
+      // Nothing to add to a list that could not load — see the products screen.
+      floatingActionButton: providersAsync.hasError
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Nova fonte'),
+              onPressed: _openForm,
+            ),
       body: SafeArea(
         child: Column(
           children: [
@@ -185,6 +188,12 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
 
   bool get _isEditing => widget.existing != null;
 
+  late final String _openedWith = _snapshot();
+
+  String _snapshot() => '${_name.text}\u0000$_type\u0000$_isActive';
+
+  bool get _hasChanges => _snapshot() != _openedWith;
+
   @override
   void initState() {
     super.initState();
@@ -244,6 +253,7 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
       title: _isEditing ? 'Editar fonte pagadora' : 'Nova fonte pagadora',
       saving: _saving,
       error: _error,
+      hasChanges: _hasChanges,
       onSave: _name.text.trim().isEmpty ? null : _submit,
       children: [
         CatalogField(

@@ -131,6 +131,28 @@ describe("UploadProductPictureUseCase", () => {
     expect(result.data.pictureUrl).toContain("/api/v1/products/pictures/products/7/");
   });
 
+  test("rejects bytes that are not a decodable image", async () => {
+    // The declared content type is the caller's word for it. Without decoding,
+    // an HTML file uploaded as `image/png` was stored and served back as one.
+    const repository = fakeRepository(null);
+    const storage = fakeStorage();
+    const file = new File(
+      [new TextEncoder().encode("<html><script>alert(1)</script></html>")],
+      "evil.png",
+      { type: "image/png" }
+    );
+
+    await expect(
+      new UploadProductPictureUseCase({
+        productRepository: repository,
+        storage,
+      }).execute({ productId: 7, file })
+    ).rejects.toBeInstanceOf(ValidationError);
+    // Nothing reaches storage, and the product keeps the picture it had.
+    expect(storage.upload).not.toHaveBeenCalled();
+    expect(repository.updatePicture).not.toHaveBeenCalled();
+  });
+
   test("rejects a type the browser will not render", async () => {
     const repository = fakeRepository(null);
     const storage = fakeStorage();

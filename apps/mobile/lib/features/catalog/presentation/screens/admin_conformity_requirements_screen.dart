@@ -56,13 +56,16 @@ class _AdminConformityRequirementsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Requisitos de cadastro'),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navyDeep,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo requisito'),
-        onPressed: _openForm,
-      ),
+      // Nothing to add to a list that could not load — see the products screen.
+      floatingActionButton: requirementsAsync.hasError
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.navyDeep,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Novo requisito'),
+              onPressed: _openForm,
+            ),
       body: SafeArea(
         child: requirementsAsync.when(
           loading: () => const SimpleListSkeleton(),
@@ -215,6 +218,21 @@ class _RequirementFormScreenState
     _maxCombinedMb,
   ];
 
+  /// What the form looked like when it opened. See [CatalogUnsavedGuard].
+  late final String _openedWith = _snapshot();
+
+  String _snapshot() => [
+    for (final controller in _controllers) controller.text,
+    '$_verticalId',
+    '$_documentType',
+    '$_isActive',
+    '$_requiresValidityDate',
+    '$_requiresFrontAndBack',
+    (_mimeTypes.toList()..sort()).join(','),
+  ].join('\u0000');
+
+  bool get _hasChanges => _snapshot() != _openedWith;
+
   @override
   void initState() {
     super.initState();
@@ -357,82 +375,115 @@ class _RequirementFormScreenState
   Widget build(BuildContext context) {
     final verticalsAsync = ref.watch(catalogVerticalsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CatalogFormAppBar(
-        title: _isEditing ? 'Editar requisito' : 'Novo requisito',
-        // The shared button, not a bare icon: it disables itself when the list
-        // already said this requirement is answered, so the admin is never
-        // offered a delete the API will refuse (spec 0016 §6.2).
-        action: _isEditing
-            ? CatalogDeleteButton(
-                deletability: widget.existing?.deletability,
-                onDelete: _delete,
-                blockedTitle: 'Este requisito não pode ser excluído',
-              )
-            : null,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                children: [
-                  const _Label('Nome do documento'),
-                  CatalogTextInput(
-                    controller: _name,
-                    capitalization: TextCapitalization.sentences,
-                    hint: 'Ex.: Licença Sanitária',
-                  ),
-                  const SizedBox(height: 14),
-                  const _Label('Descrição'),
-                  CatalogTextInput(
-                    controller: _description,
-                    capitalization: TextCapitalization.sentences,
-                    hint: 'Opcional — o que o representante deve enviar',
-                  ),
-                  const SizedBox(height: 14),
-                  const _Label('Identificador (slug)'),
-                  // Locked once saved: the slug is the key this document
-                  // travels by, so the field is disabled rather than removed —
-                  // an admin looking for it deserves to see it and the reason.
-                  _ReadOnlyWhenEditing(
-                    isEditing: _isEditing,
-                    child: CatalogTextInput(
-                      controller: _slug,
-                      hint: 'Derivado do nome se ficar vazio',
+    return CatalogUnsavedGuard(
+      hasChanges: _hasChanges,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: CatalogFormAppBar(
+          title: _isEditing ? 'Editar requisito' : 'Novo requisito',
+          // The shared button, not a bare icon: it disables itself when the list
+          // already said this requirement is answered, so the admin is never
+          // offered a delete the API will refuse (spec 0016 §6.2).
+          action: _isEditing
+              ? CatalogDeleteButton(
+                  deletability: widget.existing?.deletability,
+                  onDelete: _delete,
+                  blockedTitle: 'Este requisito não pode ser excluído',
+                )
+              : null,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  children: [
+                    const _Label('Nome do documento'),
+                    CatalogTextInput(
+                      controller: _name,
+                      capitalization: TextCapitalization.sentences,
+                      hint: 'Ex.: Licença Sanitária',
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isEditing
-                        ? 'Definido no cadastro e não editável: é a chave com '
-                              'que este documento viaja em todo o cadastro.'
-                        : 'Chave estável deste documento. Escolhida uma vez.',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.gray400,
+                    const SizedBox(height: 14),
+                    const _Label('Descrição'),
+                    CatalogTextInput(
+                      controller: _description,
+                      capitalization: TextCapitalization.sentences,
+                      hint: 'Opcional — o que o representante deve enviar',
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const _Section('ESCOPO'),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'De quem este documento é exigido. Quanto mais amplo, mais '
-                    'clínicas passam a ter uma pendência.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
-                  ),
-                  const SizedBox(height: 10),
-                  const _Label('Linha comercial'),
-                  verticalsAsync.when(
-                    loading: () => const LinearProgressIndicator(),
-                    error: (_, _) => const Text(
-                      'Não foi possível carregar as linhas.',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.error),
+                    const SizedBox(height: 14),
+                    const _Label('Identificador (slug)'),
+                    // Locked once saved: the slug is the key this document
+                    // travels by, so the field is disabled rather than removed —
+                    // an admin looking for it deserves to see it and the reason.
+                    _ReadOnlyWhenEditing(
+                      isEditing: _isEditing,
+                      child: CatalogTextInput(
+                        controller: _slug,
+                        hint: 'Derivado do nome se ficar vazio',
+                      ),
                     ),
-                    data: (verticals) => DropdownButtonFormField<int?>(
-                      initialValue: _verticalId,
+                    const SizedBox(height: 4),
+                    Text(
+                      _isEditing
+                          ? 'Definido no cadastro e não editável: é a chave com '
+                                'que este documento viaja em todo o cadastro.'
+                          : 'Chave estável deste documento. Escolhida uma vez.',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const _Section('ESCOPO'),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'De quem este documento é exigido. Quanto mais amplo, mais '
+                      'clínicas passam a ter uma pendência.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const _Label('Linha comercial'),
+                    verticalsAsync.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, _) => const Text(
+                        'Não foi possível carregar as linhas.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.error,
+                        ),
+                      ),
+                      data: (verticals) => DropdownButtonFormField<int?>(
+                        initialValue: _verticalId,
+                        isDense: true,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.gray900,
+                        ),
+                        decoration: catalogInputDecoration,
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Todas as linhas'),
+                          ),
+                          for (final vertical in verticals)
+                            DropdownMenuItem(
+                              value: vertical.id,
+                              child: Text(vertical.name),
+                            ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _verticalId = value),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const _Label('Tipo de documento da clínica'),
+                    DropdownButtonFormField<RequirementLegalDocumentType?>(
+                      initialValue: _documentType,
                       isDense: true,
                       style: const TextStyle(
                         fontSize: 14,
@@ -442,153 +493,134 @@ class _RequirementFormScreenState
                       items: [
                         const DropdownMenuItem(
                           value: null,
-                          child: Text('Todas as linhas'),
+                          child: Text('CNPJ e CPF'),
                         ),
-                        for (final vertical in verticals)
+                        for (final type in RequirementLegalDocumentType.values)
                           DropdownMenuItem(
-                            value: vertical.id,
-                            child: Text(vertical.name),
+                            value: type,
+                            child: Text(type.label),
                           ),
                       ],
-                      onChanged: (value) => setState(() => _verticalId = value),
+                      onChanged: (value) =>
+                          setState(() => _documentType = value),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  const _Label('Tipo de documento da clínica'),
-                  DropdownButtonFormField<RequirementLegalDocumentType?>(
-                    initialValue: _documentType,
-                    isDense: true,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.gray900,
+                    const SizedBox(height: 20),
+                    const _Section('O QUE SERÁ PEDIDO'),
+                    CatalogActiveSwitch(
+                      value: _requiresValidityDate,
+                      label: 'Pede data de validade',
+                      onChanged: (value) =>
+                          setState(() => _requiresValidityDate = value),
+                      explanation:
+                          'Uma Licença Sanitária vence; um Cartão CNPJ não. O '
+                          'aviso de vencimento sai desta data.',
                     ),
-                    decoration: catalogInputDecoration,
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('CNPJ e CPF'),
-                      ),
-                      for (final type in RequirementLegalDocumentType.values)
-                        DropdownMenuItem(value: type, child: Text(type.label)),
-                    ],
-                    onChanged: (value) => setState(() => _documentType = value),
-                  ),
-                  const SizedBox(height: 20),
-                  const _Section('O QUE SERÁ PEDIDO'),
-                  CatalogActiveSwitch(
-                    value: _requiresValidityDate,
-                    label: 'Pede data de validade',
-                    onChanged: (value) =>
-                        setState(() => _requiresValidityDate = value),
-                    explanation:
-                        'Uma Licença Sanitária vence; um Cartão CNPJ não. O '
-                        'aviso de vencimento sai desta data.',
-                  ),
-                  CatalogActiveSwitch(
-                    value: _requiresFrontAndBack,
-                    label: 'Pede frente e verso',
-                    onChanged: (value) =>
-                        setState(() => _requiresFrontAndBack = value),
-                    explanation:
-                        'Duas imagens em vez de uma — documentos de identidade '
-                        'costumam precisar.',
-                  ),
-                  const SizedBox(height: 14),
-                  const _Label('Tipos de arquivo aceitos'),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final entry in _mimeOptions.entries)
-                        FilterChip(
-                          label: Text(entry.value),
-                          selected: _mimeTypes.contains(entry.key),
-                          onSelected: (selected) => setState(() {
-                            if (selected) {
-                              _mimeTypes.add(entry.key);
-                            } else {
-                              _mimeTypes.remove(entry.key);
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
-                  if (_mimeTypes.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Escolha ao menos um tipo — senão não há nada que o '
-                        'representante possa enviar.',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.error,
-                        ),
-                      ),
+                    CatalogActiveSwitch(
+                      value: _requiresFrontAndBack,
+                      label: 'Pede frente e verso',
+                      onChanged: (value) =>
+                          setState(() => _requiresFrontAndBack = value),
+                      explanation:
+                          'Duas imagens em vez de uma — documentos de identidade '
+                          'costumam precisar.',
                     ),
-                  const SizedBox(height: 20),
-                  const _Section('LIMITES DE ENVIO'),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _Label('Máx. arquivos'),
-                            CatalogTextInput(
-                              controller: _maxFiles,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ],
+                    const SizedBox(height: 14),
+                    const _Label('Tipos de arquivo aceitos'),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final entry in _mimeOptions.entries)
+                          FilterChip(
+                            label: Text(entry.value),
+                            selected: _mimeTypes.contains(entry.key),
+                            onSelected: (selected) => setState(() {
+                              if (selected) {
+                                _mimeTypes.add(entry.key);
+                              } else {
+                                _mimeTypes.remove(entry.key);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                    if (_mimeTypes.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Escolha ao menos um tipo — senão não há nada que o '
+                          'representante possa enviar.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.error,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _Label('Máx. por arquivo (MB)'),
-                            CatalogTextInput(
-                              controller: _maxFileSizeMb,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ],
+                    const SizedBox(height: 20),
+                    const _Section('LIMITES DE ENVIO'),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _Label('Máx. arquivos'),
+                              CatalogTextInput(
+                                controller: _maxFiles,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _Label('Máx. total (MB)'),
-                            CatalogTextInput(
-                              controller: _maxCombinedMb,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _Label('Máx. por arquivo (MB)'),
+                              CatalogTextInput(
+                                controller: _maxFileSizeMb,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const _Section('ESTADO'),
-                  CatalogActiveSwitch(
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value),
-                    explanation:
-                        'Um requisito inativo some das listas de cadastro. O '
-                        'que já foi enviado continua valendo.',
-                  ),
-                ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _Label('Máx. total (MB)'),
+                              CatalogTextInput(
+                                controller: _maxCombinedMb,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const _Section('ESTADO'),
+                    CatalogActiveSwitch(
+                      value: _isActive,
+                      onChanged: (value) => setState(() => _isActive = value),
+                      explanation:
+                          'Um requisito inativo some das listas de cadastro. O '
+                          'que já foi enviado continua valendo.',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            CatalogSaveBar(
-              onSave: _isValid ? _submit : null,
-              saving: _saving,
-              error: _error,
-            ),
-          ],
+              CatalogSaveBar(
+                onSave: _isValid ? _submit : null,
+                saving: _saving,
+                error: _error,
+              ),
+            ],
+          ),
         ),
       ),
     );

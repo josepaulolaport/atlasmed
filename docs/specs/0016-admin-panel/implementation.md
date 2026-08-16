@@ -1188,3 +1188,38 @@ Walk all six lists and all five forms. What must be true everywhere:
 - Every form field has its label above it and a navy focus ring.
 - Every add action is a navy extended FAB with white text.
 - Every toast floats, carries an icon, and is red only when something failed.
+
+---
+
+## Phase 10 — a QA pass over the whole panel
+
+Every screen driven again from the hub, every control pressed, plus direct
+probes at the API for the cases a UI cannot easily produce. Nine defects, five
+of them server-side.
+
+### Server
+
+| # | What | Now |
+|---|---|---|
+| 1 | **Negative prices accepted** on products and competitor products, create and update, all four price columns. `price: -5` saved and flowed into the comparativo. | Bounded at the route: `numeric(12,2)`, never below zero. |
+| 2 | **Any bytes accepted as a picture.** An HTML file uploaded as `image/png` was stored and served back with that content type. | `calculateBlurhash` already decodes the bytes with sharp and returns null when it cannot — the answer was computed and thrown away. Now it rejects. Both image routes also send `X-Content-Type-Options: nosniff`. |
+| 3 | **A missing foreign key read as "still in use".** Creating a product with a Linha that does not exist answered 409 *"This record is linked to others and cannot be changed or removed while they exist"* — the opposite problem, and the opposite fix. | Postgres phrases the two directions differently in `detail`; the missing-target case is now a 400 that says so. |
+| 4 | **Two conformity requirements could share a name.** The slug was unique, the name was not, so the cadastro asked a clinic for the same document twice and the admin list showed two identical rows. | Migration `0118`, a normalized unique index on the name. |
+| 5 | Deleting a product leaves its stored picture behind. | Noted, not fixed — a few kilobytes, and the fix belongs with a storage sweep rather than in the delete path. |
+
+Checked and found correct: every write path 403s for a REP; delete is
+ownership-scoped both ways; `maxFiles`/size bounds hold; duplicate payer and
+specialty names are rejected case- and whitespace-insensitively.
+
+### Client
+
+| # | What | Now |
+|---|---|---|
+| 6 | **No unsaved-changes guard on any form.** One tap on ✕ discarded everything, on a product form with twenty-odd fields. Five screens elsewhere in the app already use `PopScope`. | `CatalogUnsavedGuard`, with the calendar editor's wording. Sheets route their close through `maybePop` so it cannot be walked past. |
+| 7 | **A disabled "Salvar" with no explanation.** The four required fields span a screen and a half. | The bar names what is still missing, in the order the fields appear. |
+| 8 | **Família offered every family, always.** Twelve chips of 70-character product names — `familyName` falls back to `name` when `product_group` is null, which it is for every imported row — between the field and the rest of the form. | Suggestions only once something is typed, capped at four, ellipsised. |
+| 9 | **The FAB stayed live on a list that failed to load.** On Produtos the form then opens without the Linhas it needs, so it can be filled and never saved. | Hidden while the list is in error, on all six lists. |
+
+Not defects, checked and left alone: the branch-back arrow on the hub (app-wide
+`AppShell` behaviour, not this panel's), and the flat picker rows in the two
+"add" sheets (a picker is not a record list).

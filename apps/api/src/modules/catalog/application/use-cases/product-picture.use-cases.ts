@@ -73,11 +73,24 @@ export class UploadProductPictureUseCase {
       ]);
     }
 
-    const key = `products/${input.productId}/${randomUUID()}.${extension}`;
     const bytes = new Uint8Array(await input.file.arrayBuffer());
-    await this.deps.storage.upload(key, bytes, input.file.type);
 
+    // The declared content type is the caller's word for it. `calculateBlurhash`
+    // decodes the bytes with sharp and returns null when it cannot, which is a
+    // free proof that this is a real image — computing it and ignoring the
+    // answer let an HTML file be stored and served back as `image/png`.
     const blurhash = await calculateBlurhash(bytes);
+    if (blurhash === null) {
+      throw new ValidationError([
+        {
+          field: "picture",
+          message: "Picture must be a readable JPEG, PNG, or WebP image",
+        },
+      ]);
+    }
+
+    const key = `products/${input.productId}/${randomUUID()}.${extension}`;
+    await this.deps.storage.upload(key, bytes, input.file.type);
     const url = pictureUrl(key);
     await this.deps.productRepository.updatePicture(input.productId, {
       pictureUrl: url,

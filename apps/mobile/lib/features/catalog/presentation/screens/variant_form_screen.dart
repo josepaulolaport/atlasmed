@@ -166,6 +166,20 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     _price20,
   ];
 
+  /// What the form looked like when it opened, so closing can tell an edit from
+  /// a look. See [CatalogUnsavedGuard].
+  late final String _openedWith = _snapshot();
+
+  String _snapshot() => [
+    for (final controller in _controllers) controller.text,
+    '$_isActive',
+    '$_requiresSterilization',
+    '${_brasindiceUpdatedAt?.toIso8601String()}',
+    _selectedVerticalIds.join(','),
+  ].join('\u0000');
+
+  bool get _hasChanges => _snapshot() != _openedWith;
+
   /// Null until the answer arrives; see [CatalogDeleteButton].
   ProductDeletability? _deletability;
 
@@ -374,6 +388,37 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       _pricesParse &&
       _emultecIdParses;
 
+  /// The families worth offering for what has been typed so far.
+  ///
+  /// Nothing until there is something to match on — an empty field means the
+  /// admin has not decided, and a wall of chips is not a decision aid. Capped,
+  /// because a match on "R" is still most of the catalogue.
+  List<String> _familySuggestions(List<String> all) {
+    final query = _familyName.text.trim().toLowerCase();
+    if (query.isEmpty) return const [];
+    return all
+        .where(
+          (name) =>
+              name.toLowerCase().contains(query) && name != _familyName.text,
+        )
+        .take(4)
+        .toList();
+  }
+
+  /// What is still missing, named in the order the fields appear, so the
+  /// sentence points down the form rather than listing everything at once.
+  String? get _missing {
+    if (_name.text.trim().isEmpty) return 'Informe o nome do produto.';
+    if (_manufacturer.text.trim().isEmpty) return 'Informe o fabricante.';
+    if (_countryOfOrigin.text.trim().isEmpty) return 'Informe o país.';
+    if (!_pricesParse) return 'Revise os preços: algum campo não é um número.';
+    if (!_emultecIdParses) return 'O ID Emultec precisa ser um número.';
+    if (_selectedVerticalIds.isEmpty) {
+      return 'Escolha ao menos uma linha comercial.';
+    }
+    return null;
+  }
+
   /// A blank price field means zero, which is what the column already holds for
   /// products nobody has priced. Text that is *not* a number is a mistake.
   bool get _pricesParse => [
@@ -527,532 +572,551 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
               .firstOrNull
         : null;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CatalogFormAppBar(
-        title: _isEditing ? 'Editar produto' : 'Novo produto',
-        action: _isEditing
-            ? CatalogDeleteButton(
-                deletability: _deletability,
-                onDelete: _delete,
-                blockedTitle: 'Este produto não pode ser excluído',
-              )
-            : null,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                children: [
-                  const CatalogFieldLabel('Imagem'),
-                  const SizedBox(height: 6),
-                  _PictureField(
-                    // A new product has no id yet, and the upload route takes
-                    // one. Rather than buffer the bytes through the save, the
-                    // section says what to do — the alternative is a form that
-                    // accepts a picture and silently drops it.
-                    enabled: _isEditing,
-                    busy: _pictureBusy,
-                    pictureUrl: _pictureUrl,
-                    blurhash: _pictureBlurhash,
-                    onTap: _openPictureOptions,
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Nome do produto'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _name,
-                    hint: 'Ex.: REVISCON 1.0%',
-                    capitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Código'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _code,
-                              hint: 'REV-1.0',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Apresentação'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _presentation,
-                              hint: '20MG / 2ML',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Família'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _familyName,
-                    hint: 'Ex.: REVISCON',
-                    capitalization: TextCapitalization.characters,
-                  ),
-                  if (familyNames.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+    return CatalogUnsavedGuard(
+      hasChanges: _hasChanges,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: CatalogFormAppBar(
+          title: _isEditing ? 'Editar produto' : 'Novo produto',
+          action: _isEditing
+              ? CatalogDeleteButton(
+                  deletability: _deletability,
+                  onDelete: _delete,
+                  blockedTitle: 'Este produto não pode ser excluído',
+                )
+              : null,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  children: [
+                    const CatalogFieldLabel('Imagem'),
+                    const SizedBox(height: 6),
+                    _PictureField(
+                      // A new product has no id yet, and the upload route takes
+                      // one. Rather than buffer the bytes through the save, the
+                      // section says what to do — the alternative is a form that
+                      // accepts a picture and silently drops it.
+                      enabled: _isEditing,
+                      busy: _pictureBusy,
+                      pictureUrl: _pictureUrl,
+                      blurhash: _pictureBlurhash,
+                      onTap: _openPictureOptions,
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Nome do produto'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _name,
+                      hint: 'Ex.: REVISCON 1.0%',
+                      capitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
                       children: [
-                        for (final name in familyNames)
-                          _SuggestionChip(
-                            label: name,
-                            onTap: () => setState(() {
-                              _familyName.text = name;
-                            }),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Código'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _code,
+                                hint: 'REV-1.0',
+                              ),
+                            ],
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Apresentação'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _presentation,
+                                hint: '20MG / 2ML',
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Descrição'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _description,
-                    hint: 'Opcional',
-                    capitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Marca'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _brand,
-                              hint: 'Opcional',
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Família'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _familyName,
+                      hint: 'Ex.: REVISCON',
+                      capitalization: TextCapitalization.characters,
+                    ),
+                    // Suggestions, not a catalogue. Every existing family used
+                    // to render unconditionally: on a new product that is
+                    // twelve chips of 70-character product names — `familyName`
+                    // falls back to `name` when `product_group` is null, which
+                    // it is for every imported row — filling the screen between
+                    // Família and the fields under it.
+                    if (_familySuggestions(familyNames).isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final name in _familySuggestions(familyNames))
+                            _SuggestionChip(
+                              label: name,
+                              onTap: () => setState(() {
+                                _familyName.text = name;
+                              }),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Classificação'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _productClassification,
-                              hint: 'Opcional',
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Classificação interna'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _internalClassification,
-                    hint: 'Opcional',
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('Linhas comerciais'),
-                  const SizedBox(height: 6),
-                  if (_isEditing)
-                    // Spec 0016 §6.7: chosen once. Orders key on
-                    // `facility_vertical_profile_id` and `product_potential_links`
-                    // is unique per (product, vertical), so a move silently
-                    // changes which profiles this product's sales join to and
-                    // orphans its metric link. Shown, with the reason, rather
-                    // than hidden — an admin looking for it deserves an answer.
-                    sectorsAsync.when(
-                      loading: () => const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      error: (_, _) => const Text(
-                        'Não foi possível carregar as linhas comerciais.',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.error,
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Descrição'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _description,
+                      hint: 'Opcional',
+                      capitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Marca'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _brand,
+                                hint: 'Opcional',
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      data: (sectors) {
-                        final names = sectors
-                            .where((s) => _selectedVerticalIds.contains(s.id))
-                            .map((s) => s.name)
-                            .join(' · ');
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              names.isEmpty ? '—' : names,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.gray900,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Classificação'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _productClassification,
+                                hint: 'Opcional',
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'A linha de um produto é definida no cadastro e '
-                              'não pode ser alterada: os pedidos já registrados '
-                              'estão ligados a ela.',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: AppColors.gray400,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    )
-                  else
-                    sectorsAsync.when(
-                      loading: () => const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: SizedBox(
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Classificação interna'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _internalClassification,
+                      hint: 'Opcional',
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('Linhas comerciais'),
+                    const SizedBox(height: 6),
+                    if (_isEditing)
+                      // Spec 0016 §6.7: chosen once. Orders key on
+                      // `facility_vertical_profile_id` and `product_potential_links`
+                      // is unique per (product, vertical), so a move silently
+                      // changes which profiles this product's sales join to and
+                      // orphans its metric link. Shown, with the reason, rather
+                      // than hidden — an admin looking for it deserves an answer.
+                      sectorsAsync.when(
+                        loading: () => const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                      ),
-                      error: (_, _) => const Text(
-                        'Não foi possível carregar as linhas comerciais.',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.error,
+                        error: (_, _) => const Text(
+                          'Não foi possível carregar as linhas comerciais.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.error,
+                          ),
                         ),
-                      ),
-                      data: (sectors) => sectors.isEmpty
-                          ? const Text(
-                              'Nenhuma linha comercial cadastrada.',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.gray400,
+                        data: (sectors) {
+                          final names = sectors
+                              .where((s) => _selectedVerticalIds.contains(s.id))
+                              .map((s) => s.name)
+                              .join(' · ');
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                names.isEmpty ? '—' : names,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.gray900,
+                                ),
                               ),
-                            )
-                          : Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final sector in sectors)
-                                  _SuggestionChip(
-                                    label: sector.name,
-                                    selected: _selectedVerticalIds.contains(
-                                      sector.id,
+                              const SizedBox(height: 4),
+                              const Text(
+                                'A linha de um produto é definida no cadastro e '
+                                'não pode ser alterada: os pedidos já registrados '
+                                'estão ligados a ela.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppColors.gray400,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      )
+                    else
+                      sectorsAsync.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        error: (_, _) => const Text(
+                          'Não foi possível carregar as linhas comerciais.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.error,
+                          ),
+                        ),
+                        data: (sectors) => sectors.isEmpty
+                            ? const Text(
+                                'Nenhuma linha comercial cadastrada.',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.gray400,
+                                ),
+                              )
+                            : Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final sector in sectors)
+                                    _SuggestionChip(
+                                      label: sector.name,
+                                      selected: _selectedVerticalIds.contains(
+                                        sector.id,
+                                      ),
+                                      onTap: () => _toggleSector(sector.id),
                                     ),
-                                    onTap: () => _toggleSector(sector.id),
-                                  ),
-                              ],
-                            ),
+                                ],
+                              ),
+                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Fabricante'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _manufacturer,
+                                hint: 'VSY',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('País'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _countryOfOrigin,
+                                hint: 'Alemanha',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Fabricante'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _manufacturer,
-                              hint: 'VSY',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('País'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _countryOfOrigin,
-                              hint: 'Alemanha',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  CatalogActiveSwitch(
-                    value: _requiresSterilization,
-                    label: 'Requer esterilização',
-                    onChanged: (value) =>
-                        setState(() => _requiresSterilization = value),
-                    explanation:
-                        'Marque para produtos que passam por autoclave antes '
-                        'do uso.',
-                  ),
-                  const SizedBox(height: 12),
-                  const CatalogSectionLabel('CÓDIGOS'),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Todos opcionais. Um campo vazio é salvo como “sem código” '
-                    '— não invente um valor para preencher.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
-                  ),
-                  const SizedBox(height: 10),
-                  const CatalogFieldLabel('SIMPRO'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(controller: _simproCode, hint: '00308555'),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('BRASÍNDICE'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(controller: _brasindiceCode, hint: '024847'),
-                  const SizedBox(height: 10),
-                  // The date the Brasíndice record was published — not the date
-                  // someone saved this form, which is what it used to record.
-                  _DateField(
-                    label: 'Publicação Brasíndice',
-                    value: _brasindiceUpdatedAt,
-                    onPick: _pickBrasindiceDate,
-                    onClear: _brasindiceUpdatedAt == null
-                        ? null
-                        : () => setState(() => _brasindiceUpdatedAt = null),
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('TISS'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(controller: _tissCode, hint: '0000094527'),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('EAN / código de barras'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _barcode,
-                              hint: '7891234567890',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('NCM'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _ncm,
-                              hint: '3006.10.19',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Registro ANVISA'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _anvisaRegistration,
-                              hint: 'Opcional',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('Código comercial'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _commercialCode,
-                              hint: 'Opcional',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const CatalogFieldLabel('ID do produto no Emultec'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _idProdutoEmultec,
-                    hint: 'Somente números',
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'É por este id que o importador de pedidos reconhece o '
-                    'produto. Um pedido do Emultec que cita um id não '
-                    'cadastrado fica retido até o produto existir aqui.',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
-                  ),
-                  const SizedBox(height: 20),
-                  const CatalogSectionLabel('UNIDADES'),
-                  const SizedBox(height: 10),
-                  const CatalogFieldLabel('Unidade'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _unit,
-                    hint: 'Ex.: caixa, ampola',
-                  ),
-                  const SizedBox(height: 12),
-                  // Read-only by decision (spec 0016 §7.1). Shown rather than
-                  // hidden, because the number is already used in reads and an
-                  // admin who cannot see it cannot notice it is wrong.
-                  _ReadOnlyRow(
-                    label: 'Unidades da métrica',
-                    value: brlNumber(widget.existing?.metricUnits ?? 1),
-                    note:
-                        'Quantas unidades da métrica valem uma unidade deste '
-                        'produto. Informativo: o cálculo de potencial usa as '
-                        'quantidades brutas, e este campo não é editável.',
-                  ),
-                  const SizedBox(height: 20),
-                  const CatalogSectionLabel('PREÇOS'),
-                  const SizedBox(height: 10),
-                  const CatalogFieldLabel('Preço de tabela'),
-                  const SizedBox(height: 6),
-                  CatalogTextInput(
-                    controller: _price,
-                    hint: '0,00',
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
+                    const SizedBox(height: 12),
+                    CatalogActiveSwitch(
+                      value: _requiresSterilization,
+                      label: 'Requer esterilização',
+                      onChanged: (value) =>
+                          setState(() => _requiresSterilization = value),
+                      explanation:
+                          'Marque para produtos que passam por autoclave antes '
+                          'do uso.',
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 17%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price17,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 18%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price18,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CatalogFieldLabel('ICMS 20%'),
-                            const SizedBox(height: 6),
-                            CatalogTextInput(
-                              controller: _price20,
-                              hint: '0,00',
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_isEditing) ...[
-                    const SizedBox(height: 20),
-                    const CatalogSectionLabel('RELACIONADOS'),
+                    const SizedBox(height: 12),
+                    const CatalogSectionLabel('CÓDIGOS'),
                     const SizedBox(height: 4),
-                    _LinkRow(
-                      icon: Icons.storefront_outlined,
-                      label: 'Produtos concorrentes',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ManageCompetitorsScreen(
-                            variantId: widget.existing!.id,
-                            variantLabel: widget.existing!.comparisonLabel,
+                    const Text(
+                      'Todos opcionais. Um campo vazio é salvo como “sem código” '
+                      '— não invente um valor para preencher.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const CatalogFieldLabel('SIMPRO'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(controller: _simproCode, hint: '00308555'),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('BRASÍNDICE'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _brasindiceCode,
+                      hint: '024847',
+                    ),
+                    const SizedBox(height: 10),
+                    // The date the Brasíndice record was published — not the date
+                    // someone saved this form, which is what it used to record.
+                    _DateField(
+                      label: 'Publicação Brasíndice',
+                      value: _brasindiceUpdatedAt,
+                      onPick: _pickBrasindiceDate,
+                      onClear: _brasindiceUpdatedAt == null
+                          ? null
+                          : () => setState(() => _brasindiceUpdatedAt = null),
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('TISS'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(controller: _tissCode, hint: '0000094527'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('EAN / código de barras'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _barcode,
+                                hint: '7891234567890',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('NCM'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _ncm,
+                                hint: '3006.10.19',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Registro ANVISA'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _anvisaRegistration,
+                                hint: 'Opcional',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('Código comercial'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _commercialCode,
+                                hint: 'Opcional',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const CatalogFieldLabel('ID do produto no Emultec'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _idProdutoEmultec,
+                      hint: 'Somente números',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'É por este id que o importador de pedidos reconhece o '
+                      'produto. Um pedido do Emultec que cita um id não '
+                      'cadastrado fica retido até o produto existir aqui.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const CatalogSectionLabel('UNIDADES'),
+                    const SizedBox(height: 10),
+                    const CatalogFieldLabel('Unidade'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _unit,
+                      hint: 'Ex.: caixa, ampola',
+                    ),
+                    const SizedBox(height: 12),
+                    // Read-only by decision (spec 0016 §7.1). Shown rather than
+                    // hidden, because the number is already used in reads and an
+                    // admin who cannot see it cannot notice it is wrong.
+                    _ReadOnlyRow(
+                      label: 'Unidades da métrica',
+                      value: brlNumber(widget.existing?.metricUnits ?? 1),
+                      note:
+                          'Quantas unidades da métrica valem uma unidade deste '
+                          'produto. Informativo: o cálculo de potencial usa as '
+                          'quantidades brutas, e este campo não é editável.',
+                    ),
+                    const SizedBox(height: 20),
+                    const CatalogSectionLabel('PREÇOS'),
+                    const SizedBox(height: 10),
+                    const CatalogFieldLabel('Preço de tabela'),
+                    const SizedBox(height: 6),
+                    CatalogTextInput(
+                      controller: _price,
+                      hint: '0,00',
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 17%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price17,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 18%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price18,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CatalogFieldLabel('ICMS 20%'),
+                              const SizedBox(height: 6),
+                              CatalogTextInput(
+                                controller: _price20,
+                                hint: '0,00',
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_isEditing) ...[
+                      const SizedBox(height: 20),
+                      const CatalogSectionLabel('RELACIONADOS'),
+                      const SizedBox(height: 4),
+                      _LinkRow(
+                        icon: Icons.storefront_outlined,
+                        label: 'Produtos concorrentes',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ManageCompetitorsScreen(
+                              variantId: widget.existing!.id,
+                              variantLabel: widget.existing!.comparisonLabel,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    _LinkRow(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Ver comparativo de preços',
-                      onTap: () => CatalogComparisonRoute(
-                        variantId: widget.existing!.id,
-                      ).push(context),
-                    ),
-                    if (family != null) ...[
-                      const SizedBox(height: 12),
-                      _PublicationFooter(
-                        brasindiceDate: family.brasindicePublishedAt,
-                        simproDate: family.simproPublishedAt,
+                      _LinkRow(
+                        icon: Icons.bar_chart_rounded,
+                        label: 'Ver comparativo de preços',
+                        onTap: () => CatalogComparisonRoute(
+                          variantId: widget.existing!.id,
+                        ).push(context),
                       ),
+                      if (family != null) ...[
+                        const SizedBox(height: 12),
+                        _PublicationFooter(
+                          brasindiceDate: family.brasindicePublishedAt,
+                          simproDate: family.simproPublishedAt,
+                        ),
+                      ],
                     ],
+                    const SizedBox(height: 20),
+                    const CatalogSectionLabel('ESTADO'),
+                    CatalogActiveSwitch(
+                      value: _isActive,
+                      onChanged: (value) => setState(() => _isActive = value),
+                      explanation:
+                          'Um produto inativo some das listas dos representantes '
+                          'e dos pedidos novos. Os pedidos e as métricas já '
+                          'registrados continuam válidos.',
+                    ),
                   ],
-                  const SizedBox(height: 20),
-                  const CatalogSectionLabel('ESTADO'),
-                  CatalogActiveSwitch(
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value),
-                    explanation:
-                        'Um produto inativo some das listas dos representantes '
-                        'e dos pedidos novos. Os pedidos e as métricas já '
-                        'registrados continuam válidos.',
-                  ),
-                ],
+                ),
               ),
-            ),
-            CatalogSaveBar(
-              onSave: _isValid ? _submit : null,
-              saving: _saving,
-              error: _error,
-            ),
-          ],
+              CatalogSaveBar(
+                onSave: _isValid ? _submit : null,
+                saving: _saving,
+                error: _error,
+                disabledReason: _missing,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1175,12 +1239,19 @@ class _SuggestionChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.gray700,
+          child: ConstrainedBox(
+            // A chip is a glance, not a paragraph. Family names run to 70
+            // characters here, and an unbounded one wrapped to three lines.
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : AppColors.gray700,
+              ),
             ),
           ),
         ),

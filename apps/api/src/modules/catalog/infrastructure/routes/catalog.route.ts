@@ -136,6 +136,9 @@ const getProductRoute = new Elysia()
  * - `metricUnits` — informative, no writer anywhere (spec 0016 §7.1).
  * - `ownership` — chosen by the endpoint, never by a field (§6.1).
  */
+/// `numeric(12,2)`: ten digits before the point, two after.
+const PRICE = t.Number({ minimum: 0, maximum: 9999999999.99 });
+
 const productWritableFields = {
   code: t.Optional(t.Nullable(t.String())),
   name: t.String({ minLength: 1 }),
@@ -159,10 +162,13 @@ const productWritableFields = {
   tissCode: t.Optional(t.Nullable(t.String())),
   manufacturer: t.String({ minLength: 1 }),
   countryOfOrigin: t.String({ minLength: 1 }),
-  price: t.Optional(t.Nullable(t.Number())),
-  price17: t.Optional(t.Number()),
-  price18: t.Optional(t.Number()),
-  price20: t.Optional(t.Number()),
+  // Bounded, not merely typed. A price is a `numeric(12,2)` the comparativo and
+  // the rep's screens read straight out; nothing downstream treats a negative
+  // as invalid, so `-5` simply becomes what the product costs.
+  price: t.Optional(t.Nullable(PRICE)),
+  price17: t.Optional(PRICE),
+  price18: t.Optional(PRICE),
+  price20: t.Optional(PRICE),
   brasindiceUpdatedAt: t.Optional(t.Nullable(t.String())),
   isActive: t.Optional(t.Boolean()),
 } as const;
@@ -261,6 +267,10 @@ const downloadProductPictureRoute = new Elysia()
         .execute({ storageKey: key });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";
+      // The stored object's bytes are whatever was uploaded. Without this a
+      // browser may sniff past the declared type and render them as something
+      // else entirely.
+      set.headers["x-content-type-options"] = "nosniff";
       return result.bytes;
     },
     {

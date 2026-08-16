@@ -256,6 +256,7 @@ class CatalogSaveBar extends StatelessWidget {
     required this.saving,
     this.error,
     this.label = 'Salvar',
+    this.disabledReason,
   });
 
   /// Null disables the button — the form is incomplete.
@@ -264,12 +265,47 @@ class CatalogSaveBar extends StatelessWidget {
   final String? error;
   final String label;
 
+  /// What is still missing, shown while [onSave] is null.
+  ///
+  /// A greyed-out button is not an explanation. On the product form the four
+  /// required fields are spread over a screen and a half, so an admin who fills
+  /// three of them sees a dead button and has to hunt for the fourth.
+  final String? disabledReason;
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (error == null &&
+            onSave == null &&
+            disabledReason != null &&
+            !saving)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: AppColors.gray400,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    disabledReason!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.gray500,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (error != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -371,10 +407,14 @@ class CatalogFormSheet extends StatelessWidget {
     required this.saving,
     this.error,
     this.saveLabel = 'Salvar',
+    this.hasChanges = false,
   });
 
   final String title;
   final List<Widget> children;
+
+  /// Whether closing would lose something. See [CatalogUnsavedGuard].
+  final bool hasChanges;
 
   /// Null while the form is incomplete — the button shows, disabled.
   final VoidCallback? onSave;
@@ -384,6 +424,10 @@ class CatalogFormSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return CatalogUnsavedGuard(hasChanges: hasChanges, child: _build(context));
+  }
+
+  Widget _build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.background,
@@ -424,7 +468,9 @@ class CatalogFormSheet extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: 'Fechar',
-                    onPressed: () => Navigator.of(context).pop(),
+                    // `maybePop`, not `pop` — a direct pop walks straight past
+                    // the guard above.
+                    onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(
                       Icons.close_rounded,
                       size: 20,
@@ -453,6 +499,65 @@ class CatalogFormSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Guards a form against losing edits to a stray tap on the close button.
+///
+/// Five screens elsewhere in the app already do this — the territory editor,
+/// the CNES wizard, the representative detail, the document composer, the
+/// calendar editor. None of the panel's five forms did, and the product form is
+/// the longest in the app: twenty-odd fields discarded silently by one tap on
+/// the ✕.
+///
+/// The wording matches the calendar editor's, because an admin should not have
+/// to read two different sentences for the same question.
+class CatalogUnsavedGuard extends StatelessWidget {
+  const CatalogUnsavedGuard({
+    super.key,
+    required this.hasChanges,
+    required this.child,
+  });
+
+  /// False while the form still matches what it was opened with, so an admin
+  /// who opens a record and closes it is not asked anything.
+  final bool hasChanges;
+  final Widget child;
+
+  static Future<bool> confirmDiscard(BuildContext context) async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Descartar alterações?'),
+        content: const Text('As informações preenchidas serão perdidas.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Continuar editando'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    return discard ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !hasChanges,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !context.mounted) return;
+        if (await confirmDiscard(context) && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: child,
     );
   }
 }

@@ -183,7 +183,9 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const AtlasAppBar(page: 'Métricas'),
-      floatingActionButton: _verticalId == null
+      // No Linha selected means nothing to create a metric *in*; an error means
+      // the screen does not know what is already there.
+      floatingActionButton: _verticalId == null || _error != null
           ? null
           : FloatingActionButton.extended(
               backgroundColor: AppColors.navyDeep,
