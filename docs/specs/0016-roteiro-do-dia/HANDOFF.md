@@ -2,11 +2,13 @@
 
 Branch `feature/roteiro-do-dia-p1-20260815`, tree clean. Last work 2026-08-16:
 a second full simulator sweep (§7), the day grid's drag, the quick sheet and
-Perfil (§8), and lunch moving from a preference to a calendar block (§9).
+Perfil (§8), lunch moving from a preference to a calendar block (§9), and the
+day's budget, the missing break and what comes next (§10).
 
-**Read §9 and §8 first if you are picking this up cold.** §9 changes what every
-generated day looks like — no rep gets a lunch break unless they have put one
-on their own calendar.
+**Read §10 and §9 first if you are picking this up cold.** Between them they
+change what every generated day looks like: no rep gets a lunch break unless
+they have put one on their own calendar, and `dailyLimit` now counts the visits
+already in the diary rather than only the ones the engine adds.
 
 Spec: `requirements.md` in this folder. Section numbers below refer to it.
 
@@ -429,6 +431,71 @@ the anchor, which is where a lean the wrong way would show up.
 Verified against Postgres: a WEEKDAYS block at 12:00 materialises Mon–Fri and
 not at the weekend, and a generated day ran 08:35, 09:38, 10:46, then jumped to
 13:00 — the end of the block.
+
+---
+
+### 10. The day's budget, the missing break, and what comes next (2026-08-16, last)
+
+Spec §15.7 has the design; this is what was driven and what is left.
+
+**The lunch block was driven end to end on the iPhone 17**, every write checked
+in Postgres. Moving one occurrence wrote an override keyed to the *original*
+12:00 slot with the new 13:00 time, leaving the series alone; cancelling one
+wrote a second override with its reason; cancelling the series set
+`calendar.status = CANCELLED` v2 and left both overrides as history. The block
+was then re-created from the app — the recurrence sheet offers *De segunda a
+sexta*, and the month view shows it Mon–Fri with the weekends blank.
+
+Then the engine, per day, against the real book:
+
+| day | state of the block | plan |
+|---|---|---|
+| 17 Aug | moved to 13:00 | five stops 08:07 → **12:59**, stopping dead before it |
+| 18 Aug | that occurrence cancelled | no notice, **11:18–12:18 across noon** |
+| 19 Aug | series still live | 10:10, then jumps to **13:00** |
+| 21, 24 Aug | re-created block | same jump — a Thursday anchor expands to Friday and Monday |
+
+**Two changes came out of it**, both committed with tests that fail against the
+old code:
+
+- **`dailyLimit` counts booked clinics** (§15.7.1). Two booked calls today →
+  three suggestions, `DAY_BUDGET` explaining the subtraction, `slotCount`
+  following so the workspace shows three slots.
+- **`NO_BREAK`** (§15.7.2), fired only when the day covers 12:00–13:00 and no
+  personal block overlaps 11:00–14:00.
+
+⚠️ **And a defect the first of those introduced**, worth reading as a pattern:
+the shortlist is `limit × 4`, so subtracting the budget from the limit shrank
+the candidate *pool* along with the day. It took a measurement to see —
+`QUOTA_UNFILLED` for PROSPECTAR on 16 Aug, which vanished once the pool was
+restored, because the quota had been unfillable only from the cut. A change to
+a number is never local when other things are derived from it.
+
+**Not defects, noticed while driving:**
+
+- Editing the *series* lists its own moved occurrence as `ocupado`, so a rep who
+  moved one day and then edits the series is blocked from that time by their own
+  exception.
+- Leaving an occurrence editor always asks *"Descartar rascunho?"*, even when
+  nothing was touched — the guard keys off `isSaved`, not off the draft
+  differing from what was loaded.
+- The screenshot-to-point factor on this simulator is **0.4374 on both axes**. A
+  wrong vertical factor made a working cancel button look like a silently
+  failing one for several attempts.
+
+**Next, in order**, all four now specified in §15.7:
+
+1. **Contacts with a doctor** (§15.7.5) — migration first: `person_id` added,
+   `facility_id` nullable, at least one present, `IN_PERSON` still requires a
+   facility. Then capture in the app, then the scope rule (a person who works at
+   a clinic in the rep's scope).
+2. **The relationship-activity merit component** (§15.7.5) — a bonus, never a
+   veto: no cooldown from a doctor contact, a small decaying lift on that
+   doctor's clinics, weighted by the outcome.
+3. **One clinic for one slot** (§15.7.4) — the same `gain` against a single gap,
+   replacing a name search that ranks by nothing.
+4. **Second-precision placement** (§15.7.6) — measured at +16 min/day for
+   ceiling-to-5. Still the user's call.
 
 ---
 

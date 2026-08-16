@@ -2020,6 +2020,164 @@ a lower threshold, which would only make the learning confident sooner on less.
 
 ---
 
+## 15.7 Amendment 2026-08-16 — the day's budget, the missing break, and contacts with a doctor
+
+### 15.7.1 `dailyLimit` counts the whole day, not the half the engine produced
+
+It bounded **suggestions only**. A rep with three visits already booked was
+offered five more and ended the day with eight — a number nobody chose, which
+fell out of counting one half of the day. It now means *how many clinics a day
+should hold*, booked and suggested together:
+
+```
+suggestions = max(0, dailyLimit − clinics already booked today)
+```
+
+Personal blocks do not count: a block is not a clinic. Remote interactions do —
+a booked call is a clinic the rep is dealing with today, even though §4.4 keeps
+it out of the route as a place. `DAY_BUDGET` reports the subtraction, and
+`slotCount` follows it, so the workspace shows three slots rather than five and
+two empty ones the day was never going to fill.
+
+`roteiro_params.daily_limit` stays the only knob — a linha that wants busier
+days raises it. No second setting: two numbers that must agree is one number and
+a future defect.
+
+**The shortlist keeps the requested depth.** `reach` takes `limit × 4`, and
+subtracting the budget from it shrank the candidate pool with the day — twenty
+clinics to twelve for a rep with two bookings. Backwards: the set that fits
+*around* a booked morning is narrower than the set that fits an empty one, so a
+rep with commitments needs more choice, not less. Measured on rep 2's book for
+16 Aug, the shrunken pool downgraded the second stop from a PROSPECTAR to a
+MANTER clinic and reported `QUOTA_UNFILLED` — a quota that was unfillable only
+because the pool had been cut.
+
+### 15.7.2 `NO_BREAK` — nobody gets a lunch they did not ask for, but they get told
+
+The consequence of §9's move of lunch onto the rep's own calendar is that a rep
+with no block is planned straight through midday. That is the honest behaviour
+and it stays. What it must not be is *silent*, because the rep discovers it at
+noon, in a clinic, with the next visit already booked.
+
+Fires only when both are true: no personal block overlaps **11:00–14:00**, and
+the planned day — suggestions and booked visits together — actually covers
+**12:00–13:00**. It reserves nothing, moves nothing, and points at the one thing
+that would.
+
+The wide window is deliberate. It answers "does this rep have a pause anywhere
+in the middle of the day", which is a different and much cruder question than
+"when is lunch" — the question the old preference tried to answer for everybody
+at 12:00 and got wrong for everybody.
+
+### 15.7.3 How the slate is actually chosen — recorded because it keeps being asked
+
+Suggestions are **not** picked in one pass. The loop is one clinic at a time,
+and each pick re-scores every remaining candidate against the day as it now
+stands:
+
+```
+gain = mérito × quotaMultiplier ÷ (added travel + service + τ)
+```
+
+- **`added travel` is a detour, not a distance.** For the gap the clinic would
+  sit in: `inbound + outbound − direct`. The same clinic is therefore cheap on
+  the way to a booked 15:00 and expensive wedged between two morning visits.
+- **The day is a set of gaps**, each bounded by what is already committed at
+  either end. `fitInGap` refuses a clinic whose end plus the drive onward would
+  make the rep late for the next commitment — so anchors are looked at in both
+  directions, before *and* after, rather than approximated.
+- **After each pick the cursor and clock move**, and the next iteration is
+  scored from there. Selection and ordering are one decision.
+- **Then an exact re-order within the gap** (never across a booking, which would
+  put the rep in two places at once). Greedy-and-never-reconsider ran up to 55 %
+  above the optimal route for one rep; that pass is what pays for it.
+- **Quotas tilt rather than cut**: an over-served bucket keeps 0.35 of its gain.
+
+The only batch step is the **shortlist** — one SQL pass ranking the rep's book
+by merit and coverage, cut at `limit × 4`. It is a pool, not a choice.
+
+### 15.7.4 One clinic for one slot — the gap this exposes
+
+"Adicionar clínica" is a **name search** over the rep's book, ranked by nothing.
+That is right for a rep who knows which clinic they want, and wrong for a rep
+looking at an empty 14:00 asking *what fits here*. Generation only answers that
+by re-planning the whole day.
+
+Everything needed already exists: take the gap the slot belongs to, run the same
+`gain` across the pool, return the top few with the detour each would cost. One
+iteration of the loop above, exposed on its own. Same maths as a full run, so a
+slot filled this way cannot disagree with a slot filled by generation.
+
+### 15.7.5 Contacts with a doctor the platform never suggested
+
+A rep talks to a doctor without a clinic visit behind it: a call, a corridor
+conversation, a coffee. Today there is nowhere to put that, so it is lost — and
+it is exactly the kind of evidence the recommendations are short of.
+
+**The record.** An interaction gains a nullable `person_id`, and `facility_id`
+becomes nullable, under two constraints:
+
+- at least one of `person_id` and `facility_id` is present — a row about nobody
+  and nowhere is not a record of anything;
+- an `IN_PERSON` interaction must name a facility. If the rep drove somewhere,
+  there is a place, and the honest record includes it.
+
+A `REMOTE` contact may name a clinic or not. Writing a building the rep never
+entered would poison the data this exists to collect.
+
+*Rejected*: a separate table for person interactions. It keeps the schema tidy
+and then makes two places answer "what happened with this doctor" — which is how
+Perfil and Desempenho came to disagree about the same book (§8).
+
+**Scope.** Permissions are facility-based, and a contact with no clinic has
+nothing for them to bite on. The rule: a rep may log a contact with any person
+who works at **at least one clinic in their scope**, via `person_facilities`.
+The same link is what makes the merit signal below meaningful.
+
+**What it does to the recommendations — a bonus, never a veto.** A doctor
+contact does **not** trigger the §4.1 cooldown. Suppressing a clinic the rep
+never visited because they phoned somebody who works there would hide it for
+days on the strength of a five-minute call.
+
+Instead it feeds a small **relationship activity** component on the merit of the
+clinics that doctor works at:
+
+- decays with age, like the rejection penalty;
+- **weighted by the outcome** — the two questions of §15.6.4 are what make a
+  contact worth more than the fact it happened, so one that went well lifts
+  more, and one that went badly does not lift at all;
+- bounded, so it can tilt a ranking between comparable clinics and never carry a
+  clinic on its own.
+
+The asymmetry is deliberate and matches §15.5.2: evidence that a clinic is worth
+visiting is cheap to act on and easy to undo, while evidence that it is not
+belongs to rejection, which is routing rather than scoring.
+
+### 15.7.6 Second-precision placement — measured, still a product call
+
+The engine places stops at second precision (`14:05:06`) because the clock
+accumulates travel in seconds, while the grid snaps to half hours and every
+wheel steps by five minutes. A rep who edits a roteiro-made visit nudges it
+without meaning to.
+
+Measured on rep 2's five-stop day (08:07:04 … ends 12:59:01):
+
+| rounding | cost |
+|---|---|
+| ceiling to 5 min | day ends 13:15 — **+16 min** of slack across five stops |
+| nearest 5 min | ≈ +8 min, but half the stops start before the rep has arrived, so it needs a guard that turns it back into a ceiling |
+
+Neither costs a stop *today*, because what binds is `dailyLimit`, not the clock:
+the day ends at 13:15 against an 18:00 wall. It costs when a gap is **bounded** —
+placement drops a stop whose end plus the onward drive exceeds the gap, so
+rounding up can silently lose a clinic between two commitments.
+
+If it is taken: ceil to five minutes, but test feasibility with the exact time
+and keep the exact seconds whenever the rounded placement no longer fits.
+**Not decided.**
+
+---
+
 ## 16. Deferred
 
 ### 16.1 Trip planning for geographically spread books
