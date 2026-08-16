@@ -86,6 +86,13 @@ class _InteractionRepository implements CalendarRepositoryContract {
     required DateTime to,
     int? ownerUserId,
   }) async => const [];
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+  }) async => throw UnimplementedError();
 }
 
 class _MutationRepository implements CalendarMutationRepositoryContract {

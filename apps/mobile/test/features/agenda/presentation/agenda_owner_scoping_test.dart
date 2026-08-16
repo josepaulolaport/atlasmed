@@ -64,6 +64,13 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     required InteractionOutcome outcome,
     required InteractionFollowUp followUp,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+  }) async => throw UnimplementedError();
 }
 
 final _manager = User(

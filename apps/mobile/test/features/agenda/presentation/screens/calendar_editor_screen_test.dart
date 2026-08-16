@@ -94,6 +94,13 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     required String idempotencyKey,
     String? correctionReason,
   }) => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+  }) async => throw UnimplementedError();
 }
 
 Widget _app(

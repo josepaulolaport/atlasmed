@@ -45,6 +45,18 @@ abstract interface class CalendarRepositoryContract {
     required InteractionOutcome outcome,
     required InteractionFollowUp followUp,
   });
+
+  /// Records arriving at a clinic the roteiro never suggested — §15.6.3.
+  ///
+  /// Creates the visit and starts it in one call. There is no appointment to
+  /// start, which is the point: a rep who simply walks into a clinic had no
+  /// way to record it, and a system that can only record its own suggestions
+  /// under-counts real work.
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+  });
 }
 
 abstract interface class CalendarMutationRepositoryContract {
@@ -311,6 +323,29 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         url: _baseUri.replace(path: '/api/v1/interactions/$id/outcome'),
         method: RepositoryHttpMethod.post,
         body: {'outcome': outcome.wire, 'followUp': followUp.wire},
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  /// Records arriving at a clinic the roteiro never suggested — §15.6.3.
+  ///
+  /// The timezone travels with the request for the same reason the calendar
+  /// editor sends it: the anchor a visit is stored against is the rep's wall
+  /// clock, and resolving it on the server would put a late arrival on the
+  /// wrong day.
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/arrivals'),
+        method: RepositoryHttpMethod.post,
+        headers: {'Idempotency-Key': idempotencyKey},
+        body: {'facilityId': facilityId, 'timeZone': timeZone},
       ),
     );
     return _interactionFromResponse(response);
