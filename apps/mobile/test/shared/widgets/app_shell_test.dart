@@ -1,7 +1,9 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   _logoutTests();
@@ -106,10 +108,9 @@ void main() {
       );
     });
 
-    test('offers no way into Perfil', () {
-      // The branch and the route survive; only the drawer entry is gone. The
-      // avatar picker and the push preference live there and nowhere else, so
-      // this is the assertion that records the trade deliberately.
+    test('offers no way into Perfil from the list', () {
+      // Not a trade any more: the drawer header opens it. The list stays
+      // places, and a rep's own account is not one of them.
       expect(
         appNavigationItems,
         isNot(
@@ -132,6 +133,17 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('kProfileBranchIndex still points at /profile', () {
+      // The header passes a bare index to goBranch. Inserting a branch above
+      // Perfil would silently send the avatar tap to Produtos — no crash, no
+      // warning, just the wrong screen. Read from the generated router so the
+      // constant cannot drift away from it.
+      final shell = $appShellRoute as StatefulShellRoute;
+      final branch = shell.branches[kProfileBranchIndex];
+
+      expect((branch.routes.single as GoRoute).path, '/profile');
     });
   });
 

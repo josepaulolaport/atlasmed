@@ -78,8 +78,7 @@ SlotWindow slotWindowFor({
   required int durationMinutes,
   List<CalendarOccurrence> busy = const [],
 }) {
-  final workStart =
-      parseHhMmMinutes(workdayStart) ?? kLinhaWorkdayStartMinutes;
+  final workStart = parseHhMmMinutes(workdayStart) ?? kLinhaWorkdayStartMinutes;
   final workEndRaw = parseHhMmMinutes(workdayEnd) ?? kLinhaWorkdayEndMinutes;
   // A rep who set the end before the start is honoured on the field they can
   // see and not on the contradiction: the engine reads the same pair, so the
@@ -234,9 +233,7 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
             // Read without blocking: the strip is useful before preferences
             // arrive, and a spinner here would delay the whole editor on a
             // detail most reps never change.
-            final prefs = ref
-                .watch(userPreferencesValueProvider)
-                .valueOrNull;
+            final prefs = ref.watch(userPreferencesValueProvider).valueOrNull;
             final window = slotWindowFor(
               workdayStart: prefs?.workdayStart,
               workdayEnd: prefs?.workdayEnd,
