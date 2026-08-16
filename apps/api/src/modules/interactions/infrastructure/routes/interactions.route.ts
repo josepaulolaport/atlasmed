@@ -12,6 +12,7 @@ export interface InteractionHttpUseCases {
   start(): Executable;
   complete(): Executable;
   recordOutcome(): Executable;
+  recordArrival(): Executable;
 }
 
 const commandSchema = z.object({ expectedVersion: z.number().int().nonnegative() });
@@ -22,6 +23,14 @@ const completeSchema = commandSchema.extend({ correctionReason: z.string().trim(
 const outcomeSchema = z.object({
   outcome: z.enum(["PEDIDO", "VAI_AVALIAR", "RELACIONAMENTO", "NAO_FALEI_COM_NINGUEM"]),
   followUp: z.enum(["NENHUM", "DIAS_15", "DIAS_30", "DIAS_90"]),
+});
+
+// The IANA zone comes from the device, the same way the calendar editor sends
+// it: the anchor a visit is stored against is the rep's wall clock, not the
+// server's.
+const arrivalSchema = z.object({
+  facilityId: z.number().int().positive(),
+  timeZone: z.string().trim().min(1),
 });
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -80,7 +89,16 @@ export function createInteractionRoutes(useCases: InteractionHttpUseCases = inte
       }),
       detail: { summary: "Record how a visit went and when to return", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
-  return new Elysia().use(get).use(start).use(complete).use(outcome);
+  // §15.6.3 — "Cheguei" on a clinic that was never on the roteiro. Permission
+  // is `create` on INTERACTION rather than `update`: nothing exists yet to
+  // address, which is the whole point of the route.
+  const arrival = new Elysia().use(authPlugin).use(requirePermission("create", "INTERACTION"))
+    .post("/interactions/arrivals", async (ctx) => useCases.recordArrival().execute({ ...(await context(ctx)),
+      idempotencyKey: commandKey(ctx.request.headers), ...parse(arrivalSchema, ctx.body) }), {
+      body: t.Object({ facilityId: t.Number({ minimum: 1 }), timeZone: t.String() }),
+      detail: { summary: "Record arriving at a clinic", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
+    });
+  return new Elysia().use(get).use(start).use(complete).use(outcome).use(arrival);
 }
 
 export const interactionsRoute = createInteractionRoutes();

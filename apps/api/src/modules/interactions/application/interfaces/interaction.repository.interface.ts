@@ -120,6 +120,38 @@ export interface InteractionRepository {
     answeredAt: Date;
   }): Promise<InteractionDetailRecord | null>;
 
+  /**
+   * A visit to a clinic that was never on the roteiro — spec 0016 §15.6.3.
+   *
+   * Creates the calendar row and the interaction together, already started,
+   * and closes whatever the rep left open. There is no scheduled appointment to
+   * start, so this cannot go through `start`: the record is being made because
+   * the rep is standing there, not because a plan said they would be.
+   *
+   * Deliberately does not run the calendar conflict check. Arriving somewhere
+   * is a fact; refusing to record it because the rep's own calendar disagrees
+   * is precisely the "system that can only record its own suggestions" the
+   * spec warns about.
+   */
+  recordArrival(input: {
+    facilityId: number;
+    agentUserId: number;
+    title: string;
+    timeZone: string;
+    anchorLocalDate: string;
+    anchorLocalTime: string;
+    recurrenceKey: string;
+    durationMinutes: number;
+    startedAt: Date;
+    idempotencyKey: string;
+  }): Promise<InteractionDetailRecord>;
+
+  /** Replay for [recordArrival]; the interaction has no id to key on yet. */
+  findArrival(input: { agentUserId: number; idempotencyKey: string }): Promise<InteractionDetailRecord | null>;
+
+  /** The clinic being arrived at, or null when it does not exist. */
+  findFacilitySummary(id: number): Promise<{ id: number; displayName: string } | null>;
+
   closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 
   markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;

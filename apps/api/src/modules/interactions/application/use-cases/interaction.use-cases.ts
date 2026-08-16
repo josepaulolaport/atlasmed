@@ -1,6 +1,6 @@
 import { assertResourceInScope, type Role, type ScopeContext } from "@atlasmed/access";
 import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
-import { calendarOccurrenceFromRecurrenceKey } from "../../../calendar/application/services/recurrence.service";
+import { calendarLocalAnchorAt, calendarOccurrenceFromRecurrenceKey } from "../../../calendar/application/services/recurrence.service";
 import type {
   InteractionDetailRecord,
   InteractionRepository,
@@ -147,6 +147,59 @@ export class StartInteractionUseCase {
     return toDto(result.interaction, input.actor, now);
   }
 }
+
+/**
+ * "Cheguei" on a clinic's own page — spec 0016 §15.6.3.
+ *
+ * Reps improvise. A system that can only record its own suggestions will
+ * under-count real work and then conclude reps are not visiting, so a visit to
+ * a clinic that was never on the roteiro has to be recordable in one press.
+ *
+ * The calendar row it creates is bookkeeping, not a plan: its 60 minutes are a
+ * placeholder for a visit already under way, and nothing reads them. What the
+ * duration model learns comes from `actualStartedAt`/`actualEndedAt` and only
+ * when the close was `MEASURED` (§15.6.2), so the placeholder cannot leak into
+ * it.
+ */
+export class RecordArrivalUseCase {
+  constructor(private readonly deps: Dependencies) {}
+  async execute(input: {
+    facilityId: number;
+    timeZone: string;
+    actor: InteractionActor;
+    scope: ScopeContext;
+    idempotencyKey: string;
+  }) {
+    const now = this.deps.now?.() ?? new Date();
+    const replay = await this.deps.repository.findArrival({ agentUserId: input.actor.userId, idempotencyKey: input.idempotencyKey });
+    if (replay) return toDto(replay, input.actor, now);
+
+    // A manager has no agenda of their own to record against, which is the
+    // same rule that stops them creating calendar events.
+    if (input.actor.roleName === "MANAGER") throw new ForbiddenError("Managers do not record their own visits");
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    const facility = await this.deps.repository.findFacilitySummary(input.facilityId);
+    if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
+
+    const anchor = calendarLocalAnchorAt(now, input.timeZone);
+    const record = await this.deps.repository.recordArrival({
+      facilityId: input.facilityId,
+      agentUserId: input.actor.userId,
+      title: `Visita · ${facility.displayName}`,
+      timeZone: input.timeZone,
+      ...anchor,
+      recurrenceKey: `${anchor.anchorLocalDate}T${anchor.anchorLocalTime}[${input.timeZone}]`,
+      durationMinutes: ARRIVAL_PLACEHOLDER_MINUTES,
+      startedAt: now,
+      idempotencyKey: input.idempotencyKey,
+    });
+    return toDto(record, input.actor, now);
+  }
+}
+
+/** Nominal length of the calendar row an arrival creates. Never learned from. */
+const ARRIVAL_PLACEHOLDER_MINUTES = 60;
 
 export class CompleteInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}

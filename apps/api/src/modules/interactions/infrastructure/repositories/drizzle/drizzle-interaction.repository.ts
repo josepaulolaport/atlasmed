@@ -246,6 +246,67 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     return this.findById(input.id);
   }
 
+  async findFacilitySummary(id: number) {
+    const [row] = await this.database.select({ id: facilities.id, displayName: facilities.displayName })
+      .from(facilities).where(eq(facilities.id, id)).limit(1);
+    return row ?? null;
+  }
+
+  async findArrival(input: { agentUserId: number; idempotencyKey: string }) {
+    const [row] = await this.database.select({ interactionId: interactionEvents.interactionId })
+      .from(interactionEvents).innerJoin(interactions, eq(interactions.id, interactionEvents.interactionId))
+      .where(and(eq(interactions.agentUserId, input.agentUserId),
+        sql`${interactionEvents.metadata} ->> 'command' = 'arrival'`,
+        sql`${interactionEvents.metadata} ->> 'idempotencyKey' = ${input.idempotencyKey}`))
+      .limit(1);
+    return row ? this.findById(row.interactionId) : null;
+  }
+
+  async recordArrival(input: {
+    facilityId: number; agentUserId: number; title: string; timeZone: string;
+    anchorLocalDate: string; anchorLocalTime: string; recurrenceKey: string;
+    durationMinutes: number; startedAt: Date; idempotencyKey: string;
+  }): Promise<InteractionDetailRecord> {
+    return this.inTransaction(async (repository, tx) => {
+      const replay = await repository.findArrival(input);
+      if (replay) return replay;
+
+      const [event] = await tx.insert(calendar).values({
+        ownerUserId: input.agentUserId, kind: "INTERACTION", title: input.title,
+        anchorLocalDate: input.anchorLocalDate, anchorLocalTime: input.anchorLocalTime,
+        timeZone: input.timeZone, durationMinutes: input.durationMinutes,
+        firstStartsAt: input.startedAt,
+        firstEndsAt: new Date(input.startedAt.getTime() + input.durationMinutes * 60_000),
+        recurrence: "NONE",
+      }).returning();
+      if (!event) throw new DatabaseError("create arrival calendar event");
+
+      const [created] = await tx.insert(interactions).values({
+        calendarId: event.id, recurrenceKey: input.recurrenceKey, facilityId: input.facilityId,
+        agentUserId: input.agentUserId, modality: "IN_PERSON", status: "IN_PROGRESS",
+        actualStartedAt: input.startedAt, updatedAt: input.startedAt,
+      }).returning();
+      if (!created) throw new DatabaseError("create arrival interaction");
+
+      // Recorded as SCHEDULED → IN_PROGRESS even though it was never scheduled:
+      // the event log describes the lifecycle, and an arrival is a start that
+      // skipped the waiting. `command: 'arrival'` is what makes it replayable
+      // and what tells a later reader this visit had no plan behind it.
+      await tx.insert(interactionEvents).values({
+        interactionId: created.id, actorUserId: input.agentUserId, source: "USER",
+        previousStatus: "SCHEDULED", newStatus: "IN_PROGRESS",
+        metadata: { command: "arrival", idempotencyKey: input.idempotencyKey, resultVersion: created.version },
+      });
+
+      await closeOpenVisits(tx, { agentUserId: input.agentUserId, exceptId: created.id,
+        at: input.startedAt, startingModality: "IN_PERSON" });
+
+      const detail = await repository.findById(created.id);
+      if (!detail) throw new DatabaseError("load arrival interaction");
+      return detail;
+    });
+  }
+
   async start(input: { id: number; actorUserId: number; expectedVersion: number; idempotencyKey: string; startedAt: Date }): Promise<InteractionMutationResult | null> {
     return this.inTransaction(async (repository, tx) => {
       const replay = await repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });

@@ -10,6 +10,7 @@ import {
   InteractionTransitionError,
   InteractionVersionConflictError,
   MarkOverdueInteractionsUseCase,
+  RecordArrivalUseCase,
   StartInteractionUseCase,
 } from "./interaction.use-cases";
 
@@ -127,6 +128,36 @@ class FakeInteractionRepository implements InteractionRepository {
     this.events.push({ previousStatus, newStatus: "COMPLETED", ...(input.correctionReason ? { reason: input.correctionReason } : {}) });
     this.receipts.set(`complete:${input.idempotencyKey}`, this.record);
     return { interaction: this.record, replayed: false };
+  }
+
+  arrivals: Array<Parameters<InteractionRepository["recordArrival"]>[0]> = [];
+  facility: { id: number; displayName: string } | null = { id: 1, displayName: "Clínica Central" };
+
+  async findFacilitySummary() { return this.facility; }
+
+  async findArrival(input: { idempotencyKey: string }) {
+    return this.receipts.get(`arrival:${input.idempotencyKey}`) ?? null;
+  }
+
+  async recordArrival(input: Parameters<InteractionRepository["recordArrival"]>[0]) {
+    this.arrivals.push(input);
+    this.record = interaction({
+      id: 11,
+      facilityId: input.facilityId,
+      agentUserId: input.agentUserId,
+      status: "IN_PROGRESS",
+      actualStartedAt: input.startedAt,
+      recurrenceKey: input.recurrenceKey,
+      calendar: {
+        ownerUserId: input.agentUserId, title: input.title,
+        anchorLocalDate: input.anchorLocalDate, anchorLocalTime: input.anchorLocalTime,
+        timeZone: input.timeZone, durationMinutes: input.durationMinutes,
+        recurrence: "NONE", recurrenceUntil: null, recurrenceCount: null,
+        status: "ACTIVE", version: 1,
+      },
+    });
+    this.receipts.set(`arrival:${input.idempotencyKey}`, this.record);
+    return this.record;
   }
 
   async closeStaleVisits(): Promise<number> {
@@ -350,5 +381,74 @@ describe("MarkOverdueInteractionsUseCase", () => {
     inProgress.record = interaction({ status: "IN_PROGRESS" });
     expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: null }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
     expect(inProgress.record.status).toBe("IN_PROGRESS");
+  });
+});
+
+describe("RecordArrivalUseCase", () => {
+  const arrive = (repository: InteractionRepository, roleName: Role = "REP", actorScope = scope(), clock = () => now) =>
+    new RecordArrivalUseCase({ repository, now: clock }).execute({
+      facilityId: 1,
+      timeZone: "America/Sao_Paulo",
+      actor: { userId: 1, roleName },
+      scope: actorScope,
+      idempotencyKey: "arrival-key",
+    });
+
+  test("records a visit to a clinic that was never on the roteiro, already started", async () => {
+    // §15.6.3: reps improvise, and a system that can only record its own
+    // suggestions under-counts real work and then concludes reps are not
+    // visiting. There is no scheduled appointment to start.
+    const repository = new FakeInteractionRepository();
+
+    const result = await arrive(repository);
+
+    expect(result.status).toBe("IN_PROGRESS");
+    expect(result.actualStartedAt).toBe(now.toISOString());
+    expect(repository.arrivals).toHaveLength(1);
+    expect(repository.arrivals[0]?.title).toBe("Visita · Clínica Central");
+  });
+
+  test("anchors the calendar row on the rep's wall clock, not the server's", async () => {
+    // 12:00Z is 09:00 in São Paulo. Storing the UTC hour would put the visit
+    // three hours from where the rep was standing.
+    const repository = new FakeInteractionRepository();
+
+    await arrive(repository);
+
+    expect(repository.arrivals[0]?.anchorLocalDate).toBe("2026-08-03");
+    expect(repository.arrivals[0]?.anchorLocalTime).toBe("09:00");
+    expect(repository.arrivals[0]?.recurrenceKey).toBe("2026-08-03T09:00[America/Sao_Paulo]");
+  });
+
+  test("replays instead of recording a second arrival", async () => {
+    // A retry on a flaky connection must not produce two visits to the same
+    // clinic a second apart.
+    const repository = new FakeInteractionRepository();
+
+    await arrive(repository);
+    await arrive(repository);
+
+    expect(repository.arrivals).toHaveLength(1);
+  });
+
+  test("refuses a clinic outside the rep's scope", async () => {
+    const repository = new FakeInteractionRepository();
+
+    await expect(arrive(repository, "REP", scope({ facilityIds: [2] }))).rejects.toThrow();
+    expect(repository.arrivals).toHaveLength(0);
+  });
+
+  test("refuses a clinic that does not exist rather than failing on the key", async () => {
+    const repository = new FakeInteractionRepository();
+    repository.facility = null;
+
+    await expect(arrive(repository)).rejects.toThrow();
+  });
+
+  test("a manager has no agenda of their own to record against", async () => {
+    const repository = new FakeInteractionRepository();
+
+    await expect(arrive(repository, "MANAGER")).rejects.toThrow();
+    expect(repository.arrivals).toHaveLength(0);
   });
 });
