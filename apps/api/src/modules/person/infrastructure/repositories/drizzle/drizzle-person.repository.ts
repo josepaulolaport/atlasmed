@@ -70,6 +70,29 @@ export class DrizzlePersonRepository implements PersonRepository {
       )
       .orderBy(asc(facilities.displayName));
 
+    // Primary first, then alphabetical — the order the doctor's chips read in,
+    // and the same rule `replaceSpecialties` returns.
+    const specialtyRows = (
+      await db
+        .select({
+          id: healthcareSpecialties.id,
+          name: healthcareSpecialties.name,
+          isPrimary: personHealthcareProfileSpecialties.isPrimary,
+        })
+        .from(personHealthcareProfileSpecialties)
+        .innerJoin(
+          healthcareSpecialties,
+          eq(
+            healthcareSpecialties.id,
+            personHealthcareProfileSpecialties.specialtyId
+          )
+        )
+        .where(eq(personHealthcareProfileSpecialties.personId, personId))
+    ).sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.localeCompare(b.name, "pt-BR");
+    });
+
     return {
       id: row.id,
       firstName: row.firstName,
@@ -90,6 +113,7 @@ export class DrizzlePersonRepository implements PersonRepository {
         name: r.facilityName,
       })),
       hasHealthcareProfile: Boolean(row.hasHealthcareProfile),
+      specialties: specialtyRows,
     };
   }
 
@@ -111,6 +135,64 @@ export class DrizzlePersonRepository implements PersonRepository {
     if (Object.keys(patch).length === 0) return;
 
     await db.update(persons).set(patch).where(eq(persons.id, personId));
+  }
+
+  /**
+   * Replace a doctor's specialties with exactly the set given.
+   *
+   * The same shape as the clinic's clinical focuses: the screen is a
+   * multiselect, so the request carries the whole selection and the repository
+   * makes it true in one transaction. Deleting first also clears the old
+   * primary, so moving it between specialties never momentarily holds two and
+   * trips `person_healthcare_profile_specialties_primary_uidx`.
+   *
+   * `person_healthcare_profiles` is the parent the join references. A doctor
+   * with no profile row yet has nowhere to hang a specialty, so one is created
+   * rather than the write failing on a foreign key.
+   */
+  async replaceSpecialties(input: {
+    personId: number;
+    specialties: { id: number; isPrimary: boolean }[];
+  }): Promise<{ id: number; name: string; isPrimary: boolean }[]> {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(personHealthcareProfiles)
+        .values({ personId: input.personId })
+        .onConflictDoNothing();
+
+      await tx
+        .delete(personHealthcareProfileSpecialties)
+        .where(eq(personHealthcareProfileSpecialties.personId, input.personId));
+
+      if (input.specialties.length === 0) return;
+
+      await tx.insert(personHealthcareProfileSpecialties).values(
+        input.specialties.map((specialty) => ({
+          personId: input.personId,
+          specialtyId: specialty.id,
+          isPrimary: specialty.isPrimary,
+        })),
+      );
+    });
+
+    const rows = await db
+      .select({
+        id: healthcareSpecialties.id,
+        name: healthcareSpecialties.name,
+        isPrimary: personHealthcareProfileSpecialties.isPrimary,
+      })
+      .from(personHealthcareProfileSpecialties)
+      .innerJoin(
+        healthcareSpecialties,
+        eq(healthcareSpecialties.id, personHealthcareProfileSpecialties.specialtyId),
+      )
+      .where(eq(personHealthcareProfileSpecialties.personId, input.personId));
+
+    // Primary first, then alphabetical — the order the doctor's chips read in.
+    return rows.sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.localeCompare(b.name, "pt-BR");
+    });
   }
 
   async listDistinctSpecialtyNames(): Promise<string[]> {

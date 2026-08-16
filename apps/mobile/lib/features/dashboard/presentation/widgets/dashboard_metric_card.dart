@@ -196,3 +196,49 @@ class MetricValue extends StatelessWidget {
 
 String formatPercent(double? ratio) =>
     ratio == null ? '—' : '${(ratio * 100).round()}%';
+
+/// Two metric cards a row, both the height of the taller one.
+///
+/// This was a `Wrap`, which sizes each child to its own content: "Clínicas
+/// atribuídas" carried a bare number and no caption, so it sat visibly shorter
+/// than "Cobertura" beside it. The caption is fixed at the call site; pairing
+/// the cards is what stops the same gap reappearing whenever one caption runs
+/// onto a second line and its neighbour's does not.
+class MetricCardGrid extends StatelessWidget {
+  const MetricCardGrid({super.key, required this.cards, this.spacing = 12.0});
+
+  final List<Widget> cards;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < cards.length; i += 2) {
+      final right = i + 1 < cards.length ? cards[i + 1] : null;
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: cards[i]),
+              SizedBox(width: spacing),
+              // An odd card keeps its half of the row rather than stretching
+              // across it, so the grid stays a grid.
+              Expanded(child: right ?? const SizedBox.shrink()),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) SizedBox(height: spacing),
+          rows[i],
+        ],
+      ],
+    );
+  }
+}

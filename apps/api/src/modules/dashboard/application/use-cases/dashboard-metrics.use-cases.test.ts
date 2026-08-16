@@ -13,6 +13,7 @@ import {
   GetOrdersMetricUseCase,
   GetPenetrationMetricUseCase,
   GetUnassignedClinicsMetricUseCase,
+  globalTerritoryLabel,
   type DashboardMetricRequest,
 } from "./dashboard-metrics.use-cases";
 
@@ -317,5 +318,54 @@ describe("clínicas não atribuídas", () => {
         directory: fakeDirectory(),
       }).execute(request(rep)),
     ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+/**
+ * What an admin's territory card is called.
+ *
+ * It used to be called "Território", full stop — the client's fallback for a
+ * label the API deliberately sent as null. Singular and possessive, for a map
+ * of other people's zones. An admin reading it had nothing to tell them they
+ * were looking at the whole line rather than a territory of their own.
+ */
+describe("globalTerritoryLabel", () => {
+  const zone = (
+    name: string,
+    ownerId: number | null,
+    ownerName: string | null,
+  ) => ({ name, ownerId, ownerName });
+
+  it("counts the zones and the people holding them", () => {
+    expect(
+      globalTerritoryLabel([
+        zone("Norte", 1, "Silvio Vieira"),
+        zone("Rio de Janeiro", 2, "Pedro Poggian"),
+        zone("Sao Paulo", 3, "Marcelo Moreno"),
+      ]),
+    ).toBe("3 territórios · 3 responsáveis");
+  });
+
+  it("names the person once the filters have narrowed to one", () => {
+    // Filtering to a gerente is asking whose zones these are. Answering "2
+    // territórios · 1 responsável" withholds the one fact that was requested.
+    expect(
+      globalTerritoryLabel([
+        zone("Norte", 1, "Silvio Vieira"),
+        zone("Parana", 1, "Silvio Vieira"),
+      ]),
+    ).toBe("2 territórios · Silvio Vieira");
+  });
+
+  it("names the zone and its owner when there is only one", () => {
+    expect(globalTerritoryLabel([zone("Rio de Janeiro", 2, "Pedro Poggian")])).toBe(
+      "Rio de Janeiro · Pedro Poggian",
+    );
+  });
+
+  it("falls back to the zone name when the owner has no name on file", () => {
+    expect(globalTerritoryLabel([zone("Rio de Janeiro", 2, null)])).toBe(
+      "Rio de Janeiro",
+    );
   });
 });

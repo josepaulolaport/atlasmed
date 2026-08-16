@@ -1,0 +1,2 @@
+ALTER TABLE "facility_clinical_focuses" ADD COLUMN "is_primary" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "facility_clinical_focuses_primary_uidx" ON "facility_clinical_focuses" USING btree ("facility_id") WHERE "facility_clinical_focuses"."is_primary";

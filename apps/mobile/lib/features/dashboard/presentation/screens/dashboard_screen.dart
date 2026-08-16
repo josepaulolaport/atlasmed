@@ -187,7 +187,13 @@ class _MetricGrid extends ConsumerWidget {
         title: 'Clínicas atribuídas',
         repository: ref.watch(assignedClinicsMetricProvider(scope)),
         onTap: () => _openBreakdown(context, 'assigned-clinics', scope),
-        builder: (context, value) => MetricValue(value: '${value.value}'),
+        // The only card with a bare number. Its neighbours all say what the
+        // figure counts, and the missing line also left it a caption shorter
+        // than the card beside it.
+        builder: (context, value) => MetricValue(
+          value: '${value.value}',
+          caption: 'com consultor responsável',
+        ),
       ),
       DashboardMetricCard<DashboardRatioMetric>(
         title: 'Cobertura',
@@ -220,19 +226,7 @@ class _MetricGrid extends ConsumerWidget {
         ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const spacing = 12.0;
-        final width = (constraints.maxWidth - spacing) / 2;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final card in cards) SizedBox(width: width, child: card),
-          ],
-        );
-      },
-    );
+    return MetricCardGrid(cards: cards);
   }
 }
 

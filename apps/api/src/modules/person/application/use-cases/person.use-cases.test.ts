@@ -32,6 +32,7 @@ function basePerson(overrides?: Partial<PersonRecord>): PersonRecord {
       { id: 20, name: "Hospital São Lucas" },
     ],
     hasHealthcareProfile: true,
+    specialties: [],
     ...overrides,
   };
 }
@@ -61,6 +62,7 @@ function createRepository(options?: {
       } as PersonRecord;
     },
     listDistinctSpecialtyNames: async () => options?.specialties ?? ["Ortopedia"],
+    replaceSpecialties: async () => [],
   };
 }
 
@@ -94,6 +96,7 @@ describe("GetPersonUseCase", () => {
         { id: 20, name: "Hospital São Lucas" },
       ],
       hasHealthcareProfile: true,
+      specialties: [],
       registrations: [],
       primaryRegistrationDisplay: null,
       // Defaults to false when no bookmark repository is wired, so the flag

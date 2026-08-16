@@ -12,13 +12,23 @@ class ClinicalFocus {
   final String name;
   final String? cnesCode;
 
-  const ClinicalFocus({required this.id, required this.name, this.cnesCode});
+  /// The focus this clinic leads with. False on the catalogue, which lists what
+  /// exists rather than what any one clinic holds.
+  final bool isPrimary;
+
+  const ClinicalFocus({
+    required this.id,
+    required this.name,
+    this.cnesCode,
+    this.isPrimary = false,
+  });
 
   factory ClinicalFocus.fromMap(Map<String, dynamic> map) {
     return ClinicalFocus(
       id: readCrmId(map['id'], 'id'),
       name: readString(map['name']),
       cnesCode: readNullableString(map['cnesCode']),
+      isPrimary: map['isPrimary'] == true,
     );
   }
 }

@@ -92,6 +92,84 @@ describe("FieldSuggestionApplyService", () => {
     });
   });
 
+  /**
+   * An address correction and the pin that goes with it are one edit: somebody
+   * outside the clinic fixes the street and the point together. Applying the
+   * text and re-deriving the point from it throws away the better half.
+   */
+  it("prefers the submitter's pin over geocoding the address they typed", async () => {
+    applyLocation.mockClear();
+
+    const result = await service.applyFieldChange({
+      facilityId: 1,
+      fieldKey: "address",
+      proposedValue: {
+        streetAddress: "Rua Voluntários da Pátria",
+        streetNumber: "286",
+        postalCode: "22270-011",
+        lat: -22.9508,
+        lng: -43.1881,
+      },
+    });
+
+    // Not geocoded: the point came in with the suggestion.
+    expect(result).toEqual({ geocoded: false });
+    expect(applyLocation).toHaveBeenCalledWith(
+      expect.objectContaining({ facilityId: 1, lat: -22.9508, lng: -43.1881 })
+    );
+    // And the address still travels, so `resolve` has something to fall back on
+    // and the stored text matches what was reviewed.
+    expect(applyLocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: expect.objectContaining({ postalCode: "22270-011" }),
+      })
+    );
+  });
+
+  it("keeps the pin out of the fields written to the facility row", async () => {
+    // `applyApprovedFieldUpdates` writes address columns. lat/lng are not among
+    // them — the location service owns `facilities.location` (spec 0009 R5), and
+    // this service writing them was the defect that rule exists to close.
+    (facilityRepository.applyApprovedFieldUpdates as ReturnType<typeof mock>).mockClear();
+
+    await service.applyFieldChange({
+      facilityId: 1,
+      fieldKey: "address",
+      proposedValue: { streetAddress: "Rua A", lat: -22.9, lng: -43.1 },
+    });
+
+    const updates = (facilityRepository.applyApprovedFieldUpdates as ReturnType<typeof mock>)
+      .mock.calls[0]![1] as Record<string, unknown>;
+    expect(updates.lat).toBeUndefined();
+    expect(updates.lng).toBeUndefined();
+  });
+
+  it("rejects an impossible pin arriving inside an address", () => {
+    // Same rules as a standalone pin move: an address is not a way past them.
+    expect(() =>
+      service.validateProposedValue("address", {
+        streetAddress: "Rua A",
+        lat: 91,
+        lng: 0,
+      })
+    ).toThrow(ValidationError);
+  });
+
+  it("still geocodes an address that arrives without a pin", async () => {
+    applyLocation.mockClear();
+
+    const result = await service.applyFieldChange({
+      facilityId: 1,
+      fieldKey: "address",
+      proposedValue: { streetAddress: "Av. Paulista", streetNumber: "1000" },
+    });
+
+    expect(result).toEqual({ geocoded: true });
+    const call = applyLocation.mock.calls[0]![0] as Record<string, unknown>;
+    expect(call.lat).toBeUndefined();
+    expect(call.lng).toBeUndefined();
+  });
+
   it("rejects coordinates outside the possible range", () => {
     expect(() =>
       service.validateProposedValue("coordinates", { lat: 91, lng: 0 })

@@ -11,6 +11,10 @@ class Professional {
   final String name;
   final String initials;
   final String specialty;
+
+  /// Every specialty held, with ids — what the editor needs. Empty on list
+  /// payloads, which carry only [specialty].
+  final List<DoctorSpecialty> specialties;
   final String crm;
   final String role;
   final double distanceKm;
@@ -69,6 +73,7 @@ class Professional {
       name: name,
       initials: initials.toUpperCase(),
       specialty: dto.specialty ?? '',
+      specialties: dto.specialties,
       crm: dto.crm,
       role: dto.specialty ?? '',
       distanceKm: dto.distanceKm ?? 0,
@@ -110,6 +115,7 @@ class Professional {
     required this.name,
     required this.initials,
     required this.specialty,
+    this.specialties = const [],
     required this.crm,
     required this.role,
     this.distanceKm = 0,
@@ -142,6 +148,7 @@ class Professional {
     String? initials,
     double? hue,
     String? specialty,
+    List<DoctorSpecialty>? specialties,
     String? crm,
     String? role,
     double? distanceKm,
@@ -181,6 +188,7 @@ class Professional {
       name: name ?? this.name,
       initials: initials ?? this.initials,
       specialty: specialty ?? this.specialty,
+      specialties: specialties ?? this.specialties,
       crm: crm ?? this.crm,
       role: role ?? this.role,
       distanceKm: distanceKm ?? this.distanceKm,

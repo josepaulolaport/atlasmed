@@ -82,6 +82,7 @@ async function serializePerson(
     facilityIds: person.facilityIds,
     facilities: person.facilities,
     hasHealthcareProfile: person.hasHealthcareProfile,
+    specialties: person.specialties,
     registrations,
     primaryRegistrationDisplay,
   };

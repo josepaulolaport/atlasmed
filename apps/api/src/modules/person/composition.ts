@@ -17,6 +17,7 @@ import { DrizzleUserPersonRelationshipRepository } from "./infrastructure/reposi
 import { DrizzleHealthcareSpecialtyCatalogRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-specialty-catalog.repository";
 import { ListHealthcareProfessionalsUseCase } from "./application/use-cases/list-healthcare-professionals.use-case";
 import { ListHealthcareSpecialtyCatalogUseCase } from "./application/use-cases/list-healthcare-specialty-catalog.use-case";
+import { ReplacePersonSpecialtiesUseCase } from "./application/use-cases/replace-person-specialties.use-case";
 import { ListPersonFacilityRolesUseCase } from "./application/use-cases/list-person-facility-roles.use-case";
 import { ListPersonProfessionalRegistrationCouncilsUseCase } from "./application/use-cases/list-person-professional-registration-councils.use-case";
 import {
@@ -106,6 +107,11 @@ export const personUseCases = {
     }),
   patchPerson: () =>
     new PatchPersonUseCase({ personRepository, registrationRepository }),
+  replacePersonSpecialties: () =>
+    new ReplacePersonSpecialtiesUseCase({
+      personRepository,
+      specialtyCatalogRepository,
+    }),
 
   listPersonNotes: () =>
     new ListPersonNotesUseCase({ personNoteRepository }),
