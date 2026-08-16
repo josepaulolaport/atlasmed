@@ -164,6 +164,21 @@ export interface InteractionRepository {
   /** Replay for [recordArrival]; the interaction has no id to key on yet. */
   findArrival(input: { agentUserId: number; idempotencyKey: string }): Promise<InteractionDetailRecord | null>;
 
+  /**
+   * The visit this rep already has booked at this clinic on this local day, if
+   * any — so an arrival can start *that* rather than mint a second row.
+   *
+   * Only one that has not started: a visit already in progress or closed is a
+   * different visit, and a rep who walks back into the same clinic in the
+   * afternoon means the second one.
+   */
+  findPlannedVisitAt(input: {
+    agentUserId: number;
+    facilityId: number;
+    localDate: string;
+    timeZone: string;
+  }): Promise<InteractionDetailRecord | null>;
+
   /** The clinic being arrived at, or null when it does not exist. */
   findFacilitySummary(id: number): Promise<{ id: number; displayName: string } | null>;
 

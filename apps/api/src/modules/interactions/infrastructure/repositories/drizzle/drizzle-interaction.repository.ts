@@ -265,6 +265,29 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     return row ?? null;
   }
 
+  async findPlannedVisitAt(input: {
+    agentUserId: number; facilityId: number; localDate: string; timeZone: string;
+  }): Promise<InteractionDetailRecord | null> {
+    // Matched on the *recurrence key's* local date rather than on instants: the
+    // key already carries the day in the calendar's own zone, which is the day
+    // the rep means when they say "I have that clinic today".
+    const [row] = await this.database.select({ id: interactions.id })
+      .from(interactions)
+      .innerJoin(calendar, eq(calendar.id, interactions.calendarId))
+      .where(and(
+        eq(interactions.agentUserId, input.agentUserId),
+        eq(interactions.facilityId, input.facilityId),
+        eq(interactions.modality, "IN_PERSON"),
+        inArray(interactions.status, ["SCHEDULED", "NOT_COMPLETED"]),
+        eq(calendar.status, "ACTIVE"),
+        eq(calendar.timeZone, input.timeZone),
+        sql`${interactions.recurrenceKey} like ${`${input.localDate}T%`}`,
+      ))
+      .orderBy(asc(interactions.recurrenceKey))
+      .limit(1);
+    return row ? this.findById(row.id) : null;
+  }
+
   async findArrival(input: { agentUserId: number; idempotencyKey: string }) {
     const [row] = await this.database.select({ interactionId: interactionEvents.interactionId })
       .from(interactionEvents).innerJoin(interactions, eq(interactions.id, interactionEvents.interactionId))

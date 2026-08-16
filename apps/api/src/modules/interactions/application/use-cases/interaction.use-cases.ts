@@ -222,6 +222,33 @@ export class RecordArrivalUseCase {
     if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
 
     const anchor = calendarLocalAnchorAt(startedAt, input.timeZone);
+
+    /**
+     * **If the rep planned this visit, this *is* that visit.**
+     *
+     * Arrival used to always mint a new calendar row and a new interaction, so
+     * a rep who pressed Cheguei from the clinic's page instead of the agenda
+     * ended the day with two rows for one visit: an improvised one that was
+     * measured, and the planned one rotting to NOT_COMPLETED. The engine then
+     * read a visit that happened *and* a plan that was missed, from the same
+     * hour in the same building, and any adherence number counted both.
+     */
+    const planned = await this.deps.repository.findPlannedVisitAt({
+      agentUserId: input.actor.userId,
+      facilityId: input.facilityId,
+      localDate: anchor.anchorLocalDate,
+      timeZone: input.timeZone,
+    });
+    if (planned) {
+      const started = await this.deps.repository.start({
+        id: planned.id, actorUserId: input.actor.userId, expectedVersion: planned.version,
+        idempotencyKey: input.idempotencyKey, startedAt,
+      });
+      // A null here means somebody else moved it between the read and the
+      // write. Falling through to a fresh arrival keeps the press recorded,
+      // which matters more than which row carries it.
+      if (started) return toDto(started.interaction, input.actor, now);
+    }
     const record = await this.deps.repository.recordArrival({
       facilityId: input.facilityId,
       agentUserId: input.actor.userId,

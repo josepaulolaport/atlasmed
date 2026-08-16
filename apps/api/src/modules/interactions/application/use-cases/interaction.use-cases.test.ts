@@ -91,6 +91,10 @@ class FakeInteractionRepository implements InteractionRepository {
 
   async findById() { return this.record; }
 
+  /** The visit already booked at this clinic today, when a test seeds one. */
+  plannedVisit: InteractionDetailRecord | null = null;
+  async findPlannedVisitAt() { return this.plannedVisit; }
+
   async start(input: { expectedVersion: number; idempotencyKey: string; startedAt: Date }) {
     const replay = this.receipts.get(`start:${input.idempotencyKey}`);
     if (replay) return { interaction: replay, replayed: true };
@@ -456,6 +460,37 @@ describe("RecordArrivalUseCase", () => {
     expect(result.actualStartedAt).toBe(now.toISOString());
     expect(repository.arrivals).toHaveLength(1);
     expect(repository.arrivals[0]?.title).toBe("Visita · Clínica Central");
+  });
+
+  test("starts the visit the rep already had booked at that clinic today", async () => {
+    // Arrival used to always mint a second row, so pressing Cheguei from the
+    // clinic's page rather than the agenda left the day holding an improvised
+    // visit that was measured *and* a planned one that rotted to
+    // NOT_COMPLETED — one hour in one building, counted twice and missed once.
+    const repository = new FakeInteractionRepository();
+    // The fake's start() mutates whatever `record` holds, so both point at the
+    // booked visit — which is the situation being described.
+    repository.record = interaction({ id: 77, version: 5 });
+    repository.plannedVisit = repository.record;
+
+    const result = await arrive(repository);
+
+    expect(result.id).toBe(77);
+    expect(result.status).toBe("IN_PROGRESS");
+    // Nothing improvised: no second calendar row exists to confuse the count.
+    expect(repository.arrivals).toHaveLength(0);
+  });
+
+  test("still improvises when the booked visit has already been started", async () => {
+    // A rep who walks back into the same clinic in the afternoon means the
+    // second visit, not a correction to the first.
+    const repository = new FakeInteractionRepository();
+    repository.plannedVisit = null;
+
+    const result = await arrive(repository);
+
+    expect(repository.arrivals).toHaveLength(1);
+    expect(result.status).toBe("IN_PROGRESS");
   });
 
   test("anchors the calendar row on the rep's wall clock, not the server's", async () => {
