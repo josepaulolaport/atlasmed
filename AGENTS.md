@@ -422,6 +422,7 @@ Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possíve
 | General worker work | `docs/architecture/current.md` |
 | CNES | ADR `0009-cnes-ingestion-worker-and-join-key.md` first, then ADR 0006 — 0009 supersedes it on the worker, the `ingestion` ledger and the join key |
 | Emultec order import | `docs/ops/emultec-order-import.md` |
+| Purchase recurrence / funnel | `docs/ops/purchase-recurrence-funnel.md`, then ADR 0003 |
 | Persistence from workflow | this file → `packages/database` section |
 | Workflow triggered by API | this file → `apps/api` section (only the trigger surface) |
 

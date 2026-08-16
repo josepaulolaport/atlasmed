@@ -14,19 +14,39 @@ export const PURCHASE_RECURRENCE_SCHEDULES = [
   {
     scheduleId: "facility-purchase-recurrence-hourly",
     workflowId: "facility-purchase-recurrence-hourly",
-    overlap: "SKIP" as const,
     /**
      * `hour: "*"` is load-bearing. Temporal defaults an omitted calendar field
      * to 0, not to every value, so `{ minute: 0 }` resolves to `hour: "0"` —
      * midnight daily, which is what ran in production until 2026-08-14.
      *
-     * That also silently disabled the incremental path: the workflow takes its
+     * That also silently disabled the incremental path: the workflow took its
      * `fullSweep` branch when `scheduledAt.getUTCHours() === 0`, so the single
-     * daily run was always a full sweep and the two-hour `since`/`until` window
-     * never executed. Nothing was lost, but a purchase waited until the next
-     * midnight to be reflected instead of the next hour.
+     * daily run was always a full sweep and the `since`/`until` window never
+     * executed. Nothing was lost, but a purchase waited until the next midnight
+     * to be reflected instead of the next hour.
      */
     calendar: { minute: 0, hour: "*" },
+    fullSweep: false,
+  },
+  {
+    /**
+     * The daily repair, on its own schedule id.
+     *
+     * It used to be a branch inside the hourly run, chosen by the hour of day.
+     * `SKIP` then coupled the two: an hourly run that overran past midnight
+     * caused the midnight firing to be skipped, and the sweep with it — losing
+     * the one pass that catches deleted orders, external writers that did not
+     * move `updated_at`, and any window the incremental path missed. A separate
+     * id cannot be skipped by an overrunning hourly run.
+     *
+     * 06:30 UTC is 03:30 in São Paulo. The old midnight-UTC slot was 21:00 there
+     * — inside the working evening, which is the worst time to hold row locks
+     * across every active facility.
+     */
+    scheduleId: "facility-purchase-recurrence-daily-sweep",
+    workflowId: "facility-purchase-recurrence-daily-sweep",
+    calendar: { minute: 30, hour: 6 },
+    fullSweep: true,
   },
 ] as const;
 
@@ -42,7 +62,7 @@ function scheduleOptions(definition: typeof PURCHASE_RECURRENCE_SCHEDULES[number
       workflowType: "purchaseRecurrenceWorkflow",
       taskQueue: input.taskQueue,
       workflowId: definition.workflowId,
-      args: [{ mode: "RECONCILE" as const }],
+      args: [{ mode: "RECONCILE" as const, fullSweep: definition.fullSweep }],
     },
   };
 }

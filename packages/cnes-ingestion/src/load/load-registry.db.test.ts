@@ -202,6 +202,30 @@ function buildDualUfDump(subdir: string) {
   ]);
 }
 
+/**
+ * Two SUS ids claiming one CRM — the shape that killed the production load on
+ * 2026-08-14.
+ *
+ * `(council, UF, number)` is unique across the whole table, so the second
+ * claimant cannot be written. The loader is designed to keep the first owner
+ * and count the drop; reassigning would move a doctor's identity onto a
+ * stranger. Both professionals work at the scoped clinic so both reach step 5.
+ */
+function buildDuplicateCrmDump(subdir: string) {
+  buildDump(subdir, true);
+  writeCsv(subdir, "tbDadosProfissionalSus", [
+    ["CO_PROFISSIONAL_SUS", "NO_PROFISSIONAL", "CO_CNS", "CO_CPF"],
+    [DOCTOR_SUS, "DOUTOR FIXTURE", "700000000009901", "XXX.392.286.XX"],
+    [STRANGER_SUS, "DOUTOR HOMONIMO", "700000000009903", "XXX.333.444.XX"],
+  ]);
+  writeCsv(subdir, "tbCargaHorariaSus", [
+    ["CO_UNIDADE", "CO_PROFISSIONAL_SUS", "CO_CBO", "CO_CONSELHO_CLASSE", "NU_REGISTRO", "SG_UF_CRM"],
+    [UNIT_CODE, DOCTOR_SUS, "225125", "71", DOCTOR_CRM, "SP"],
+    // Same council, same UF, same number, different person.
+    [UNIT_CODE, STRANGER_SUS, "225125", "71", DOCTOR_CRM, "SP"],
+  ]);
+}
+
 async function purgeFixtures(database: AnyDatabase) {
   await database.execute(sql`
     delete from registry.facility_professional_occupations where facility_cnes_id = ${CNES_CODE};
@@ -356,6 +380,7 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
     buildDump("without-doctor", false);
     buildDualUfDump("dual-uf");
     buildNationalDump("national");
+    buildDuplicateCrmDump("duplicate-crm");
   });
 
   afterAll(async () => {
@@ -652,6 +677,37 @@ describe.if(dbUp)("loadRegistryFromCsv", () => {
       expect(await vinculoCount(tx)).toBe(0);
       // The person survives — absence is not departure, and the bridge is theirs.
       expect(await professionalExists(tx, DOCTOR_SUS)).toBe(true);
+    });
+  });
+
+  /**
+   * The production load died here on 2026-08-14, on CRM 66/MA/1161543. The
+   * guard that should have absorbed it read `code` off the error it was handed,
+   * and drizzle hands a `DrizzleQueryError` with the driver error on `cause`,
+   * so the check returned false and the insert rethrew — killing a load over a
+   * row the loader was designed to skip.
+   */
+  it("keeps the first claimant when two SUS ids carry one CRM, and finishes", async () => {
+    await rolledBack(async (tx) => {
+      const result = await loadRegistryFromCsv({
+        db: tx,
+        csvDir: join(dir, "duplicate-crm"),
+        reference: REFERENCE,
+      });
+
+      // The load completes rather than throwing.
+      expect(result.registrationsConflicted).toBe(1);
+      expect(result.registrationsUpserted).toBe(1);
+
+      const held = (await tx.execute(sql`
+        select professional_cnes_id
+          from registry.professional_registrations
+         where council_cnes_id = '71' and state_code = 'SP'
+           and registration_number = ${DOCTOR_CRM}
+      `)) as unknown as { professional_cnes_id: string }[];
+      // Exactly one owner, and it is the first claimant — not the stranger.
+      expect(held).toHaveLength(1);
+      expect(held[0]?.professional_cnes_id).toBe(DOCTOR_SUS);
     });
   });
 

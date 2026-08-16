@@ -4,10 +4,7 @@ import {
   orders,
   type Database,
 } from "@atlasmed/database";
-import {
-  calculatePurchaseRecurrenceSnapshot,
-  type PurchaseRecurrenceSnapshot,
-} from "@atlasmed/facility-insights";
+import type { PurchaseRecurrenceSnapshot } from "@atlasmed/facility-insights";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
@@ -146,91 +143,4 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
     });
   }
 
-  async recalculateAllProfiles(
-    facilityId: number,
-    today: string,
-  ): Promise<{ changed: boolean } | null> {
-    return this.database.transaction(async (tx) => {
-      const facilityAlive = await tx
-        .select({ id: facilities.id })
-        .from(facilities)
-        .where(
-          and(eq(facilities.id, facilityId), sql`${facilities.deactivatedAt} is null`),
-        )
-        .limit(1);
-      if (!facilityAlive[0]) return null;
-
-      const profiles = await tx
-        .select({
-          id: facilityVerticalProfiles.id,
-          verticalId: facilityVerticalProfiles.verticalId,
-          manualPurchaseProfile: facilityVerticalProfiles.manualPurchaseProfile,
-          manualPurchaseIntervalDays:
-            facilityVerticalProfiles.manualPurchaseIntervalDays,
-          purchaseFunnelStage: facilityVerticalProfiles.purchaseFunnelStage,
-          purchaseIntervalDays: facilityVerticalProfiles.purchaseIntervalDays,
-          purchaseIntervalSource: facilityVerticalProfiles.purchaseIntervalSource,
-          observedPurchaseIntervalDays:
-            facilityVerticalProfiles.observedPurchaseIntervalDays,
-          lastValidPurchaseDate: facilityVerticalProfiles.lastValidPurchaseDate,
-          purchaseRecurrenceSampleSize:
-            facilityVerticalProfiles.purchaseRecurrenceSampleSize,
-          nextPurchaseFunnelTransitionDate:
-            facilityVerticalProfiles.nextPurchaseFunnelTransitionDate,
-          purchaseRecurrenceCalculatedAt:
-            facilityVerticalProfiles.purchaseRecurrenceCalculatedAt,
-        })
-        .from(facilityVerticalProfiles)
-        .where(
-          and(
-            eq(facilityVerticalProfiles.facilityId, facilityId),
-            eq(facilityVerticalProfiles.isActive, true),
-          ),
-        );
-
-      if (profiles.length === 0) return { changed: false };
-
-      let changed = false;
-      for (const profile of profiles) {
-        const purchaseDates = await loadPurchaseDates(tx, profile.id);
-        const configuration: ManualPurchaseConfiguration = {
-          manualProfile: profile.manualPurchaseProfile,
-          manualIntervalDays: profile.manualPurchaseIntervalDays,
-        };
-        const snapshot = calculatePurchaseRecurrenceSnapshot({
-          purchaseDates,
-          manualProfile: configuration.manualProfile,
-          manualIntervalDays: configuration.manualIntervalDays,
-          today,
-        });
-        const same =
-          profile.purchaseRecurrenceCalculatedAt != null &&
-          profile.purchaseFunnelStage === snapshot.purchaseFunnelStage &&
-          profile.purchaseIntervalDays === snapshot.purchaseIntervalDays &&
-          profile.purchaseIntervalSource === snapshot.purchaseIntervalSource &&
-          profile.observedPurchaseIntervalDays ===
-            snapshot.observedPurchaseIntervalDays &&
-          profile.lastValidPurchaseDate === snapshot.lastValidPurchaseDate &&
-          profile.purchaseRecurrenceSampleSize ===
-            snapshot.purchaseRecurrenceSampleSize &&
-          profile.nextPurchaseFunnelTransitionDate ===
-            snapshot.nextPurchaseFunnelTransitionDate &&
-          profile.manualPurchaseProfile === snapshot.manualPurchaseProfile &&
-          profile.manualPurchaseIntervalDays ===
-            snapshot.manualPurchaseIntervalDays;
-        if (same) continue;
-        changed = true;
-        await tx
-          .update(facilityVerticalProfiles)
-          .set(snapshotSet(snapshot, configuration))
-          .where(eq(facilityVerticalProfiles.id, profile.id));
-      }
-
-      if (profiles.some((p) => p.purchaseRecurrenceCalculatedAt == null)) {
-        changed = true;
-      }
-
-      return { changed };
-    });
-  }
 }
