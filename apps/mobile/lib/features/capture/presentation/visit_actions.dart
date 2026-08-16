@@ -19,19 +19,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Lives outside any one screen because the same press belongs on the agenda,
 /// on Desempenho, and anywhere else the day is shown. A rep should not have to
 /// find a clinic profile to say they have arrived somewhere they planned.
+/// [atFacility] is false for a contact with a doctor that happened nowhere
+/// (§15.7.5): nobody arrived anywhere, so the confirmation says so.
 Future<bool> startPlannedVisit(
   BuildContext context,
   WidgetRef ref, {
   required int interactionId,
   required int expectedVersion,
   required String facilityName,
+  bool atFacility = true,
 }) => _run(
   context,
   ref,
   kind: PendingCaptureKind.start,
   label: 'Iniciar · $facilityName',
   payload: {'interactionId': interactionId, 'expectedVersion': expectedVersion},
-  onlineMessage: 'Visita iniciada em $facilityName',
+  onlineMessage: atFacility
+      ? 'Visita iniciada em $facilityName'
+      : 'Contato iniciado com $facilityName',
   call: (repository, stampedAt) => repository.startInteraction(
     interactionId,
     expectedVersion: expectedVersion,
@@ -46,13 +51,16 @@ Future<bool> finishPlannedVisit(
   required int interactionId,
   required int expectedVersion,
   required String facilityName,
+  bool atFacility = true,
 }) => _run(
   context,
   ref,
   kind: PendingCaptureKind.complete,
   label: 'Encerrar · $facilityName',
   payload: {'interactionId': interactionId, 'expectedVersion': expectedVersion},
-  onlineMessage: 'Visita encerrada em $facilityName',
+  onlineMessage: atFacility
+      ? 'Visita encerrada em $facilityName'
+      : 'Contato encerrado com $facilityName',
   call: (repository, stampedAt) => repository.completeInteraction(
     interactionId,
     expectedVersion: expectedVersion,

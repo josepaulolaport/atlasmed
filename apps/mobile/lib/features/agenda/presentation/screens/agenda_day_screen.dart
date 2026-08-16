@@ -318,7 +318,14 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     final status = occurrence.interaction?.status;
     final running = status == InteractionStatus.inProgress;
     final startable = status == InteractionStatus.scheduled;
-    final name = occurrence.facility?.name ?? occurrence.title;
+    // "Cheguei" is an arrival somewhere, and a remote contact with a doctor
+    // (§15.7.5) is nowhere — the arrival endpoint needs a clinic it does not
+    // have. Same press, honest name: the rep is starting a call.
+    final arrives = occurrence.interaction?.modality != CalendarModality.remote
+        && occurrence.interaction?.facilityId != null;
+    final name = occurrence.facility?.name
+        ?? occurrence.interaction?.person?.name
+        ?? occurrence.title;
 
     final action = await showModalBottomSheet<String>(
       context: context,
@@ -346,18 +353,20 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
             if (startable)
               ListTile(
                 key: const Key('day-visit-start'),
-                leading: const Icon(
-                  Icons.where_to_vote_rounded,
+                leading: Icon(
+                  arrives
+                      ? Icons.where_to_vote_rounded
+                      : Icons.play_circle_outline_rounded,
                   color: AppColors.green,
                 ),
-                title: const Text('Cheguei'),
+                title: Text(arrives ? 'Cheguei' : 'Iniciar'),
                 onTap: () => Navigator.of(sheetContext).pop('start'),
               ),
             if (running)
               ListTile(
                 key: const Key('day-visit-finish'),
                 leading: const Icon(Icons.stop_circle_outlined),
-                title: const Text('Encerrar visita'),
+                title: Text(arrives ? 'Encerrar visita' : 'Encerrar'),
                 onTap: () => Navigator.of(sheetContext).pop('finish'),
               ),
             // Only while it is still only a plan. Once a visit has started or
@@ -399,6 +408,7 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
           interactionId: interactionId,
           expectedVersion: version,
           facilityName: name,
+          atFacility: arrives,
         );
       case 'finish':
         await finishPlannedVisit(
@@ -407,6 +417,7 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
           interactionId: interactionId,
           expectedVersion: version,
           facilityName: name,
+          atFacility: arrives,
         );
       case 'edit':
         // Reaches the occurrence-vs-series chooser, and through it the series
