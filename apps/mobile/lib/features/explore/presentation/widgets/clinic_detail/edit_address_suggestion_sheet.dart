@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_geocoding_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_location_picker.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Bottom sheet to suggest edits for the street-address components.
-/// Display on the admin card stays as one composed "Endereço" line; editing
-/// opens this multi-field form (bairro / logradouro / número / complemento).
+/// Bottom sheet to suggest edits for the address — text, CEP and the pin.
+///
+/// It used to collect four text fields and nothing else, and the reviewer's
+/// approval re-derived the point by geocoding what had been typed. That is the
+/// weaker half of the correction: somebody standing outside the clinic knows
+/// where it is, and a forward lookup of a street they just corrected does not.
+/// The sheet now offers the same geocode-and-drag the CNES import wizard has,
+/// and the pin travels with the address so one approval moves CEP, address and
+/// location together.
+///
+/// The standalone `coordinates` suggestion still exists for the case where only
+/// the pin is wrong.
 Future<void> showAddressEditSuggestionSheet(
   BuildContext context, {
   required WidgetRef ref,
@@ -17,12 +30,14 @@ Future<void> showAddressEditSuggestionSheet(
   String? city,
   String? state,
   String? postalCode,
+  double? lat,
+  double? lng,
 }) async {
   await Future<void>.delayed(Duration.zero);
   if (!context.mounted) return;
 
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final submitted = await showModalBottomSheet<Map<String, String?>>(
+  final submitted = await showModalBottomSheet<Map<String, Object?>>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -35,6 +50,11 @@ Future<void> showAddressEditSuggestionSheet(
       streetAddress: streetAddress,
       streetNumber: streetNumber,
       addressComplement: addressComplement,
+      postalCode: postalCode,
+      city: city,
+      state: state,
+      initialLat: lat,
+      initialLng: lng,
     ),
   );
 
@@ -53,7 +73,15 @@ Future<void> showAddressEditSuggestionSheet(
             'addressComplement': submitted['addressComplement'],
             'city': city,
             'state': state,
-            'postalCode': postalCode,
+            // Edited here now rather than carried through untouched: a street
+            // correction almost always comes with a CEP correction, and the two
+            // arriving in separate suggestions meant the pair could be approved
+            // apart and disagree in between.
+            'postalCode': submitted['postalCode'],
+            // Absent when the submitter never placed one, in which case the
+            // server geocodes the text exactly as before.
+            if (submitted['lat'] != null) 'lat': submitted['lat'],
+            if (submitted['lng'] != null) 'lng': submitted['lng'],
           },
         );
     if (!context.mounted) return;
@@ -80,12 +108,22 @@ class _AddressEditSuggestionSheetBody extends StatefulWidget {
     required this.streetAddress,
     required this.streetNumber,
     required this.addressComplement,
+    required this.postalCode,
+    required this.city,
+    required this.state,
+    required this.initialLat,
+    required this.initialLng,
   });
 
   final String? neighborhood;
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;
+  final String? postalCode;
+  final String? city;
+  final String? state;
+  final double? initialLat;
+  final double? initialLng;
 
   @override
   State<_AddressEditSuggestionSheetBody> createState() =>
@@ -98,10 +136,25 @@ class _AddressEditSuggestionSheetBodyState
   late final TextEditingController _streetCtrl;
   late final TextEditingController _numberCtrl;
   late final TextEditingController _complementCtrl;
+  late final TextEditingController _postalCodeCtrl;
+
+  final _geocoding = FacilityGeocodingRepository();
+  MapCoordinate? _point;
+  String? _pinAddress;
+  bool _resolving = false;
 
   @override
   void initState() {
     super.initState();
+    _postalCodeCtrl = TextEditingController(
+      text: widget.postalCode?.trim() ?? '',
+    );
+    if (widget.initialLat != null && widget.initialLng != null) {
+      _point = MapCoordinate(
+        latitude: widget.initialLat!,
+        longitude: widget.initialLng!,
+      );
+    }
     _neighborhoodCtrl = TextEditingController(
       text: widget.neighborhood?.trim() ?? '',
     );
@@ -122,7 +175,96 @@ class _AddressEditSuggestionSheetBodyState
     _streetCtrl.dispose();
     _numberCtrl.dispose();
     _complementCtrl.dispose();
+    _postalCodeCtrl.dispose();
     super.dispose();
+  }
+
+  bool get _hasAddressToGeocode =>
+      _streetCtrl.text.trim().isNotEmpty ||
+      _postalCodeCtrl.text.trim().isNotEmpty;
+
+  /// Address → pin, server-side, so the sheet lands on the same coordinates the
+  /// reviewer's approval would have derived — with the difference that the
+  /// submitter gets to see them and correct them first.
+  Future<void> _geocodeFromAddress() async {
+    if (_resolving) return;
+    setState(() => _resolving = true);
+    try {
+      final point = await _geocoding.geocodeAddress(
+        streetAddress: _streetCtrl.text,
+        streetNumber: _numberCtrl.text,
+        neighborhood: _neighborhoodCtrl.text,
+        city: widget.city,
+        state: widget.state,
+        postalCode: _postalCodeCtrl.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resolving = false;
+        if (point != null) {
+          _point = MapCoordinate(
+            latitude: point.latitude,
+            longitude: point.longitude,
+          );
+          // Derived from the fields above, so echoing it back would just repeat
+          // the form at the reader.
+          _pinAddress = null;
+        }
+      });
+      if (point == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não encontramos esse endereço no mapa. Marque o ponto à mão.',
+            ),
+          ),
+        );
+      }
+    } on CnesFacilityImportException catch (e) {
+      if (!mounted) return;
+      setState(() => _resolving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
+  /// one fact, so moving the pin rewrites the fields rather than leaving them
+  /// describing where the clinic used to be.
+  ///
+  /// The picker resolves the address before it returns and refuses to confirm a
+  /// point it cannot name, so what comes back is always a place — there is no
+  /// window here where new coordinates sit beside the old address.
+  Future<void> _pickOnMap() async {
+    final picked = await FacilityPinPickerScreen.show(
+      context,
+      initial: _point,
+      title: 'Endereço da clínica',
+      resolve: (lat, lng) =>
+          _geocoding.reverseGeocode(latitude: lat, longitude: lng),
+    );
+    if (picked == null || !mounted) return;
+
+    final address = picked.address;
+    setState(() {
+      _point = picked.point;
+      _pinAddress = address.fullAddress;
+      if (address.streetAddress != null) {
+        _streetCtrl.text = address.streetAddress!;
+      }
+      if (address.streetNumber != null) {
+        _numberCtrl.text = address.streetNumber!;
+      }
+      if (address.neighborhood != null) {
+        _neighborhoodCtrl.text = address.neighborhood!;
+      }
+      // A five-digit prefix must not overwrite a full CEP already on file.
+      if (isCompleteCep(address.postalCode) ||
+          (address.postalCode != null && _postalCodeCtrl.text.trim().isEmpty)) {
+        _postalCodeCtrl.text = address.postalCode!;
+      }
+    });
   }
 
   @override
@@ -205,7 +347,36 @@ class _AddressEditSuggestionSheetBodyState
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            _AddressField(
+              label: 'CEP',
+              controller: _postalCodeCtrl,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'LOCALIZAÇÃO',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+                color: AppColors.gray400,
+              ),
+            ),
             const SizedBox(height: 8),
+            FacilityLocationCard(
+              point: _point,
+              geocoding: _resolving,
+              addressLabel: _pinAddress,
+              canUseAddress: _hasAddressToGeocode,
+              onUseAddress: _geocodeFromAddress,
+              onPickOnMap: _pickOnMap,
+              note:
+                  'O ponto vai junto com o endereço: aprovar a sugestão move os '
+                  'dois de uma vez.',
+            ),
+            const SizedBox(height: 10),
             const Text(
               'Sua sugestão passa por revisão administrativa antes de entrar no perfil.',
               style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
@@ -215,7 +386,7 @@ class _AddressEditSuggestionSheetBodyState
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
-                  Navigator.of(context).pop(<String, String?>{
+                  Navigator.of(context).pop(<String, Object?>{
                     'neighborhood': _neighborhoodCtrl.text.trim().isEmpty
                         ? null
                         : _neighborhoodCtrl.text.trim(),
@@ -228,6 +399,11 @@ class _AddressEditSuggestionSheetBodyState
                     'addressComplement': _complementCtrl.text.trim().isEmpty
                         ? null
                         : _complementCtrl.text.trim(),
+                    'postalCode': _postalCodeCtrl.text.trim().isEmpty
+                        ? null
+                        : _postalCodeCtrl.text.trim(),
+                    'lat': _point?.latitude,
+                    'lng': _point?.longitude,
                   });
                 },
                 style: FilledButton.styleFrom(
