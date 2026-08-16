@@ -340,6 +340,24 @@ export const facilityVerticalProfiles = pgTable(
       .where(
         sql`${t.isActive} = true and ${t.nextPurchaseFunnelTransitionDate} is not null`,
       ),
+    /**
+     * Profiles whose snapshot is invalid and must be recomputed on the next
+     * reconcile — never calculated, or explicitly cleared.
+     *
+     * Clearing the timestamp is how a profile that *lost* its orders asks to be
+     * recalculated. Reconciliation otherwise finds a facility by joining an
+     * order to its profile, so when the Emultec importer re-keys an order onto
+     * the clinic's real CNPJ profile, the profile it came from is reachable from
+     * nothing and keeps reporting a purchase that moved away.
+     *
+     * Tiny by construction: rows leave the index as soon as they are
+     * recalculated.
+     */
+    index("facility_vertical_profiles_invalidated_snapshot_idx")
+      .on(t.facilityId)
+      .where(
+        sql`${t.isActive} = true and ${t.purchaseRecurrenceCalculatedAt} is null`,
+      ),
     check(
       "facility_vertical_profiles_observed_purchase_interval_days_check",
       sql`${t.observedPurchaseIntervalDays} is null or ${t.observedPurchaseIntervalDays} between 1 and 3650`,

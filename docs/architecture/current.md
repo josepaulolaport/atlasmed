@@ -113,7 +113,7 @@ write the same row. Being replaced by [Spec 0011](../specs/0011-cadastro-pipelin
   `person_professional_registration_councils` gained `POST`/`PATCH` on the
   `CATALOG` subject with spec 0016 §5.2, edited from
   `Administração › Catálogos`. `healthcare_specialties.cnes_id` became nullable
-  in migration `0117` so a specialty CNES does not list can be registered without
+  in migration `0118` so a specialty CNES does not list can be registered without
   inventing an official id; its plain `UNIQUE` is kept rather than swapped for a
   partial index, because NULLs are already distinct under one and a partial index
   cannot be inferred as an `ON CONFLICT` arbiter — which would break any future

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "conformity_requirements_name_normalized_uidx" ON "conformity_requirements" USING btree (lower(trim("name")));

@@ -3,12 +3,18 @@ import {
   createMetricSnapshotStore,
   listAllProfileIds,
   listProfilesWithChangedInputs,
+  RECONCILE_WATERMARKS,
   type AnyDatabase,
 } from "@atlasmed/database";
 import {
   recomputeMetricSnapshots,
 } from "@atlasmed/facility-insights";
 import { getDb } from "../infrastructure/db";
+import {
+  commitCoveredUntil,
+  planReconcileWindow,
+  readCoveredUntil,
+} from "../infrastructure/reconcile-watermark";
 import { logger } from "../logger";
 
 /**
@@ -191,6 +197,84 @@ export async function recalculateMetricSnapshotsBatch(
     store: createMetricSnapshotBatchStore(getDb()),
   })(input);
 }
+
+export interface MetricSnapshotWindowInput {
+  until: string;
+}
+
+export interface MetricSnapshotWindowPlan {
+  since: string;
+}
+
+/**
+ * The window the hourly RECONCILE should cover.
+ *
+ * It was a fixed two-hour lookback from the run's own start, and the comment
+ * beside it already called that a watermark. Under overlap `SKIP` it is not one:
+ * a run that overruns causes the next firings to be skipped, and the run that
+ * does fire looks back two hours from *itself*, so the hours in between are
+ * covered by nobody. Unlike the purchase funnel there is no sweep to hide it —
+ * the NIGHTLY pass visits every profile but recomputes from current state, so a
+ * missed order change that has since aged out of the rolling 90-day window is
+ * simply lost.
+ *
+ * No `fullSweep` in the plan: NIGHTLY is its own schedule and its own mode, so a
+ * badly lagging watermark just yields a wide window, which the keyset paging
+ * already handles.
+ */
+export function createClaimMetricSnapshotWindowActivity(dependencies: {
+  read: () => Promise<string | null>;
+}) {
+  return async function claimMetricSnapshotWindow(
+    input: MetricSnapshotWindowInput,
+  ): Promise<MetricSnapshotWindowPlan> {
+    let coveredUntil: string | null = null;
+    try {
+      coveredUntil = await dependencies.read();
+    } catch (error) {
+      throw ApplicationFailure.retryable(
+        `Metric snapshot watermark read failed: ${errorMessage(error)}`,
+        "MetricSnapshotDatabaseFailure",
+      );
+    }
+    const { since } = planReconcileWindow({ coveredUntil, until: input.until });
+    logger.info("facility_metric_snapshot.window_planned", {
+      coveredUntil: coveredUntil ?? undefined,
+      since,
+      until: input.until,
+    });
+    return { since };
+  };
+}
+
+export function createCommitMetricSnapshotWindowActivity(dependencies: {
+  commit: (until: string) => Promise<void>;
+}) {
+  return async function commitMetricSnapshotWindow(
+    input: MetricSnapshotWindowInput,
+  ): Promise<void> {
+    try {
+      await dependencies.commit(input.until);
+    } catch (error) {
+      // Retryable on purpose: dropping the commit re-does the same window
+      // forever, which is the failure the watermark exists to prevent.
+      throw ApplicationFailure.retryable(
+        `Metric snapshot watermark commit failed: ${errorMessage(error)}`,
+        "MetricSnapshotDatabaseFailure",
+      );
+    }
+    logger.info("facility_metric_snapshot.window_committed", { until: input.until });
+  };
+}
+
+export const claimMetricSnapshotWindow = createClaimMetricSnapshotWindowActivity({
+  read: () => readCoveredUntil(getDb(), RECONCILE_WATERMARKS.metricSnapshot),
+});
+
+export const commitMetricSnapshotWindow = createCommitMetricSnapshotWindowActivity({
+  commit: (until) =>
+    commitCoveredUntil(getDb(), RECONCILE_WATERMARKS.metricSnapshot, until),
+});
 
 export interface MetricSnapshotLifecycleLogInput {
   action: string;

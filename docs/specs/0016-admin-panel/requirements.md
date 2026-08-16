@@ -679,7 +679,7 @@ was `NOT NULL UNIQUE` and all 66 production rows carry a real CNES id
 (223119–225355), so the table mirrored the official CBO list and adding a
 specialty meant inventing an official id.
 
-Migration `0117` makes `cnes_id` nullable with a partial-unique index — exactly
+The migration makes `cnes_id` nullable with a partial-unique index — exactly
 what spec 0013 §2 did for the product coding columns, for the same reason — plus
 a normalised unique index on the name. Especialidades are now the fourth segment
 of `Administração › Catálogos`.

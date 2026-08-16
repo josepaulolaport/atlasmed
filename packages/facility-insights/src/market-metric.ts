@@ -7,6 +7,8 @@
  * reproduce itself exactly.
  */
 
+import { APPLICATION_TIMEZONE, partsAt } from "./civil-date";
+
 /**
  * Months are calendar months **in São Paulo**, not UTC.
  *
@@ -14,8 +16,12 @@
  * bounds would file an order taken 31 March at 22:00 in São Paulo under April —
  * and the rep who entered it would disagree with the chart. The rep answers
  * *quantas por mês* and means their own months.
+ *
+ * The zone and the formatting live in `./civil-date` now that the purchase
+ * funnel needs the same rule; re-exported here so existing importers are
+ * unaffected.
  */
-export const APPLICATION_TIMEZONE = "America/Sao_Paulo";
+export { APPLICATION_TIMEZONE };
 
 /** First day of a calendar month, `YYYY-MM-01`. */
 export type MonthKey = string;
@@ -55,29 +61,6 @@ function parseMonthKey(month: MonthKey): { year: number; month: number } {
 
 function formatMonthKey(year: number, month: number): MonthKey {
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`;
-}
-
-function partsAt(instant: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(instant);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value);
-  return {
-    year: value("year"),
-    month: value("month"),
-    day: value("day"),
-    hour: value("hour"),
-    minute: value("minute"),
-    second: value("second"),
-  };
 }
 
 function offsetMillisecondsAt(instant: Date, timeZone: string): number {

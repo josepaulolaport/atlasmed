@@ -693,12 +693,12 @@ the index name does not appear in the response body.
 
 ---
 
-## Phase 6 — migration `0117`, from the two answered questions
+## Phase 6 — the schema change, from the two answered questions
 
 Two answers required schema changes; both landed in one migration.
 
 ```
-packages/database/drizzle/0117_admin_editable_specialties_and_unique_payers.sql
+packages/database/drizzle/0118_admin_editable_catalogues.sql
 ```
 
 Three statements, and **the unique constraint is not one of them**:
@@ -759,7 +759,7 @@ A constraint that silently turns that into a runtime 42P10 is a trap laid for a
 future author, and "document the workaround" is a worse answer than "do not lay
 the trap". `products.code` keeps the partial form because nothing upserts on it.
 
-`0117` was local and unmerged, so it was deleted and regenerated rather than
+It was local and unmerged, so it was deleted and regenerated rather than
 stacked on: the test database was dropped, rebuilt from the full chain, and
 re-migrated. The result is three statements that never touch the constraint.
 
@@ -779,7 +779,7 @@ properly:
 | Every Drizzle `healthcareSpecialties` reference | All reads: selects and joins in the search index, the professional repository and the person repository |
 | Every raw `ON CONFLICT` in the repo, resolved to its table | The `(cnes_id)` ones target `registry.professionals`, `registry.occupations` and `registry.professional_councils` — different tables, untouched |
 | Every Drizzle `onConflict*({ target })` cross-referenced against the **32 partial unique indexes** in the database | None targets a partial index. The one place code does — `person_facilities` — already repeats its predicate, so the pattern was known |
-| Migration numbering across every branch | `main` is at `0116`; no branch holds a `0117`. No collision |
+| Migration numbering across every branch | Checked at the time against `0116`. `main` later shipped its own `0117`, so this branch's migration was renumbered to `0118` when main was merged — see Phase 11 |
 
 So the bug class is not latent anywhere else, and the claim now rests on a sweep
 rather than on one grep.
@@ -971,7 +971,7 @@ when the API omits limits.
 Run on a dedicated simulator (`AtlasMed Admin16`, created for this so the three
 already-booted ones were left alone), against a **local** API on `:3111` pointed
 at `atlasmed_admin16_dev` — an isolated copy of the local snapshot migrated to
-`0117`. `AppConfig.apiBaseUrl` throws when `API_BASE_URL` is missing, so there is
+the new migration. `AppConfig.apiBaseUrl` throws when `API_BASE_URL` is missing, so there is
 no path by which this could have reached production.
 
 Signed in as ADMIN. Desempenho rendered its real numbers (1423 clínicas, 1388
@@ -1018,7 +1018,7 @@ Each fix carries a regression test naming the simulator as where it was found.
 | Desempenho | unchanged |
 
 Also exercised over HTTP before the UI: nullable-CNES specialty creation (twice,
-proving `0117`), duplicate → **409** with a readable message (a **500** before the
+proving the migration), duplicate → **409** with a readable message (a **500** before the
 constraint mapping), non-numeric CNES id → **400**, requirement create with a
 derived slug, `PATCH` ignoring a slug attempt, delete allowed and delete refused
 with `blockedBy`.
@@ -1204,7 +1204,7 @@ of them server-side.
 | 1 | **Negative prices accepted** on products and competitor products, create and update, all four price columns. `price: -5` saved and flowed into the comparativo. | Bounded at the route: `numeric(12,2)`, never below zero. |
 | 2 | **Any bytes accepted as a picture.** An HTML file uploaded as `image/png` was stored and served back with that content type. | `calculateBlurhash` already decodes the bytes with sharp and returns null when it cannot — the answer was computed and thrown away. Now it rejects. Both image routes also send `X-Content-Type-Options: nosniff`. |
 | 3 | **A missing foreign key read as "still in use".** Creating a product with a Linha that does not exist answered 409 *"This record is linked to others and cannot be changed or removed while they exist"* — the opposite problem, and the opposite fix. | Postgres phrases the two directions differently in `detail`; the missing-target case is now a 400 that says so. |
-| 4 | **Two conformity requirements could share a name.** The slug was unique, the name was not, so the cadastro asked a clinic for the same document twice and the admin list showed two identical rows. | Migration `0118`, a normalized unique index on the name. |
+| 4 | **Two conformity requirements could share a name.** The slug was unique, the name was not, so the cadastro asked a clinic for the same document twice and the admin list showed two identical rows. | A normalized unique index on the name, folded into `0118`. |
 | 5 | Deleting a product leaves its stored picture behind. | Noted, not fixed — a few kilobytes, and the fix belongs with a storage sweep rather than in the delete path. |
 
 Checked and found correct: every write path 403s for a REP; delete is
@@ -1223,3 +1223,38 @@ specialty names are rejected case- and whitespace-insensitively.
 Not defects, checked and left alone: the branch-back arrow on the hub (app-wide
 `AppShell` behaviour, not this panel's), and the flat picker rows in the two
 "add" sheets (a picker is not a record list).
+
+---
+
+## Phase 11 — merging `main`, and the migration number that collided
+
+`main` shipped its own **`0117`** while this branch was open
+(`0117_reconcile_watermark_and_invalidated_snapshots`). Phase 6 had checked
+every branch for a `0117` and found none; that check was true when it was made
+and stopped being true, which is the whole hazard with a numbered sequence.
+
+Only the drizzle metadata conflicted — `_journal.json` and the `0117` snapshot.
+The schema itself merged cleanly, including `facilities.ts`, which both sides
+touched.
+
+Resolved by taking `main`'s lineage whole and regenerating: this branch's two
+migrations were deleted, the journal reset to `main`'s, and `db:generate` run
+against the merged schema. The result is one **`0118_admin_editable_catalogues`**
+carrying all four statements:
+
+```sql
+ALTER TABLE "healthcare_specialties" ALTER COLUMN "cnes_id" DROP NOT NULL;
+CREATE UNIQUE INDEX "conformity_requirements_name_normalized_uidx" …;
+CREATE UNIQUE INDEX "healthcare_providers_name_normalized_uidx" …;
+CREATE UNIQUE INDEX "healthcare_specialties_name_normalized_uidx" …;
+```
+
+They ship together as one feature, so one file is honest. Regenerating rather
+than renaming matters: a drizzle snapshot chains to the one before it by id, so
+renaming the files by hand leaves a `prevId` pointing at a migration that is no
+longer there. `drizzle-kit check` passes on the regenerated chain.
+
+**Deploy note:** the migration to run for this branch is `0118`, not `0117`.
+Anything that already applied the old local `0117` on a scratch database has the
+same statements under a different name and should be rebuilt rather than
+migrated forward.

@@ -30,15 +30,27 @@ function page(overrides: Partial<MetricSnapshotBatchResult> = {}): MetricSnapsho
   };
 }
 
-function createDependencies(pages: MetricSnapshotBatchResult[]) {
+function createDependencies(
+  pages: MetricSnapshotBatchResult[],
+  options: { coveredUntil?: string } = {},
+) {
   const calls: MetricSnapshotBatchInput[] = [];
   const logs: MetricSnapshotLifecycleLogInput[] = [];
+  const commits: string[] = [];
   let index = 0;
   return {
     calls,
     logs,
+    commits,
     continued: [] as MetricSnapshotWorkflowInput[],
     dependencies: {
+      // No watermark by default, so the window falls back to the two-hour
+      // lookback the schedule interval implies.
+      claimWindow: async ({ until }: { until: string }) => ({
+        since: options.coveredUntil
+          ?? new Date(Date.parse(until) - 2 * 60 * 60 * 1_000).toISOString(),
+      }),
+      commitWindow: async ({ until }: { until: string }) => { commits.push(until); },
       recalculate: async (input: MetricSnapshotBatchInput) => {
         calls.push(input);
         return pages[index++] ?? page();
@@ -81,9 +93,57 @@ describe("runMetricSnapshotWorkflow", () => {
 
     const [call] = harness.calls;
     expect(call!.until).toBe("2026-03-15T10:00:00.000Z");
-    // Two hours of lookback against an hourly schedule, so a skipped or delayed
-    // run does not leave a gap no later run ever looks at.
+    // Two hours of lookback with no watermark yet, matching the hourly schedule.
     expect(call!.since).toBe("2026-03-15T08:00:00.000Z");
+    // Committed only after the last page, so a run that dies leaves its window
+    // for the next one.
+    expect(harness.commits).toEqual(["2026-03-15T10:00:00.000Z"]);
+  });
+
+  /**
+   * The gap this closes. `since = start - 2h` was called a watermark and was
+   * not one: under overlap `SKIP` an overrunning run leaves the hours after it
+   * covered by nobody, and NIGHTLY does not repair it — it recomputes from
+   * current state, so an order change that has aged out of the rolling 90-day
+   * window is gone.
+   */
+  test("RECONCILE reaches back to where the last completed run got to", async () => {
+    const harness = createDependencies([page()], {
+      coveredUntil: "2026-03-15T04:00:00.000Z",
+    });
+    await runMetricSnapshotWorkflow({ mode: "RECONCILE" }, harness.dependencies);
+
+    expect(harness.calls[0]!.since).toBe("2026-03-15T04:00:00.000Z");
+  });
+
+  test("a continued run still commits the window its first run claimed", async () => {
+    const harness = createDependencies([page()]);
+    await runMetricSnapshotWorkflow({
+      mode: "RECONCILE",
+      since: "2026-03-15T08:00:00.000Z",
+      until: "2026-03-15T10:00:00.000Z",
+      ownsWatermark: true,
+    }, harness.dependencies);
+    expect(harness.commits).toEqual(["2026-03-15T10:00:00.000Z"]);
+  });
+
+  test("a caller-supplied window does not advance the watermark", async () => {
+    const harness = createDependencies([page()]);
+    await runMetricSnapshotWorkflow({
+      mode: "RECONCILE",
+      since: "2026-03-15T08:00:00.000Z",
+      until: "2026-03-15T10:00:00.000Z",
+    }, harness.dependencies);
+    expect(harness.commits).toEqual([]);
+  });
+
+  test("does not advance the watermark when a page fails", async () => {
+    const harness = createDependencies([]);
+    await expect(runMetricSnapshotWorkflow({ mode: "RECONCILE" }, {
+      ...harness.dependencies,
+      recalculate: async () => { throw new Error("database unavailable"); },
+    })).rejects.toThrow("database unavailable");
+    expect(harness.commits).toEqual([]);
   });
 
   test("NIGHTLY visits every profile and sends no watermark window", async () => {
@@ -97,6 +157,9 @@ describe("runMetricSnapshotWorkflow", () => {
     expect(call!.mode).toBe("NIGHTLY");
     expect(call!.since).toBeUndefined();
     expect(call!.until).toBeUndefined();
+    // And it must not move the RECONCILE watermark, which would claim coverage
+    // of a window it never looked at.
+    expect(harness.commits).toEqual([]);
   });
 
   test("TRIGGER carries the named profiles through, and sends no window", async () => {

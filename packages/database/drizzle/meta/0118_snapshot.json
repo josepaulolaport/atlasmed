@@ -1,6 +1,6 @@
 {
-  "id": "c3f01c37-5a9f-4d96-bec5-eb802948276f",
-  "prevId": "4d57724f-7905-4a75-ad09-a15a5683aa1c",
+  "id": "be0431fa-7d51-4e98-ae14-89891a5ce4b8",
+  "prevId": "cbb80eef-b98a-4aff-a860-ffd678c3549d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5338,6 +5338,22 @@
           ],
           "isUnique": false,
           "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"next_purchase_funnel_transition_date\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "facility_vertical_profiles_invalidated_snapshot_idx": {
+          "name": "facility_vertical_profiles_invalidated_snapshot_idx",
+          "columns": [
+            {
+              "expression": "facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"purchase_recurrence_calculated_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -12802,6 +12818,38 @@
           "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "ops.reconcile_watermark": {
+      "name": "reconcile_watermark",
+      "schema": "ops",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "covered_until": {
+          "name": "covered_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
