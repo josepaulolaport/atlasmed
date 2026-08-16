@@ -117,7 +117,10 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Da
       endsAt: occurrence.endsAt.toISOString(),
       timeZone: record.calendar.timeZone,
     },
+    // Both nullable since §15.7.5, and never both null: an interaction is about
+    // a clinic, a doctor, or the two together.
     facility: record.facility,
+    person: record.person,
     agent: {
       ...record.agent,
       displayName: [record.agent.firstName, record.agent.lastName].filter(Boolean).join(" ") || record.agent.id,
