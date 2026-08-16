@@ -60,6 +60,10 @@ class ClinicalFocusLabels {
   static List<ClinicalFocus> prioritize(List<ClinicalFocus> focuses) {
     final copy = List<ClinicalFocus>.from(focuses);
     copy.sort((a, b) {
+      // A focus somebody chose as the clinic's primary outranks the built-in
+      // heuristic. The heuristic guesses which name matters; the flag is an
+      // answer, and a guess must not overrule one.
+      if (a.isPrimary != b.isPrimary) return a.isPrimary ? -1 : 1;
       final rank = priorityRank(a.name) - priorityRank(b.name);
       if (rank != 0) return rank;
       return formatName(a.name).compareTo(formatName(b.name));

@@ -3,6 +3,11 @@ export interface FacilityClinicalFocus {
   name: string;
   /** Optional CNES code when mapped from official catalogs. */
   cnesCode: string | null;
+  /**
+   * The focus the clinic leads with. Absent on the catalogue, which is a list
+   * of what exists rather than of what any one clinic holds.
+   */
+  isPrimary?: boolean;
 }
 
 export interface FacilityUnitSubtype {
@@ -246,6 +251,12 @@ export interface FacilityRepository {
 
   /** Clinical focus catalog for Explorar filters. */
   listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]>;
+
+  /** Set a clinic's focuses to exactly this list, at most one of them primary. */
+  replaceClinicalFocuses(input: {
+    facilityId: number;
+    focuses: { id: number; isPrimary: boolean }[];
+  }): Promise<FacilityClinicalFocus[]>;
 
   /** CNES unit types some active facility has — Explorar filter options. */
   listUnitTypesInUse(): Promise<FacilityClinicalFocus[]>;

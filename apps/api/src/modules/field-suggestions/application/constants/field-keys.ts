@@ -73,6 +73,10 @@ export function snapshotCurrentValue(
         city: facility.city,
         state: facility.state,
         postalCode: facility.postalCode,
+        // The pin travels with the address now, so the "before" side has to show
+        // it too — otherwise a reviewer sees the street change and not the move.
+        lat: facility.lat,
+        lng: facility.lng,
       };
     case "coordinates":
       return { lat: facility.lat, lng: facility.lng };

@@ -66,6 +66,7 @@ function fakeRepository(
     registryHasEstablishment: async () => true,
     findById: async () => null,
     listClinicalFocusCatalog: async () => [],
+    replaceClinicalFocuses: async () => [],
     listUnitTypesInUse: async () => [],
     listUnitTypeCatalog: async () => [],
     create: async () => facilityRecord(100),

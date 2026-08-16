@@ -35,7 +35,18 @@ function asOptionalString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function parseAddress(value: unknown): AddressParts {
+/**
+ * An address suggestion, and optionally the pin the submitter placed for it.
+ *
+ * The pin is part of the address rather than a separate suggestion because they
+ * are one correction: somebody standing outside the clinic fixes the street and
+ * the point at once, and applying the text while re-deriving the point from it
+ * discards the more reliable half. The standalone `coordinates` key survives for
+ * a pin-only fix, where the address was right all along.
+ */
+type ProposedAddress = AddressParts & { lat?: number | null; lng?: number | null };
+
+function parseAddress(value: unknown): ProposedAddress {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new ValidationError([
       { field: "proposedValue", message: "Address must be an object" },
@@ -52,6 +63,11 @@ function parseAddress(value: unknown): AddressParts {
     state: asOptionalString(obj.state),
     postalCode: asOptionalString(obj.postalCode),
     country: asOptionalString(obj.country) ?? "Brazil",
+    // Validated by the same rules as a standalone pin move, so an impossible
+    // point cannot reach the map by arriving inside an address instead.
+    ...(obj.lat != null && obj.lng != null
+      ? parseCoordinates({ lat: obj.lat, lng: obj.lng })
+      : {}),
   };
 }
 
@@ -175,22 +191,26 @@ export class FieldSuggestionApplyService {
     // it was the fourth writer of `facilities.location`, and the one that could
     // move a clinic out of its rep's patch on an approval with nothing checked.
     if (input.fieldKey === "address") {
-      const address = validated as AddressParts;
+      const { lat, lng, ...address } = validated as ProposedAddress;
 
+      // A pin the submitter placed wins over geocoding the text they typed:
+      // `resolve` prefers explicit coordinates, so passing both means the text
+      // is only geocoded when no pin came with it. Somebody standing outside
+      // the clinic knows where it is better than a forward lookup does.
       await this.deps.locationService.applyLocation({
         facilityId: input.facilityId,
+        lat,
+        lng,
         address,
         acceptCoverageLoss: input.acceptCoverageLoss,
       });
 
-      // The address text itself is still the suggestion's payload; the point is
-      // derived from it by the location service.
       await this.deps.facilityRepository.applyApprovedFieldUpdates(
         input.facilityId,
         address
       );
 
-      return { geocoded: true };
+      return { geocoded: lat == null || lng == null };
     }
 
     if (input.fieldKey === "coordinates") {

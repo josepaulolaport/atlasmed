@@ -74,7 +74,15 @@ class DashboardTerritoryCard extends StatelessWidget {
           else if (data.mode.showMap && data.features.isNotEmpty)
             _TerritoryMiniMap(
               features: data.features,
-              label: data.label ?? 'Território',
+              // "Território" is the right word only when the zones are the
+              // viewer's own. On the admin's card they are several other
+              // people's, and the API now sends a label that says so; the
+              // fallback must not quietly put the possessive back.
+              label:
+                  data.label ??
+                  (data.mode == TerritoryMode.global
+                      ? 'Toda a linha'
+                      : 'Território'),
             )
           else
             Container(
@@ -123,7 +131,15 @@ class DashboardTerritoryCard extends StatelessWidget {
                         color: Color(0xFF4b5563),
                       ),
                       children: [
-                        const TextSpan(text: 'Você cobriu '),
+                        // An admin is not looking at their own region — the
+                        // zones below belong to the managers. "Você cobriu ...
+                        // da sua região" credited them with other people's work
+                        // and named a territory they do not hold.
+                        TextSpan(
+                          text: data.mode == TerritoryMode.global
+                              ? 'A linha cobriu '
+                              : 'Você cobriu ',
+                        ),
                         TextSpan(
                           text: '$coveragePercent%',
                           style: const TextStyle(
@@ -131,7 +147,11 @@ class DashboardTerritoryCard extends StatelessWidget {
                             color: Color(0xFF16a373),
                           ),
                         ),
-                        const TextSpan(text: ' da sua região'),
+                        TextSpan(
+                          text: data.mode == TerritoryMode.global
+                              ? ' do território atribuído'
+                              : ' da sua região',
+                        ),
                       ],
                     ),
                   ),
@@ -215,12 +235,20 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
   MapboxMap? _mapboxMap;
   bool _mapUnavailable = false;
 
-  List<TerritoryGeometry> get _geometries {
-    return widget.features
-        .where((f) => f.boundary != null)
-        .map((f) => TerritoryGeometry.tryFromGeoJson(f.boundary!))
-        .whereType<TerritoryGeometry>()
-        .toList(growable: false);
+  /// Each zone with the geometry it parsed to, so the colour of its owner
+  /// survives into the GeoJSON. Zipping the two lists afterwards would have
+  /// mismatched them the moment one boundary failed to parse.
+  List<({DashboardTerritoryFeature feature, TerritoryGeometry geometry})>
+  get _geometries {
+    final out =
+        <({DashboardTerritoryFeature feature, TerritoryGeometry geometry})>[];
+    for (final f in widget.features) {
+      if (f.boundary == null) continue;
+      final geometry = TerritoryGeometry.tryFromGeoJson(f.boundary!);
+      if (geometry == null) continue;
+      out.add((feature: f, geometry: geometry));
+    }
+    return out;
   }
 
   @override
@@ -234,6 +262,14 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
         _featureKey(oldWidget.features) != _featureKey(widget.features)) {
       setState(() => _mapUnavailable = false);
     }
+  }
+
+  /// The dots the pill shows. Capped at four: past that they stop being
+  /// distinguishable at 7px and the label is already carrying the count.
+  List<Color> get _legendColors {
+    final colors = ownerColors(widget.features).values.toList(growable: false);
+    if (colors.isEmpty) return const [Color(0xFF0a2f7f)];
+    return colors.take(4).toList(growable: false);
   }
 
   @override
@@ -305,15 +341,22 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF0a2f7f),
-                        shape: BoxShape.circle,
+                    // One dot per responsável on the map, in their colour, so
+                    // the pill is a legend rather than decoration. A single
+                    // owner keeps the single dot the card always had.
+                    for (final color in _legendColors)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 3),
                     Text(
                       widget.label,
                       style: const TextStyle(
@@ -358,14 +401,22 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
     final geometries = _geometries;
     if (geometries.isEmpty) return;
 
+    final colors = ownerColors(widget.features);
+    const fallback = Color(0xFF2563EB);
+
     final collection = {
       'type': 'FeatureCollection',
       'features': [
-        for (final g in geometries)
+        for (final entry in geometries)
           {
             'type': 'Feature',
-            'properties': <String, Object?>{},
-            'geometry': g.toGeoJson(),
+            'properties': <String, Object?>{
+              // Carried on the feature rather than set on the layer: one layer
+              // has one colour, and the point here is that adjacent zones have
+              // different ones.
+              'color': _cssColor(colors[entry.feature.ownerId] ?? fallback),
+            },
+            'geometry': entry.geometry.toGeoJson(),
           },
       ],
     };
@@ -391,7 +442,7 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
               'MultiPolygon',
             ],
           ],
-          fillColor: const Color(0xFF2563EB).toARGB32(),
+          fillColorExpression: const ['get', 'color'],
           fillOpacity: 0.22,
         ),
       );
@@ -399,7 +450,7 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
         LineLayer(
           id: _lineLayerId,
           sourceId: _sourceId,
-          lineColor: const Color(0xFF1D4ED8).toARGB32(),
+          lineColorExpression: const ['get', 'color'],
           lineWidth: 2,
           lineOpacity: 0.9,
           lineJoin: LineJoin.ROUND,
@@ -414,6 +465,45 @@ class _TerritoryMiniMapState extends State<_TerritoryMiniMap> {
 /// Identity of a zone set — what decides the map has to be rebuilt and refitted.
 String _featureKey(List<DashboardTerritoryFeature> features) =>
     features.map((f) => f.id).join(',');
+
+/// One colour per responsável, so an admin can see that the outline below is
+/// several people's territory rather than one shape.
+///
+/// Assigned by position in the sorted owner list, which guarantees the people
+/// on screen get different colours — up to the length of the palette — but does
+/// not survive a filter that removes one of them, since everyone after them
+/// shifts up. Keying the colour off the owner id instead would hold across
+/// filters at the cost of letting two managers collide in the same view, and a
+/// legend where two zones share a colour is worse than one that repaints.
+const _ownerPalette = <Color>[
+  Color(0xFF2563EB),
+  Color(0xFF16A373),
+  Color(0xFFB45309),
+  Color(0xFF7C3AED),
+  Color(0xFFDB2777),
+  Color(0xFF0891B2),
+  Color(0xFF65A30D),
+  Color(0xFFDC2626),
+];
+
+/// Mapbox reads colours out of feature properties as CSS strings, not ints.
+String _cssColor(Color color) =>
+    '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+
+@visibleForTesting
+Map<int, Color> ownerColors(List<DashboardTerritoryFeature> features) {
+  final owners =
+      features
+          .map((f) => f.ownerId)
+          .whereType<int>()
+          .toSet()
+          .toList(growable: false)
+        ..sort();
+  return {
+    for (var i = 0; i < owners.length; i++)
+      owners[i]: _ownerPalette[i % _ownerPalette.length],
+  };
+}
 
 /// The camera that frames exactly the zones handed to it.
 ///
@@ -479,6 +569,19 @@ class _CameraFit {
   final double zoom;
 }
 
+/// Where the north edge of a latitude sits on the Web Mercator sheet, as a
+/// fraction of its total height.
+///
+/// The fit used `latSpan / 180`, which treats the projection as if latitude
+/// were linear. It is not: the sheet stretches towards the poles, so a degree
+/// near -30 covers more of it than one near the equator, and the further a zone
+/// set sits from the equator the more the linear form under-measures it.
+double _mercatorY(double latitude) {
+  final clamped = latitude.clamp(-85.05112878, 85.05112878);
+  final radians = clamped * math.pi / 180;
+  return 0.5 - math.log(math.tan(math.pi / 4 + radians / 2)) / (2 * math.pi);
+}
+
 _CameraFit? _idealCameraForBounds({
   required MapBounds? bounds,
   required double boxWidth,
@@ -492,10 +595,10 @@ _CameraFit? _idealCameraForBounds({
   final availableWidth = math.max(1.0, boxWidth - padding * 2);
   final availableHeight = math.max(1.0, boxHeight - padding * 2);
   final latFraction =
-      ((bounds.northeast.latitude - bounds.southwest.latitude) / 180).clamp(
-        1e-9,
-        1.0,
-      );
+      (_mercatorY(bounds.southwest.latitude) -
+              _mercatorY(bounds.northeast.latitude))
+          .abs()
+          .clamp(1e-9, 1.0);
   final lngFraction =
       ((bounds.northeast.longitude - bounds.southwest.longitude) / 360).clamp(
         1e-9,
@@ -506,6 +609,11 @@ _CameraFit? _idealCameraForBounds({
   final zoom = math.min(latZoom, lngZoom) - 0.35;
   return _CameraFit(
     center: MapCoordinate(latitude: centerLat, longitude: centerLng),
-    zoom: zoom.clamp(2.5, 14).toDouble(),
+    // The floor used to be 2.5, which is closer than the whole of Brazil fits
+    // in a 160pt box — so an admin's card, whose zones run from Roraima to
+    // Paraná, was framed on the north and cut São Paulo and Rio off the bottom
+    // edge. A floor exists only to stop a degenerate bounds asking for a view
+    // of the whole globe repeated; 0.5 still shows a continent whole.
+    zoom: zoom.clamp(0.5, 14).toDouble(),
   );
 }

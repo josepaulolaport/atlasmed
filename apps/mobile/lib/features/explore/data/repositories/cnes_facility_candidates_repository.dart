@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_geocoding_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
@@ -240,6 +241,12 @@ class CnesFacilityCandidatesRepository extends Repository<void>
        );
 
   final String _base;
+
+  late final FacilityGeocodingRepository _geocoding =
+      FacilityGeocodingRepository(
+        baseUrl: _base.replaceAll('/api/v1', ''),
+        client: client,
+      );
   final RepositoryHttpClient? _client;
 
   @override
@@ -297,9 +304,8 @@ class CnesFacilityCandidatesRepository extends Repository<void>
 
   /// Where an address sits, or null when the provider cannot place it.
   ///
-  /// Server-side so the wizard lands on the coordinates the backfill script
-  /// would have chosen — it does the CEP lookup and the candidate scoring that
-  /// a raw Mapbox call from here would skip.
+  /// Delegated: the two geocoding calls are not about CNES at all, and the
+  /// clinic's endereço suggestion needs the same pair.
   Future<GeocodedPoint?> geocodeAddress({
     String? streetAddress,
     String? streetNumber,
@@ -307,87 +313,20 @@ class CnesFacilityCandidatesRepository extends Repository<void>
     String? city,
     String? state,
     String? postalCode,
-  }) async {
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse('$_base/facilities/geocode'),
-        method: RepositoryHttpMethod.post,
-        headers: const {'Content-Type': 'application/json'},
-        body: {
-          if ((streetAddress ?? '').trim().isNotEmpty)
-            'streetAddress': streetAddress!.trim(),
-          if ((streetNumber ?? '').trim().isNotEmpty)
-            'streetNumber': streetNumber!.trim(),
-          if ((neighborhood ?? '').trim().isNotEmpty)
-            'neighborhood': neighborhood!.trim(),
-          if ((city ?? '').trim().isNotEmpty) 'city': city!.trim(),
-          if ((state ?? '').trim().isNotEmpty) 'state': state!.trim(),
-          if ((postalCode ?? '').trim().isNotEmpty)
-            'postalCode': postalCode!.trim(),
-        },
-      ),
-    );
+  }) => _geocoding.geocodeAddress(
+    streetAddress: streetAddress,
+    streetNumber: streetNumber,
+    neighborhood: neighborhood,
+    city: city,
+    state: state,
+    postalCode: postalCode,
+  );
 
-    if (!successfulCondition(response.statusCode, response.body)) {
-      throw CnesFacilityImportException(
-        _messageOf(response.body) ??
-            'Não foi possível localizar o endereço (${response.statusCode})',
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) return null;
-    final point = decoded['point'];
-    if (point is! Map<String, dynamic>) return null;
-    final lat = (point['lat'] as num?)?.toDouble();
-    final lng = (point['lng'] as num?)?.toDouble();
-    if (lat == null || lng == null) return null;
-    return GeocodedPoint(latitude: lat, longitude: lng);
-  }
-
-  /// The address a dropped pin sits at. Spec 0009 decision 4: an address and a
-  /// pin are two views of one fact, so moving the pin re-derives the address.
+  /// The address a dropped pin sits at.
   Future<ReverseGeocodedAddress?> reverseGeocode({
     required double latitude,
     required double longitude,
-  }) async {
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse('$_base/facilities/reverse-geocode'),
-        method: RepositoryHttpMethod.post,
-        headers: const {'Content-Type': 'application/json'},
-        body: {'lat': latitude, 'lng': longitude},
-      ),
-    );
-
-    if (!successfulCondition(response.statusCode, response.body)) {
-      throw CnesFacilityImportException(
-        _messageOf(response.body) ??
-            'Não foi possível descrever este ponto (${response.statusCode})',
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) return null;
-    final parts = decoded['parts'];
-    return ReverseGeocodedAddress(
-      fullAddress: decoded['fullAddress'] as String?,
-      streetAddress: _stringOrNull(parts, 'streetAddress'),
-      streetNumber: _stringOrNull(parts, 'streetNumber'),
-      neighborhood: _stringOrNull(parts, 'neighborhood'),
-      postalCode: _stringOrNull(parts, 'postalCode'),
-      city: _stringOrNull(parts, 'city'),
-      state: _stringOrNull(parts, 'state'),
-    );
-  }
-
-  static String? _stringOrNull(Object? parts, String key) {
-    if (parts is! Map<String, dynamic>) return null;
-    final value = parts[key];
-    if (value is! String) return null;
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
-  }
+  }) => _geocoding.reverseGeocode(latitude: latitude, longitude: longitude);
 
   Future<CnesFacilityPreview> preview(String cnesCode) async {
     final response = await client.call(

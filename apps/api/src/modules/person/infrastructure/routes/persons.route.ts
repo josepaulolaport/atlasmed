@@ -11,6 +11,7 @@ type Executable = { execute(input: any): Promise<any> };
 export interface PersonsHttpUseCases {
   getPerson(): Executable;
   patchPerson(): Executable;
+  replacePersonSpecialties(): Executable;
   listPersonNotes(): Executable;
   createPersonNote(): Executable;
   updatePersonNote(): Executable;
@@ -177,6 +178,45 @@ const patchPersonRoute = (useCases: PersonsHttpUseCases, authPlugin: any = auth)
         }),
         detail: {
           summary: "Patch person identity fields",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
+/**
+ * The whole selection, not a diff — the screen is a multiselect, and a
+ * partially applied diff would leave the doctor tagged with neither the old set
+ * nor the new one.
+ */
+const replacePersonSpecialtiesRoute = (
+  useCases: PersonsHttpUseCases,
+  authPlugin: any = auth,
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .put(
+      "/persons/:personId/specialties",
+      async ({ params, body }) =>
+        useCases.replacePersonSpecialties().execute({
+          personId: params.personId,
+          specialties: body.specialties,
+        }),
+      {
+        params: personIdParams,
+        body: t.Object({
+          specialties: t.Array(
+            t.Object({
+              id: t.Number({ minimum: 1 }),
+              isPrimary: t.Boolean(),
+            }),
+            { maxItems: 50 },
+          ),
+        }),
+        detail: {
+          summary:
+            "Set a doctor's specialties, at most one of them the primary one",
           tags: ["Persons"],
           security: [{ bearerAuth: [] }],
         },
@@ -505,6 +545,7 @@ export function createPersonsRoutes(
   return new Elysia()
     .use(getPersonRoute(useCases, authPlugin))
     .use(patchPersonRoute(useCases, authPlugin))
+    .use(replacePersonSpecialtiesRoute(useCases, authPlugin))
     .use(listPersonNotesRoute(useCases, authPlugin))
     .use(createPersonNoteRoute(useCases, authPlugin))
     .use(updatePersonNoteRoute(useCases, authPlugin))

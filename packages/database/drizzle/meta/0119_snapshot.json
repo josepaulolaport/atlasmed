@@ -1,6 +1,6 @@
 {
-  "id": "c550b75d-0fa3-4195-87ad-ee6a4e37d61d",
-  "prevId": "cbb80eef-b98a-4aff-a860-ffd678c3549d",
+  "id": "8b4bffe1-90d0-4a21-8ba1-ce68713ee376",
+  "prevId": "c550b75d-0fa3-4195-87ad-ee6a4e37d61d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3886,6 +3886,21 @@
         }
       },
       "indexes": {
+        "conformity_requirements_name_normalized_uidx": {
+          "name": "conformity_requirements_name_normalized_uidx",
+          "columns": [
+            {
+              "expression": "lower(trim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "conformity_requirements_vertical_id_idx": {
           "name": "conformity_requirements_vertical_id_idx",
           "columns": [
@@ -5770,6 +5785,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "healthcare_providers_name_normalized_uidx": {
+          "name": "healthcare_providers_name_normalized_uidx",
+          "columns": [
+            {
+              "expression": "lower(trim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -5804,7 +5834,7 @@
           "name": "cnes_id",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -5834,7 +5864,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "healthcare_specialties_name_normalized_uidx": {
+          "name": "healthcare_specialties_name_normalized_uidx",
+          "columns": [
+            {
+              "expression": "lower(trim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

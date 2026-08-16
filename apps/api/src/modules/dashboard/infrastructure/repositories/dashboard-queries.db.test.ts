@@ -179,6 +179,7 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
     const features = await repository.listVerticalTerritoryFeatures({
       verticalId: 1,
       filter: filter(),
+      ownerIds: [],
     });
     for (const feature of features) {
       expect(typeof feature.name).toBe("string");

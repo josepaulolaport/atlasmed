@@ -16,6 +16,14 @@ export interface PersonRecord {
   /** Same active links as `facilityIds`, named, ordered by name. */
   facilities: PersonFacilitySummary[];
   hasHealthcareProfile: boolean;
+  /**
+   * Every specialty the doctor holds, primary first.
+   *
+   * The list endpoints carry only the primary one's *name*, which is enough to
+   * print a badge and useless for editing: the picker needs ids, and needs the
+   * secondary ones or saving would silently drop them.
+   */
+  specialties: { id: number; name: string; isPrimary: boolean }[];
 }
 
 export interface PersonFacilitySummary {
@@ -45,4 +53,10 @@ export interface PersonRepository {
 
   /** Distinct active specialty names linked to at least one non-deleted person. */
   listDistinctSpecialtyNames(): Promise<string[]>;
+
+  /** Set a doctor's specialties to exactly this list, at most one primary. */
+  replaceSpecialties(input: {
+    personId: number;
+    specialties: { id: number; isPrimary: boolean }[];
+  }): Promise<{ id: number; name: string; isPrimary: boolean }[]>;
 }

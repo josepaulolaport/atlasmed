@@ -182,6 +182,10 @@ class ClinicAdminInfoSection extends ConsumerWidget {
               city: detail.address?.city,
               state: detail.address?.state,
               postalCode: detail.address?.postalCode,
+              // Where the clinic sits now, so the picker opens on the pin being
+              // corrected rather than on an empty map.
+              lat: detail.address?.lat,
+              lng: detail.address?.lng,
             ),
             fieldKey: 'address',
             editable: true,

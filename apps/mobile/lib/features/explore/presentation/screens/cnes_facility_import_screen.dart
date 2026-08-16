@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/cnes_facility_candidates_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_geocoding_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_location_picker.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/cnes_candidate_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
@@ -442,9 +443,6 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
   /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
   /// one fact, so moving the pin rewrites the address rather than leaving it
   /// describing where the clinic used to be.
-  /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
-  /// one fact, so moving the pin rewrites the address rather than leaving it
-  /// describing where the clinic used to be.
   ///
   /// The picker resolves the address before it returns and refuses to confirm a
   /// point it cannot name, so what comes back is always a place — there is no
@@ -469,7 +467,13 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
       if (address.neighborhood != null) {
         _neighborhood.text = address.neighborhood!;
       }
-      if (address.postalCode != null) _postalCode.text = address.postalCode!;
+      // Same guard as the endereço suggestion: Mapbox answers some points with
+      // the five-digit prefix alone, and that is not an improvement on a
+      // complete CEP the form already holds.
+      if (isCompleteCep(address.postalCode) ||
+          (address.postalCode != null && _postalCode.text.trim().isEmpty)) {
+        _postalCode.text = address.postalCode!;
+      }
     });
   }
 

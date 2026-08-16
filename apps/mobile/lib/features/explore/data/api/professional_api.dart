@@ -27,6 +27,38 @@ class ProfessionalFacilityRef {
 /// - `GET /api/v1/healthcare-professionals` (paginated list)
 /// - `GET /api/v1/persons/:id` (detail)
 /// - `PATCH /api/v1/persons/:id` (update)
+/// One specialty a doctor holds.
+class DoctorSpecialty {
+  const DoctorSpecialty({
+    required this.id,
+    required this.name,
+    required this.isPrimary,
+  });
+
+  final int id;
+  final String name;
+  final bool isPrimary;
+
+  static List<DoctorSpecialty> listFrom(Object? raw) {
+    if (raw is! List) return const [];
+    final out = <DoctorSpecialty>[];
+    for (final item in raw) {
+      if (item is! Map<String, dynamic>) continue;
+      final id = readCrmIdOrNull(item['id'], 'id');
+      final name = readNullableString(item['name']);
+      if (id == null || name == null || name.isEmpty) continue;
+      out.add(
+        DoctorSpecialty(
+          id: id,
+          name: name,
+          isPrimary: item['isPrimary'] == true,
+        ),
+      );
+    }
+    return out;
+  }
+}
+
 /// - Embedded in facility professional items
 class ProfessionalDTO {
   /// Whether the caller has this doctor in Favoritos (detail responses only).
@@ -37,6 +69,11 @@ class ProfessionalDTO {
   final String lastName;
   final String? fullName;
   final String? specialty;
+
+  /// Every specialty held, primary first. Only the detail endpoint carries it;
+  /// list responses send `specialty` alone, which is the primary one's name and
+  /// has no id to edit with.
+  final List<DoctorSpecialty> specialties;
   final String? mobilePhone;
   final String? landlinePhone;
   final String? email;
@@ -82,6 +119,7 @@ class ProfessionalDTO {
     this.isPriority = false,
     this.fullName,
     this.specialty,
+    this.specialties = const [],
     this.mobilePhone,
     this.landlinePhone,
     this.email,
@@ -113,6 +151,7 @@ class ProfessionalDTO {
       specialty: readNullableString(
         map['specialty'] ?? map['primarySpecialtyLabel'],
       ),
+      specialties: DoctorSpecialty.listFrom(map['specialties']),
       mobilePhone: readNullableString(map['mobilePhone']),
       landlinePhone: readNullableString(map['landlinePhone']),
       email: readNullableString(map['email']),

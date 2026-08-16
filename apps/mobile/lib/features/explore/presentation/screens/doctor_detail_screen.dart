@@ -28,6 +28,10 @@ import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/bookmarks_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bookmark_icon_button.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/healthcare_specialty.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/healthcare_specialties_catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/tag_selection_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tag_editor_sheet.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
@@ -341,6 +345,11 @@ class _DoctorDetailContent extends ConsumerWidget {
                   onEditField: (field) => _editField(context, ref, field),
                 ),
                 const SizedBox(height: 16),
+                _DoctorSpecialties(
+                  detail: detail,
+                  onChanged: () => repository.refresh(),
+                ),
+                const SizedBox(height: 16),
                 ProfessionalRegistrationsSection(
                   personId: doctorId,
                   onChanged: () => repository.refresh(),
@@ -377,6 +386,182 @@ class _DoctorDetailContent extends ConsumerWidget {
                 const SizedBox(height: 24),
               ],
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The doctor's specialties, and the only way to change them.
+///
+/// Until now `person_healthcare_profile_specialties` was written by the CNES
+/// importer and nothing else, so a specialty the federal registry did not carry
+/// could not be recorded at all — and the header, which prints only the primary
+/// one's name, gave no hint that a doctor might hold others.
+///
+/// Applied directly rather than through the suggestion queue: a specialty is a
+/// catalogue tag, not one of the identity fields that queue exists to guard.
+class _DoctorSpecialties extends StatefulWidget {
+  const _DoctorSpecialties({required this.detail, required this.onChanged});
+
+  final Professional detail;
+  final Future<void> Function() onChanged;
+
+  @override
+  State<_DoctorSpecialties> createState() => _DoctorSpecialtiesState();
+}
+
+class _DoctorSpecialtiesState extends State<_DoctorSpecialties> {
+  bool _loadingCatalog = false;
+
+  Future<void> _edit() async {
+    if (_loadingCatalog) return;
+    setState(() => _loadingCatalog = true);
+    final List<HealthcareSpecialty> catalog;
+    try {
+      catalog = await HealthcareSpecialtiesCatalogRepository().listActive();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loadingCatalog = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível carregar as especialidades: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _loadingCatalog = false);
+
+    final held = widget.detail.specialties;
+    final saved = await TagEditorSheet.show(
+      context,
+      copy: TagEditorCopy.specialty,
+      options: [
+        for (final entry in catalog) TagOption(id: entry.id, label: entry.name),
+      ],
+      selectedIds: held.map((s) => s.id).toSet(),
+      primaryId: held.where((s) => s.isPrimary).map((s) => s.id).firstOrNull,
+      onSave: (result) => TagSelectionRepository().saveSpecialties(
+        personId: widget.detail.id,
+        specialties: [
+          for (final id in result.selectedIds)
+            TagSelection(id: id, isPrimary: id == result.primaryId),
+        ],
+      ),
+    );
+
+    if (saved == null || !mounted) return;
+    await widget.onChanged();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Especialidades atualizadas'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final held = widget.detail.specialties;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: 'ESPECIALIDADES',
+          subtitle: held.isEmpty ? 'nenhuma registrada' : null,
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final specialty in held)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: specialty.isPrimary
+                        ? const Color(0xFFfef3c7)
+                        : AppColors.gray100,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (specialty.isPrimary) ...[
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 13,
+                          color: Color(0xFFb45309),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        specialty.name,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: specialty.isPrimary
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: specialty.isPrimary
+                              ? const Color(0xFF92400e)
+                              : AppColors.gray700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Material(
+                color: AppColors.gray100,
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  key: const Key('doctor-specialties-edit'),
+                  onTap: _loadingCatalog ? null : _edit,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_loadingCatalog)
+                          const SizedBox(
+                            width: 13,
+                            height: 13,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          const Icon(
+                            Icons.add_rounded,
+                            size: 14,
+                            color: AppColors.navyBright,
+                          ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Editar',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navyBright,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

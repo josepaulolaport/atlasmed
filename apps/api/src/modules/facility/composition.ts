@@ -43,6 +43,7 @@ import {
   RejectFacilityCadastroRecordUseCase,
   UpdateFacilityBillingEmailUseCase,
 } from "./application/use-cases/facility-cadastro.use-cases";
+import { ReplaceFacilityClinicalFocusesUseCase } from "./application/use-cases/clinical-focus.use-cases";
 import {
   CompleteCadastroFileUploadUseCase,
   CreateCadastroDocumentUseCase,
@@ -361,6 +362,10 @@ export const facilityUseCases = {
     new GetFacilityCadastroChecklistUseCase(facilityCadastroDeps),
   updateFacilityBillingEmail: () =>
     new UpdateFacilityBillingEmailUseCase(facilityCadastroDeps),
+  replaceFacilityClinicalFocuses: () =>
+    new ReplaceFacilityClinicalFocusesUseCase({
+      facilityRepository: facilityRepositories.facility,
+    }),
   approveFacilityCadastroRecord: () =>
     new ApproveFacilityCadastroRecordUseCase(facilityCadastroDeps),
   rejectFacilityCadastroRecord: () =>

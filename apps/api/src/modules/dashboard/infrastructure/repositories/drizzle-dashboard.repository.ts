@@ -10,7 +10,10 @@ import {
   states,
   territories,
   userTerritoryAssignments,
+  users,
+  roles,
 } from "@atlasmed/database";
+import { Role } from "@atlasmed/access";
 import { sql, eq, and, or, ilike, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
 import type { FacilityListSort } from "../../../facility/application/interfaces/facility.repository.interface";
 import { buildFacilityListOrderBy } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
@@ -55,6 +58,12 @@ export type DashboardTerritoryFeature = {
   id: number;
   name: string;
   boundary: unknown;
+  /**
+   * Who holds the zone. Null when the caller does not resolve ownership — the
+   * assigned-to-me query does not, because there the owner is the viewer.
+   */
+  ownerId?: number | null;
+  ownerName?: string | null;
 };
 
 export type DashboardPenetrationRow = {
@@ -868,32 +877,79 @@ export class DrizzleDashboardRepository {
     }));
   }
 
+  /**
+   * The zones an admin sees, at the granularity the filters asked for.
+   *
+   * This used to return every active zone in the vertical, which drew manager
+   * zones and the rep patches nested inside them on the same map in the same
+   * flat blue — overlapping fills compounded into a darker blue that read as a
+   * data signal but was only the same area painted twice. It also drew zones
+   * nobody is assigned to.
+   *
+   * Now the map answers "whose territory am I looking at": with no owner filter,
+   * the managers' zones, which do not overlap each other; with a gerente or
+   * representante chosen, exactly those people's zones. That keeps the outline
+   * at the same granularity as the numbers printed under it.
+   *
+   * An unassigned zone is never drawn — it belongs to nobody, so it is not
+   * anyone's territory to show.
+   */
   async listVerticalTerritoryFeatures(input: {
     verticalId: number;
     filter: DashboardProfileFilter;
+    /** Owners the filters narrowed to; empty means "every manager". */
+    ownerIds: number[];
   }): Promise<DashboardTerritoryFeature[]> {
+    const ownedBy =
+      input.ownerIds.length > 0
+        ? inArray(userTerritoryAssignments.userId, input.ownerIds)
+        : inArray(
+            userTerritoryAssignments.userId,
+            db
+              .select({ id: users.id })
+              .from(users)
+              .innerJoin(roles, eq(roles.id, users.roleId))
+              .where(eq(roles.name, Role.MANAGER)),
+          );
+
     const rows = await db
-      .select({
+      .selectDistinctOn([territories.name, territories.id], {
         id: territories.id,
         name: territories.name,
         boundary: sql<string>`ST_AsGeoJSON(${territories.boundary})::text`,
+        ownerId: userTerritoryAssignments.userId,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
       })
       .from(territories)
+      // Inner, not left: an unassigned zone drops out here rather than being
+      // filtered afterwards, so it cannot reach the count either.
+      .innerJoin(
+        userTerritoryAssignments,
+        eq(userTerritoryAssignments.territoryId, territories.id),
+      )
+      .innerJoin(users, eq(users.id, userTerritoryAssignments.userId))
       .where(
         and(
           eq(territories.verticalId, input.verticalId),
           eq(territories.isActive, true),
           isNotNull(territories.boundary),
+          ownedBy,
           holdsAClinicInScope(input.filter),
         ),
       )
-      .orderBy(territories.name)
+      // The trailing userId only breaks ties: a zone assigned to two people
+      // yields one row, and which owner names it must not vary between requests.
+      .orderBy(territories.name, territories.id, userTerritoryAssignments.userId)
       .limit(200);
 
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
       boundary: r.boundary ? (JSON.parse(r.boundary) as unknown) : null,
+      ownerId: r.ownerId,
+      ownerName:
+        [r.ownerFirstName, r.ownerLastName].filter(Boolean).join(" ") || null,
     }));
   }
 }
