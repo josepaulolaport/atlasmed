@@ -200,7 +200,9 @@ class _SupportCatalogFormState extends ConsumerState<_SupportCatalogForm> {
     if (_name.text.trim().isEmpty) return false;
     // The councils' `abbreviation` is NOT NULL on the column, so an empty one
     // would be a 500 rather than a validation message.
-    if (widget.catalog.extraRequired && _extra.text.trim().isEmpty) return false;
+    if (widget.catalog.extraRequired && _extra.text.trim().isEmpty) {
+      return false;
+    }
     return true;
   }
 

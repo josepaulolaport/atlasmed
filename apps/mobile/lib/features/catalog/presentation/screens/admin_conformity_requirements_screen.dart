@@ -235,8 +235,10 @@ class _RequirementFormScreenState
   late RequirementLegalDocumentType? _documentType =
       widget.existing?.appliesToLegalDocumentType;
   late bool _isActive = widget.existing?.isActive ?? true;
-  late bool _requiresValidityDate = widget.existing?.requiresValidityDate ?? false;
-  late bool _requiresFrontAndBack = widget.existing?.requiresFrontAndBack ?? false;
+  late bool _requiresValidityDate =
+      widget.existing?.requiresValidityDate ?? false;
+  late bool _requiresFrontAndBack =
+      widget.existing?.requiresFrontAndBack ?? false;
   late final Set<String> _mimeTypes = {
     ...?widget.existing?.allowedMimeTypes,
     if (widget.existing == null) ...const [

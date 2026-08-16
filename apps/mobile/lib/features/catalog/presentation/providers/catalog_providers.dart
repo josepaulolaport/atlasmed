@@ -30,7 +30,9 @@ final catalogFamiliesProvider = FutureProvider<List<CatalogFamily>>((ref) {
 /// it, so the rep-facing `/products` list cannot start showing retired products
 /// because an admin screen changed its mind.
 final adminCatalogFamiliesProvider = FutureProvider<List<CatalogFamily>>((ref) {
-  return ref.watch(catalogRepositoryProvider).getFamilies(includeInactive: true);
+  return ref
+      .watch(catalogRepositoryProvider)
+      .getFamilies(includeInactive: true);
 });
 
 /// "Comparativo" for a single AtlasMed variant — that product plus its

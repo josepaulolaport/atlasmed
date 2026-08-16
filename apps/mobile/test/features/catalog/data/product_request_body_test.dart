@@ -76,15 +76,18 @@ void main() {
     expect(body['brasindiceUpdatedAt'], isNull);
   });
 
-  test('sends productGroup, so the Família field is not silently discarded', () {
-    // It never was sent: the form asked for a family, the request omitted it,
-    // and the saved product came back grouped under its own name.
-    expect(productRequestBody(variant())['productGroup'], 'REVISCON');
-    expect(
-      productRequestBody(variant(productGroup: null))['productGroup'],
-      isNull,
-    );
-  });
+  test(
+    'sends productGroup, so the Família field is not silently discarded',
+    () {
+      // It never was sent: the form asked for a family, the request omitted it,
+      // and the saved product came back grouped under its own name.
+      expect(productRequestBody(variant())['productGroup'], 'REVISCON');
+      expect(
+        productRequestBody(variant(productGroup: null))['productGroup'],
+        isNull,
+      );
+    },
+  );
 
   test('folds the presentation into the name the API stores', () {
     expect(productRequestBody(variant())['name'], 'REVISCON 1.0% - 20MG / 2ML');

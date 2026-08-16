@@ -30,7 +30,10 @@ void main() {
         HealthcareProviderType.fromWire('SOMETHING_NEW'),
         HealthcareProviderType.other,
       );
-      expect(HealthcareProviderType.fromWire(null), HealthcareProviderType.other);
+      expect(
+        HealthcareProviderType.fromWire(null),
+        HealthcareProviderType.other,
+      );
     });
 
     test('parses the API row', () {

@@ -351,7 +351,10 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                       'Um produto inativo deixa de aparecer no comparativo e no '
                       'seletor do representante. As quantidades já registradas '
                       'nas clínicas continuam valendo.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
                     ),
                   ),
                   if (_error != null) ...[

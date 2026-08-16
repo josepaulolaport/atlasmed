@@ -71,7 +71,10 @@ void main() {
     // references it" for a requirement a clinic had already answered, because
     // it never asked. Null here means *unknown*, and the button stays disabled.
     final fromList = ConformityRequirement.fromJson(
-      row({'deletable': false, 'blockingReferences': {'conformityRecords': 1}}),
+      row({
+        'deletable': false,
+        'blockingReferences': {'conformityRecords': 1},
+      }),
     );
     expect(fromList.deletability?.deletable, isFalse);
     expect(fromList.deletability?.blockedByLabel, '1 resposta de clínica');

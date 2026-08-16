@@ -372,7 +372,9 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 error: (_, _) => const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
-                    child: Text('Não foi possível carregar os produtos concorrentes'),
+                    child: Text(
+                      'Não foi possível carregar os produtos concorrentes',
+                    ),
                   ),
                 ),
                 data: (unlinked) {

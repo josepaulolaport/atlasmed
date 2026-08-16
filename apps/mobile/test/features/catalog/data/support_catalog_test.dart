@@ -51,14 +51,8 @@ void main() {
   test('each catalogue points at the endpoint that exists', () {
     // These paths are appended to `/api/v1/` verbatim, so a typo is a 404 at
     // runtime and nothing else would catch it.
-    expect(
-      SupportCatalog.healthcareSpecialties.path,
-      'healthcare-specialties',
-    );
-    expect(
-      SupportCatalog.clinicalFocuses.path,
-      'facilities/clinical-focuses',
-    );
+    expect(SupportCatalog.healthcareSpecialties.path, 'healthcare-specialties');
+    expect(SupportCatalog.clinicalFocuses.path, 'facilities/clinical-focuses');
     expect(SupportCatalog.personFacilityRoles.path, 'person-facility-roles');
     expect(
       SupportCatalog.professionalCouncils.path,

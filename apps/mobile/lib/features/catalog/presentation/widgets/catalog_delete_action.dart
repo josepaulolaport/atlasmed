@@ -65,8 +65,7 @@ Future<bool> confirmCatalogDelete(
   BuildContext context, {
   required String name,
   required String kind,
-  String referencesLabel =
-      'nenhum pedido, quantidade, equivalência ou métrica',
+  String referencesLabel = 'nenhum pedido, quantidade, equivalência ou métrica',
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,

@@ -15,12 +15,10 @@ class AdminMetricsScreen extends ConsumerStatefulWidget {
   const AdminMetricsScreen({super.key});
 
   @override
-  ConsumerState<AdminMetricsScreen> createState() =>
-      _AdminMetricsScreenState();
+  ConsumerState<AdminMetricsScreen> createState() => _AdminMetricsScreenState();
 }
 
-class _AdminMetricsScreenState
-    extends ConsumerState<AdminMetricsScreen> {
+class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
   final _repo = PotentialDefinitionsRepository();
   final _catalog = CatalogRepository();
 

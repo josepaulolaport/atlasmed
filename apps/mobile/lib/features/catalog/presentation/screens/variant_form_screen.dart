@@ -336,9 +336,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       invalidateCatalog(ref, variantId: existing.id);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${existing.name} excluído')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${existing.name} excluído')));
     } catch (error) {
       if (!mounted) return;
       showDeleteFailure(
@@ -933,9 +933,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                   // admin who cannot see it cannot notice it is wrong.
                   _ReadOnlyRow(
                     label: 'Unidades da métrica',
-                    value: brlNumber(
-                      widget.existing?.metricUnits ?? 1,
-                    ),
+                    value: brlNumber(widget.existing?.metricUnits ?? 1),
                     note:
                         'Quantas unidades da métrica valem uma unidade deste '
                         'produto. Informativo: o cálculo de potencial usa as '
@@ -1027,10 +1025,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     _LinkRow(
                       icon: Icons.bar_chart_rounded,
                       label: 'Ver comparativo de preços',
-                      onTap: () =>
-                          CatalogComparisonRoute(
-                            variantId: widget.existing!.id,
-                          ).push(context),
+                      onTap: () => CatalogComparisonRoute(
+                        variantId: widget.existing!.id,
+                      ).push(context),
                     ),
                     if (family != null) ...[
                       const SizedBox(height: 12),
@@ -1059,7 +1056,10 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       'Um produto inativo some das listas dos representantes e '
                       'dos pedidos novos. Os pedidos e as métricas já '
                       'registrados continuam válidos.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
                     ),
                   ),
                   if (_error != null) ...[
@@ -1394,7 +1394,10 @@ class _PictureField extends StatelessWidget {
                     const Text(
                       'JPG, PNG ou WebP, até 5 MB. Salva na hora, sem esperar '
                       'o botão Salvar.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.gray400,
+                      ),
                     ),
                   ],
                 )

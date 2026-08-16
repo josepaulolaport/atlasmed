@@ -97,8 +97,7 @@ class _AdminCompetitorProductsScreenState
               child: competitorsAsync.when(
                 loading: () => const ProductListSkeleton(),
                 error: (_, _) => CatalogErrorState(
-                  onRetry: () =>
-                      ref.invalidate(adminAllCompetitorsProvider),
+                  onRetry: () => ref.invalidate(adminAllCompetitorsProvider),
                 ),
                 data: (all) {
                   final competitors = _filtered(all);

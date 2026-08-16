@@ -39,7 +39,11 @@ class ConformityRequirement {
     this.description,
     this.verticalId,
     this.appliesToLegalDocumentType,
-    this.allowedMimeTypes = const ['image/jpeg', 'image/png', 'application/pdf'],
+    this.allowedMimeTypes = const [
+      'image/jpeg',
+      'image/png',
+      'application/pdf',
+    ],
     this.maxFiles = 10,
     this.maxFileSizeBytes = 52428800,
     this.maxCombinedSizeBytes = 209715200,

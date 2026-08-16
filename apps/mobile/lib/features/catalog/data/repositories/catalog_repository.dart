@@ -76,7 +76,9 @@ class CatalogRepository {
   /// [CatalogFamily] entries. The catalog is small enough that a single
   /// generously-limited page covers the whole thing — there is no
   /// dedicated "all products" endpoint on the API.
-  Future<List<CatalogFamily>> getFamilies({bool includeInactive = false}) async {
+  Future<List<CatalogFamily>> getFamilies({
+    bool includeInactive = false,
+  }) async {
     final response = await _get(
       _uri('/products', {
         'limit': '500',
@@ -328,15 +330,12 @@ class CatalogRepository {
     String? extra,
     bool isActive = true,
   }) async {
-    final response = await _send(
-      _uri('/${catalog.path}'),
-      RepositoryHttpMethod.post,
-      {
-        'name': name,
-        'isActive': isActive,
-        if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
-      },
-    );
+    final response =
+        await _send(_uri('/${catalog.path}'), RepositoryHttpMethod.post, {
+          'name': name,
+          'isActive': isActive,
+          if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
+        });
     _throwIfError(response);
     return SupportCatalogEntry.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -350,15 +349,12 @@ class CatalogRepository {
     String? extra,
     required bool isActive,
   }) async {
-    final response = await _send(
-      _uri('/${catalog.path}/$id'),
-      RepositoryHttpMethod.patch,
-      {
-        'name': name,
-        'isActive': isActive,
-        if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
-      },
-    );
+    final response =
+        await _send(_uri('/${catalog.path}/$id'), RepositoryHttpMethod.patch, {
+          'name': name,
+          'isActive': isActive,
+          if (catalog.extraLabel != null) 'extra': _nullIfBlank(extra),
+        });
     _throwIfError(response);
     return SupportCatalogEntry.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -511,7 +507,9 @@ class CatalogRepository {
     _ => 'Não foi possível enviar a imagem. Tente novamente.',
   };
 
-  Future<ProductDeletability> getCompetitorDeletability(int competitorId) async {
+  Future<ProductDeletability> getCompetitorDeletability(
+    int competitorId,
+  ) async {
     final response = await _get(_uri('/competitor-products/$competitorId'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
