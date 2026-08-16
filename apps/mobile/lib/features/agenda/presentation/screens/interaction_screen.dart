@@ -287,6 +287,7 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final start = detail.occurrenceStartsAt.toLocal();
     final end = detail.occurrenceEndsAt.toLocal();
+    final measured = _measuredSpan(detail);
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,9 +329,21 @@ class _SummaryCard extends StatelessWidget {
             label: _dateLabel(start),
           ),
           const SizedBox(height: 8),
+          // What the visit was, with what it was meant to be underneath.
+          //
+          // The screen showed only the plan, so a visit booked 08:00–09:00 that
+          // ran 08:05–08:47 read as an hour on the one screen whose job is
+          // saying what happened. The plan is not dropped — the gap between the
+          // two is what P5 measures (§15.6.3) — it just stops being the headline
+          // once there is a measurement to replace it.
           _InfoLine(
             icon: Icons.schedule_outlined,
-            label: '${_timeLabel(start)}–${_timeLabel(end)}',
+            label: measured == null
+                ? '${_timeLabel(start)}–${_timeLabel(end)}'
+                : '${_timeLabel(measured.$1)}–${_timeLabel(measured.$2)}',
+            note: measured == null
+                ? null
+                : 'previsto ${_timeLabel(start)}–${_timeLabel(end)}',
           ),
           const SizedBox(height: 8),
           _InfoLine(
@@ -350,6 +363,18 @@ class _SummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// When the visit ran, if it has finished and both instants were recorded.
+///
+/// A close with no opening instant is an auto-closed visit the system never saw
+/// start; there is nothing measured to show, so the plan stands.
+(DateTime, DateTime)? _measuredSpan(InteractionDetail detail) {
+  if (detail.status != InteractionStatus.completed) return null;
+  final start = detail.actualStartedAt;
+  final end = detail.actualEndedAt;
+  if (start == null || end == null || !end.isAfter(start)) return null;
+  return (start.toLocal(), end.toLocal());
 }
 
 class _OrdersCard extends StatelessWidget {
@@ -736,15 +761,33 @@ class _Card extends StatelessWidget {
 }
 
 class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.icon, required this.label});
+  const _InfoLine({required this.icon, required this.label, this.note});
   final IconData icon;
   final String label;
+
+  /// Quieter text under the line — the plan, once the measurement has taken
+  /// the headline.
+  final String? note;
+
   @override
   Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Icon(icon, size: 18, color: AppColors.gray500),
       const SizedBox(width: 8),
-      Expanded(child: Text(label)),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label),
+            if (note case final text?)
+              Text(
+                text,
+                style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
+              ),
+          ],
+        ),
+      ),
     ],
   );
 }

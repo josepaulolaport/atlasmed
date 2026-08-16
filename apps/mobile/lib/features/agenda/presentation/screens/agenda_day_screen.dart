@@ -360,6 +360,23 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
                 title: const Text('Encerrar visita'),
                 onTap: () => Navigator.of(sheetContext).pop('finish'),
               ),
+            // Only while it is still only a plan. Once a visit has started or
+            // finished, its time is a record of what happened and moving it is
+            // a correction, which the interaction screen owns.
+            if (startable)
+              ListTile(
+                key: const Key('day-visit-edit'),
+                leading: const Icon(Icons.edit_calendar_outlined),
+                title: Text(
+                  occurrence.recurrence == CalendarRecurrence.none
+                      ? 'Editar'
+                      : 'Editar…',
+                ),
+                subtitle: occurrence.recurrence == CalendarRecurrence.none
+                    ? null
+                    : const Text('Esta ocorrência ou toda a série'),
+                onTap: () => Navigator.of(sheetContext).pop('edit'),
+              ),
             ListTile(
               key: const Key('day-visit-open'),
               leading: const Icon(Icons.open_in_new_rounded),
@@ -391,6 +408,12 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
           expectedVersion: version,
           facilityName: name,
         );
+      case 'edit':
+        // Reaches the occurrence-vs-series chooser, and through it the series
+        // editor. Before this the sheet intercepted every tap on a visit and
+        // offered no way in, so "Editar toda a série" — and with it cancelling
+        // a whole weekly series of visits — was unreachable for interactions.
+        if (mounted) await _openEditor(occurrence);
       case 'open':
         if (mounted) InteractionDetailRoute(id: interactionId).push(context);
     }

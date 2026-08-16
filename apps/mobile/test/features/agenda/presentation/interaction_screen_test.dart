@@ -184,7 +184,11 @@ InteractionDetail _detail({
   int? overrideVersion,
   CalendarRecurrence recurrence = CalendarRecurrence.none,
   bool needsOutcome = false,
+  DateTime? actualStartedAt,
+  DateTime? actualEndedAt,
 }) => InteractionDetail(
+  actualStartedAt: actualStartedAt,
+  actualEndedAt: actualEndedAt,
   needsOutcome: needsOutcome,
   id: 1,
   calendarId: 1,
@@ -257,6 +261,53 @@ void main() {
     SessionEnvironment.instance.timer?.cancel();
     // ignore: invalid_use_of_protected_member
     SessionEnvironment.instance.timer = null;
+  });
+
+  testWidgets('a finished visit reads the hours it ran, with the plan under', (
+    tester,
+  ) async {
+    // The screen whose job is saying what happened showed only what was
+    // booked: an hour, for a visit that took forty-two minutes. The plan stays
+    // visible because the gap between the two is what P5 measures (§15.6.3).
+    final repository = _InteractionRepository(
+      _detail(
+        status: InteractionStatus.completed,
+        actualStartedAt: DateTime.utc(2026, 8, 3, 12, 5),
+        actualEndedAt: DateTime.utc(2026, 8, 3, 12, 47),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('09:05–09:47'), findsOneWidget);
+    expect(find.text('previsto 09:00–10:00'), findsOneWidget);
+  });
+
+  testWidgets('a visit still ahead reads the plan, with nothing under it', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(_detail());
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('09:00–10:00'), findsOneWidget);
+    expect(find.textContaining('previsto'), findsNothing);
+  });
+
+  testWidgets('a close with no measured start keeps the plan', (tester) async {
+    // The workday-end job can close a visit it never saw start; there is no
+    // measurement to promote.
+    final repository = _InteractionRepository(
+      _detail(
+        status: InteractionStatus.completed,
+        actualEndedAt: DateTime.utc(2026, 8, 3, 12, 47),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('09:00–10:00'), findsOneWidget);
+    expect(find.textContaining('previsto'), findsNothing);
   });
 
   testWidgets('offers the questions when a closed visit has no answers', (
