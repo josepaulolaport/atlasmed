@@ -6,7 +6,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/cata
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 /// "Tabela Brasíndice/Simpro" screen — the complete price index: every
 /// AtlasMed product and every competitor product in the catalog, flattened
@@ -71,7 +71,14 @@ class _CatalogPriceIndexScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const SubscreenAppBar(title: 'Tabela completa'),
+      // [AtlasAppBar], not [SubscreenAppBar], even though main moved this
+      // screen to the latter: there, `/price-index` was a child of `/catalog`
+      // and genuinely pushed. Here it is a peer tab of Produtos inside branch 9
+      // (spec 0016 §3.4) and [CatalogTabBar] switches between them with `.go`.
+      // Nothing is on the stack, so a back arrow would find `canPop()` false
+      // and do nothing — a dead control, on a screen that also needs to keep
+      // the drawer.
+      appBar: const AtlasAppBar(page: 'Produtos'),
       body: SafeArea(
         child: Column(
           children: [

@@ -13,7 +13,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/produc
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
     show isAdminProvider;
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -150,7 +150,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       // No metrics shortcut in the app bar: Métricas is a peer destination on
       // the Administração hub, one tap away, and a second door to it here
       // would need its own state to stay honest about which Linha is selected.
-      appBar: const AtlasAppBar(page: 'Produtos'),
+      appBar: const SubscreenAppBar(title: 'Produtos'),
       body: SafeArea(
         child: Column(
           children: [

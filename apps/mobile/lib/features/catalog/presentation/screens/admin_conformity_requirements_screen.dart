@@ -11,7 +11,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// `Administração › Requisitos de cadastro` (spec 0016 §4.7).
@@ -55,7 +55,7 @@ class _AdminConformityRequirementsScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Requisitos de cadastro'),
+      appBar: const SubscreenAppBar(title: 'Requisitos de cadastro'),
       // Nothing to add to a list that could not load — see the products screen.
       floatingActionButton: requirementsAsync.hasError
           ? null

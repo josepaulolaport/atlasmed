@@ -10,7 +10,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// `Administração › Produtos concorrentes` (spec 0016 §4.3) — the competitors'
@@ -75,7 +75,7 @@ class _AdminCompetitorProductsScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Produtos concorrentes'),
+      appBar: const SubscreenAppBar(title: 'Produtos concorrentes'),
       // Nothing to add to a list that could not load — see the products screen.
       floatingActionButton: competitorsAsync.hasError
           ? null

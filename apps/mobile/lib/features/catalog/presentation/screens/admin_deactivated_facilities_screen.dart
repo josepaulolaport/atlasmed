@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// `Administração › Clínicas desativadas` (spec 0016 §4.8).
@@ -130,7 +130,7 @@ class _AdminDeactivatedFacilitiesScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Clínicas desativadas'),
+      appBar: const SubscreenAppBar(title: 'Clínicas desativadas'),
       body: SafeArea(
         child: Column(
           children: [

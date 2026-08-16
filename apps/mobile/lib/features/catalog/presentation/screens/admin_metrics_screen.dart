@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -185,7 +185,7 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Métricas'),
+      appBar: const SubscreenAppBar(title: 'Métricas'),
       // No Linha selected means nothing to create a metric *in*; an error means
       // the screen does not know what is already there.
       floatingActionButton: _verticalId == null || _error != null
@@ -201,7 +201,7 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // No page heading here: `AtlasAppBar` already says "Métricas", and
+            // No page heading here: the app bar already says "Métricas", and
             // a second 22px title under it was the only screen in the panel
             // announcing itself twice.
             optionsAsync.when(
@@ -478,8 +478,11 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_label),
+      // Was a bare `AppBar` with Material's own chrome and a white Scaffold
+      // under it — the one screen in the panel that did not match the rest.
+      backgroundColor: AppColors.background,
+      appBar: SubscreenAppBar(
+        title: _label,
         actions: [
           IconButton(
             onPressed: _rename,
