@@ -248,17 +248,14 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
     if (draft.title.trim().isEmpty) {
       errors['title'] = 'Informe um título.';
     }
-    // §15.7.5 — an interaction is about a clinic, a doctor, or both. A remote
-    // contact with a doctor happened nowhere, and naming a clinic the rep never
-    // entered would be worse than leaving it empty. A presencial one still has
-    // a place, because the rep drove there.
-    if (draft.kind == CalendarEventKind.interaction) {
-      if (draft.facilityId == null && draft.personId == null) {
-        errors['facilityId'] = 'Selecione uma clínica ou um médico.';
-      } else if (draft.facilityId == null &&
-          draft.modality == CalendarModality.inPerson) {
-        errors['facilityId'] = 'Uma visita presencial precisa de uma clínica.';
-      }
+    // §15.7.5 — an interaction is about a clinic, a doctor, or both, and the
+    // modality does not change that. A meeting with a doctor may be presencial
+    // and still be nowhere the rep's book knows: a coffee, a corridor at a
+    // congress. Naming a clinic they never entered is worse than naming none.
+    if (draft.kind == CalendarEventKind.interaction &&
+        draft.facilityId == null &&
+        draft.personId == null) {
+      errors['facilityId'] = 'Selecione uma clínica ou um médico.';
     }
     if (draft.durationMinutes <= 0 || draft.durationMinutes % 30 != 0) {
       errors['durationMinutes'] = 'Use uma duração em múltiplos de 30 minutos.';

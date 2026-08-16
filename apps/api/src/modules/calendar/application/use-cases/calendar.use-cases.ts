@@ -162,17 +162,18 @@ function validateEventData(data: EventData): void {
  * these in there rejected every reschedule for having no subject it was never
  * asked to change.
  *
- * Says the same two things the table's checks say (§15.7.5), so the rep gets a
+ * Says the same thing the table's check says (§15.7.5), so the rep gets a
  * message instead of a constraint violation.
+ *
+ * **Modality no longer decides this.** An in-person meeting with a doctor need
+ * not be at a clinic — a coffee, a corridor at a congress, a hospital the rep's
+ * book has never heard of. Requiring a clinic there only produced a wrong one.
  */
 function validateSubject(data: EventData): void {
   const issues: Array<{ field: string; message: string }> = [];
   if (data.kind === "INTERACTION") {
     if (data.facilityId === undefined && data.personId === undefined) {
       issues.push({ field: "facilityId", message: "An interaction needs a clinic, a person, or both" });
-    }
-    if (data.modality === "IN_PERSON" && data.facilityId === undefined) {
-      issues.push({ field: "facilityId", message: "An in-person interaction needs a clinic" });
     }
   } else if (data.personId !== undefined) {
     issues.push({ field: "personId", message: "A personal block is not about anybody" });

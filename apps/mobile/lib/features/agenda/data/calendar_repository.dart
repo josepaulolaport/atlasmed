@@ -491,6 +491,13 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         throw CalendarValidationException(message, details: payload.details);
       case 403:
         throw CalendarForbiddenException(message);
+      // A decision, not a connection. The appointment is gone — cancelled from
+      // another device, or deleted — so a queued press for it will be refused
+      // for ever. Left as a network failure it kept its place at the head of
+      // the queue and stopped every later press from draining behind it.
+      case 404:
+      case 410:
+        throw CalendarGoneException(message);
       case 409 when payload.code == 'INTERACTION_INVALID_TRANSITION':
         throw InteractionTransitionException(message);
       case 409 when payload.code == 'INTERACTION_VERSION_CONFLICT':
@@ -556,6 +563,11 @@ class InteractionVersionConflictException extends CalendarApiException {
 
   final int? expectedVersion;
   final int? actualVersion;
+}
+
+/// The thing the request is about no longer exists.
+class CalendarGoneException extends CalendarApiException {
+  const CalendarGoneException(super.message);
 }
 
 class CalendarValidationException extends CalendarApiException {

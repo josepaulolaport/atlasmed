@@ -1,0 +1,1 @@
+ALTER TABLE "interactions" DROP CONSTRAINT "interactions_in_person_has_facility_check";

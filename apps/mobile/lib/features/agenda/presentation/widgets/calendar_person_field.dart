@@ -2,8 +2,25 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_form_styles.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// What the picker is searching: the text, and the clinic it is narrowed to.
+class CalendarPersonQuery extends Equatable {
+  const CalendarPersonQuery({required this.text, this.facilityId});
+
+  final String text;
+
+  /// When the rep has already chosen a clinic, only the doctors who work there
+  /// are offered — a visit to a doctor at a clinic they do not attend is not a
+  /// thing anyone means to book, and the whole book is a worse list than five
+  /// names.
+  final int? facilityId;
+
+  @override
+  List<Object?> get props => [text, facilityId];
+}
 
 /// Doctors matching what the rep has typed, for the editor's own picker.
 ///
@@ -11,8 +28,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// alive against the session cache tag and carries the filters of a screen the
 /// rep is not on. This is one search, disposed with the field.
 final calendarPersonSearchProvider = FutureProvider.autoDispose
-    .family<List<CalendarIdentity>, String>((ref, query) async {
-      final repository = DoctorsRepository(searchQuery: query, limit: 10);
+    .family<List<CalendarIdentity>, CalendarPersonQuery>((ref, query) async {
+      final repository = DoctorsRepository(
+        searchQuery: query.text,
+        facilityId: query.facilityId,
+        limit: 10,
+      );
       ref.onDispose(repository.dispose);
       final page = await repository.currentValueOrResolve();
       return (page?.items ?? const [])
@@ -38,10 +59,13 @@ class CalendarPersonField extends ConsumerStatefulWidget {
     super.key,
     required this.selected,
     required this.onChanged,
+    this.facilityId,
     this.errorText,
     this.helperText,
   });
 
+  /// The clinic already chosen, if any. Narrows the search to its own staff.
+  final int? facilityId;
   final CalendarIdentity? selected;
   final ValueChanged<CalendarIdentity?> onChanged;
   final String? errorText;
@@ -83,7 +107,14 @@ class _CalendarPersonFieldState extends ConsumerState<CalendarPersonField> {
     // book and costs a request per keystroke to say so.
     final searching = normalized.length >= 2 && widget.selected == null;
     final results = searching
-        ? ref.watch(calendarPersonSearchProvider(normalized))
+        ? ref.watch(
+            calendarPersonSearchProvider(
+              CalendarPersonQuery(
+                text: normalized,
+                facilityId: widget.facilityId,
+              ),
+            ),
+          )
         : const AsyncValue<List<CalendarIdentity>>.data([]);
 
     return Column(
@@ -130,9 +161,16 @@ class _CalendarPersonFieldState extends ConsumerState<CalendarPersonField> {
               child: Text('Não foi possível buscar médicos.'),
             ),
             data: (doctors) => doctors.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text('Nenhum médico encontrado.'),
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    // Says *why* the list is empty when the clinic is what
+                    // narrowed it, rather than leaving the rep to wonder
+                    // whether the doctor is in the system at all.
+                    child: Text(
+                      widget.facilityId == null
+                          ? 'Nenhum médico encontrado.'
+                          : 'Nenhum médico com esse nome nesta clínica.',
+                    ),
                   )
                 : Material(
                     color: Theme.of(context).colorScheme.surface,

@@ -208,11 +208,12 @@ export const interactions = pgTable(
       .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
     /**
-     * Nullable since §15.7.5. A rep who phones a doctor was nowhere, and
-     * writing a building they never entered would poison exactly the data the
-     * record exists to collect. `interactions_in_person_has_facility_check`
-     * still requires one for an `IN_PERSON` interaction: if the rep drove
-     * somewhere, there is a place.
+     * Nullable since §15.7.5, for **either** modality. A rep who phones a
+     * doctor was nowhere; a rep who meets one for coffee was somewhere that is
+     * not a clinic, and the clinic list is the wrong place to look for it.
+     * Writing a building they never entered would poison exactly the data the
+     * record exists to collect, so the only rule left is
+     * `interactions_subject_check`: a clinic, a person, or both.
      */
     facilityId: bigint("facility_id", { mode: "number" }).references(
       () => facilities.id,
@@ -281,12 +282,6 @@ export const interactions = pgTable(
     check(
       "interactions_subject_check",
       sql`${t.facilityId} is not null or ${t.personId} is not null`,
-    ),
-    // §15.7.5: a REMOTE contact may name a clinic or not; an IN_PERSON one has
-    // to, because the rep was somewhere.
-    check(
-      "interactions_in_person_has_facility_check",
-      sql`${t.modality} <> 'IN_PERSON' or ${t.facilityId} is not null`,
     ),
     index("interactions_facility_id_status_idx").on(t.facilityId, t.status),
     index("interactions_person_id_status_idx").on(t.personId, t.status),

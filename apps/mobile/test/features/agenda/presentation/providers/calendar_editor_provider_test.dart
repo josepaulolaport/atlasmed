@@ -336,8 +336,9 @@ void main() {
     expect(notifier.state.draft.title, 'Contato · Dra. Marina Alves');
   });
 
-  test('a presencial contact with a doctor still needs a clinic', () {
-    // If the rep drove somewhere, there is a place, and the record says where.
+  test('a presencial meeting with a doctor needs no clinic either', () {
+    // A coffee, a corridor at a congress, a hospital the rep's book has never
+    // heard of. The modality does not decide whether there is a clinic.
     final notifier = CalendarEditorNotifier(
       repository: _FakeCalendarRepository(),
       target: const CalendarEditorTarget.creating(),
@@ -348,10 +349,7 @@ void main() {
     notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
     notifier.setModality(CalendarModality.inPerson);
 
-    expect(
-      notifier.validationErrors['facilityId'],
-      'Uma visita presencial precisa de uma clínica.',
-    );
+    expect(notifier.validationErrors, isNot(contains('facilityId')));
   });
 
   test('sends the doctor with the appointment', () async {

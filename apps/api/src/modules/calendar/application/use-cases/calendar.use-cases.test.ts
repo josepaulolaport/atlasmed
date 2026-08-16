@@ -238,13 +238,15 @@ describe("Calendar application use cases", () => {
     expect(repository.created?.interaction).toMatchObject({ facilityId: null, personId: 7, modality: "REMOTE" });
   });
 
-  it("refuses an in-person interaction with nowhere to be", async () => {
+  it("books an in-person meeting with a doctor at no clinic", () => {
+    // A coffee, a corridor at a congress, a hospital the rep's book has never
+    // heard of. Requiring a clinic here only ever produced a wrong one.
     const repository = new FakeCalendarRepository();
     repository.personFacilities.set(7, [1]);
-    await expect(new CreateCalendarEventUseCase({ repository }).execute({
+    return expect(new CreateCalendarEventUseCase({ repository }).execute({
       actor: { userId: 1, roleName: "REP" }, scope: repScope, idempotencyKey: "cmd-person-in-person",
       data: { ...createInteraction, facilityId: undefined, personId: 7, modality: "IN_PERSON" },
-    })).rejects.toBeInstanceOf(ValidationError);
+    })).resolves.toBeDefined();
   });
 
   it("refuses an interaction about nobody and nowhere", async () => {

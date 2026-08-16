@@ -179,6 +179,9 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                   // the rep never entered would be worse than
                                   // leaving it empty.
                                   CalendarPersonField(
+                                    // Narrowed to the clinic's own staff once
+                                    // the rep has chosen one.
+                                    facilityId: draft.facilityId,
                                     selected: draft.personId == null
                                         ? null
                                         : CalendarIdentity(
@@ -187,11 +190,9 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                                 draft.personName ??
                                                 'Médico selecionado',
                                           ),
-                                    helperText:
-                                        draft.modality ==
-                                            CalendarModality.remote
-                                        ? 'Um contato remoto pode ficar sem clínica.'
-                                        : null,
+                                    helperText: draft.facilityId == null
+                                        ? 'Um contato com um médico pode ficar sem clínica.'
+                                        : 'Somente quem atende nesta clínica.',
                                     onChanged: notifier.setPerson,
                                   ),
                                   const SizedBox(height: 16),

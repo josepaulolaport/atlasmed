@@ -2115,15 +2115,22 @@ conversation, a coffee. Today there is nowhere to put that, so it is lost — an
 it is exactly the kind of evidence the recommendations are short of.
 
 **The record.** An interaction gains a nullable `person_id`, and `facility_id`
-becomes nullable, under two constraints:
+becomes nullable, under one constraint: at least one of `person_id` and
+`facility_id` is present — a row about nobody and nowhere is not a record of
+anything.
 
-- at least one of `person_id` and `facility_id` is present — a row about nobody
-  and nowhere is not a record of anything;
-- an `IN_PERSON` interaction must name a facility. If the rep drove somewhere,
-  there is a place, and the honest record includes it.
+**Modality does not decide whether there is a clinic**, and briefly did. The
+first cut required one for an `IN_PERSON` interaction, on the reasoning that a
+rep who drove somewhere was somewhere. That is true and useless: the somewhere
+is often a coffee, a corridor at a congress, a hospital canteen — none of them
+in the rep's book. Requiring a clinic there does not produce the real place, it
+produces a wrong one, and a wrong clinic is worse than no clinic because
+everything downstream believes it. Dropped in migration 0127.
 
-A `REMOTE` contact may name a clinic or not. Writing a building the rep never
-entered would poison the data this exists to collect.
+**The clinic narrows the doctor, not the other way round.** Choosing a clinic
+first filters the doctor search to that clinic's own staff — a visit to a doctor
+at a clinic they do not attend is not something anyone means to book — and the
+empty state says which of the two narrowed it away.
 
 *Rejected*: a separate table for person interactions. It keeps the schema tidy
 and then makes two places answer "what happened with this doctor" — which is how
