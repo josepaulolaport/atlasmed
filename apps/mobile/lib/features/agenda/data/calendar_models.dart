@@ -516,6 +516,7 @@ class InteractionDetail extends Equatable {
     required this.facility,
     required this.agent,
     required this.linkedOrders,
+    this.person,
     required this.version,
     required this.canMutate,
     this.calendarVersion = 0,
@@ -540,7 +541,11 @@ class InteractionDetail extends Equatable {
   final DateTime occurrenceStartsAt;
   final DateTime occurrenceEndsAt;
   final String timeZone;
-  final InteractionFacility facility;
+  /// Null for a contact with a doctor that happened nowhere (§15.7.5).
+  final InteractionFacility? facility;
+
+  /// Who the contact was with, when it was booked against a person.
+  final CalendarIdentity? person;
   final InteractionAgent agent;
   final List<InteractionLinkedOrder> linkedOrders;
   final int version;
@@ -577,9 +582,18 @@ class InteractionDetail extends Equatable {
       ).toUtc(),
       occurrenceEndsAt: DateTime.parse(occurrence['endsAt'] as String).toUtc(),
       timeZone: occurrence['timeZone'] as String? ?? 'America/Sao_Paulo',
-      facility: InteractionFacility.fromJson(
-        json['facility'] as Map<String, dynamic>,
-      ),
+      facility: json['facility'] == null
+          ? null
+          : InteractionFacility.fromJson(
+              json['facility'] as Map<String, dynamic>,
+            ),
+      person: json['person'] == null
+          ? null
+          : CalendarIdentity.fromJson(
+              json['person'] as Map<String, dynamic>,
+              fallbackId: 0,
+              fallbackName: 'Médico',
+            ),
       agent: InteractionAgent.fromJson(json['agent'] as Map<String, dynamic>),
       linkedOrders: (json['linkedOrders'] as List<dynamic>? ?? const [])
           .map(
@@ -725,10 +739,12 @@ class CalendarOccurrence extends Equatable {
         id: detail.agent.id,
         name: detail.agent.displayName,
       ),
-      facility: CalendarIdentity(
-        id: detail.facility.id,
-        name: detail.facility.displayName,
-      ),
+      facility: detail.facility == null
+          ? null
+          : CalendarIdentity(
+              id: detail.facility!.id,
+              name: detail.facility!.displayName,
+            ),
       modality: detail.modality,
       startsAt: detail.occurrenceStartsAt,
       endsAt: detail.occurrenceEndsAt,
@@ -738,7 +754,8 @@ class CalendarOccurrence extends Equatable {
       recurrence: detail.recurrence,
       interaction: CalendarInteractionContext(
         id: detail.id,
-        facilityId: detail.facility.id,
+        facilityId: detail.facility?.id,
+        person: detail.person,
         agentUserId: detail.agent.id,
         modality: detail.modality,
         status: detail.status,

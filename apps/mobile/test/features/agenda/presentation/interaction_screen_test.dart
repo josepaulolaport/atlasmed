@@ -186,6 +186,8 @@ InteractionDetail _detail({
   bool needsOutcome = false,
   DateTime? actualStartedAt,
   DateTime? actualEndedAt,
+  bool withoutFacility = false,
+  CalendarIdentity? person,
 }) => InteractionDetail(
   actualStartedAt: actualStartedAt,
   actualEndedAt: actualEndedAt,
@@ -199,12 +201,15 @@ InteractionDetail _detail({
   occurrenceStartsAt: DateTime.utc(2026, 8, 3, 12),
   occurrenceEndsAt: DateTime.utc(2026, 8, 3, 13),
   timeZone: 'America/Sao_Paulo',
-  facility: const InteractionFacility(
-    id: 1,
-    displayName: 'Clínica Central',
-    city: 'São Paulo',
-    state: 'SP',
-  ),
+  facility: withoutFacility
+      ? null
+      : const InteractionFacility(
+          id: 1,
+          displayName: 'Clínica Central',
+          city: 'São Paulo',
+          state: 'SP',
+        ),
+  person: person,
   agent: const InteractionAgent(id: 1, displayName: 'Ana Souza'),
   linkedOrders: [
     InteractionLinkedOrder(
@@ -597,6 +602,24 @@ void main() {
       expect(find.text('Cancelar agendamento'), findsNothing);
     },
   );
+
+  testWidgets('a contact with a doctor opens without a clinic', (tester) async {
+    // §15.7.5 — the screen used to cast `facility` unconditionally, so the
+    // first contact recorded with no clinic would have crashed on open.
+    final repository = _InteractionRepository(
+      _detail(
+        withoutFacility: true,
+        person: const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dra. Marina Alves'), findsOneWidget);
+    expect(find.text('Contato sem clínica'), findsOneWidget);
+    // Notes hang off a clinic; with none there is no card to show.
+    expect(find.text('Observações'), findsNothing);
+  });
 
   testWidgets('manager view is read-only and hides note composer', (
     tester,

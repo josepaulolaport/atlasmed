@@ -192,6 +192,11 @@ Future<void> _cancelOccurrence(
 ///
 /// Dismissing without answering is a legitimate outcome — unanswered is a state
 /// the model carries, and a rep in a car park should be able to walk away.
+/// What this interaction is *about*: the clinic, or the doctor when it happened
+/// nowhere (§15.7.5). Falls back to the title, which is never empty.
+String _subjectName(InteractionDetail detail) =>
+    detail.facility?.displayName ?? detail.person?.name ?? detail.title;
+
 Future<void> _askOutcome(
   WidgetRef ref,
   BuildContext context,
@@ -199,7 +204,7 @@ Future<void> _askOutcome(
 ) async {
   final answers = await showVisitOutcomeSheet(
     context,
-    facilityName: detail.facility.displayName,
+    facilityName: _subjectName(detail),
   );
   if (answers == null) return;
   await ref
@@ -235,9 +240,18 @@ class _InteractionContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notesQuery = InteractionNotesQuery(facilityId: detail.facility.id);
+    // Notes hang off a clinic, so a contact that happened nowhere has none to
+    // show (§15.7.5). The rest of the screen is unchanged.
+    final facilityId = detail.facility?.id;
+    final notesQuery = facilityId == null
+        ? null
+        : InteractionNotesQuery(facilityId: facilityId);
     return RefreshIndicator(
       onRefresh: () async {
+        if (notesQuery == null) {
+          await onRefresh();
+          return;
+        }
         ref.invalidate(interactionNotesProvider(notesQuery));
         await Future.wait([
           onRefresh(),
@@ -260,7 +274,8 @@ class _InteractionContent extends ConsumerWidget {
           const SizedBox(height: 16),
           _OrdersCard(detail: detail),
           const SizedBox(height: 16),
-          _NotesCard(query: notesQuery, canAdd: detail.canMutate),
+          if (notesQuery != null)
+            _NotesCard(query: notesQuery, canAdd: detail.canMutate),
           if (detail.canMutate) ...[
             const SizedBox(height: 16),
             _ActionsCard(
@@ -295,8 +310,10 @@ class _SummaryCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.local_hospital_outlined,
+              Icon(
+                detail.facility == null
+                    ? Icons.person_outline_rounded
+                    : Icons.local_hospital_outlined,
                 color: AppColors.navyDeep,
               ),
               const SizedBox(width: 10),
@@ -305,18 +322,32 @@ class _SummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      detail.facility.displayName,
+                      _subjectName(detail),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: AppColors.gray900,
                       ),
                     ),
-                    if (detail.facility.locationLabel.isNotEmpty)
-                      Text(
-                        detail.facility.locationLabel,
-                        style: const TextStyle(color: AppColors.gray500),
-                      ),
+                    // Under the heading: where it happened, or who it was with
+                    // when the heading is already the clinic.
+                    if (detail.facility == null)
+                      const Text(
+                        'Contato sem clínica',
+                        style: TextStyle(color: AppColors.gray500),
+                      )
+                    else ...[
+                      if (detail.person != null)
+                        Text(
+                          detail.person!.name,
+                          style: const TextStyle(color: AppColors.gray500),
+                        ),
+                      if (detail.facility!.locationLabel.isNotEmpty)
+                        Text(
+                          detail.facility!.locationLabel,
+                          style: const TextStyle(color: AppColors.gray500),
+                        ),
+                    ],
                   ],
                 ),
               ),

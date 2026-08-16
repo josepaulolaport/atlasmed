@@ -141,8 +141,8 @@ class InteractionNotifier extends StateNotifier<InteractionState>
             ? PendingCaptureKind.start
             : PendingCaptureKind.complete,
         label: command == 'start'
-            ? 'Iniciar · ${detail.facility.displayName}'
-            : 'Encerrar · ${detail.facility.displayName}',
+            ? 'Iniciar · ${_subjectLabel(detail)}'
+            : 'Encerrar · ${_subjectLabel(detail)}',
         payload: {
           'interactionId': interactionId,
           'expectedVersion': detail.version,
@@ -167,6 +167,14 @@ class InteractionNotifier extends StateNotifier<InteractionState>
     }
   }
 }
+
+/// What the queued press is *about*, for the banner the rep reads offline.
+///
+/// The clinic where there is one; otherwise the doctor, since a contact with a
+/// doctor may have happened nowhere (§15.7.5). "Iniciar · Atendimento" would
+/// tell them nothing about which of two waiting entries this is.
+String _subjectLabel(InteractionDetail detail) =>
+    detail.facility?.displayName ?? detail.person?.name ?? detail.title;
 
 String interactionErrorMessage(Object error) {
   if (error is InteractionVersionConflictException) {
