@@ -6,6 +6,7 @@ import {
   interactions,
   municipalities,
   orders,
+  persons,
   states,
   users,
   visits,
@@ -150,7 +151,10 @@ async function closeOpenVisits(
     at: args.at,
   })) {
     let visitId = stale.visitId;
-    if (!visitId) {
+    // Same rule as `complete`: no clinic, no `visits` row. In practice the
+    // closer is scoped to IN_PERSON, which always has one — this is the type
+    // agreeing with the constraint rather than a second policy.
+    if (!visitId && stale.facilityId !== null) {
       const [visit] = await tx
         .insert(visits)
         .values({
@@ -208,13 +212,18 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         facility: facilities,
         facilityCity: municipalities.name,
         facilityState: states.abbreviation,
+        person: persons,
         agent: users,
       })
       .from(interactions)
       .innerJoin(calendar, eq(calendar.id, interactions.calendarId))
-      .innerJoin(facilities, eq(facilities.id, interactions.facilityId))
-      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
-      .innerJoin(states, eq(states.id, facilities.stateId))
+      // Left, not inner, since §15.7.5: a contact with a doctor may have no
+      // facility, and an inner join would make it invisible rather than
+      // partial — the whole interaction would 404.
+      .leftJoin(facilities, eq(facilities.id, interactions.facilityId))
+      .leftJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .leftJoin(states, eq(states.id, facilities.stateId))
+      .leftJoin(persons, eq(persons.id, interactions.personId))
       .innerJoin(users, eq(users.id, interactions.agentUserId))
       .where(eq(interactions.id, id))
       .limit(1);
@@ -233,6 +242,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       row.calendar,
       row.facility,
       { city: row.facilityCity, state: row.facilityState },
+      row.person,
       row.agent,
       override[0] ?? null,
       orderRows,
@@ -349,7 +359,10 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         : current.actualStartedAt;
       if (!actualStartedAt || input.completedAt <= actualStartedAt) return null;
       let visitId = current.visitId;
-      if (!visitId) {
+      // A `visits` row is about a clinic, so a contact that happened nowhere
+      // (§15.7.5 — a call to a doctor) closes without one. The interaction is
+      // still the record; `visits` is the older, narrower table it feeds.
+      if (!visitId && current.facilityId !== null) {
         const [visit] = await tx.insert(visits).values({ userId: current.agentUserId, facilityId: current.facilityId,
           visitedAt: actualStartedAt }).returning({ id: visits.id });
         if (!visit) throw new DatabaseError("create compatibility visit");
@@ -582,8 +595,9 @@ export class DrizzleInteractionRepository implements InteractionRepository {
   private mapDetail(
     row: InteractionRow,
     event: CalendarRow,
-    facility: typeof facilities.$inferSelect,
+    facility: typeof facilities.$inferSelect | null,
     facilityGeo: { city: string | null; state: string | null },
+    person: typeof persons.$inferSelect | null,
     agent: typeof users.$inferSelect,
     override: typeof calendarOccurrenceOverrides.$inferSelect | null,
     linkedOrders: Array<{ id: number; status: string; type: string; orderedAt: Date }>,
@@ -595,12 +609,21 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         recurrence: event.recurrence, recurrenceUntil: event.recurrenceUntil, recurrenceCount: event.recurrenceCount,
         status: event.status, version: event.version },
       occurrenceOverride: override ? { startsAt: override.startsAt, endsAt: override.endsAt, status: override.status, version: override.version } : null,
-      facility: {
-        id: facility.id,
-        displayName: facility.displayName,
-        city: facilityGeo.city,
-        state: facilityGeo.state,
-      },
+      facility: facility
+        ? {
+          id: facility.id,
+          displayName: facility.displayName,
+          city: facilityGeo.city,
+          state: facilityGeo.state,
+        }
+        : null,
+      person: person
+        ? {
+          id: person.id,
+          // The name the person goes by, where they have one.
+          name: person.socialName?.trim() || [person.firstName, person.lastName].filter(Boolean).join(" "),
+        }
+        : null,
       agent: { id: agent.id, firstName: agent.firstName, lastName: agent.lastName },
       linkedOrders,
     };

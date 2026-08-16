@@ -26,7 +26,11 @@ export interface CalendarCommandReceipt<T> {
 export interface CalendarInteractionRecord {
   id: number;
   recurrenceKey: string;
-  facilityId: number;
+  /** Null only for a contact with a person that happened nowhere (§15.7.5). */
+  facilityId: number | null;
+  /** The doctor, when the rep booked the person rather than the place. */
+  personId?: number | null;
+  person?: { id: number; name: string } | null;
   modality: InteractionModality;
   status: InteractionStatus;
   cancelledAt?: Date | null;
@@ -73,7 +77,8 @@ export interface CreateCalendarEventInput {
   };
   interaction?: {
     recurrenceKey: string;
-    facilityId: number;
+    facilityId: number | null;
+    personId: number | null;
     agentUserId: number;
     modality: InteractionModality;
   };
@@ -117,6 +122,15 @@ export interface CalendarRepository {
   cancelInteractionOccurrences(input: { calendarId: number; recurrenceKeys?: string[]; actorUserId: number; reason: string }): Promise<number>;
   getCommandReceipt<T>(ownerUserId: number, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined>;
   saveCommandReceipt<T>(ownerUserId: number, commandKey: string, commandKind: string, resourceId: number | null, requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>>;
+  /**
+   * The clinics a person currently works at, for the §15.7.5 scope rule.
+   *
+   * Permissions are facility-based and a contact with no clinic has nothing for
+   * them to bite on, so the rep may book a person who works at *at least one*
+   * clinic they can already see. Active links only: someone who left a clinic
+   * last year does not lend their old employer's permissions to anybody.
+   */
+  listPersonFacilityIds(personId: number): Promise<number[]>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;
   update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null>;
   replaceUntouchedInteractions(input: { calendarId: number; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean>;

@@ -55,6 +55,10 @@ export class DrizzleInteractionContextPort implements InteractionContextPort {
       ...interaction,
       canRead: true,
       canCreateOrder:
+        // An order is placed by a clinic. A contact with a doctor that happened
+        // nowhere (§15.7.5) has no buyer to attach one to, so it cannot carry
+        // an order — the rep records the order against the clinic's own visit.
+        interaction.facilityId !== null &&
         interaction.calendarStatus === "ACTIVE" &&
         interaction.occurrenceStatus !== "CANCELLED" &&
         (interaction.status === "SCHEDULED" || interaction.status === "IN_PROGRESS"),

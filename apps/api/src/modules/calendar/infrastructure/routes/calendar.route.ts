@@ -26,7 +26,13 @@ const baseEvent = z.object({
   recurrence: z.enum(["NONE", "DAILY", "WEEKDAYS", "WEEKLY", "MONTHLY", "YEARLY"]), recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), recurrenceCount: z.number().int().positive().optional(),
 }).refine((value) => !(value.recurrenceUntil && value.recurrenceCount), { path: ["recurrenceUntil"], message: "recurrenceUntil and recurrenceCount are mutually exclusive" });
 const createSchema = z.discriminatedUnion("kind", [
-  baseEvent.extend({ kind: z.literal("INTERACTION"), facilityId: z.number().int().positive(), modality: z.enum(["IN_PERSON", "REMOTE"]) }),
+  // §15.7.5 — a contact may name a clinic, a doctor, or both. The use case
+  // holds the rule that an IN_PERSON one still needs a clinic, so the message
+  // is the same whichever door the request came through.
+  baseEvent.extend({ kind: z.literal("INTERACTION"), facilityId: z.number().int().positive().optional(),
+    personId: z.number().int().positive().optional(), modality: z.enum(["IN_PERSON", "REMOTE"]) })
+    .refine((value) => value.facilityId !== undefined || value.personId !== undefined,
+      { path: ["facilityId"], message: "An interaction needs a clinic, a person, or both" }),
   baseEvent.extend({ kind: z.literal("PERSONAL_BLOCK"), facilityId: z.never().optional(), modality: z.never().optional() }),
 ]);
 const expectedVersionSchema = z.number().int().nonnegative();
@@ -58,7 +64,7 @@ async function context(input: any) {
 }
 
 const dateRangeType = t.Object({ from: t.String(), to: t.String(), ownerUserId: t.Optional(t.Number({ minimum: 1 })) });
-const createType = t.Object({ kind: t.Union([t.Literal("INTERACTION"), t.Literal("PERSONAL_BLOCK")]), title: t.String(), facilityId: t.Optional(t.Number({ minimum: 1 })), modality: t.Optional(t.Union([t.Literal("IN_PERSON"), t.Literal("REMOTE")])), startsAt: t.String(), timeZone: t.String(), durationMinutes: t.Number(), recurrence: t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKDAYS"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")]), recurrenceUntil: t.Optional(t.String()), recurrenceCount: t.Optional(t.Number()) });
+const createType = t.Object({ kind: t.Union([t.Literal("INTERACTION"), t.Literal("PERSONAL_BLOCK")]), title: t.String(), facilityId: t.Optional(t.Number({ minimum: 1 })), personId: t.Optional(t.Number({ minimum: 1 })), modality: t.Optional(t.Union([t.Literal("IN_PERSON"), t.Literal("REMOTE")])), startsAt: t.String(), timeZone: t.String(), durationMinutes: t.Number(), recurrence: t.Union([t.Literal("NONE"), t.Literal("DAILY"), t.Literal("WEEKDAYS"), t.Literal("WEEKLY"), t.Literal("MONTHLY"), t.Literal("YEARLY")]), recurrenceUntil: t.Optional(t.String()), recurrenceCount: t.Optional(t.Number()) });
 
 export function createCalendarRoutes(useCases: CalendarHttpUseCases = calendarUseCases, authPlugin: any = auth) {
   // Security registry requires the production route to visibly declare `.use(auth)`;

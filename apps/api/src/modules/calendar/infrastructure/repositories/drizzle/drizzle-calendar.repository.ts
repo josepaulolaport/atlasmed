@@ -1,5 +1,5 @@
 import { and, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
-import { calendar, calendarCommandReceipts, calendarOccurrenceOverrides, facilities, interactionEvents, interactions, orders, users, type AnyDatabase } from "@atlasmed/database";
+import { calendar, calendarCommandReceipts, calendarOccurrenceOverrides, facilities, interactionEvents, interactions, orders, personFacilities, persons, users, type AnyDatabase } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
 import type {
@@ -20,8 +20,9 @@ function mapOverride(row: typeof calendarOccurrenceOverrides.$inferSelect): Cale
     endsAt: row.endsAt, status: row.status, reason: row.reason, version: row.version };
 }
 function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount = 0,
-  lifecycle: { eventCount?: number } = {}): CalendarInteractionRecord {
-  return { id: row.id, recurrenceKey: row.recurrenceKey, facilityId: row.facilityId, modality: row.modality,
+  lifecycle: { eventCount?: number } = {}, person: { id: number; name: string } | null = null): CalendarInteractionRecord {
+  return { id: row.id, recurrenceKey: row.recurrenceKey, facilityId: row.facilityId,
+    personId: row.personId, person, modality: row.modality,
     status: row.status, cancelledAt: row.cancelledAt, cancelledByUserId: row.cancelledByUserId,
     cancellationReason: row.cancellationReason, visitId: row.visitId, linkedOrderCount, version: row.version,
     actualStartedAt: row.actualStartedAt, actualEndedAt: row.actualEndedAt,
@@ -51,16 +52,32 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     });
   }
 
+  /** Names for the doctors an interaction may be about, keyed by person id. */
+  private async loadPersons(ids: Array<number | null>): Promise<Map<number, { id: number; name: string }>> {
+    const personIds = [...new Set(ids.filter((id): id is number => id !== null))];
+    if (!personIds.length) return new Map();
+    const rows = await this.database.select({ id: persons.id, firstName: persons.firstName,
+      lastName: persons.lastName, socialName: persons.socialName }).from(persons).where(inArray(persons.id, personIds));
+    return new Map(rows.map((person) => [person.id, { id: person.id,
+      // The social name is the one the person goes by, so it wins where it exists.
+      name: person.socialName?.trim() || [person.firstName, person.lastName].filter(Boolean).join(" ") }]));
+  }
+
   private async hydrate(rows: (typeof calendar.$inferSelect)[]) {
     if (!rows.length) return [];
     const ids = rows.map((row) => row.id);
     const overrideRows = await this.database.query.calendarOccurrenceOverrides.findMany({ where: (table, { inArray }) => inArray(table.calendarId, ids) });
     const interactionRows = await this.database.query.interactions.findMany({ where: (table, { inArray }) => inArray(table.calendarId, ids) });
     const ownerIds = [...new Set(rows.map((row) => row.ownerUserId))];
-    const [ownerRows, facilityRows, orderCounts, lifecycleRows] = await Promise.all([
+    // Both are nullable since §15.7.5: a clinic visit has no person, a call to
+    // a doctor has no clinic. `inArray` with a null in the list is not the same
+    // query, so they are filtered out rather than passed through.
+    const facilityIds = [...new Set(interactionRows.map((item) => item.facilityId).filter((id): id is number => id !== null))];
+    const [ownerRows, facilityRows, personById, orderCounts, lifecycleRows] = await Promise.all([
       this.database.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(inArray(users.id, ownerIds)),
-      interactionRows.length ? this.database.select({ id: facilities.id, name: facilities.displayName }).from(facilities)
-        .where(inArray(facilities.id, [...new Set(interactionRows.map((item) => item.facilityId))])) : Promise.resolve([]),
+      facilityIds.length ? this.database.select({ id: facilities.id, name: facilities.displayName }).from(facilities)
+        .where(inArray(facilities.id, facilityIds)) : Promise.resolve([]),
+      this.loadPersons(interactionRows.map((item) => item.personId)),
       interactionRows.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` }).from(orders)
         .where(inArray(orders.interactionId, interactionRows.map((item) => item.id))).groupBy(orders.interactionId) : Promise.resolve([]),
       interactionRows.length ? this.database.select({ interactionId: interactionEvents.interactionId,
@@ -76,9 +93,11 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       { eventCount: item.count }]));
     return rows.map((row) => {
       const rowInteractions = interactionRows.filter((item) => item.calendarId === row.id);
-      const facility = rowInteractions[0] ? facilityById.get(rowInteractions[0].facilityId) ?? null : null;
+      const firstFacilityId = rowInteractions[0]?.facilityId ?? null;
+      const facility = firstFacilityId === null ? null : facilityById.get(firstFacilityId) ?? null;
       return mapCalendarEvent(row, overrideRows.filter((item) => item.calendarId === row.id).map(mapOverride),
-        rowInteractions.map((item) => mapInteraction(item, orderCountByInteractionId.get(item.id) ?? 0, lifecycleByInteractionId.get(item.id))),
+        rowInteractions.map((item) => mapInteraction(item, orderCountByInteractionId.get(item.id) ?? 0,
+          lifecycleByInteractionId.get(item.id), item.personId === null ? null : personById.get(item.personId) ?? null)),
         ownerById.get(row.ownerUserId), facility);
     });
   }
@@ -146,13 +165,18 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       const [snapshot] = existing.length ? existing : await this.database.select().from(interactions).where(eq(interactions.calendarId, calendarId)).limit(1);
       if (!snapshot) throw new DatabaseError("materialize calendar occurrence interactions");
       await this.database.insert(interactions).values(missing.map((recurrenceKey) => ({
-        calendarId, recurrenceKey, facilityId: snapshot.facilityId, agentUserId: snapshot.agentUserId,
-        modality: snapshot.modality,
+        calendarId, recurrenceKey, facilityId: snapshot.facilityId, personId: snapshot.personId,
+        agentUserId: snapshot.agentUserId, modality: snapshot.modality,
       }))).onConflictDoNothing({ target: [interactions.calendarId, interactions.recurrenceKey] });
     }
-    return (await this.database.select().from(interactions).where(and(
+    const rows = await this.database.select().from(interactions).where(and(
       eq(interactions.calendarId, calendarId), inArray(interactions.recurrenceKey, keys.filter((key) => !cancelledKeys.has(key))),
-    ))).map((row) => mapInteraction(row));
+    ));
+    const personById = await this.loadPersons(rows.map((row) => row.personId));
+    // The person is hydrated here as well as in `hydrate`, because this is the
+    // path the day list actually takes for a recurring interaction — mapping
+    // without it returned every doctor as null while `hydrate` looked correct.
+    return rows.map((row) => mapInteraction(row, 0, {}, personById.get(row.personId ?? -1) ?? null));
   }
   async cancelInteractionOccurrences(input: { calendarId: number; recurrenceKeys?: string[]; actorUserId: number; reason: string }): Promise<number> {
     const now = new Date();
@@ -188,6 +212,14 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     const replay = await this.getCommandReceipt<T>(ownerUserId, commandKey);
     if (!replay) throw new DatabaseError("save calendar command receipt");
     return replay;
+  }
+  async listPersonFacilityIds(personId: number): Promise<number[]> {
+    const rows = await this.database.select({ facilityId: personFacilities.facilityId })
+      .from(personFacilities)
+      // Active links only: someone who left a clinic last year does not lend
+      // their old employer's permissions to anybody.
+      .where(and(eq(personFacilities.personId, personId), isNull(personFacilities.endedAt)));
+    return rows.map((row) => row.facilityId);
   }
   async create(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
     const [row] = await this.database.insert(calendar).values(input.event).returning();

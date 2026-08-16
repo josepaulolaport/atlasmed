@@ -32,8 +32,19 @@ interface Dependencies {
   now?: () => Date;
 }
 
-function assertReadable(record: InteractionDetailRecord, actor: InteractionActor, scope: ScopeContext): void {
+/**
+ * A contact with no clinic (§15.7.5) has no facility for the scope check to
+ * test, and "any interaction in the database" is not a scope. The record is the
+ * rep's own, so ownership carries it: the checks below already require the actor
+ * to be the agent, an admin, or their manager.
+ */
+function assertFacilityScope(record: InteractionDetailRecord, scope: ScopeContext): void {
+  if (record.facilityId === null) return;
   assertResourceInScope(scope, "facility", record.facilityId);
+}
+
+function assertReadable(record: InteractionDetailRecord, actor: InteractionActor, scope: ScopeContext): void {
+  assertFacilityScope(record, scope);
   if (record.agentUserId === actor.userId) return;
   if (actor.roleName === "ADMIN" && scope.isGlobal) return;
   if (actor.roleName === "MANAGER" && scope.managedUserIds.includes(record.agentUserId)) return;
@@ -41,7 +52,7 @@ function assertReadable(record: InteractionDetailRecord, actor: InteractionActor
 }
 
 function assertOwner(record: InteractionDetailRecord, actor: InteractionActor, scope: ScopeContext): void {
-  assertResourceInScope(scope, "facility", record.facilityId);
+  assertFacilityScope(record, scope);
   if (record.agentUserId !== actor.userId || record.calendar.ownerUserId !== actor.userId) {
     throw new ForbiddenError("Only the interaction owner may change its lifecycle");
   }

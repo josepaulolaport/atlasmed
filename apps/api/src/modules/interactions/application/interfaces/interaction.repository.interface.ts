@@ -19,7 +19,9 @@ export interface InteractionDetailRecord {
   id: number;
   calendarId: number;
   recurrenceKey: string;
-  facilityId: number;
+  /** Null for a contact with a person that happened nowhere (§15.7.5). */
+  facilityId: number | null;
+  personId: number | null;
   agentUserId: number;
   modality: "IN_PERSON" | "REMOTE";
   status: InteractionStatus;
@@ -59,7 +61,12 @@ export interface InteractionDetailRecord {
     displayName: string;
     city: string | null;
     state: string | null;
-  };
+  } | null;
+  /** Who the contact was with, when it was booked against a person. */
+  person: {
+    id: number;
+    name: string;
+  } | null;
   agent: {
     id: number;
     firstName: string | null;

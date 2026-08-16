@@ -883,6 +883,13 @@
       "when": 1786904464692,
       "tag": "0125_drop_roteiro_lunch_params",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1786913910997,
+      "tag": "0126_interaction_person_subject",
+      "breakpoints": true
     }
   ]
 }

@@ -65,6 +65,10 @@ class FakeCalendarRepository implements CalendarRepository {
     this.locked = true;
     try { return await work(this); } finally { this.locked = false; }
   }
+  /** Clinics per person, for the §15.7.5 scope rule. Seeded by the tests. */
+  personFacilities = new Map<number, number[]>();
+
+  async listPersonFacilityIds(personId: number) { return this.personFacilities.get(personId) ?? []; }
   async listByOwner(ownerUserId: number, _range?: { from: Date; to: Date }) { return this.events.filter((event) => event.ownerUserId === ownerUserId && event.status !== "CANCELLED"); }
   async findById(id: number) { return this.events.find((event) => event.id === id) ?? null; }
   async ensureInteractionsForOccurrences(calendarId: number, recurrenceKeys: string[]) {
@@ -122,7 +126,9 @@ class FakeCalendarRepository implements CalendarRepository {
       id: 99,
       version: 1,
       owner: { id: input.event.ownerUserId, name: "Ana Silva" },
-      facility: input.interaction ? { id: input.interaction.facilityId, name: "Clínica Central" } : null,
+      facility: input.interaction?.facilityId != null
+        ? { id: input.interaction.facilityId, name: "Clínica Central" }
+        : null,
       overrides: [],
       interactions: input.interaction ? [{
         id: 10,
@@ -216,6 +222,51 @@ describe("Calendar application use cases", () => {
       actor: { userId: 1, roleName: "REP" },
       scope: { ...managerScope, managedUserIds: [] } as ScopeContext,
       idempotencyKey: "cmd", data: { ...createInteraction, facilityId: 99 },
+    })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("books a contact with a doctor that happened nowhere", async () => {
+    // §15.7.5 — a call to a doctor has no clinic, and writing a building the
+    // rep never entered would poison the data this exists to collect.
+    const repository = new FakeCalendarRepository();
+    repository.personFacilities.set(7, [1]);
+    await new CreateCalendarEventUseCase({ repository }).execute({
+      actor: { userId: 1, roleName: "REP" }, scope: repScope, idempotencyKey: "cmd-person",
+      data: { ...createInteraction, facilityId: undefined, personId: 7, modality: "REMOTE" },
+    });
+
+    expect(repository.created?.interaction).toMatchObject({ facilityId: null, personId: 7, modality: "REMOTE" });
+  });
+
+  it("refuses an in-person interaction with nowhere to be", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.personFacilities.set(7, [1]);
+    await expect(new CreateCalendarEventUseCase({ repository }).execute({
+      actor: { userId: 1, roleName: "REP" }, scope: repScope, idempotencyKey: "cmd-person-in-person",
+      data: { ...createInteraction, facilityId: undefined, personId: 7, modality: "IN_PERSON" },
+    })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("refuses an interaction about nobody and nowhere", async () => {
+    const repository = new FakeCalendarRepository();
+    await expect(new CreateCalendarEventUseCase({ repository }).execute({
+      actor: { userId: 1, roleName: "REP" }, scope: repScope, idempotencyKey: "cmd-empty",
+      data: { ...createInteraction, facilityId: undefined, modality: "REMOTE" },
+    })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("refuses a doctor who works at no clinic the rep can see", async () => {
+    // Permissions are facility-based, so a contact with no clinic would arrive
+    // with nothing for them to bite on. One clinic in the rep's own book is
+    // what makes the doctor theirs to talk to.
+    const repository = new FakeCalendarRepository();
+    repository.personFacilities.set(7, [99]);
+    // A scoped rep, not the global one the other tests use: a global scope
+    // sees every clinic, so it could never show this rule working.
+    const scopedRep = { ...managerScope, managedUserIds: [], facilityIds: [1] } as ScopeContext;
+    await expect(new CreateCalendarEventUseCase({ repository }).execute({
+      actor: { userId: 1, roleName: "REP" }, scope: scopedRep, idempotencyKey: "cmd-person-out",
+      data: { ...createInteraction, facilityId: undefined, personId: 7, modality: "REMOTE" },
     })).rejects.toBeInstanceOf(ForbiddenError);
   });
 

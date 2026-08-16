@@ -16,6 +16,8 @@ interface EventData {
   kind: "INTERACTION" | "PERSONAL_BLOCK";
   title: string;
   facilityId?: number;
+  /** §15.7.5 — the doctor, when the rep is booking a person rather than a place. */
+  personId?: number;
   modality?: InteractionModality;
   startsAt: string;
   timeZone: string;
@@ -55,7 +57,8 @@ export interface CalendarOccurrenceDto {
    * measured pair three improvised five-minute visits draw as three overlapping
    * hours and the rep's afternoon reads as full.
    */
-  interaction?: { id: number; facilityId: number; modality: InteractionModality; status: string; version: number;
+  interaction?: { id: number; facilityId: number | null; person: { id: number; name: string } | null;
+    modality: InteractionModality; status: string; version: number;
     actualStartedAt: string | null; actualEndedAt: string | null };
 }
 
@@ -151,6 +154,32 @@ function validateEventData(data: EventData): void {
   if (issues.length) throw new ValidationError(issues);
 }
 
+/**
+ * Who and where an interaction is about — **create only**.
+ *
+ * Deliberately not part of `validateEventData`, which every reschedule also
+ * runs: an occurrence update carries the times and nothing else, so folding
+ * these in there rejected every reschedule for having no subject it was never
+ * asked to change.
+ *
+ * Says the same two things the table's checks say (§15.7.5), so the rep gets a
+ * message instead of a constraint violation.
+ */
+function validateSubject(data: EventData): void {
+  const issues: Array<{ field: string; message: string }> = [];
+  if (data.kind === "INTERACTION") {
+    if (data.facilityId === undefined && data.personId === undefined) {
+      issues.push({ field: "facilityId", message: "An interaction needs a clinic, a person, or both" });
+    }
+    if (data.modality === "IN_PERSON" && data.facilityId === undefined) {
+      issues.push({ field: "facilityId", message: "An in-person interaction needs a clinic" });
+    }
+  } else if (data.personId !== undefined) {
+    issues.push({ field: "personId", message: "A personal block is not about anybody" });
+  }
+  if (issues.length) throw new ValidationError(issues);
+}
+
 function eventValues(ownerUserId: number, data: EventData) {
   validateEventData(data);
   const startsAt = new Date(data.startsAt);
@@ -226,8 +255,9 @@ export class CreateCalendarEventUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { actor: Actor; scope: ScopeContext; idempotencyKey: string; data: EventData }) {
     if (input.actor.roleName === "MANAGER") throw new ForbiddenError();
-    if (input.data.kind === "INTERACTION" && (!input.scope.isGlobal && !input.scope.facilityIds.includes(input.data.facilityId!))) throw new ForbiddenError();
+    validateSubject(input.data);
     const event = eventValues(input.actor.userId, input.data);
+    if (input.data.kind === "INTERACTION") await this.assertSubjectInScope(input.scope, input.data);
     const commandKind = "CREATE";
     const fingerprint = commandFingerprint(commandKind, null, null, input.data);
     return this.deps.repository.runWithOwnerLock(input.actor.userId, async (repository) => {
@@ -240,9 +270,29 @@ export class CreateCalendarEventUseCase {
       const firstOccurrence = expandCalendarOccurrences(candidate.rule, { from: new Date(event.firstStartsAt.getTime() - 1), to: new Date(event.firstEndsAt.getTime() + 1) })[0]!;
       const created = await repository.create({ commandKey: input.idempotencyKey, event,
         ...(input.data.kind === "INTERACTION" ? { interaction: { recurrenceKey: firstOccurrence.recurrenceKey,
-          facilityId: input.data.facilityId!, agentUserId: input.actor.userId, modality: input.data.modality! } } : {}) });
+          facilityId: input.data.facilityId ?? null, personId: input.data.personId ?? null,
+          agentUserId: input.actor.userId, modality: input.data.modality! } } : {}) });
       return (await repository.saveCommandReceipt(input.actor.userId, input.idempotencyKey, commandKind, null, fingerprint, created)).result;
     });
+  }
+
+  /**
+   * §15.7.5 — who a rep may book, when the booking may name no clinic.
+   *
+   * A clinic is checked the way it always was. A person is checked through the
+   * clinics they work at: permissions are facility-based, so a contact with no
+   * facility would otherwise arrive with nothing for them to bite on, and "any
+   * person in the database" is not a scope. One clinic in the rep's own book is
+   * enough — that is what makes the doctor theirs to talk to.
+   */
+  private async assertSubjectInScope(scope: ScopeContext, data: EventData): Promise<void> {
+    if (scope.isGlobal) return;
+    if (data.facilityId !== undefined) {
+      if (!scope.facilityIds.includes(data.facilityId)) throw new ForbiddenError();
+      return;
+    }
+    const facilityIds = await this.deps.repository.listPersonFacilityIds(data.personId!);
+    if (!facilityIds.some((id) => scope.facilityIds.includes(id))) throw new ForbiddenError();
   }
 }
 
@@ -263,7 +313,12 @@ export class ListCalendarUseCase {
       }
       for (const occurrence of occurrences) {
         const interaction = interactions.find((item) => item.recurrenceKey === occurrence.recurrenceKey);
-        if (event.kind === "INTERACTION" && (!interaction || (managerView && !input.scope.isGlobal && !input.scope.facilityIds.includes(interaction.facilityId)))) continue;
+        // A manager sees a rep's clinic visits only for clinics in their own
+        // scope. An interaction with no clinic has no facility to test, and a
+        // contact with a doctor is the rep's own record, so it is not shown in
+        // a manager's view of somebody else's day rather than shown unchecked.
+        if (event.kind === "INTERACTION" && (!interaction || (managerView && !input.scope.isGlobal
+          && (interaction.facilityId === null || !input.scope.facilityIds.includes(interaction.facilityId))))) continue;
         if (interaction?.status === "CANCELLED") continue;
         const effectiveInteractionStatus = interaction?.status === "SCHEDULED" && occurrence.endsAt <= now
           ? "NOT_COMPLETED"
@@ -281,7 +336,8 @@ export class ListCalendarUseCase {
           version: event.version, calendarVersion: event.version, owner: event.owner, facility: event.facility,
           canMutate: !managerView && event.ownerUserId === input.actor.userId,
           ...(occurrence.override ? { overrideVersion: occurrence.override.version } : {}),
-          ...(interaction ? { interaction: { id: interaction.id, facilityId: interaction.facilityId, modality: interaction.modality,
+          ...(interaction ? { interaction: { id: interaction.id, facilityId: interaction.facilityId,
+            person: interaction.person ?? null, modality: interaction.modality,
             status: effectiveInteractionStatus!, version: interaction.version,
             actualStartedAt: interaction.actualStartedAt?.toISOString() ?? null,
             actualEndedAt: interaction.actualEndedAt?.toISOString() ?? null } } : {}) });

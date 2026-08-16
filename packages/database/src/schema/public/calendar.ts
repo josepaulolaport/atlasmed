@@ -14,6 +14,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { facilities } from "./facilities";
+import { persons } from "./persons";
 import { users } from "./users";
 import { visits } from "./visits";
 
@@ -206,9 +207,25 @@ export const interactions = pgTable(
       .notNull()
       .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
-    facilityId: bigint("facility_id", { mode: "number" })
-      .notNull()
-      .references(() => facilities.id, { onDelete: "restrict" }),
+    /**
+     * Nullable since §15.7.5. A rep who phones a doctor was nowhere, and
+     * writing a building they never entered would poison exactly the data the
+     * record exists to collect. `interactions_in_person_has_facility_check`
+     * still requires one for an `IN_PERSON` interaction: if the rep drove
+     * somewhere, there is a place.
+     */
+    facilityId: bigint("facility_id", { mode: "number" }).references(
+      () => facilities.id,
+      { onDelete: "restrict" },
+    ),
+    /**
+     * The doctor, when the contact was with a person rather than a clinic
+     * (§15.7.5) — a call, a corridor conversation, a coffee. Both may be set:
+     * a visit to a named doctor at their clinic is one interaction, not two.
+     */
+    personId: bigint("person_id", { mode: "number" }).references(() => persons.id, {
+      onDelete: "restrict",
+    }),
     agentUserId: bigint("agent_user_id", { mode: "number" })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -260,7 +277,19 @@ export const interactions = pgTable(
       "interactions_correction_metadata_check",
       sql`(${t.correctedAt} is null and ${t.correctedByUserId} is null and ${t.correctionReason} is null) or (${t.correctedAt} is not null and ${t.correctedByUserId} is not null and ${t.correctionReason} is not null and btrim(${t.correctionReason}) <> '' and ${t.status} = 'COMPLETED')`,
     ),
+    // A row about nobody and nowhere is not a record of anything.
+    check(
+      "interactions_subject_check",
+      sql`${t.facilityId} is not null or ${t.personId} is not null`,
+    ),
+    // §15.7.5: a REMOTE contact may name a clinic or not; an IN_PERSON one has
+    // to, because the rep was somewhere.
+    check(
+      "interactions_in_person_has_facility_check",
+      sql`${t.modality} <> 'IN_PERSON' or ${t.facilityId} is not null`,
+    ),
     index("interactions_facility_id_status_idx").on(t.facilityId, t.status),
+    index("interactions_person_id_status_idx").on(t.personId, t.status),
     index("interactions_agent_user_id_status_idx").on(t.agentUserId, t.status),
     index("interactions_status_idx").on(t.status),
   ],
@@ -343,6 +372,10 @@ export const interactionsRelations = relations(interactions, ({ one, many }) => 
   facility: one(facilities, {
     fields: [interactions.facilityId],
     references: [facilities.id],
+  }),
+  person: one(persons, {
+    fields: [interactions.personId],
+    references: [persons.id],
   }),
   agent: one(users, {
     fields: [interactions.agentUserId],
