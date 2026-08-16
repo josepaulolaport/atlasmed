@@ -7,9 +7,41 @@ import {
 } from "./ensure-purchase-recurrence-schedule";
 
 describe("purchase recurrence schedule provisioning", () => {
-  test("defines one stable hourly UTC schedule without a fixed fullSweep input", () => {
-    expect(PURCHASE_RECURRENCE_SCHEDULES).toEqual([expect.objectContaining({ scheduleId: "facility-purchase-recurrence-hourly", workflowId: "facility-purchase-recurrence-hourly", overlap: "SKIP", calendar: { minute: 0, hour: "*" } })]);
-    expect(PURCHASE_RECURRENCE_SCHEDULES[0]).not.toHaveProperty("fullSweep");
+  /**
+   * Two schedules, two ids. The daily repair used to be a branch inside the
+   * hourly run chosen by the hour of day, which `SKIP` could swallow whole: an
+   * hourly run overrunning past midnight skipped the midnight firing and the
+   * sweep with it, losing the only pass that catches deleted orders and
+   * external writers that did not move `updated_at`.
+   */
+  test("separates the hourly reconcile from the daily sweep", () => {
+    expect(PURCHASE_RECURRENCE_SCHEDULES).toEqual([
+      expect.objectContaining({
+        scheduleId: "facility-purchase-recurrence-hourly",
+        workflowId: "facility-purchase-recurrence-hourly",
+        calendar: { minute: 0, hour: "*" },
+        fullSweep: false,
+      }),
+      expect.objectContaining({
+        scheduleId: "facility-purchase-recurrence-daily-sweep",
+        workflowId: "facility-purchase-recurrence-daily-sweep",
+        fullSweep: true,
+      }),
+    ]);
+
+    const ids = PURCHASE_RECURRENCE_SCHEDULES.map((schedule) => schedule.scheduleId);
+    expect(new Set(ids).size).toBe(ids.length);
+    // Distinct workflow ids too, or `SKIP` would couple them right back
+    // together.
+    const workflowIds = PURCHASE_RECURRENCE_SCHEDULES.map((schedule) => schedule.workflowId);
+    expect(new Set(workflowIds).size).toBe(workflowIds.length);
+  });
+
+  test("runs the sweep in the Brazilian small hours, not during the working evening", () => {
+    const sweep = PURCHASE_RECURRENCE_SCHEDULES[1];
+    // 06:30 UTC is 03:30 in São Paulo. The old midnight-UTC slot was 21:00
+    // there, which is the worst time to hold locks over every active facility.
+    expect(sweep?.calendar).toEqual({ minute: 30, hour: 6 });
   });
 
   /**
@@ -36,9 +68,10 @@ describe("purchase recurrence schedule provisioning", () => {
     await ensurePurchaseRecurrenceSchedules({ create, getHandle } as never, { taskQueue: "atlasmed" });
 
     expect(deleteLegacy).toHaveBeenCalledTimes(1);
-    expect(updates).toHaveLength(1);
+    expect(updates).toHaveLength(2);
     expect(create).not.toHaveBeenCalled();
-    expect(updates[0]?.({ state: {} }).action.args).toEqual([{ mode: "RECONCILE" }]);
+    expect(updates[0]?.({ state: {} }).action.args).toEqual([{ mode: "RECONCILE", fullSweep: false }]);
+    expect(updates[1]?.({ state: {} }).action.args).toEqual([{ mode: "RECONCILE", fullSweep: true }]);
   });
 
   test("tolerates a missing legacy schedule and creates a missing canonical schedule", async () => {
@@ -49,8 +82,9 @@ describe("purchase recurrence schedule provisioning", () => {
 
     await ensurePurchaseRecurrenceSchedules({ create, getHandle } as never, { taskQueue: "atlasmed" });
 
-    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(2);
     expect(create.mock.calls[0]?.[0]).toMatchObject({ scheduleId: "facility-purchase-recurrence-hourly" });
+    expect(create.mock.calls[1]?.[0]).toMatchObject({ scheduleId: "facility-purchase-recurrence-daily-sweep" });
   });
 
   test("propagates non-not-found legacy deletion failures", async () => {

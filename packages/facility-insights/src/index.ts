@@ -14,8 +14,8 @@ export type {
   PurchaseRecurrenceValidationErrorCode,
   PurchaseRecurrenceSnapshot,
 } from "./purchase-recurrence";
+export { APPLICATION_TIMEZONE, civilDateAt } from "./civil-date";
 export {
-  APPLICATION_TIMEZONE,
   DAYS_PER_MONTH,
   ROLLING_WINDOW_DAYS,
   monthlyRateFromDays,

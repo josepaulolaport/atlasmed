@@ -179,8 +179,17 @@ export class ListFacilitiesUseCase {
         input.purchaseProfile
           ? meiliPurchaseProfileFilter(listScope.verticalIds, input.purchaseProfile)
           : undefined,
+        /**
+         * Each bound is its own EXISTS in SQL — "has a profile of at least N"
+         * and "has a profile of at most M", not necessarily the same profile —
+         * so the lower bound tests the largest interval and the upper bound the
+         * smallest. Both used to test the minimum, which read as "every profile
+         * is at least N" and silently dropped multi-vertical clinics; the
+         * hydrate guard only catches Meili returning too many rows, never too
+         * few.
+         */
         input.purchaseIntervalMinDays !== undefined
-          ? gteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMinDays)
+          ? gteFilter("purchaseIntervalDaysMax", input.purchaseIntervalMinDays)
           : undefined,
         input.purchaseIntervalMaxDays !== undefined
           ? lteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMaxDays)

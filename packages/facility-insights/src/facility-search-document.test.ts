@@ -119,3 +119,67 @@ describe("deriveFacilityProfileFunnelFields", () => {
     });
   });
 });
+
+/**
+ * Unscoped funnel filters ask "does the clinic have *a* profile like this",
+ * which is what the SQL EXISTS asks. Answering them from the per-facility
+ * minimum turned that into "every profile", and a multi-vertical clinic
+ * disappeared from a filter it belongs in — in the one direction the API's
+ * hydrate guard never catches, since that only fires when Meili returns rows SQL
+ * then rejects.
+ */
+describe("unscoped multi-profile funnel fields", () => {
+  const profiles = [
+    {
+      verticalId: 10,
+      purchaseFunnelStage: "PURCHASE_WINDOW" as const,
+      purchaseIntervalDays: 30,
+      purchaseIntervalSource: "CALCULATED" as const,
+      manualPurchaseProfile: null,
+      lastValidPurchaseDate: "2026-07-01",
+    },
+    {
+      verticalId: 11,
+      purchaseFunnelStage: "CHURN" as const,
+      purchaseIntervalDays: 90,
+      purchaseIntervalSource: "MANUAL" as const,
+      manualPurchaseProfile: "QUARTERLY" as const,
+      lastValidPurchaseDate: "2026-01-01",
+    },
+  ];
+
+  it("spans the profiles from shortest to longest interval", () => {
+    expect(deriveFacilityProfileFunnelFields(profiles)).toMatchObject({
+      // "at least 60 days" has to match this clinic — its quarterly line
+      // qualifies — so the lower bound is tested against the maximum.
+      purchaseIntervalDaysMax: 90,
+      // "at most 60 days" has to match it too, via the monthly line.
+      purchaseIntervalDaysMin: 30,
+    });
+  });
+
+  it("reports every source and manual profile present, not only a unanimous one", () => {
+    expect(deriveFacilityProfileFunnelFields(profiles)).toMatchObject({
+      purchaseIntervalSourcesAny: ["CALCULATED", "MANUAL"],
+      manualPurchaseProfilesAny: ["QUARTERLY"],
+    });
+  });
+
+  it("leaves the manual list empty when every profile is automatic", () => {
+    expect(deriveFacilityProfileFunnelFields([profiles[0]!])).toMatchObject({
+      manualPurchaseProfilesAny: [],
+      purchaseIntervalSourcesAny: ["CALCULATED"],
+      purchaseIntervalDaysMin: 30,
+      purchaseIntervalDaysMax: 30,
+    });
+  });
+
+  it("falls back to the default interval on both bounds with no profiles", () => {
+    expect(deriveFacilityProfileFunnelFields([])).toMatchObject({
+      purchaseIntervalDaysMin: 30,
+      purchaseIntervalDaysMax: 30,
+      purchaseIntervalSourcesAny: [],
+      manualPurchaseProfilesAny: [],
+    });
+  });
+});

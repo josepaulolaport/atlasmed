@@ -1,6 +1,6 @@
 {
-  "id": "5c929977-1d0a-473f-9f16-f59d89c92b69",
-  "prevId": "8203f730-b252-485a-a025-8bfae4391295",
+  "id": "8203f730-b252-485a-a025-8bfae4391295",
+  "prevId": "b2e86787-4089-45b4-8a81-fe171581d367",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5351,6 +5351,22 @@
           ],
           "isUnique": false,
           "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"next_purchase_funnel_transition_date\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "facility_vertical_profiles_invalidated_snapshot_idx": {
+          "name": "facility_vertical_profiles_invalidated_snapshot_idx",
+          "columns": [
+            {
+              "expression": "facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"facility_vertical_profiles\".\"is_active\" = true and \"facility_vertical_profiles\".\"purchase_recurrence_calculated_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -10822,13 +10838,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "duration_source": {
-          "name": "duration_source",
-          "type": "interaction_duration_source",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
         "cancelled_at": {
           "name": "cancelled_at",
           "type": "timestamp with time zone",
@@ -15463,6 +15472,38 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "ops.reconcile_watermark": {
+      "name": "reconcile_watermark",
+      "schema": "ops",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "covered_until": {
+          "name": "covered_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -15744,14 +15785,6 @@
       "values": [
         "ACTIVE",
         "CANCELLED"
-      ]
-    },
-    "public.interaction_duration_source": {
-      "name": "interaction_duration_source",
-      "schema": "public",
-      "values": [
-        "MEASURED",
-        "INFERRED"
       ]
     },
     "public.interaction_event_source": {

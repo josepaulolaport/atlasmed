@@ -1,6 +1,6 @@
 {
-  "id": "b2e86787-4089-45b4-8a81-fe171581d367",
-  "prevId": "9b55fb69-bcc0-432b-9f65-592992748f80",
+  "id": "67b310c7-12b5-4a73-b6a6-804a3a6ced23",
+  "prevId": "5c929977-1d0a-473f-9f16-f59d89c92b69",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10838,6 +10838,33 @@
           "primaryKey": false,
           "notNull": false
         },
+        "duration_source": {
+          "name": "duration_source",
+          "type": "interaction_duration_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "interaction_outcome",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "follow_up": {
+          "name": "follow_up",
+          "type": "interaction_follow_up",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome_answered_at": {
+          "name": "outcome_answered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "cancelled_at": {
           "name": "cancelled_at",
           "type": "timestamp with time zone",
@@ -12484,13 +12511,25 @@
           "name": "roteiro_id",
           "type": "bigint",
           "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vertical_id": {
+          "name": "vertical_id",
+          "type": "bigint",
+          "primaryKey": false,
           "notNull": true
         },
         "position": {
           "name": "position",
           "type": "smallint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "rejected_profile_id": {
           "name": "rejected_profile_id",
@@ -12556,6 +12595,33 @@
           "method": "btree",
           "with": {}
         },
+        "roteiro_stop_rejections_user_profile_idx": {
+          "name": "roteiro_stop_rejections_user_profile_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rejected_profile_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "roteiro_stop_rejections_reason_created_at_idx": {
           "name": "roteiro_stop_rejections_reason_created_at_idx",
           "columns": [
@@ -12590,6 +12656,32 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "roteiro_stop_rejections_user_id_users_id_fk": {
+          "name": "roteiro_stop_rejections_user_id_users_id_fk",
+          "tableFrom": "roteiro_stop_rejections",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "roteiro_stop_rejections_vertical_id_business_verticals_id_fk": {
+          "name": "roteiro_stop_rejections_vertical_id_business_verticals_id_fk",
+          "tableFrom": "roteiro_stop_rejections",
+          "tableTo": "business_verticals",
+          "columnsFrom": [
+            "vertical_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "roteiro_stop_rejections_rejected_profile_id_fk": {
@@ -15722,6 +15814,14 @@
         "CANCELLED"
       ]
     },
+    "public.interaction_duration_source": {
+      "name": "interaction_duration_source",
+      "schema": "public",
+      "values": [
+        "MEASURED",
+        "INFERRED"
+      ]
+    },
     "public.interaction_event_source": {
       "name": "interaction_event_source",
       "schema": "public",
@@ -15730,12 +15830,32 @@
         "SYSTEM"
       ]
     },
+    "public.interaction_follow_up": {
+      "name": "interaction_follow_up",
+      "schema": "public",
+      "values": [
+        "NENHUM",
+        "DIAS_15",
+        "DIAS_30",
+        "DIAS_90"
+      ]
+    },
     "public.interaction_modality": {
       "name": "interaction_modality",
       "schema": "public",
       "values": [
         "IN_PERSON",
         "REMOTE"
+      ]
+    },
+    "public.interaction_outcome": {
+      "name": "interaction_outcome",
+      "schema": "public",
+      "values": [
+        "PEDIDO",
+        "VAI_AVALIAR",
+        "RELACIONAMENTO",
+        "NAO_FALEI_COM_NINGUEM"
       ]
     },
     "public.interaction_status": {

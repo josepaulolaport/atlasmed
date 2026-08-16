@@ -38,6 +38,14 @@ export interface MetricSnapshotWorkflowInput {
   cursor?: number | null;
   since?: string;
   until?: string;
+  /**
+   * Whether this run is the one allowed to advance the reconcile watermark.
+   *
+   * Set when a run claims a window of its own, and carried through
+   * `continueAsNew` so a long run still commits at the end of the chain rather
+   * than leaving the watermark where it started.
+   */
+  ownsWatermark?: boolean;
   totals?: MetricSnapshotWorkflowTotals;
   lifecycleStartedAt?: string;
 }
@@ -62,6 +70,8 @@ const LIFECYCLE_ACTIONS: Record<MetricSnapshotMode, { started: string; completed
 interface WorkflowDependencies {
   recalculate(input: MetricSnapshotBatchInput): Promise<MetricSnapshotBatchResult>;
   logLifecycle(input: MetricSnapshotLifecycleLogInput): Promise<void>;
+  claimWindow(input: { until: string }): Promise<{ since: string }>;
+  commitWindow(input: { until: string }): Promise<void>;
   continueAsNew(input: MetricSnapshotWorkflowInput): Promise<never>;
   startedAt?: Date;
   now?: () => number;
@@ -74,10 +84,28 @@ export async function runMetricSnapshotWorkflow(
   const scheduledAt = dependencies.startedAt ?? new Date(workflowInfo().startTime);
   const now = dependencies.now ?? Date.now;
 
-  // The watermark defaults to twice the schedule interval, so a run that is
-  // skipped or delayed does not leave a gap no later run ever looks at.
   const until = input.until ?? scheduledAt.toISOString();
-  const since = input.since ?? new Date(scheduledAt.getTime() - 2 * 60 * 60 * 1_000).toISOString();
+  /**
+   * The window comes from a stored watermark, not from a fixed lookback.
+   *
+   * `start - 2h` was described here as a watermark and is not one. Under overlap
+   * `SKIP` a run that overruns causes the next firings to be skipped, and the
+   * run that does fire looks back two hours from *itself* — so the hours in
+   * between are covered by nobody. NIGHTLY does not repair it: it visits every
+   * profile but recomputes from current state, so an order change that has since
+   * aged out of the rolling 90-day window is simply gone.
+   *
+   * Already resolved on a `continueAsNew`; NIGHTLY and TRIGGER have no window.
+   */
+  const ownsWatermark =
+    input.ownsWatermark ?? (input.mode === "RECONCILE" && input.since === undefined);
+  const claimed =
+    ownsWatermark && input.since === undefined
+      ? await dependencies.claimWindow({ until })
+      : null;
+  const since =
+    input.since ?? claimed?.since
+    ?? new Date(scheduledAt.getTime() - 2 * 60 * 60 * 1_000).toISOString();
 
 
   const lifecycleStartedAt = input.lifecycleStartedAt ?? scheduledAt.toISOString();
@@ -122,11 +150,18 @@ export async function runMetricSnapshotWorkflow(
         ...input,
           since,
         until,
+        ownsWatermark,
         cursor,
         totals,
         lifecycleStartedAt,
       });
     }
+  }
+
+  // After the last page, never before: the watermark records what has actually
+  // been covered, so a run that dies mid-way leaves its window for the next one.
+  if (ownsWatermark) {
+    await dependencies.commitWindow({ until });
   }
 
   await dependencies.logLifecycle({
@@ -145,12 +180,8 @@ export async function metricSnapshotWorkflow(
   return runMetricSnapshotWorkflow(input, {
     recalculate: activities.recalculateMetricSnapshotsBatch,
     logLifecycle: activities.logMetricSnapshotLifecycle,
+    claimWindow: activities.claimMetricSnapshotWindow,
+    commitWindow: activities.commitMetricSnapshotWindow,
     continueAsNew: (nextInput) => continueAsNew<typeof metricSnapshotWorkflow>(nextInput),
-    // Imported from the package, not reimplemented here. It is safe inside a
-    // workflow because it is pure — it takes the instant as an argument and
-    // reads no clock — and because `@atlasmed/facility-insights` touches no
-    // database at import time, which is the constraint that actually applies to
-    // workflow bundles. Importing the *activities* module would not be safe: it
-    // reaches for `getDb`.
   });
 }
