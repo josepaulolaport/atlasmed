@@ -212,3 +212,66 @@ describe("serializeFacility", () => {
   });
 
 });
+
+describe("date fields the driver may hand back as strings", () => {
+  /*
+   * Production, 2026-08-16: every `/facilities` page and every
+   * `/dashboard/metrics/*\/clinics` drilldown 500'd with
+   *
+   *   TypeError: list.lastVisitAt?.toISOString is not a function
+   *
+   * `lastVisitAt` came from `sql<Date>\`max(visited_at)\``, which asserts a type
+   * rather than producing one — the driver returns a string for a bare
+   * template, and `?.` only guards the null. One visited clinic anywhere in a
+   * page took the whole page down, which is why a local database with no visits
+   * never showed it.
+   */
+  it("serialises a string lastVisitAt instead of throwing", () => {
+    const facility = baseFacility();
+    const withStringDate = {
+      ...facility,
+      lastVisitAt: "2026-08-10 14:32:00+00" as unknown as Date,
+    } as FacilityListRecord;
+
+    const dto = serializeFacility(withStringDate);
+
+    expect(dto.lastVisitAt).toBe(new Date("2026-08-10 14:32:00+00").toISOString());
+  });
+
+  it("still serialises a real Date", () => {
+    const facility = baseFacility();
+    const visited = new Date("2026-08-10T14:32:00.000Z");
+
+    const dto = serializeFacility({
+      ...facility,
+      lastVisitAt: visited,
+    } as FacilityListRecord);
+
+    expect(dto.lastVisitAt).toBe(visited.toISOString());
+  });
+
+  it("leaves lastVisitAt out when there is no visit", () => {
+    const dto = serializeFacility(baseFacility());
+    expect(dto.lastVisitAt).toBeUndefined();
+  });
+
+  it("drops an unparseable value rather than failing the page", () => {
+    const dto = serializeFacility({
+      ...baseFacility(),
+      lastVisitAt: "not a date" as unknown as Date,
+    } as FacilityListRecord);
+
+    expect(dto.lastVisitAt).toBeUndefined();
+  });
+
+  it("applies the same rule to consultantSince", () => {
+    const dto = serializeFacility({
+      ...baseFacility(),
+      consultantSince: "2026-07-01 09:00:00+00" as unknown as Date,
+    } as FacilityListRecord);
+
+    expect(dto.consultantSince).toBe(
+      new Date("2026-07-01 09:00:00+00").toISOString(),
+    );
+  });
+});
