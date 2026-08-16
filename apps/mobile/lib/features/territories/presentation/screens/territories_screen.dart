@@ -745,7 +745,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                     'vinculadas a ela ficarão sem uma zona associada.'
               : [
                   if (holderName != null && holderName.isNotEmpty)
-                    '$holderName ficará sem território: sai da equipe do gestor '
+                    '$holderName ficará sem território: sai da equipe do gerente '
                         'e deixa de poder receber clínicas.'
                   else
                     'Esta área de representante será excluída permanentemente.',

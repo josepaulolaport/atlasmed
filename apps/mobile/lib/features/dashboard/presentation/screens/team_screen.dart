@@ -67,7 +67,15 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
       backgroundColor: AppColors.background,
       appBar: widget.managerId == null
           ? const AtlasAppBar(page: 'Equipe')
-          : AppBar(title: Text(widget.managerName ?? 'Equipe')),
+          // Named for the team, not the person: this opens from that person's
+          // profile, so both screens were titled "Silvio Vieira".
+          : AppBar(
+              title: Text(
+                widget.managerName == null
+                    ? 'Equipe'
+                    : 'Equipe de ${widget.managerName}',
+              ),
+            ),
       body: RefreshIndicator(
         color: AppColors.navyBright,
         backgroundColor: Colors.white,
@@ -92,7 +100,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             // when the header used it on every render: by the time an empty
             // response has arrived, the role has had the same trip to resolve.
             //
-            // The distinction earns its keep: "nenhum gestor com zona" and
+            // The distinction earns its keep: "nenhum gerente com zona" and
             // "nenhum representante nesta equipe" have different causes and
             // different fixes.
             final isManagerRoster =
@@ -108,23 +116,32 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
             }
 
             final visible = _filter(members);
+            // Invites went unfiltered, so a search matching nobody still
+            // listed every pending one — and, because the empty-search notice
+            // was gated on invites being empty too, without saying that the
+            // search had matched nothing.
+            final visibleInvites = _filterInvites(invites);
+            final nothingMatched = visible.isEmpty && visibleInvites.isEmpty;
 
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               // Header, plus the empty-search notice when it applies.
               itemCount:
                   visible.length +
-                  invites.length +
-                  (visible.isEmpty && invites.isEmpty ? 2 : 1),
+                  visibleInvites.length +
+                  (nothingMatched ? 2 : 1),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return _RosterHeader(
                     showSearch: members.length >= _searchThreshold,
                     search: _search,
                     onSearch: (value) => setState(() => _search = value),
+                    count: members.length + invites.length,
+                    isRepRoster:
+                        members.isEmpty || members.first.roleName == 'REP',
                   );
                 }
-                if (visible.isEmpty && invites.isEmpty) {
+                if (nothingMatched) {
                   return _NoSearchMatch(term: _search);
                 }
                 // Spec 0015 R11: people who already occupy territory but have
@@ -132,7 +149,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                 final position = index - 1;
                 if (position >= visible.length) {
                   return _PendingInviteTile(
-                    invite: invites[position - visible.length],
+                    invite: visibleInvites[position - visible.length],
                   );
                 }
                 return _MemberTile(
@@ -161,6 +178,18 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
         )
         .toList(growable: false);
   }
+
+  List<PendingInvite> _filterInvites(List<PendingInvite> invites) {
+    final term = _search.trim().toLowerCase();
+    if (term.isEmpty) return invites;
+    return invites
+        .where(
+          (invite) => '${invite.displayName} ${invite.email ?? ''}'
+              .toLowerCase()
+              .contains(term),
+        )
+        .toList(growable: false);
+  }
 }
 
 /// What sits above the roster: the search, when there are enough people to
@@ -176,18 +205,49 @@ class _RosterHeader extends StatelessWidget {
     required this.showSearch,
     required this.search,
     required this.onSearch,
+    required this.count,
+    required this.isRepRoster,
   });
 
   final bool showSearch;
   final String search;
   final ValueChanged<String> onSearch;
 
+  /// How many people the roster holds, before any search narrows it.
+  final int count;
+
+  /// Read off the rows rather than the viewer's role: the rows have already
+  /// arrived by the time this renders, and the role provider has not
+  /// necessarily resolved.
+  final bool isRepRoster;
+
   @override
   Widget build(BuildContext context) {
-    if (!showSearch) return const SizedBox(height: 8);
+    final noun = isRepRoster
+        ? (count == 1 ? 'representante' : 'representantes')
+        : (count == 1 ? 'gerente' : 'gerentes');
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: _SearchField(value: search, onChanged: onSearch),
+      padding: EdgeInsets.fromLTRB(16, 14, 16, showSearch ? 10 : 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Every other list in the app says how much of what it is showing.
+          // This one opened straight onto cards.
+          Text(
+            '$count $noun',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.gray500,
+            ),
+          ),
+          if (showSearch) ...[
+            const SizedBox(height: 10),
+            _SearchField(value: search, onChanged: onSearch),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -266,6 +326,10 @@ class _MemberTile extends StatelessWidget {
   /// comparisons, and comparing people is what Desempenho is for — here they
   /// turned a list of colleagues into a scoreboard you had to read rather than
   /// scan. The sort still orders by them; the card no longer argues about them.
+  ///
+  /// Taking the figures out left a name alone on a 72pt slab. The role and the
+  /// e-mail are back because they answer *who* — which is this screen's whole
+  /// question — and they were being fetched and thrown away.
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -321,17 +385,39 @@ class _MemberTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    member.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        member.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray900,
+                          letterSpacing: -0.15,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          _RolePill(isRep: member.roleName == 'REP'),
+                          const SizedBox(width: 8),
+                          // Only when the name is a name. `displayName` falls
+                          // back to the e-mail, and printing it twice reads as
+                          // a rendering fault.
+                          if (member.displayName != member.email)
+                            Flexible(
+                              child: _MemberMeta(
+                                icon: Icons.mail_outline_rounded,
+                                text: member.email,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -343,6 +429,37 @@ class _MemberTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Representante or Gerente, in the colour Usuários gives that role.
+///
+/// The word is "Gerente" throughout the rest of the app — Territórios,
+/// Usuários, Perfil, Não Conformidades — and was "Gestor" only inside this
+/// feature, for the same role.
+class _RolePill extends StatelessWidget {
+  const _RolePill({required this.isRep});
+
+  final bool isRep;
+
+  @override
+  Widget build(BuildContext context) {
+    final role = isRep ? UserRoleName.rep : UserRoleName.manager;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: role.color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        role.label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: role.color,
         ),
       ),
     );
@@ -398,18 +515,37 @@ class RepsWithoutPatchScreen extends ConsumerWidget {
           repository: ref.watch(repsWithoutPatchProvider),
           builder: (context, members, repo) {
             if (members == null) {
-              return const Center(child: CircularProgressIndicator());
+              // The skeleton the rest of the app's lists use; this was the one
+              // spinner left in the section.
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [TeamListSkeleton()],
+              );
             }
             if (members.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 64),
-                    child: Text(
-                      'Todo representante tem um território.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 56),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 28,
+                          color: AppColors.green,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Todo representante tem um território',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -417,9 +553,23 @@ class RepsWithoutPatchScreen extends ConsumerWidget {
             }
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: members.length,
+              itemCount: members.length + 1,
               itemBuilder: (context, index) {
-                final member = members[index];
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    child: Text(
+                      '${members.length} '
+                      '${members.length == 1 ? 'representante' : 'representantes'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.gray500,
+                      ),
+                    ),
+                  );
+                }
+                final member = members[index - 1];
                 return _PersonRow(
                   title: member.displayName,
                   subtitle: member.email,
@@ -451,63 +601,72 @@ class _PersonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.blue100, AppColors.blueLight],
-                ),
-              ),
-              child: Text(
-                title.characters.first.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.navyBright,
-                ),
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.surfaceSecondary),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.blue100, AppColors.blueLight],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  _MemberMeta(icon: subtitleIcon, text: subtitle),
-                ],
-              ),
+                  child: Text(
+                    title.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navyBright,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray900,
+                          letterSpacing: -0.15,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      _MemberMeta(icon: subtitleIcon, text: subtitle),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
+                ),
+              ],
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.gray500,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -538,7 +697,7 @@ class _TeamEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             isManagerRoster
-                ? 'Nenhum gestor com zona nesta linha'
+                ? 'Nenhum gerente com zona nesta linha'
                 : 'Nenhum representante nesta equipe',
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -550,8 +709,8 @@ class _TeamEmptyState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isManagerRoster
-                ? 'A equipe aparece quando um gestor assume uma zona desta linha.'
-                : 'Os representantes aparecem quando um patch é criado dentro das zonas do gestor.',
+                ? 'A equipe aparece quando um gerente assume uma zona desta linha.'
+                : 'Os representantes aparecem quando um patch é criado dentro das zonas do gerente.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 12.5,
@@ -571,6 +730,10 @@ class _TeamEmptyState extends StatelessWidget {
 /// nothing to sort them by. The card exists so that a manager who invited
 /// somebody can see them on the roster — which it, built on `users`, could not
 /// do until they accepted.
+///
+/// It is the same card as a member's, dimmed. It used to be a full-bleed row
+/// with a divider, sitting in a list of rounded cards, which read as a
+/// different kind of thing rather than as the same person not yet arrived.
 class _PendingInviteTile extends StatelessWidget {
   const _PendingInviteTile({required this.invite});
 
@@ -578,55 +741,87 @@ class _PendingInviteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.72,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: AppColors.surfaceSecondary,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Opacity(
+        opacity: 0.72,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.surfaceSecondary),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surfaceTertiary,
+                ),
+                child: const Icon(
+                  Icons.hourglass_empty_rounded,
+                  size: 20,
+                  color: AppColors.gray500,
+                ),
               ),
-              child: const Icon(
-                Icons.hourglass_empty_rounded,
-                size: 20,
-                color: AppColors.gray500,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    invite.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
-                      letterSpacing: -0.15,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invite.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                        letterSpacing: -0.15,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  const _MemberMeta(
-                    icon: Icons.mail_outline_rounded,
-                    text: 'Convite pendente',
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Text(
+                            'Convite pendente',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.amber,
+                            ),
+                          ),
+                        ),
+                        if (invite.email != null &&
+                            invite.displayName != invite.email) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: _MemberMeta(
+                              icon: Icons.mail_outline_rounded,
+                              text: invite.email!,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
