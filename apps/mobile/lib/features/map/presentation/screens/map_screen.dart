@@ -247,6 +247,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             selected: _statusFilters,
             onToggle: _toggleStatusFilter,
           ),
+          // Filtering to a status that nothing matches emptied the map, and an
+          // empty map reads as no data or a broken load rather than as the
+          // filter doing its job.
+          if (_statusFilters.isNotEmpty && _clinics.isNotEmpty)
+            _MapFilterSummary(
+              visible: _visibleClinics.length,
+              total: _clinics.length,
+              onClear: () => setState(_statusFilters.clear),
+            ),
           Expanded(
             child: token.isEmpty
                 ? const _MapMessage(
@@ -1571,7 +1580,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  '${establishments.length} clínicas neste local',
+                  '${establishments.length} '
+                  '${establishments.length == 1 ? 'clínica' : 'clínicas'} '
+                  'neste local',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1629,6 +1640,53 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       return;
     }
     ClinicDetailRoute(id: id).push(context);
+  }
+}
+
+/// How many clinics survived the status chips, with a way back to all of them.
+class _MapFilterSummary extends StatelessWidget {
+  const _MapFilterSummary({
+    required this.visible,
+    required this.total,
+    required this.onClear,
+  });
+
+  final int visible;
+  final int total;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final none = visible == 0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              none
+                  ? 'Nenhuma clínica com esse status por aqui.'
+                  : '$visible de $total ${total == 1 ? 'clínica' : 'clínicas'} '
+                        'no filtro',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: none ? FontWeight.w600 : FontWeight.w500,
+                color: none ? AppColors.amberDark : AppColors.gray500,
+              ),
+            ),
+          ),
+          TextButton(
+            key: const Key('map-clear-status-filters'),
+            onPressed: onClear,
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: const Text('Limpar'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
