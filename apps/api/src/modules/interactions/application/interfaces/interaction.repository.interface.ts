@@ -5,6 +5,16 @@ export type InteractionStatus =
   | "NOT_COMPLETED"
   | "CANCELLED";
 
+/** §15.6.4 — how the visit went, in the rep's own terms. */
+export type InteractionOutcome =
+  | "PEDIDO"
+  | "VAI_AVALIAR"
+  | "RELACIONAMENTO"
+  | "NAO_FALEI_COM_NINGUEM";
+
+/** §15.6.4 — when to come back. Governs the §4.3.1 coverage rotation. */
+export type InteractionFollowUp = "NENHUM" | "DIAS_15" | "DIAS_30" | "DIAS_90";
+
 export interface InteractionDetailRecord {
   id: number;
   calendarId: number;
@@ -14,6 +24,9 @@ export interface InteractionDetailRecord {
   modality: "IN_PERSON" | "REMOTE";
   status: InteractionStatus;
   actualStartedAt: Date | null;
+  outcome: InteractionOutcome | null;
+  followUp: InteractionFollowUp | null;
+  outcomeAnsweredAt: Date | null;
   actualEndedAt: Date | null;
   correctedAt: Date | null;
   correctedByUserId: number | null;
@@ -85,5 +98,61 @@ export interface InteractionRepository {
     correctionReason?: string;
     persistEffectiveMissed?: boolean;
   }): Promise<InteractionMutationResult | null>;
+  /**
+   * Closes visits the rep walked away from — spec 0016 §15.6.1.
+   *
+   * `INFERRED`, always: nobody witnessed the ending, so it must never train the
+   * duration model (§15.6.2).
+   */
+  /**
+   * Records the two questions asked on the way out — spec 0016 §15.6.4.
+   *
+   * Separate from `complete` because the visit is often already closed by the
+   * time anyone answers: an arrival closed it, or the workday-end job did, and
+   * the rep is answering afterwards. Returns null when the interaction is not
+   * in a state that can carry an outcome.
+   */
+  recordOutcome(input: {
+    id: number;
+    actorUserId: number;
+    outcome: InteractionOutcome;
+    followUp: InteractionFollowUp;
+    answeredAt: Date;
+  }): Promise<InteractionDetailRecord | null>;
+
+  /**
+   * A visit to a clinic that was never on the roteiro — spec 0016 §15.6.3.
+   *
+   * Creates the calendar row and the interaction together, already started,
+   * and closes whatever the rep left open. There is no scheduled appointment to
+   * start, so this cannot go through `start`: the record is being made because
+   * the rep is standing there, not because a plan said they would be.
+   *
+   * Deliberately does not run the calendar conflict check. Arriving somewhere
+   * is a fact; refusing to record it because the rep's own calendar disagrees
+   * is precisely the "system that can only record its own suggestions" the
+   * spec warns about.
+   */
+  recordArrival(input: {
+    facilityId: number;
+    agentUserId: number;
+    title: string;
+    timeZone: string;
+    anchorLocalDate: string;
+    anchorLocalTime: string;
+    recurrenceKey: string;
+    durationMinutes: number;
+    startedAt: Date;
+    idempotencyKey: string;
+  }): Promise<InteractionDetailRecord>;
+
+  /** Replay for [recordArrival]; the interaction has no id to key on yet. */
+  findArrival(input: { agentUserId: number; idempotencyKey: string }): Promise<InteractionDetailRecord | null>;
+
+  /** The clinic being arrived at, or null when it does not exist. */
+  findFacilitySummary(id: number): Promise<{ id: number; displayName: string } | null>;
+
+  closeStaleVisits(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
+
   markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 }

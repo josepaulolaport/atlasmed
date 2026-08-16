@@ -184,7 +184,15 @@ function logRequestOutcome(params: {
   }
 
   if (params.statusCode >= 400) {
-    logger.warn(context, 'Request rejected');
+    // Say *why*. A 4xx logged as a bare "Request rejected" tells whoever is
+    // debugging it nothing the status code did not already say, and the client
+    // is usually the only place the reason was ever visible.
+    const reason = params.error instanceof Error ? params.error.message : undefined;
+    const code = (params.error as { code?: unknown } | undefined)?.code;
+    logger.warn(
+      { ...context, ...(code ? { errorCode: String(code) } : {}), ...(reason ? { reason } : {}) },
+      'Request rejected',
+    );
     return;
   }
 

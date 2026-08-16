@@ -11,6 +11,16 @@ import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'calendar_models.dart';
 
+/// When the device says something happened, as an offset ISO-8601 instant.
+///
+/// Spec 0016 §15.6.6-4: the server used to stamp receipt time, so anything sent
+/// from a clinic with no signal recorded the moment the queue drained rather
+/// than the moment it happened. The server accepts this within bounds — not in
+/// the future, not more than a day old — and falls back to its own clock when
+/// it is absent.
+String clientInstant([DateTime? at]) =>
+    (at ?? DateTime.now()).toUtc().toIso8601String();
+
 abstract interface class CalendarRepositoryContract {
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
@@ -26,10 +36,14 @@ abstract interface class CalendarRepositoryContract {
 
   Future<InteractionDetail> getInteraction(int id);
 
+  /// [startedAt] is the instant the rep pressed, offset ISO-8601. Omitted
+  /// means now; the queue passes the original stamp when replaying, which is
+  /// the whole point of §15.6.6-4.
   Future<InteractionDetail> startInteraction(
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   });
 
   Future<InteractionDetail> completeInteraction(
@@ -37,6 +51,27 @@ abstract interface class CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
+  });
+
+  /// Records how the visit went and when to return — spec 0016 §15.6.4.
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  });
+
+  /// Records arriving at a clinic the roteiro never suggested — §15.6.3.
+  ///
+  /// Creates the visit and starts it in one call. There is no appointment to
+  /// start, which is the point: a rep who simply walks into a clinic had no
+  /// way to record it, and a system that can only record its own suggestions
+  /// under-counts real work.
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+    String? startedAt,
   });
 }
 
@@ -254,13 +289,30 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id/start'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
-        body: {'expectedVersion': expectedVersion},
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        // §15.6.6-4: the moment the rep pressed, not the moment the request
+        // arrived. A start queued in a clinic with no signal used to be
+        // stamped when connectivity returned, and every duration computed
+        // from it was fiction.
+        body: {
+          'expectedVersion': expectedVersion,
+          'startedAt': startedAt ?? clientInstant(),
+        },
       ),
     );
     return _interactionFromResponse(response);
@@ -272,16 +324,88 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id/complete'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
         body: {
           'expectedVersion': expectedVersion,
+          // The end is the device's too: waiting for signal would otherwise
+          // inflate the duration by however long the wait was.
+          'completedAt': completedAt ?? clientInstant(),
           if (correctionReason != null && correctionReason.trim().isNotEmpty)
             'correctionReason': correctionReason.trim(),
+        },
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  /// Records how the visit went and when to return — spec 0016 §15.6.4.
+  ///
+  /// No `expectedVersion`: answering is not a state transition, and a visit
+  /// closed for the rep by an arrival or by the workday-end job will already
+  /// have moved past whatever version their screen was holding.
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id/outcome'),
+        method: RepositoryHttpMethod.post,
+        headers: {'Content-Type': 'application/json'},
+        body: {'outcome': outcome.wire, 'followUp': followUp.wire},
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  /// Records arriving at a clinic the roteiro never suggested — §15.6.3.
+  ///
+  /// The timezone travels with the request for the same reason the calendar
+  /// editor sends it: the anchor a visit is stored against is the rep's wall
+  /// clock, and resolving it on the server would put a late arrival on the
+  /// wrong day.
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+    String? startedAt,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/arrivals'),
+        method: RepositoryHttpMethod.post,
+        // Content-Type is load-bearing: without it Elysia parses no body at
+        // all and answers 400 "Expected number" for a field that was sent.
+        // The calendar mutations always set it; these four never did, so the
+        // whole capture loop — start, complete, outcome, arrival — could not
+        // work from the app. Invisible because no test crosses the real HTTP
+        // layer, and nobody had pressed the buttons yet.
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: {
+          'facilityId': facilityId,
+          'timeZone': timeZone,
+          'startedAt': startedAt ?? clientInstant(),
         },
       ),
     );
@@ -448,6 +572,19 @@ class _CalendarErrorPayload {
   final int? actualVersion;
 }
 
+List<CalendarConflict> _readConflicts(List<dynamic> raw) {
+  final conflicts = <CalendarConflict>[];
+  for (final entry in raw) {
+    if (entry is! Map<String, dynamic>) continue;
+    try {
+      conflicts.add(CalendarConflict.fromJson(entry));
+    } catch (_) {
+      // Skip the one we cannot read; keep the rest.
+    }
+  }
+  return List.unmodifiable(conflicts);
+}
+
 _CalendarErrorPayload _errorPayload(String body) {
   try {
     final decoded = jsonDecode(body) as Map<String, dynamic>;
@@ -462,10 +599,11 @@ _CalendarErrorPayload _errorPayload(String body) {
           (detailsRaw is String ? detailsRaw : null) ??
           'Não foi possível concluir a solicitação.',
       details: detailsRaw is List<dynamic> ? detailsRaw : const [],
-      conflicts: conflictsRaw
-          .cast<Map<String, dynamic>>()
-          .map(CalendarConflict.fromJson)
-          .toList(growable: false),
+      // Guarded on its own: a conflict this client cannot read is a reason to
+      // lose that conflict, not to lose the server's message, its code and
+      // every other conflict with it. That is what used to happen, and it
+      // turned a precise 409 into "não foi possível concluir a solicitação".
+      conflicts: _readConflicts(conflictsRaw),
       calendarId: readCrmIdOrNull(error['calendarId'], 'calendarId'),
       expectedVersion: error['expectedVersion'] as int?,
       actualVersion: error['actualVersion'] as int?,

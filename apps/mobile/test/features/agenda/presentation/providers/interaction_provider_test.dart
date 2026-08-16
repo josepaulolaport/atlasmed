@@ -5,6 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Repository implements CalendarRepositoryContract {
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
+
   _Repository({required this.detail, this.startError});
 
   InteractionDetail detail;
@@ -24,6 +31,7 @@ class _Repository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     startCalls++;
     keys.add(idempotencyKey);
@@ -38,6 +46,7 @@ class _Repository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async => detail;
 
   @override
@@ -53,6 +62,14 @@ class _Repository implements CalendarRepositoryContract {
     required DateTime to,
     int? ownerUserId,
   }) async => const [];
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+    String? startedAt,
+  }) async => throw UnimplementedError();
 }
 
 InteractionDetail _detail({

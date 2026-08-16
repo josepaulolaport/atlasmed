@@ -17,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/clinic_arrival.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/visit_scheduling.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
@@ -745,6 +746,29 @@ class _ClinicDetailContent extends ConsumerWidget {
                         address: detail.address?.formattedAddress,
                       ),
                     ),
+                    // §15.6.3 — the rep is standing here now. A different
+                    // sentence from "Visita" beside it, which schedules: reps
+                    // improvise, and until this existed a clinic they simply
+                    // walked into could not be recorded at all.
+                    if (ref.watch(canCreateCalendarEventProvider))
+                      QuickActionItem(
+                        icon: CircleAvatar(
+                          backgroundColor: AppColors.green.createSecondary(),
+                          radius: 18,
+                          child: const Icon(
+                            Icons.where_to_vote_rounded,
+                            size: 18,
+                            color: AppColors.green,
+                          ),
+                        ),
+                        label: const Text('Cheguei'),
+                        onTap: () => recordClinicArrival(
+                          context,
+                          ref,
+                          facilityId: detail.id,
+                          facilityName: detail.name,
+                        ),
+                      ),
                     // Schedules, rather than logging a visit on the spot.
                     //
                     // This used to POST /visits the instant it was tapped —

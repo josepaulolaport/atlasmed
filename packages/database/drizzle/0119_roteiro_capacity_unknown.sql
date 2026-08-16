@@ -1,0 +1,2 @@
+ALTER TABLE "roteiro_params" ADD COLUMN "capacity_unknown" numeric(4, 3) DEFAULT '0.400' NOT NULL;--> statement-breakpoint
+ALTER TABLE "roteiro_params" ADD CONSTRAINT "roteiro_params_capacity_unknown_range_check" CHECK ("roteiro_params"."capacity_unknown" >= 0 and "roteiro_params"."capacity_unknown" <= 1);

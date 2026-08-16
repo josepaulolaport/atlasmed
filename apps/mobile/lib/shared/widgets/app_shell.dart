@@ -469,7 +469,7 @@ const appNavigationItems = <AppNavigationItem>[
     label: 'Agenda',
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
-    visibleFor: canReadAgenda,
+    visibleFor: canReadOwnAgenda,
   ),
   AppNavigationItem(
     branchIndex: 4,
@@ -520,12 +520,20 @@ const appNavigationItems = <AppNavigationItem>[
     visibleFor: canReadCatalog,
   ),
 
-  // Perfil is hidden alongside Usuários. Branch 10 and `/profile` still exist —
-  // only the drawer entry is gone. Note what goes with it: the avatar picker,
-  // the push-notification preference and the personal Território card have no
-  // other entry point in the app. Signing out does not: "Sair" is in the
-  // drawer's own footer, not on Perfil.
+  // Perfil is deliberately not a navigation row. It is reached by tapping the
+  // drawer header — see [kProfileBranchIndex] — which is where a rep looks for
+  // their own account and keeps the list to places rather than people.
 ];
+
+/// Branch behind `/profile`. Not in [appNavigationItems]: the drawer header is
+/// the way in.
+///
+/// It had no way in at all for a while, which took the avatar picker, the
+/// notification preferences, the personal Território card and — once spec 0016
+/// added it — the working-hours sheet down with it. The roteiro's overrun
+/// warning was the only route to hours a rep could reach, so they could only
+/// state when they work after the engine had already planned against a guess.
+const kProfileBranchIndex = 10;
 
 class AtlasDrawer extends ConsumerWidget {
   final int activeBranchIndex;
@@ -568,6 +576,10 @@ class AtlasDrawer extends ConsumerWidget {
                       avatarUrl: user?.avatarUrl,
                       avatarBlurhash: user?.avatarBlurhash,
                       avatarToken: session.token,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSelectBranch(kProfileBranchIndex);
+                      },
                     ),
                     Expanded(
                       child: AtlasDrawerNavigation(
@@ -633,11 +645,13 @@ class _DrawerHeader extends StatelessWidget {
   final String? avatarUrl;
   final String? avatarBlurhash;
   final String? avatarToken;
+  final VoidCallback onTap;
 
   const _DrawerHeader({
     required this.initials,
     required this.displayName,
     required this.email,
+    required this.onTap,
     this.avatarUrl,
     this.avatarBlurhash,
     this.avatarToken,
@@ -654,7 +668,6 @@ class _DrawerHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 52, 22, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -662,59 +675,80 @@ class _DrawerHeader extends StatelessWidget {
           colors: [AppColors.navyDeep, AppColors.navyBright],
         ),
       ),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar initials circle
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: avatarUrl != null && avatarUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: _avatarUri(avatarUrl!),
-                        httpHeaders: avatarToken == null
-                            ? null
-                            : {"Authorization": "Bearer $avatarToken"},
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) => hasBlurhash
-                            ? BlurHash(hash: hash)
+      // The header is the way into Perfil, so the whole of it is the target —
+      // an avatar alone is a 44pt hit area at the top of a drawer, and missing
+      // it lands on nothing.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const Key('drawer-profile-entry'),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 52, 22, 24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Avatar initials circle
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: avatarUrl != null && avatarUrl!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: _avatarUri(avatarUrl!),
+                                httpHeaders: avatarToken == null
+                                    ? null
+                                    : {"Authorization": "Bearer $avatarToken"},
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => hasBlurhash
+                                    ? BlurHash(hash: hash)
+                                    : _InitialsAvatar(initials: initials),
+                                errorWidget: (_, _, _) =>
+                                    _InitialsAvatar(initials: initials),
+                              )
                             : _InitialsAvatar(initials: initials),
-                        errorWidget: (_, _, _) =>
-                            _InitialsAvatar(initials: initials),
-                      )
-                    : _InitialsAvatar(initials: initials),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                displayName,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: -0.2,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: 12,
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

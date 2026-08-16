@@ -7,8 +7,11 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
   CalendarCreateCommand? created;
   String? createKey;
   CalendarOccurrenceUpdateCommand? occurrenceUpdate;
+  String? occurrenceUpdateKey;
   CalendarCancellationCommand? occurrenceCancellation;
+  String? occurrenceCancellationKey;
   Object? submitError;
+  Object? cancelError;
 
   @override
   Future<void> createCalendar({
@@ -35,6 +38,8 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String idempotencyKey,
   }) async {
     occurrenceUpdate = command;
+    occurrenceUpdateKey = idempotencyKey;
+    if (submitError case final error?) throw error;
   }
 
   @override
@@ -52,6 +57,8 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String idempotencyKey,
   }) async {
     occurrenceCancellation = command;
+    occurrenceCancellationKey = idempotencyKey;
+    if (cancelError case final error?) throw error;
   }
 }
 
@@ -117,6 +124,90 @@ void main() {
     expect(notifier.state.draft.title, 'Visita · Clínica Central');
     // Seeded well enough to save without touching the form.
     expect(notifier.validationErrors, isEmpty);
+  });
+
+  test('refuses a series that ends before it begins', () {
+    // Presence of an end date was checked; its order was not. A series from
+    // the 20th to the 10th passed every rule and produced no occurrences —
+    // a repeating appointment that never repeats, with nothing saying why.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+        ),
+      ),
+      now: () => DateTime(2026, 8, 20, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+    notifier.setStartsAt(DateTime(2026, 8, 20, 9));
+    notifier.setRecurrence(CalendarRecurrence.weekly);
+    notifier.setRecurrenceEnd(CalendarRecurrenceEnd.date);
+    notifier.setRecurrenceUntil(DateTime(2026, 8, 10));
+
+    expect(notifier.validationErrors['recurrenceUntil'], isNotNull);
+  });
+
+  test('accepts a series ending on the day it begins', () {
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+        ),
+      ),
+      now: () => DateTime(2026, 8, 20, 9),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+    notifier.setStartsAt(DateTime(2026, 8, 20, 9));
+    notifier.setRecurrence(CalendarRecurrence.weekly);
+    notifier.setRecurrenceEnd(CalendarRecurrenceEnd.date);
+    notifier.setRecurrenceUntil(DateTime(2026, 8, 20));
+
+    expect(notifier.validationErrors['recurrenceUntil'], isNull);
+  });
+
+  test('a block drawn on the day grid opens the form on that block', () {
+    // Reopening the editor at the next free half hour would discard the one
+    // decision the rep had already made by dragging.
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 7,
+          facilityName: 'Clínica Central',
+          startsAt: DateTime(2026, 8, 14, 18),
+          durationMinutes: 30,
+        ),
+      ),
+      now: () => DateTime(2026, 8, 14, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.startsAt, DateTime(2026, 8, 14, 18));
+    expect(notifier.state.draft.durationMinutes, 30);
+    expect(notifier.validationErrors, isEmpty);
+  });
+
+  test('without a drawn block the form still opens on the next half hour', () {
+    final notifier = CalendarEditorNotifier(
+      repository: _FakeCalendarRepository(),
+      target: const CalendarEditorTarget.creating(),
+      now: () => DateTime(2026, 8, 14, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.startsAt.hour, 9);
+    expect(notifier.state.draft.startsAt.minute, 30);
+    expect(notifier.state.draft.durationMinutes, 60);
   });
 
   test(
@@ -334,6 +425,133 @@ void main() {
       expect(await notifier.retry(), isTrue);
       expect(repository.createKey, 'key-1');
       expect(notifier.state.isSaved, isTrue);
+    },
+  );
+
+  test(
+    'a cancellation does not reuse the key a failed save is holding',
+    () async {
+      // Receipts are stored per (user, key) and replaying one under a different
+      // command kind is a hard error. A save that reached the server and failed
+      // on the way back leaves an UPDATE receipt against the key the client is
+      // still holding, so sharing it turned the next cancel into an idempotency
+      // conflict the rep could only escape by leaving the screen.
+      final repository = _FakeCalendarRepository()
+        ..submitError = const CalendarNetworkException('Sem conexão.');
+      var keys = 0;
+      final notifier = CalendarEditorNotifier(
+        repository: repository,
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+        idempotencyKeyFactory: () => 'key-${++keys}',
+      );
+
+      expect(await notifier.submit(), isFalse);
+      expect(repository.occurrenceUpdateKey, 'key-1');
+
+      expect(await notifier.cancel('Clínica fechou'), isTrue);
+      expect(repository.occurrenceCancellationKey, isNot('key-1'));
+    },
+  );
+
+  test('a cancellation retry reuses its own key', () async {
+    // The other half of the same rule: retrying the same cancel must not
+    // create a second cancellation if the first one landed.
+    final repository = _FakeCalendarRepository()
+      ..cancelError = const CalendarNetworkException('Sem conexão.');
+    var keys = 0;
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+      idempotencyKeyFactory: () => 'key-${++keys}',
+    );
+
+    expect(await notifier.cancel('Clínica fechou'), isFalse);
+    final first = repository.occurrenceCancellationKey;
+
+    repository.cancelError = null;
+    expect(await notifier.cancel('Clínica fechou'), isTrue);
+
+    expect(repository.occurrenceCancellationKey, first);
+  });
+
+  test(
+    'a blank cancellation reason says so instead of doing nothing',
+    () async {
+      // It used to return false silently, so the dialog closed, nothing was
+      // cancelled, and the screen gave no sign either had happened.
+      final notifier = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+      );
+
+      expect(await notifier.cancel('   '), isFalse);
+      expect(notifier.state.errorMessage, isNotNull);
+    },
+  );
+
+  test('the failure reason is readable the moment submit returns', () async {
+    // The day grid's quick sheet is not a ConsumerWidget, so it used to read
+    // this off `stream` — which delivers asynchronously. `await submit()`
+    // returned before the listener had run, and the sheet showed "Não foi
+    // possível salvar." over a conflict the server had just explained.
+    final repository = _FakeCalendarRepository()
+      ..submitError = const CalendarNetworkException('Sem conexão.');
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          facilityId: 1,
+          facilityName: 'Clínica Central',
+          kind: CalendarEventKind.interaction,
+        ),
+      ),
+      now: () => DateTime.utc(2026, 8, 3, 9),
+      timeZoneResolver: (_) => 'Etc/UTC',
+    )..setTitle('Visita');
+
+    expect(await notifier.submit(), isFalse);
+
+    expect(notifier.errorMessage, 'Sem conexão.');
+  });
+
+  test(
+    'editing a series opens on the series anchor, not the tapped week',
+    () async {
+      // Found on the simulator: opening the third week of a weekly block and
+      // changing only its duration moved the series anchor to that week, so the
+      // first two occurrences vanished without a word. `toUpdateCommand` sends
+      // `startsAt` and the server writes it as the anchor, so the form has to be
+      // seeded with the series' own start.
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': '3:2026-08-27T17:00[America/Sao_Paulo]',
+        'calendarId': 3,
+        'recurrenceKey': '2026-08-27T17:00[America/Sao_Paulo]',
+        'ownerUserId': 2,
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Bloqueio semanal',
+        'startsAt': '2026-08-27T20:00:00.000Z',
+        'endsAt': '2026-08-27T21:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'recurrence': 'WEEKLY',
+        'anchorLocalDate': '2026-08-20',
+        'anchorLocalTime': '17:00',
+        'version': 1,
+        'canMutate': true,
+      });
+
+      final series = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingSeries(occurrence),
+      );
+      expect(series.state.draft.startsAt, DateTime(2026, 8, 20, 17));
+
+      // One occurrence is still about that occurrence.
+      final single = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingOccurrence(occurrence),
+      );
+      expect(single.state.draft.startsAt.day, 27);
     },
   );
 

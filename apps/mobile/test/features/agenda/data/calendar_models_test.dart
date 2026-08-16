@@ -235,42 +235,4 @@ void main() {
       );
     },
   );
-
-  test('groups and sorts occurrences by local day and local start time', () {
-    CalendarOccurrence occurrence(
-      int id,
-      String title,
-      String localDate,
-      String time,
-    ) => CalendarOccurrence.fromJson({
-      'id': id,
-      'occurrenceId': '$id:$localDate-$time',
-      'recurrenceKey': '$localDate-${time.replaceAll(':', '')}',
-      'kind': 'PERSONAL_BLOCK',
-      'title': title,
-      'owner': {'id': 1, 'name': 'Ana'},
-      'facility': null,
-      'modality': null,
-      'startsAt': '${localDate}T$time:00.000Z',
-      'endsAt': '${localDate}T$time:30.000Z',
-      'localDate': localDate,
-      'localStartsAt': time,
-      'localEndsAt': time,
-      'recurrence': 'NONE',
-      'interaction': null,
-      'canMutate': true,
-    });
-
-    final sections = groupCalendarOccurrences([
-      occurrence(3, 'late', '2026-08-04', '16:00'),
-      occurrence(2, 'second', '2026-08-03', '11:00'),
-      occurrence(1, 'first', '2026-08-03', '08:30'),
-    ]);
-
-    expect(sections.map((section) => section.date), [
-      DateTime(2026, 8, 3),
-      DateTime(2026, 8, 4),
-    ]);
-    expect(sections.first.items.map((item) => item.title), ['first', 'second']);
-  });
 }

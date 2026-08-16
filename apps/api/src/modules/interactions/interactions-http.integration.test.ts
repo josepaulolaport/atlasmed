@@ -18,7 +18,8 @@ function actorPlugin(roleName: Role = "REP", userId = 1) {
 function useCases(overrides: Partial<InteractionHttpUseCases> = {}): InteractionHttpUseCases {
   const read = { execute: mock(async () => ({ id: 10, status: "SCHEDULED", canMutate: true })) };
   const mutate = { execute: mock(async () => ({ id: 10, status: "IN_PROGRESS", version: 2 })) };
-  return { get: () => read, start: () => mutate, complete: () => mutate, ...overrides };
+  return { get: () => read, start: () => mutate, complete: () => mutate,
+    recordOutcome: () => mutate, recordArrival: () => mutate, ...overrides };
 }
 
 function app(deps: InteractionHttpUseCases, role: Role = "REP") {
@@ -75,5 +76,40 @@ describe("Interaction HTTP routes", () => {
     }));
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual(expect.objectContaining({ error: expect.objectContaining({ code: "INTERACTION_INVALID_TRANSITION" }) }));
+  });
+  // §15.6.6-4. Elysia strips fields its own body schema does not name *before*
+  // zod ever sees them, so a stamp declared only in the zod schema would be
+  // dropped in silence: the route would answer 200 and the server clock would
+  // win anyway. These assert the field survives the whole way to the use case.
+  it("carries the device's start stamp through to the use case", async () => {
+    const execute = mock(async () => ({ id: 10, status: "IN_PROGRESS" }));
+    const response = await app(useCases({ start: () => ({ execute }) as never })).handle(new Request("http://localhost/interactions/10/start", {
+      method: "POST", headers: { "content-type": "application/json", "idempotency-key": "start-1" },
+      body: JSON.stringify({ expectedVersion: 1, startedAt: "2026-08-15T17:20:00.000Z" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ startedAt: "2026-08-15T17:20:00.000Z" }));
+  });
+
+  it("carries the device's completion stamp through to the use case", async () => {
+    const execute = mock(async () => ({ id: 10, status: "COMPLETED" }));
+    const response = await app(useCases({ complete: () => ({ execute }) as never })).handle(new Request("http://localhost/interactions/10/complete", {
+      method: "POST", headers: { "content-type": "application/json", "idempotency-key": "complete-2" },
+      body: JSON.stringify({ expectedVersion: 2, completedAt: "2026-08-15T18:05:00.000Z" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ completedAt: "2026-08-15T18:05:00.000Z" }));
+  });
+
+  it("carries the arrival's clinic, zone and stamp through to the use case", async () => {
+    const execute = mock(async () => ({ id: 11, status: "IN_PROGRESS" }));
+    const response = await app(useCases({ recordArrival: () => ({ execute }) as never })).handle(new Request("http://localhost/interactions/arrivals", {
+      method: "POST", headers: { "content-type": "application/json", "idempotency-key": "arrival-1" },
+      body: JSON.stringify({ facilityId: 9001, timeZone: "America/Sao_Paulo", startedAt: "2026-08-15T17:20:00.000Z" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({
+      facilityId: 9001, timeZone: "America/Sao_Paulo", startedAt: "2026-08-15T17:20:00.000Z", idempotencyKey: "arrival-1",
+    }));
   });
 });

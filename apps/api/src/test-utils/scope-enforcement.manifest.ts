@@ -150,6 +150,30 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "facility"],
   },
 
+  // Scope is asserted by assertMayPlanFor: a rep plans only their own day, a
+  // manager only their reps'. Confirming — which writes to a calendar — is a
+  // separate and stricter gate (spec 0016 §7.3), landing with P2.
+  "modules/roteiro/application/use-cases/generate-roteiro.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["managedUserIds", "isGlobal"],
+  },
+
+  // Confirming is stricter than generating: only the agent may write to their
+  // own calendar, so ownership is checked directly rather than through the
+  // manager/global widening that generation allows. The scope itself is passed
+  // through to the calendar use case, which enforces facility visibility.
+  // The picker lists the subject's own book, so scope is the same
+  // owner/manager check generation makes before it will plan for someone.
+  "modules/roteiro/application/use-cases/list-addable-clinics.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["managedUserIds", "isGlobal"],
+  },
+
+  "modules/roteiro/application/use-cases/confirm-roteiro.use-case.ts": {
+    kind: "assert-id",
+    patterns: ["roteiro.userId", "ForbiddenError"],
+  },
+
   "modules/orders/application/use-cases/orders.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],

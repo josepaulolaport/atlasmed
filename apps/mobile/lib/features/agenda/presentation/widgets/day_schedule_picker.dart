@@ -1,15 +1,133 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// First and last slot offered, in minutes from midnight, and the step between
-/// them. 07:00–20:00 in half hours, which is the granularity the API accepts
-/// for durations.
-const _dayStartMinutes = 7 * 60;
-const _dayEndMinutes = 20 * 60;
+bool _isSameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// The linha's hours, used where the rep has stated none — spec 0016 §15.5.5.
+/// The same pair the roteiro engine and the workday auto-close fall back to.
+const kLinhaWorkdayStartMinutes = 8 * 60;
+const kLinhaWorkdayEndMinutes = 18 * 60;
+
+/// Half hours, which is the granularity the API accepts for durations.
 const _slotMinutes = 30;
+
+/// How far either side of the working day the strip still offers slots.
+///
+/// The rep's hours say when they *plan* to work, not what they are allowed to
+/// write down. A 07:30 breakfast with a clinic director is a real appointment,
+/// and a picker that refused to express it would send the rep back to guessing.
+const _windowMarginMinutes = 60;
+
+/// `HH:MM` to minutes from midnight; null for absent or malformed.
+int? parseHhMmMinutes(String? value) {
+  if (value == null) return null;
+  final parts = value.split(':');
+  if (parts.length != 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+/// Which slots the strip offers, and which of them fall outside the rep's day.
+class SlotWindow {
+  const SlotWindow({
+    required this.startMinutes,
+    required this.endMinutes,
+    required this.workStartMinutes,
+    required this.workEndMinutes,
+  });
+
+  /// Bounds of the strip itself.
+  final int startMinutes;
+  final int endMinutes;
+
+  /// Bounds of the rep's stated working day.
+  final int workStartMinutes;
+  final int workEndMinutes;
+
+  /// An appointment of [durationMinutes] starting at [minutes] does not fit
+  /// inside the working day — it starts before it or ends after it.
+  bool isOutsideHours(int minutes, int durationMinutes) =>
+      minutes < workStartMinutes || minutes + durationMinutes > workEndMinutes;
+}
+
+int _floorToSlot(int minutes) => (minutes ~/ _slotMinutes) * _slotMinutes;
+
+int _ceilToSlot(int minutes) =>
+    ((minutes + _slotMinutes - 1) ~/ _slotMinutes) * _slotMinutes;
+
+/// The strip's range, from the rep's hours widened to cover what the day
+/// already holds.
+///
+/// Widened rather than clamped because narrowing to the working day could hide
+/// something real: an appointment already booked at 07:00, or the very time the
+/// rep is editing. A picker that cannot show you where you are is worse than
+/// one that shows an hour you will not use.
+SlotWindow slotWindowFor({
+  required String? workdayStart,
+  required String? workdayEnd,
+  required DateTime dayStart,
+  required DateTime selectedStartsAt,
+  required int durationMinutes,
+  List<CalendarOccurrence> busy = const [],
+}) {
+  final workStart = parseHhMmMinutes(workdayStart) ?? kLinhaWorkdayStartMinutes;
+  final workEndRaw = parseHhMmMinutes(workdayEnd) ?? kLinhaWorkdayEndMinutes;
+  // A rep who set the end before the start is honoured on the field they can
+  // see and not on the contradiction: the engine reads the same pair, so the
+  // strip must not be the one place where 18:00–08:00 means something.
+  final workEnd = workEndRaw > workStart ? workEndRaw : kLinhaWorkdayEndMinutes;
+
+  var low = workStart;
+  var high = workEnd;
+
+  final selected = selectedStartsAt.difference(dayStart).inMinutes;
+  low = low < selected ? low : selected;
+  high = high > selected + durationMinutes ? high : selected + durationMinutes;
+
+  for (final item in busy) {
+    final start = item.startsAt.toLocal().difference(dayStart).inMinutes;
+    final end = item.endsAt.toLocal().difference(dayStart).inMinutes;
+    low = low < start ? low : start;
+    high = high > end ? high : end;
+  }
+
+  low = _floorToSlot(low - _windowMarginMinutes).clamp(0, 23 * 60 + 30);
+  high = _ceilToSlot(high + _windowMarginMinutes).clamp(0, 23 * 60 + 30);
+
+  return SlotWindow(
+    startMinutes: low,
+    endMinutes: high < low ? low : high,
+    workStartMinutes: workStart,
+    workEndMinutes: workEnd,
+  );
+}
+
+/// The slots the strip can still offer, in order.
+///
+/// A slot that has already gone is not a choice: offering 08:00 at half past
+/// eight in the evening fills the strip with times nobody can pick and pushes
+/// the ones they can off the end of it. On any day but today nothing is past,
+/// so the whole window stands.
+List<DateTime> remainingSlots({
+  required SlotWindow window,
+  required DateTime dayStart,
+  required DateTime now,
+}) {
+  final isToday = _isSameDay(dayStart, now);
+  return [
+    for (var m = window.startMinutes; m <= window.endMinutes; m += _slotMinutes)
+      if (!isToday || !dayStart.add(Duration(minutes: m)).isBefore(now))
+        dayStart.add(Duration(minutes: m)),
+  ];
+}
 
 /// What the day already holds, and which times are still free for it.
 ///
@@ -26,6 +144,7 @@ class DaySchedulePicker extends ConsumerStatefulWidget {
     required this.selectedStartsAt,
     required this.onPick,
     this.excludeOccurrenceId,
+    this.now,
   });
 
   /// Local day being scheduled into.
@@ -36,6 +155,9 @@ class DaySchedulePicker extends ConsumerStatefulWidget {
 
   /// The appointment being edited, which must not count as a clash with itself.
   final String? excludeOccurrenceId;
+
+  /// Injected so "already gone" is testable. Defaults to the wall clock.
+  final DateTime? now;
 
   @override
   ConsumerState<DaySchedulePicker> createState() => _DaySchedulePickerState();
@@ -58,11 +180,11 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
   /// day's appointments are already cached the list is built in this very
   /// frame, so the controller has no clients yet and the check would skip the
   /// only chance to scroll — leaving the strip parked at 07:00.
-  void _centreOnSelection() {
+  void _centreOnSelection(SlotWindow window) {
     if (_centredOnSelection) return;
     _centredOnSelection = true;
     final index =
-        (_minutesOf(widget.selectedStartsAt) - _dayStartMinutes) ~/
+        (_minutesOf(widget.selectedStartsAt) - window.startMinutes) ~/
         _slotMinutes;
     if (index <= 0) return;
     const slotExtent = 76.0 + 8.0;
@@ -126,7 +248,27 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
               excludeOccurrenceId: widget.excludeOccurrenceId,
             );
 
-            _centreOnSelection();
+            // The rep's own hours, or the linha's until they say otherwise.
+            // Read without blocking: the strip is useful before preferences
+            // arrive, and a spinner here would delay the whole editor on a
+            // detail most reps never change.
+            final prefs = ref.watch(userPreferencesValueProvider).valueOrNull;
+            final window = slotWindowFor(
+              workdayStart: prefs?.workdayStart,
+              workdayEnd: prefs?.workdayEnd,
+              dayStart: dayStart,
+              selectedStartsAt: widget.selectedStartsAt,
+              durationMinutes: widget.durationMinutes,
+              busy: busy,
+            );
+
+            final slots = remainingSlots(
+              window: window,
+              dayStart: dayStart,
+              now: widget.now ?? DateTime.now(),
+            );
+
+            _centreOnSelection(window);
 
             return _ScheduleShell(
               child: Column(
@@ -145,16 +287,31 @@ class _DaySchedulePickerState extends ConsumerState<DaySchedulePicker> {
                   else
                     _BusyList(occurrences: busy),
                   const SizedBox(height: 14),
-                  _SlotStrip(
-                    controller: _slotsController,
-                    dayStart: dayStart,
-                    durationMinutes: widget.durationMinutes,
-                    selectedStartsAt: widget.selectedStartsAt,
-                    busy: busy,
-                    onPick: widget.onPick,
-                  ),
-                  const SizedBox(height: 10),
-                  const _Legend(),
+                  // Every slot gone. It used to render as blank space above a
+                  // legend explaining the colours of nothing; the day is not
+                  // broken, it is over, and the answer is another date.
+                  if (slots.isEmpty)
+                    const Text(
+                      'Não há mais horários hoje. Escolha outra data.',
+                      key: Key('day-slot-strip-empty'),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.gray500,
+                      ),
+                    )
+                  else ...[
+                    _SlotStrip(
+                      controller: _slotsController,
+                      window: window,
+                      slots: slots,
+                      durationMinutes: widget.durationMinutes,
+                      selectedStartsAt: widget.selectedStartsAt,
+                      busy: busy,
+                      onPick: widget.onPick,
+                    ),
+                    const SizedBox(height: 10),
+                    const _Legend(),
+                  ],
                   // The chosen time can become occupied without being touched —
                   // lengthening the appointment is enough — so say it here
                   // rather than letting the save fail with a conflict.
@@ -359,7 +516,8 @@ class _BusyList extends StatelessWidget {
 class _SlotStrip extends StatelessWidget {
   const _SlotStrip({
     required this.controller,
-    required this.dayStart,
+    required this.window,
+    required this.slots,
     required this.durationMinutes,
     required this.selectedStartsAt,
     required this.busy,
@@ -367,18 +525,16 @@ class _SlotStrip extends StatelessWidget {
   });
 
   final ScrollController controller;
-  final DateTime dayStart;
+  final SlotWindow window;
   final int durationMinutes;
   final DateTime selectedStartsAt;
   final List<CalendarOccurrence> busy;
   final ValueChanged<DateTime> onPick;
 
+  final List<DateTime> slots;
+
   @override
   Widget build(BuildContext context) {
-    final slots = <DateTime>[
-      for (var m = _dayStartMinutes; m <= _dayEndMinutes; m += _slotMinutes)
-        dayStart.add(Duration(minutes: m)),
-    ];
     final selectedMinutes = _minutesOf(selectedStartsAt);
 
     return SizedBox(
@@ -397,6 +553,10 @@ class _SlotStrip extends StatelessWidget {
           return _Slot(
             label: _hhmm(slot),
             taken: clash != null,
+            outsideHours: window.isOutsideHours(
+              _minutesOf(slot),
+              durationMinutes,
+            ),
             selected: selected,
             // A taken slot stays tappable, but says what is in the way instead
             // of accepting the time and failing on save.
@@ -428,12 +588,17 @@ class _Slot extends StatelessWidget {
   const _Slot({
     required this.label,
     required this.taken,
+    required this.outsideHours,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
   final bool taken;
+
+  /// The appointment would start before the rep's day or end after it. Still
+  /// pickable — it is a note about their hours, not a rule about the calendar.
+  final bool outsideHours;
   final bool selected;
   final VoidCallback onTap;
 
@@ -453,12 +618,25 @@ class _Slot extends StatelessWidget {
         ? Colors.white
         : taken
         ? AppColors.red
+        : outsideHours
+        ? AppColors.gray400
         : AppColors.gray700;
+    // "Ocupado" wins: a slot that is both booked and after hours is refused for
+    // the first reason, and saying the second would bury it.
+    final caption = taken
+        ? 'ocupado'
+        : outsideHours
+        ? 'fora'
+        : 'livre';
 
     return Semantics(
       button: true,
       selected: selected,
-      label: taken ? '$label, ocupado' : '$label, livre',
+      label: taken
+          ? '$label, ocupado'
+          : outsideHours
+          ? '$label, fora do horário de trabalho'
+          : '$label, livre',
       child: Material(
         color: background,
         borderRadius: BorderRadius.circular(10),
@@ -486,7 +664,7 @@ class _Slot extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  taken ? 'ocupado' : 'livre',
+                  caption,
                   style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w600,

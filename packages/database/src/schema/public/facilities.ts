@@ -310,6 +310,20 @@ export const facilityVerticalProfiles = pgTable(
     purchaseRecurrenceCalculatedAt: timestamp("purchase_recurrence_calculated_at", {
       withTimezone: true,
     }),
+    /**
+     * When this clinic was last *committed to* in a roteiro — spec 0016 §4.3.1.
+     *
+     * Written on confirm, never on generation. A clinic that appeared in a draft
+     * the rep discarded has not been covered, and marking it covered would let
+     * the book rot quietly behind a rep who regenerates ten times a morning.
+     *
+     * This is what makes coverage a rotation rather than a hope: the overdue
+     * pool is ordered by this column ascending, so the book gets walked instead
+     * of sampled, and a rep cannot end a year having never been offered a clinic
+     * they own. Merit alone cannot do that — a clinic that ranks twelfth every
+     * single day is never visited and no score ever changes that.
+     */
+    lastSuggestedAt: timestamp("last_suggested_at", { withTimezone: true }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
@@ -335,6 +349,15 @@ export const facilityVerticalProfiles = pgTable(
       t.verticalId,
       t.purchaseFunnelStage,
     ),
+    /**
+     * The coverage rotation's index (spec 0016 §4.3.1) — oldest-covered first,
+     * within a linha. NULLS FIRST is the point: a clinic never committed to is
+     * the most overdue thing there is, and it must sort ahead of one covered
+     * years ago rather than falling off the end.
+     */
+    index("facility_vertical_profiles_coverage_rotation_idx")
+      .on(t.verticalId, t.lastSuggestedAt.asc().nullsFirst())
+      .where(sql`${t.isActive} = true`),
     index("facility_vertical_profiles_next_funnel_transition_idx")
       .on(t.nextPurchaseFunnelTransitionDate, t.id)
       .where(

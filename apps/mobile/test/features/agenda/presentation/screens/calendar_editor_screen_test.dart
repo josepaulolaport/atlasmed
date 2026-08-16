@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +56,13 @@ class _EditorRepository implements CalendarMutationRepositoryContract {
 /// test, and a refresh timer still pending at teardown.
 class _EmptyDayRepository implements CalendarRepositoryContract {
   @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
@@ -77,6 +85,7 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) => throw UnimplementedError();
 
   @override
@@ -85,7 +94,16 @@ class _EmptyDayRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+    String? startedAt,
+  }) async => throw UnimplementedError();
 }
 
 Widget _app(
@@ -96,6 +114,10 @@ Widget _app(
   overrides: [
     calendarMutationRepositoryProvider.overrideWithValue(repository),
     calendarRepositoryProvider.overrideWithValue(_EmptyDayRepository()),
+    // The slot picker reads the rep's working hours. Left to the real
+    // repository it opens an eight-minute periodic timer the test never
+    // outlives, and the failure names the timer rather than this line.
+    userPreferencesValueProvider.overrideWith((ref) async => null),
   ],
   child: MaterialApp(
     theme: AppTheme.light,
@@ -132,7 +154,9 @@ void main() {
       expect(find.text('Interação'), findsWidgets);
       expect(find.text('Bloqueio pessoal'), findsOneWidget);
       expect(find.text('Presencial'), findsOneWidget);
-      expect(find.text('60 minutos'), findsOneWidget);
+      // "1h" rather than "60 minutos": the wheel is flicked past, and the
+      // shorter label is what fits and reads on it.
+      expect(find.text('1h'), findsOneWidget);
 
       final recurrence = find.byKey(const Key('calendar-recurrence')).first;
       await tester.ensureVisible(recurrence);
@@ -168,6 +192,31 @@ void main() {
     expect(find.text('Editar toda a série'), findsOneWidget);
     expect(find.text('Repetição'), findsWidgets);
     expect(find.byTooltip('Cancelar toda a série'), findsOneWidget);
+  });
+
+  testWidgets('the cancel dialog will not act without a reason', (
+    tester,
+  ) async {
+    // It used to accept the press, pop with an empty string, and be discarded
+    // by two separate guards — the dialog closed, nothing was cancelled, and
+    // nothing said either had happened.
+    await tester.pumpWidget(
+      _app(
+        _EditorRepository(),
+        target: CalendarEditorTarget.editingOccurrence(_recurringOccurrence()),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Cancelar esta ocorrência'));
+    await tester.pumpAndSettle();
+
+    final confirm = find.widgetWithText(FilledButton, 'Cancelar compromisso');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+
+    await tester.enterText(find.byKey(const Key('cancel-reason')), 'Fechou');
+    await tester.pump();
+
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
   });
 
   testWidgets(

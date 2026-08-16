@@ -39,6 +39,9 @@ export interface CalendarOccurrenceDto {
   recurrence: CalendarRecurrence;
   recurrenceUntil: string | null;
   recurrenceCount: number | null;
+  /** Where the series starts — not this occurrence. */
+  anchorLocalDate: string;
+  anchorLocalTime: string;
   version: number;
   calendarVersion: number;
   overrideVersion?: number;
@@ -262,6 +265,11 @@ export class ListCalendarUseCase {
           startsAt: occurrence.startsAt.toISOString(), endsAt: occurrence.endsAt.toISOString(), timeZone: event.timeZone,
           durationMinutes: Math.round((occurrence.endsAt.getTime() - occurrence.startsAt.getTime()) / 60_000),
           recurrence: event.recurrence, recurrenceUntil: event.recurrenceUntil, recurrenceCount: event.recurrenceCount,
+          // Where the *series* starts, not this occurrence. Editing a whole
+          // series has to edit the series' own anchor: seeding the form from
+          // the occurrence the rep happened to tap re-anchored the series to
+          // that date on save, silently dropping every occurrence before it.
+          anchorLocalDate: event.anchorLocalDate, anchorLocalTime: event.anchorLocalTime,
           version: event.version, calendarVersion: event.version, owner: event.owner, facility: event.facility,
           canMutate: !managerView && event.ownerUserId === input.actor.userId,
           ...(occurrence.override ? { overrideVersion: occurrence.override.version } : {}),

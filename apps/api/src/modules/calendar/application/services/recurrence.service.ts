@@ -260,6 +260,25 @@ export function calendarRuleEnd(rule: CalendarRecurrenceRule): Date | undefined 
   return occurrence.endsAt;
 }
 
+/**
+ * The wall-clock anchor an instant lands on in `timeZone`, to the minute.
+ *
+ * Used by an arrival (spec 0016 §15.6.3), which has an instant — the rep is
+ * standing there now — and needs the local anchor a calendar row is stored as.
+ * Seconds are dropped rather than rounded: the anchor is the minute the rep
+ * arrived in, and rounding could put it in the next one.
+ */
+export function calendarLocalAnchorAt(
+  instant: Date,
+  timeZone: string
+): { anchorLocalDate: string; anchorLocalTime: string } {
+  const local = utcToLocalDateTime(instant, timeZone);
+  return {
+    anchorLocalDate: formatDate(local),
+    anchorLocalTime: `${pad(local.hour)}:${pad(local.minute)}`,
+  };
+}
+
 export function calendarOccurrenceFromRecurrenceKey(
   rule: CalendarRecurrenceRule,
   recurrenceKey: string

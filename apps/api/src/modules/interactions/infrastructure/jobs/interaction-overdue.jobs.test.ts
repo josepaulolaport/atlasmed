@@ -6,7 +6,8 @@ describe("interaction overdue jobs", () => {
     const add = mock(async () => undefined);
     const counts = [100, 100, 7, 0];
     const execute = mock(async () => counts.shift() ?? 0);
-    const jobs = createInteractionOverdueJobs({ queue: { add }, createWorker: () => ({}) as never, useCase: { execute } });
+    const jobs = createInteractionOverdueJobs({ queue: { add }, createWorker: () => ({}) as never, closeStale: { execute: mock(async () => 0) },
+    useCase: { execute } });
 
     await jobs.schedule();
     expect(add).toHaveBeenCalledWith("mark-overdue-interactions", { limit: 100 }, expect.objectContaining({ repeat: { pattern: "* * * * *" } }));

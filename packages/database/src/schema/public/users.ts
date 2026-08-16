@@ -64,6 +64,11 @@ export const users = pgTable(
     roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
     /** Emultec `vendedor.Id` — manual map for order import seller resolve. */
     idVendedorEmultec: bigint("id_vendedor_emultec", { mode: "number" }),
+    /*
+     * No `base_location` here, deliberately (spec 0016 §6.1). A roteiro starts
+     * from the rep's live GPS and nothing else — a stored base was only ever
+     * needed to plan a future day, which the feature no longer does.
+     */
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

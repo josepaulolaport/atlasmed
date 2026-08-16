@@ -208,6 +208,25 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
   final String Function() _idempotencyKeyFactory;
   String? _pendingIdempotencyKey;
 
+  /// Cancelling carries its own key.
+  ///
+  /// A receipt is stored per (user, key) and replaying one under a different
+  /// command kind is a hard error. Sharing one key meant a save that reached
+  /// the server but failed on the way back — the receipt says UPDATE, the
+  /// client still holds the key — turned the next cancel into an idempotency
+  /// conflict the rep could only escape by leaving the screen.
+  String? _pendingCancelKey;
+
+  /// Why the last attempt failed, or null.
+  ///
+  /// Callers outside a `ConsumerWidget` — the day grid's quick sheet — used to
+  /// read this off `stream`, which delivers asynchronously: `await submit()`
+  /// returned before the listener had run, so the sheet fell back to "Não foi
+  /// possível salvar." and threw away the conflict the server had just
+  /// explained. A read-only getter is the notifier's own API, not a reach
+  /// inside it.
+  String? get errorMessage => state.errorMessage;
+
   Map<String, String> get validationErrors {
     final errors = <String, String>{};
     final draft = state.draft;
@@ -228,6 +247,22 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
     if (draft.recurrenceEnd == CalendarRecurrenceEnd.date &&
         draft.recurrenceUntil == null) {
       errors['recurrenceUntil'] = 'Informe a data final.';
+    }
+    // Presence was checked; order was not. A series running from the 20th to
+    // the 10th passes every other rule and produces no occurrences at all —
+    // the rep gets a repeating appointment that never repeats, and nothing
+    // says why.
+    final until = draft.recurrenceUntil;
+    if (draft.recurrenceEnd == CalendarRecurrenceEnd.date &&
+        until != null &&
+        until.isBefore(
+          DateTime(
+            draft.startsAt.year,
+            draft.startsAt.month,
+            draft.startsAt.day,
+          ),
+        )) {
+      errors['recurrenceUntil'] = 'O término não pode ser antes do início.';
     }
     if (draft.recurrenceEnd == CalendarRecurrenceEnd.count &&
         (draft.recurrenceCount == null || draft.recurrenceCount! <= 0)) {
@@ -365,8 +400,15 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
 
   Future<bool> cancel(String reason) async {
     final occurrence = target.occurrence;
-    if (occurrence == null || reason.trim().isEmpty) return false;
-    final key = _pendingIdempotencyKey ??= _idempotencyKeyFactory();
+    if (occurrence == null) return false;
+    if (reason.trim().isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'Informe o motivo do cancelamento.',
+        canRetry: false,
+      );
+      return false;
+    }
+    final key = _pendingCancelKey ??= _idempotencyKeyFactory();
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final command = CalendarCancellationCommand(
@@ -389,7 +431,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
           idempotencyKey: key,
         );
       }
-      _pendingIdempotencyKey = null;
+      _pendingCancelKey = null;
       state = state.copyWith(isSubmitting: false, isSaved: true);
       return true;
     } on CalendarApiException catch (error) {
@@ -424,6 +466,21 @@ final calendarEditorProvider = StateNotifierProvider.autoDispose
       return notifier;
     });
 
+/// Where a series edit should open: the series' own anchor, not the occurrence
+/// the rep happened to tap.
+///
+/// Seeding from the occurrence re-anchored the series to that date on save,
+/// because the update command sends `startsAt` and the server writes it as the
+/// anchor. A rep who opened the third week and changed only the duration lost
+/// the first two weeks without being told. Verified on the simulator.
+DateTime? _seriesAnchorStart(CalendarOccurrence occurrence) {
+  final date = occurrence.anchorLocalDate;
+  final time = occurrence.anchorLocalTime;
+  if (date == null || time == null) return null;
+  final parsed = DateTime.tryParse('${date}T$time:00');
+  return parsed;
+}
+
 CalendarEditorDraft _initialDraft(
   CalendarEditorTarget target,
   DateTime now,
@@ -437,7 +494,9 @@ CalendarEditorDraft _initialDraft(
       facilityId: occurrence.facility?.id ?? occurrence.interaction?.facilityId,
       facilityName: occurrence.facility?.name,
       modality: occurrence.modality ?? CalendarModality.inPerson,
-      startsAt: occurrence.startsAt.toLocal(),
+      startsAt: target.mode == CalendarEditorMode.series
+          ? (_seriesAnchorStart(occurrence) ?? occurrence.startsAt.toLocal())
+          : occurrence.startsAt.toLocal(),
       timeZone: occurrence.timeZone,
       durationMinutes: occurrence.durationMinutes,
       recurrence: occurrence.recurrence,
@@ -487,9 +546,12 @@ CalendarEditorDraft _initialDraft(
     facilityId: prefill?.facilityId,
     facilityName: prefill?.facilityName,
     modality: CalendarModality.inPerson,
-    startsAt: rounded,
+    // A slot drawn on the day grid wins over the next free half hour: the rep
+    // has already said when, and reopening the form on a default time would
+    // discard the one decision they had made.
+    startsAt: prefill?.startsAt ?? rounded,
     timeZone: timeZoneResolver(now),
-    durationMinutes: 60,
+    durationMinutes: prefill?.durationMinutes ?? 60,
     recurrence: CalendarRecurrence.none,
     recurrenceEnd: CalendarRecurrenceEnd.none,
     recurrenceUntil: null,

@@ -69,6 +69,8 @@ class CalendarEditorPrefill extends Equatable {
     this.personId,
     this.personName,
     this.facilityChoice = CalendarFacilityChoice.anyClinic,
+    this.startsAt,
+    this.durationMinutes,
   });
 
   final int? facilityId;
@@ -87,6 +89,14 @@ class CalendarEditorPrefill extends Equatable {
 
   final CalendarFacilityChoice facilityChoice;
 
+  /// The slot the rep already drew on the day grid.
+  ///
+  /// Carried so "Mais opções" opens the full form *on the block they just
+  /// dragged* rather than on a default time. Reopening at 09:00 after they had
+  /// chosen 18:00–18:30 would throw away the only decision they had made.
+  final DateTime? startsAt;
+  final int? durationMinutes;
+
   @override
   List<Object?> get props => [
     facilityId,
@@ -96,6 +106,8 @@ class CalendarEditorPrefill extends Equatable {
     personId,
     personName,
     facilityChoice,
+    startsAt,
+    durationMinutes,
   ];
 }
 
@@ -291,6 +303,7 @@ class CalendarInteractionContext extends Equatable {
     this.facilityId,
     this.agentUserId,
     this.modality,
+    this.version = 0,
   });
 
   final int id;
@@ -298,6 +311,11 @@ class CalendarInteractionContext extends Equatable {
   final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
+
+  /// Needed to start or finish this visit without opening it first — the
+  /// lifecycle calls take an `expectedVersion`. The API has always sent it on
+  /// the list DTO; the model simply dropped it.
+  final int version;
 
   factory CalendarInteractionContext.fromJson(Map<String, dynamic> json) =>
       CalendarInteractionContext(
@@ -308,10 +326,18 @@ class CalendarInteractionContext extends Equatable {
             ? null
             : _enumFromApi(CalendarModality.values, json['modality']),
         status: _enumFromApi(InteractionStatus.values, json['status']),
+        version: (json['version'] as num?)?.toInt() ?? 0,
       );
 
   @override
-  List<Object?> get props => [id, facilityId, agentUserId, modality, status];
+  List<Object?> get props => [
+    id,
+    facilityId,
+    agentUserId,
+    modality,
+    status,
+    version,
+  ];
 }
 
 class InteractionFacility extends Equatable {
@@ -393,6 +419,53 @@ class InteractionLinkedOrder extends Equatable {
   List<Object?> get props => [id, status, type, orderedAt];
 }
 
+/// How a visit went — spec 0016 §15.6.4.
+///
+/// ⚠️ [naoFalouComNinguem] is deliberately **not** the rejection vocabulary's
+/// `SEM_INTERESSE`. That describes a judgement about a clinic made before
+/// going and carries a decaying merit penalty; this describes a visit that
+/// already happened and touches merit not at all. A rep who could not get past
+/// reception has learned nothing about whether the clinic wants the product.
+enum InteractionOutcome {
+  pedido('PEDIDO', 'Fechei pedido'),
+  vaiAvaliar('VAI_AVALIAR', 'Vai avaliar'),
+  relacionamento('RELACIONAMENTO', 'Só relacionamento'),
+  naoFalouComNinguem('NAO_FALEI_COM_NINGUEM', 'Não falei com ninguém');
+
+  const InteractionOutcome(this.wire, this.label);
+  final String wire;
+  final String label;
+}
+
+/// When to come back. The load-bearing answer: it governs the coverage
+/// rotation, so a rep answering it is scheduling their own next visit.
+enum InteractionFollowUp {
+  nenhum('NENHUM', 'Não precisa'),
+  dias15('DIAS_15', 'Em 15 dias'),
+  dias30('DIAS_30', 'Em 30 dias'),
+  dias90('DIAS_90', 'Em 90 dias');
+
+  const InteractionFollowUp(this.wire, this.label);
+  final String wire;
+  final String label;
+}
+
+InteractionOutcome? _outcomeFromApi(Object? value) {
+  if (value is! String) return null;
+  for (final option in InteractionOutcome.values) {
+    if (option.wire == value) return option;
+  }
+  return null;
+}
+
+InteractionFollowUp? _followUpFromApi(Object? value) {
+  if (value is! String) return null;
+  for (final option in InteractionFollowUp.values) {
+    if (option.wire == value) return option;
+  }
+  return null;
+}
+
 class InteractionDetail extends Equatable {
   const InteractionDetail({
     required this.id,
@@ -417,6 +490,9 @@ class InteractionDetail extends Equatable {
     this.actualStartedAt,
     this.actualEndedAt,
     this.correctionReason,
+    this.outcome,
+    this.followUp,
+    this.needsOutcome = false,
   });
 
   final int id;
@@ -441,6 +517,14 @@ class InteractionDetail extends Equatable {
   final DateTime? actualStartedAt;
   final DateTime? actualEndedAt;
   final String? correctionReason;
+
+  /// The two questions (§15.6.4). Null means unanswered, which is common and
+  /// legitimate — they are asked, never enforced.
+  final InteractionOutcome? outcome;
+  final InteractionFollowUp? followUp;
+
+  /// Completed with nothing answered — the only state where asking is useful.
+  final bool needsOutcome;
 
   factory InteractionDetail.fromJson(Map<String, dynamic> json) {
     final occurrence = json['occurrence'] as Map<String, dynamic>;
@@ -494,6 +578,9 @@ class InteractionDetail extends Equatable {
           ? null
           : DateTime.parse(json['actualEndedAt'] as String).toUtc(),
       correctionReason: json['correctionReason'] as String?,
+      outcome: _outcomeFromApi(json['outcome']),
+      followUp: _followUpFromApi(json['followUp']),
+      needsOutcome: json['needsOutcome'] as bool? ?? false,
     );
   }
 
@@ -521,6 +608,9 @@ class InteractionDetail extends Equatable {
     actualStartedAt,
     actualEndedAt,
     correctionReason,
+    outcome,
+    followUp,
+    needsOutcome,
   ];
 }
 
@@ -549,6 +639,8 @@ class CalendarOccurrence extends Equatable {
     this.recurrenceUntil,
     this.recurrenceCount,
     this.recurrenceProvided = true,
+    this.anchorLocalDate,
+    this.anchorLocalTime,
   });
 
   final int calendarId;
@@ -574,6 +666,15 @@ class CalendarOccurrence extends Equatable {
   final String? recurrenceUntil;
   final int? recurrenceCount;
   final bool recurrenceProvided;
+
+  /// Where the *series* starts, `YYYY-MM-DD` and `HH:MM` in [timeZone].
+  ///
+  /// Editing a whole series must edit the series' own anchor. Seeding that form
+  /// from the occurrence the rep happened to tap re-anchored the series to that
+  /// date on save, silently dropping every occurrence before it — a rep who
+  /// opened the third week and changed only the duration lost the first two.
+  final String? anchorLocalDate;
+  final String? anchorLocalTime;
 
   factory CalendarOccurrence.fromInteraction(InteractionDetail detail) {
     final localStart = detail.occurrenceStartsAt.toLocal();
@@ -652,6 +753,8 @@ class CalendarOccurrence extends Equatable {
       calendarId: calendarId,
       occurrenceId: occurrenceId,
       recurrenceKey: (json['recurrenceKey'] as String?) ?? occurrenceId,
+      anchorLocalDate: json['anchorLocalDate'] as String?,
+      anchorLocalTime: json['anchorLocalTime'] as String?,
       kind: _enumFromApi(CalendarEventKind.values, json['kind']),
       title: json['title'] as String,
       owner: CalendarIdentity.fromJson(
@@ -768,10 +871,21 @@ class CalendarConflict extends Equatable {
   final CalendarConflictInterval candidate;
   final CalendarConflictInterval existing;
 
+  /// Ids are read leniently; the times are what the message is made of.
+  ///
+  /// A conflict on *create* names its candidate `candidate:<idempotency-key>`,
+  /// because the thing being created has no id yet. Demanding a CRM id there
+  /// threw, the throw was caught where the whole error payload is parsed, and
+  /// the conflict list came back empty — so the rep was told "o horário
+  /// solicitado está indisponível" while the server had already said which
+  /// appointment was in the way and when. Reproduced on device.
+  ///
+  /// Lenient, not permissive: a key string still reads as null rather than
+  /// being coerced into an id nothing can look up.
   factory CalendarConflict.fromJson(Map<String, dynamic> json) =>
       CalendarConflict(
         candidate: CalendarConflictInterval(
-          id: readCrmIdOrNull(json['candidateId'], 'candidateId'),
+          id: readCrmIdLoose(json['candidateId']),
           startsAt: DateTime.parse(
             (json['candidateStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -781,7 +895,7 @@ class CalendarConflict extends Equatable {
         ),
         existing: CalendarConflictInterval(
           // CRM calendar/override id only — never occurrence key strings.
-          id: readCrmIdOrNull(json['existingId'], 'existingId'),
+          id: readCrmIdLoose(json['existingId']),
           startsAt: DateTime.parse(
             (json['existingStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -793,38 +907,6 @@ class CalendarConflict extends Equatable {
 
   @override
   List<Object?> get props => [candidate, existing];
-}
-
-class AgendaDayGroup extends Equatable {
-  const AgendaDayGroup({required this.date, required this.items});
-
-  final DateTime date;
-  final List<CalendarOccurrence> items;
-
-  @override
-  List<Object?> get props => [date, items];
-}
-
-List<AgendaDayGroup> groupCalendarOccurrences(
-  Iterable<CalendarOccurrence> occurrences,
-) {
-  final sorted = occurrences.toList()
-    ..sort((left, right) {
-      final byDate = left.localDate.compareTo(right.localDate);
-      if (byDate != 0) return byDate;
-      final byTime = left.localStartsAt.compareTo(right.localStartsAt);
-      if (byTime != 0) return byTime;
-      return left.occurrenceId.compareTo(right.occurrenceId);
-    });
-  final grouped = <DateTime, List<CalendarOccurrence>>{};
-  for (final occurrence in sorted) {
-    grouped
-        .putIfAbsent(_dateOnly(occurrence.localDate), () => [])
-        .add(occurrence);
-  }
-  return grouped.entries
-      .map((entry) => AgendaDayGroup(date: entry.key, items: entry.value))
-      .toList(growable: false);
 }
 
 String formatAgendaDay(DateTime date) {

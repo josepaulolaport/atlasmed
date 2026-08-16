@@ -26,9 +26,12 @@ GoRouter createAppRouter({
 
       if (isAuthenticated) {
         final user = ref.read(currentUserProvider).valueOrNull;
+        // Only a rep has an agenda of their own. A manager reaching /agenda
+        // directly — an old deep link, a bookmark — lands on the dashboard
+        // rather than an empty calendar; theirs is reached per rep from Equipe.
         if (location == '/agenda' &&
             user != null &&
-            !canReadAgenda(user.role.name)) {
+            !canReadOwnAgenda(user.role.name)) {
           return '/dashboard';
         }
         final locationSession = ref.read(locationSessionProvider);

@@ -430,7 +430,11 @@ async function loadLastVisitAt(
   const rows = await db
     .select({
       facilityId: visits.facilityId,
-      lastVisitAt: sql<Date>`max(${visits.visitedAt})`,
+      // `sql<Date>` is an assertion, not a conversion: a raw SQL expression
+      // comes back from postgres as a string however it is typed here, and the
+      // mapper then called `.toISOString()` on it. Converted below so the
+      // declared `Map<number, Date>` is true.
+      lastVisitAt: sql<string>`max(${visits.visitedAt})`,
     })
     .from(visits)
     .where(
@@ -441,7 +445,11 @@ async function loadLastVisitAt(
     )
     .groupBy(visits.facilityId);
 
-  return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
+  return new Map(
+    rows
+      .filter((row) => row.lastVisitAt !== null)
+      .map((row) => [row.facilityId, new Date(row.lastVisitAt)]),
+  );
 }
 
 /**

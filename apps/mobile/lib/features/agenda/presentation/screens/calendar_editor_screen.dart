@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/calenda
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_schedule_picker.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/recurrence_fields.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -159,25 +160,39 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                     onChanged: notifier.setFacility,
                                   ),
                                   const SizedBox(height: 16),
-                                  DropdownButtonFormField<CalendarModality>(
-                                    initialValue: draft.modality,
-                                    decoration: appFieldDecoration(
-                                      label: 'Modalidade',
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: CalendarModality.inPerson,
-                                        child: Text('Presencial'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: CalendarModality.remote,
-                                        child: Text('Remoto'),
-                                      ),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        notifier.setModality(value);
+                                  _PickerTile(
+                                    fieldKey: const Key('calendar-modality'),
+                                    icon: Icons.place_outlined,
+                                    label: 'Modalidade',
+                                    value:
+                                        draft.modality ==
+                                            CalendarModality.inPerson
+                                        ? 'Presencial'
+                                        : 'Remoto',
+                                    onTap: () async {
+                                      final picked =
+                                          await showOptionSheet<
+                                            CalendarModality
+                                          >(
+                                            context,
+                                            title: 'Modalidade',
+                                            selected: draft.modality,
+                                            options: const [
+                                              (
+                                                value:
+                                                    CalendarModality.inPerson,
+                                                label: 'Presencial',
+                                                icon: Icons.place_outlined,
+                                              ),
+                                              (
+                                                value: CalendarModality.remote,
+                                                label: 'Remoto',
+                                                icon: Icons.call_outlined,
+                                              ),
+                                            ],
+                                          );
+                                      if (picked != null) {
+                                        notifier.setModality(picked);
                                       }
                                     },
                                   ),
@@ -230,35 +245,15 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                   onPick: (slot) => notifier.setStartsAt(slot),
                                 ),
                                 const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  key: const Key('calendar-duration'),
-                                  initialValue:
-                                      _durationOptions.contains(
-                                        draft.durationMinutes,
-                                      )
-                                      ? draft.durationMinutes
-                                      : null,
-                                  decoration: appFieldDecoration(
-                                    label: 'Duração',
-                                    errorText: errors['durationMinutes'],
+                                _PickerTile(
+                                  fieldKey: const Key('calendar-duration'),
+                                  icon: Icons.hourglass_bottom_rounded,
+                                  label: 'Duração',
+                                  value: formatDurationLabel(
+                                    draft.durationMinutes,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  hint: Text(
-                                    '${draft.durationMinutes} minutos',
-                                  ),
-                                  items: _durationOptions
-                                      .map(
-                                        (minutes) => DropdownMenuItem(
-                                          value: minutes,
-                                          child: Text('$minutes minutos'),
-                                        ),
-                                      )
-                                      .toList(growable: false),
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      notifier.setDurationMinutes(value);
-                                    }
-                                  },
+                                  errorText: errors['durationMinutes'],
+                                  onTap: () => _pickDuration(draft, notifier),
                                 ),
                                 const SizedBox(height: 12),
                                 Row(
@@ -458,11 +453,21 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
     DateTime current,
     CalendarEditorNotifier notifier,
   ) async {
+    // Scheduling is forward-looking: a visit dated 2020 is born overdue, and
+    // with outcome capture live it can only produce a duration nobody
+    // measured. Editing an appointment that is *already* in the past stays
+    // possible — the floor is that appointment's own day, so a missed visit can
+    // be moved forward but nothing new can be created behind us.
+    final today = DateTime.now();
+    final currentDay = DateTime(current.year, current.month, current.day);
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final floor = currentDay.isBefore(startOfToday) ? currentDay : startOfToday;
+
     final date = await showDatePicker(
       context: context,
       initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: floor,
+      lastDate: DateTime(today.year + 3),
       helpText: 'Data do compromisso',
       cancelText: 'Cancelar',
       confirmText: 'Selecionar',
@@ -474,65 +479,47 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
     }
   }
 
+  /// A wheel, not Material's dial — the same one the payer percentages use.
+  ///
+  /// Two reasons beyond consistency: a time is one of a short ordered list and
+  /// nudging beats aiming at a clock face on a bus, and Material's picker
+  /// renders its own chrome in English because the app has no localization
+  /// delegate.
   Future<void> _pickTime(
     DateTime current,
     CalendarEditorNotifier notifier,
   ) async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(current),
-      helpText: 'Horário do compromisso',
-      cancelText: 'Cancelar',
-      confirmText: 'Selecionar',
+    final picked = await showTimeWheelPicker(context, initial: current);
+    if (picked != null) notifier.setStartsAt(picked);
+  }
+
+  Future<void> _pickDuration(
+    CalendarEditorDraft draft,
+    CalendarEditorNotifier notifier,
+  ) async {
+    final picked = await showDurationWheelPicker(
+      context,
+      initial: draft.durationMinutes,
+      options: _durationOptions,
     );
-    if (time != null) {
-      notifier.setStartsAt(
-        DateTime(
-          current.year,
-          current.month,
-          current.day,
-          time.hour,
-          time.minute,
-        ),
-      );
-    }
+    if (picked != null) notifier.setDurationMinutes(picked);
   }
 
   Future<void> _cancel() async {
-    final controller = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          widget.target.mode == CalendarEditorMode.occurrence
-              ? 'Cancelar esta ocorrência?'
-              : 'Cancelar esta série?',
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Motivo do cancelamento',
-            hintText: 'Informe por que o compromisso será cancelado',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Voltar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Cancelar compromisso'),
-          ),
-        ],
-      ),
+      builder: (_) => _CancelReasonDialog(mode: widget.target.mode),
     );
-    controller.dispose();
     if (reason == null || reason.isEmpty || !mounted) return;
     final notifier = ref.read(calendarEditorProvider(widget.target).notifier);
-    if (await notifier.cancel(reason) && mounted) _finish();
+    if (await notifier.cancel(reason) && mounted) {
+      _finish();
+      return;
+    }
+    // A failed cancel writes its reason to the foot of the form, which is not
+    // where the rep is looking — they pressed a button in the app bar. Without
+    // this the screen simply sits there.
+    if (mounted) _revealError();
   }
 
   void _attemptBack() {
@@ -563,6 +550,72 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
       ),
     );
     if (discard == true && mounted) Navigator.of(context).pop();
+  }
+}
+
+/// Asks why, and owns the controller that asks it.
+///
+/// It used to be an inline `AlertDialog` with a controller disposed on the line
+/// after `await showDialog`. The route is still animating out at that point and
+/// its `TextField` is still mounted, so every cancellation crashed the app to a
+/// red screen: *A TextEditingController was used after being disposed*. A
+/// `StatefulWidget` ties the controller's life to the dialog's own, which is
+/// the only thing that actually knows when the field is gone.
+class _CancelReasonDialog extends StatefulWidget {
+  const _CancelReasonDialog({required this.mode});
+
+  final CalendarEditorMode mode;
+
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = _controller.text.trim();
+    return AlertDialog(
+      title: Text(
+        widget.mode == CalendarEditorMode.occurrence
+            ? 'Cancelar esta ocorrência?'
+            : 'Cancelar esta série?',
+      ),
+      content: TextField(
+        key: const Key('cancel-reason'),
+        controller: _controller,
+        autofocus: true,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          labelText: 'Motivo do cancelamento',
+          hintText: 'Informe por que o compromisso será cancelado',
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Voltar'),
+        ),
+        // Disabled until there is a reason, rather than accepting the press and
+        // discarding it. The API requires a non-empty reason and both this
+        // screen and the notifier dropped a blank one on the floor: the dialog
+        // closed, nothing was cancelled, and nothing said so.
+        FilledButton(
+          onPressed: reason.isEmpty
+              ? null
+              : () => Navigator.pop(context, reason),
+          child: const Text('Cancelar compromisso'),
+        ),
+      ],
+    );
   }
 }
 
@@ -638,6 +691,7 @@ class _PickerTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.errorText,
   });
 
   final Key fieldKey;
@@ -646,52 +700,83 @@ class _PickerTile extends StatelessWidget {
   final String value;
   final VoidCallback onTap;
 
+  /// Shown under the tile and reddens its border, so a tappable field can fail
+  /// validation the same way a text field does.
+  final String? errorText;
+
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.surfaceTertiary,
-    borderRadius: BorderRadius.circular(12),
-    child: InkWell(
-      key: fieldKey,
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Material(
+        color: AppColors.surfaceTertiary,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: fieldKey,
+          onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.surfaceSecondary),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: AppColors.navyBright),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray500,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: errorText == null
+                    ? AppColors.surfaceSecondary
+                    : AppColors.red,
               ),
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: AppColors.navyBright),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          value,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.expand_more_rounded,
+                  size: 18,
+                  color: AppColors.gray400,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-    ),
+      if (errorText case final message?)
+        Padding(
+          padding: const EdgeInsets.only(left: 14, top: 6),
+          child: Text(
+            message,
+            style: const TextStyle(fontSize: 11.5, color: AppColors.red),
+          ),
+        ),
+    ],
   );
 }
 

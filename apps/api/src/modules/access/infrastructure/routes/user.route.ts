@@ -30,6 +30,29 @@ function toValidationError(error: unknown): ValidationError {
   ]);
 }
 
+/**
+ * Elysia strips anything not named here **before zod ever sees it**, so a field
+ * missing from this list is silently dropped rather than rejected — which is
+ * exactly how working hours reached the server, validated cleanly, and were
+ * never stored. `user.route.test.ts` asserts this stays in step with the zod
+ * schema, because the two drifting apart fails silently by construction.
+ */
+export const userPreferencesBody = t.Object({
+  theme: t.Optional(
+    t.Union([t.Literal("system"), t.Literal("light"), t.Literal("dark")]),
+  ),
+  pushNotificationsEnabled: t.Optional(t.Boolean()),
+  emailNotificationsEnabled: t.Optional(t.Boolean()),
+  smsNotificationsEnabled: t.Optional(t.Boolean()),
+  // Nullable, not merely optional: clearing an hour back to "follow the linha"
+  // is a real edit, and a schema that only allowed strings would make the reset
+  // unsendable — spec 0016 §15.5.5.
+  workdayStart: t.Optional(t.Nullable(t.String())),
+  workdayEnd: t.Optional(t.Nullable(t.String())),
+  lunchStart: t.Optional(t.Nullable(t.String())),
+  lunchMinutes: t.Optional(t.Nullable(t.Number())),
+});
+
 export const userRoute = new Elysia({
   detail: {
     tags: ["User"],
@@ -130,14 +153,7 @@ export const userRoute = new Elysia({
       });
     },
     {
-      body: t.Object({
-        theme: t.Optional(
-          t.Union([t.Literal("system"), t.Literal("light"), t.Literal("dark")]),
-        ),
-        pushNotificationsEnabled: t.Optional(t.Boolean()),
-        emailNotificationsEnabled: t.Optional(t.Boolean()),
-        smsNotificationsEnabled: t.Optional(t.Boolean()),
-      }),
+      body: userPreferencesBody,
       detail: {
         summary: "Update authenticated user preferences",
         tags: ["User"],
@@ -145,3 +161,4 @@ export const userRoute = new Elysia({
       },
     },
   );
+

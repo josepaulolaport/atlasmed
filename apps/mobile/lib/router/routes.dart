@@ -41,6 +41,8 @@ import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profil
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_day_screen.dart';
+import 'package:atlasmed_mobile_app/features/roteiro/presentation/screens/roteiro_workspace_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_assignments_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_profile_screen.dart';
@@ -225,6 +227,8 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
     TypedStatefulShellBranch<AgendaBranch>(
       routes: <TypedRoute<RouteData>>[
         TypedGoRoute<AgendaRoute>(path: '/agenda'),
+        TypedGoRoute<AgendaDayRoute>(path: '/agenda/day/:day'),
+        TypedGoRoute<RoteiroRoute>(path: '/agenda/day/:day/roteiro'),
       ],
     ),
     TypedStatefulShellBranch<TerritoriesBranch>(
@@ -369,6 +373,50 @@ class AgendaRoute extends GoRouteData with $AgendaRoute {
       const NoTransitionPage(child: AgendaRouteGuard());
 }
 
+/// One day as an hour grid, reached by tapping a day in the month view.
+class AgendaDayRoute extends GoRouteData with $AgendaDayRoute {
+  const AgendaDayRoute(this.day, {this.ownerUserId, this.ownerName});
+
+  /// `YYYY-MM-DD`. A string rather than a DateTime so the URL is readable and
+  /// a deep link to a specific day is shareable.
+  final String day;
+
+  /// Set when a manager is looking at a rep's day, opened from Equipe. The
+  /// backend refuses an owner outside the caller's scope either way.
+  final int? ownerUserId;
+  final String? ownerName;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      NoTransitionPage(
+        child: AgendaDayScreen(
+          day: DateTime.tryParse(day) ?? DateTime.now(),
+          ownerUserId: ownerUserId,
+          ownerName: ownerName,
+        ),
+      );
+}
+
+/// Where a rep plans a day — spec 0016 §15.4.1.
+///
+/// Scoped to a day rather than to "today", and reached from that day in the
+/// agenda: a rep plans a day, often tomorrow, and planning is a loop rather
+/// than a single answer.
+class RoteiroRoute extends GoRouteData with $RoteiroRoute {
+  const RoteiroRoute(this.day);
+
+  /// `YYYY-MM-DD`.
+  final String day;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      NoTransitionPage(
+        child: RoteiroWorkspaceScreen(
+          day: DateTime.tryParse(day) ?? DateTime.now(),
+        ),
+      );
+}
+
 class TerritoriesRoute extends GoRouteData with $TerritoriesRoute {
   const TerritoriesRoute();
 
@@ -437,6 +485,9 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
     this.title,
     this.personId,
     this.personName,
+    this.startsAt,
+    this.durationMinutes,
+    this.personalBlock,
   });
 
   // Query parameters, not `$extra`.
@@ -457,11 +508,37 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
   final int? personId;
   final String? personName;
 
+  /// The slot the rep drew on the day grid, ISO-8601, and how long it is.
+  ///
+  /// Query parameters for the same reason as the rest: the router rebuilds
+  /// matches from the location alone on every refresh, and a time passed beside
+  /// it would vanish — reopening the form on a default hour after the rep had
+  /// already chosen one.
+  final String? startsAt;
+  final int? durationMinutes;
+
+  /// Opens the form on a personal block rather than an interaction.
+  ///
+  /// The agenda's speed dial offers "Interação" and "Bloqueio pessoal" as
+  /// separate actions, and both used to arrive here identically — so choosing
+  /// a block opened a form set to Interação, with a clinic field the rep then
+  /// had to dismiss by flipping a toggle they had already answered.
+  final bool? personalBlock;
+
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    final seeded = facilityId != null || title != null || personId != null;
+    final drawnStartsAt = startsAt == null
+        ? null
+        : DateTime.tryParse(startsAt!);
+    final isBlock = personalBlock ?? false;
+    final seeded =
+        facilityId != null ||
+        title != null ||
+        personId != null ||
+        drawnStartsAt != null ||
+        isBlock;
     return AgendaEditorRouteGuard(
       target: CalendarEditorTarget.creating(
         prefill: !seeded
@@ -469,12 +546,16 @@ class AgendaNewRoute extends GoRouteData with $AgendaNewRoute {
             : CalendarEditorPrefill(
                 // Only interactions carry a clinic; a personal block cannot be
                 // seeded from one.
-                kind: CalendarEventKind.interaction,
-                facilityId: facilityId,
-                facilityName: facilityName,
+                kind: isBlock
+                    ? CalendarEventKind.personalBlock
+                    : CalendarEventKind.interaction,
+                facilityId: isBlock ? null : facilityId,
+                facilityName: isBlock ? null : facilityName,
                 title: title,
-                personId: personId,
-                personName: personName,
+                personId: isBlock ? null : personId,
+                personName: isBlock ? null : personName,
+                startsAt: drawnStartsAt,
+                durationMinutes: durationMinutes,
                 facilityChoice: facilityId != null
                     ? CalendarFacilityChoice.fixed
                     : personId != null

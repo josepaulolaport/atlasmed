@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dash
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/purchase_status_donut_card.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/features/capture/presentation/today_appointments_card.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
@@ -158,6 +159,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Above the donut: it is the only card here asking the rep to do
               // something, and it renders nothing when there is nothing to do.
               _CpfWarningSection(scope: scope),
+              // What is left of today, and the press that records it. Above
+              // the charts because this is the only card here about the next
+              // hour rather than the last quarter, and it renders nothing when
+              // the day is done.
+              const TodayAppointmentsCard(),
+              const SizedBox(height: 12),
               // The two cards that were already here keep the top of the
               // screen: this is the view reps open every day, and spec 0014
               // added metrics to it rather than replacing what they read first.

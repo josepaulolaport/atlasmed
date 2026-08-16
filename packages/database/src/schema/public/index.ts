@@ -16,3 +16,4 @@ export * from "./calendar";
 export * from "./orders";
 export * from "./visits";
 export * from "./bookmarks";
+export * from "./roteiros";

@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/visit_outcome_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -70,9 +71,18 @@ class InteractionScreen extends ConsumerWidget {
           commandError: state.commandError,
           onStart: () =>
               ref.read(interactionProvider(interactionId).notifier).start(),
-          onComplete: ({correctionReason}) => ref
-              .read(interactionProvider(interactionId).notifier)
-              .complete(correctionReason: correctionReason),
+          onComplete: ({correctionReason}) async {
+            final done = await ref
+                .read(interactionProvider(interactionId).notifier)
+                .complete(correctionReason: correctionReason);
+            // Asked the moment the visit closes, while the rep still remembers
+            // it (§15.6.4). Never blocking: the visit is already recorded.
+            if (done && context.mounted) {
+              await _askOutcome(ref, context, detail);
+            }
+            return done;
+          },
+          onAnswerOutcome: () => _askOutcome(ref, context, detail),
           onRefresh: () =>
               ref.read(interactionProvider(interactionId).notifier).load(),
           onReschedule:
@@ -178,6 +188,25 @@ Future<void> _cancelOccurrence(
   }
 }
 
+/// Puts the two questions on screen and stores whatever the rep taps.
+///
+/// Dismissing without answering is a legitimate outcome — unanswered is a state
+/// the model carries, and a rep in a car park should be able to walk away.
+Future<void> _askOutcome(
+  WidgetRef ref,
+  BuildContext context,
+  InteractionDetail detail,
+) async {
+  final answers = await showVisitOutcomeSheet(
+    context,
+    facilityName: detail.facility.displayName,
+  );
+  if (answers == null) return;
+  await ref
+      .read(interactionProvider(detail.id).notifier)
+      .recordOutcome(outcome: answers.outcome, followUp: answers.followUp);
+}
+
 class _InteractionContent extends ConsumerWidget {
   const _InteractionContent({
     required this.detail,
@@ -185,6 +214,7 @@ class _InteractionContent extends ConsumerWidget {
     required this.commandError,
     required this.onStart,
     required this.onComplete,
+    required this.onAnswerOutcome,
     required this.onRefresh,
     this.onReschedule,
     this.onCancel,
@@ -195,6 +225,10 @@ class _InteractionContent extends ConsumerWidget {
   final String? commandError;
   final Future<bool> Function() onStart;
   final Future<bool> Function({String? correctionReason}) onComplete;
+
+  /// Offered when a visit was closed for the rep — by an arrival or by the
+  /// workday-end job — and nobody has answered the questions yet.
+  final Future<void> Function() onAnswerOutcome;
   final Future<void> Function() onRefresh;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
@@ -234,6 +268,7 @@ class _InteractionContent extends ConsumerWidget {
               command: command,
               onStart: onStart,
               onComplete: onComplete,
+              onAnswerOutcome: onAnswerOutcome,
               onReschedule: onReschedule,
               onCancel: onCancel,
             ),
@@ -491,6 +526,7 @@ class _ActionsCard extends StatelessWidget {
     required this.command,
     required this.onStart,
     required this.onComplete,
+    required this.onAnswerOutcome,
     this.onReschedule,
     this.onCancel,
   });
@@ -499,6 +535,10 @@ class _ActionsCard extends StatelessWidget {
   final String? command;
   final Future<bool> Function() onStart;
   final Future<bool> Function({String? correctionReason}) onComplete;
+
+  /// Offered when a visit was closed for the rep — by an arrival or by the
+  /// workday-end job — and nobody has answered the questions yet.
+  final Future<void> Function() onAnswerOutcome;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
 
@@ -525,6 +565,15 @@ class _ActionsCard extends StatelessWidget {
               label: Text(
                 command == 'complete' ? 'Concluindo…' : 'Concluir interação',
               ),
+            ),
+          // A visit closed by an arrival or by the workday-end job comes back
+          // to a rep who never pressed anything. Asking here is the only way
+          // those get answered at all (§15.6.4).
+          if (detail.needsOutcome)
+            OutlinedButton.icon(
+              onPressed: busy ? null : () => onAnswerOutcome(),
+              icon: const Icon(Icons.rate_review_outlined),
+              label: const Text('Como foi a visita?'),
             ),
           if (detail.status == InteractionStatus.notCompleted)
             FilledButton.icon(

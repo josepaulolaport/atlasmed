@@ -296,6 +296,16 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           hasOverriddenOnExit: false,
           factory: $AgendaRoute._fromState,
         ),
+        GoRouteData.$route(
+          path: '/agenda/day/:day',
+          hasOverriddenOnExit: false,
+          factory: $AgendaDayRoute._fromState,
+        ),
+        GoRouteData.$route(
+          path: '/agenda/day/:day/roteiro',
+          hasOverriddenOnExit: false,
+          factory: $RoteiroRoute._fromState,
+        ),
       ],
     ),
     StatefulShellBranchData.$branch(
@@ -443,6 +453,68 @@ mixin $AgendaRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/agenda');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $AgendaDayRoute on GoRouteData {
+  static AgendaDayRoute _fromState(GoRouterState state) => AgendaDayRoute(
+    state.pathParameters['day']!,
+    ownerUserId: _$convertMapValue(
+      'owner-user-id',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    ownerName: state.uri.queryParameters['owner-name'],
+  );
+
+  AgendaDayRoute get _self => this as AgendaDayRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/agenda/day/${Uri.encodeComponent(_self.day)}',
+    queryParams: {
+      if (_self.ownerUserId != null)
+        'owner-user-id': _self.ownerUserId!.toString(),
+      if (_self.ownerName != null) 'owner-name': _self.ownerName,
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $RoteiroRoute on GoRouteData {
+  static RoteiroRoute _fromState(GoRouterState state) =>
+      RoteiroRoute(state.pathParameters['day']!);
+
+  RoteiroRoute get _self => this as RoteiroRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/agenda/day/${Uri.encodeComponent(_self.day)}/roteiro',
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -621,6 +693,15 @@ mixin $TeamRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
 RouteBase get $agendaNewRoute => GoRouteData.$route(
   path: '/agenda/new',
   hasOverriddenOnExit: false,
@@ -643,6 +724,17 @@ mixin $AgendaNewRoute on GoRouteData {
       int.tryParse,
     ),
     personName: state.uri.queryParameters['person-name'],
+    startsAt: state.uri.queryParameters['starts-at'],
+    durationMinutes: _$convertMapValue(
+      'duration-minutes',
+      state.uri.queryParameters,
+      int.tryParse,
+    ),
+    personalBlock: _$convertMapValue(
+      'personal-block',
+      state.uri.queryParameters,
+      _$boolConverter,
+    ),
   );
 
   AgendaNewRoute get _self => this as AgendaNewRoute;
@@ -656,6 +748,11 @@ mixin $AgendaNewRoute on GoRouteData {
       if (_self.title != null) 'title': _self.title,
       if (_self.personId != null) 'person-id': _self.personId!.toString(),
       if (_self.personName != null) 'person-name': _self.personName,
+      if (_self.startsAt != null) 'starts-at': _self.startsAt,
+      if (_self.durationMinutes != null)
+        'duration-minutes': _self.durationMinutes!.toString(),
+      if (_self.personalBlock != null)
+        'personal-block': _self.personalBlock!.toString(),
     },
   );
 
@@ -673,13 +770,15 @@ mixin $AgendaNewRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }
 
 RouteBase get $agendaEditRoute => GoRouteData.$route(
@@ -891,17 +990,6 @@ mixin $MemberTerritoryRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
 }
 
 RouteBase get $outOfTerritoryRoute => GoRouteData.$route(

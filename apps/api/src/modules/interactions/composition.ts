@@ -1,7 +1,10 @@
 import {
   CompleteInteractionUseCase,
   GetInteractionUseCase,
+  CloseStaleVisitsUseCase,
+  RecordInteractionOutcomeUseCase,
   MarkOverdueInteractionsUseCase,
+  RecordArrivalUseCase,
   StartInteractionUseCase,
 } from "./application/use-cases/interaction.use-cases";
 import { DrizzleInteractionRepository } from "./infrastructure/repositories/drizzle/drizzle-interaction.repository";
@@ -12,4 +15,7 @@ export const interactionUseCases = {
   start: () => new StartInteractionUseCase({ repository: interactionRepositories.interaction }),
   complete: () => new CompleteInteractionUseCase({ repository: interactionRepositories.interaction }),
   markOverdue: () => new MarkOverdueInteractionsUseCase({ repository: interactionRepositories.interaction }),
+  closeStaleVisits: () => new CloseStaleVisitsUseCase({ repository: interactionRepositories.interaction }),
+  recordOutcome: () => new RecordInteractionOutcomeUseCase({ repository: interactionRepositories.interaction }),
+  recordArrival: () => new RecordArrivalUseCase({ repository: interactionRepositories.interaction }),
 };

@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/te
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_month_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -131,6 +132,24 @@ class _Profile extends ConsumerWidget {
             withinManagerId: viaManagerId,
           ).push(context),
         ),
+        // Only a rep has an agenda: a manager's own calendar is not what the
+        // team page is about, and it would open empty.
+        if (member.isRep) ...[
+          const SizedBox(height: 10),
+          _LinkCard(
+            icon: Icons.calendar_month_outlined,
+            title: 'Agenda',
+            subtitle: 'Ver os compromissos e roteiros desta pessoa',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => AgendaMonthScreen(
+                  ownerUserId: member.userId,
+                  ownerName: member.displayName,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         _LinkCard(
           icon: Icons.local_hospital_rounded,

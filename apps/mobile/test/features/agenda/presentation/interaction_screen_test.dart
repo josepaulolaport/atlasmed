@@ -47,6 +47,7 @@ class _InteractionRepository implements CalendarRepositoryContract {
     int id, {
     required int expectedVersion,
     required String idempotencyKey,
+    String? startedAt,
   }) async {
     starts++;
     detail = _detail(status: InteractionStatus.inProgress, version: 2);
@@ -59,12 +60,20 @@ class _InteractionRepository implements CalendarRepositoryContract {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
+    String? completedAt,
   }) async {
     completes++;
     this.correctionReason = correctionReason;
     detail = _detail(status: InteractionStatus.completed, version: 3);
     return detail;
   }
+
+  @override
+  Future<InteractionDetail> recordInteractionOutcome(
+    int id, {
+    required InteractionOutcome outcome,
+    required InteractionFollowUp followUp,
+  }) async => throw UnimplementedError();
 
   @override
   Future<List<CalendarAvailabilityInterval>> getAvailability({
@@ -79,6 +88,14 @@ class _InteractionRepository implements CalendarRepositoryContract {
     required DateTime to,
     int? ownerUserId,
   }) async => const [];
+
+  @override
+  Future<InteractionDetail> recordArrival({
+    required int facilityId,
+    required String timeZone,
+    required String idempotencyKey,
+    String? startedAt,
+  }) async => throw UnimplementedError();
 }
 
 class _MutationRepository implements CalendarMutationRepositoryContract {
@@ -166,7 +183,9 @@ InteractionDetail _detail({
   int? calendarVersion,
   int? overrideVersion,
   CalendarRecurrence recurrence = CalendarRecurrence.none,
+  bool needsOutcome = false,
 }) => InteractionDetail(
+  needsOutcome: needsOutcome,
   id: 1,
   calendarId: 1,
   recurrenceKey: '2026-08-03T09:00',
@@ -238,6 +257,38 @@ void main() {
     SessionEnvironment.instance.timer?.cancel();
     // ignore: invalid_use_of_protected_member
     SessionEnvironment.instance.timer = null;
+  });
+
+  testWidgets('offers the questions when a closed visit has no answers', (
+    tester,
+  ) async {
+    // Most visits are closed for the rep — by the next arrival, or by the
+    // workday-end job — so without this prompt those never get answered at all
+    // (spec 0016 §15.6.4).
+    final repository = _InteractionRepository(
+      _detail(status: InteractionStatus.completed, needsOutcome: true),
+    );
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Como foi a visita?'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Como foi a visita?'), findsOneWidget);
+  });
+
+  testWidgets('does not ask again once the questions are answered', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(
+      _detail(status: InteractionStatus.completed),
+    );
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Como foi a visita?'), findsNothing);
   });
 
   testWidgets('opening shows context and does not auto-start', (tester) async {
