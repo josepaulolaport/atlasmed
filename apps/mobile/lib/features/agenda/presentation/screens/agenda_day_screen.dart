@@ -61,6 +61,14 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
   bool _saving = false;
   String? _error;
 
+  /// When the rep's day starts, resolved during `build`.
+  ///
+  /// Watched rather than read from the callback: `ref.read` on a provider
+  /// nothing on this screen watches returns loading the first time, so the
+  /// speed dial silently fell back to the linha's 08:00 and then opened a form
+  /// that labelled 08:00 "fora" against the rep's own 10:00.
+  int _workdayStartMinutes = kLinhaWorkdayStartMinutes;
+
   @override
   Widget build(BuildContext context) {
     final day = widget.day;
@@ -79,6 +87,11 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       ),
     );
     final role = ref.watch(currentUserProvider).valueOrNull?.role.name;
+    _workdayStartMinutes =
+        parseHhMmMinutes(
+          ref.watch(userPreferencesValueProvider).valueOrNull?.workdayStart,
+        ) ??
+        kLinhaWorkdayStartMinutes;
     // Read-only when looking at someone else's day: planning it would write to
     // their calendar, which is theirs alone.
     final canCreate =
@@ -275,6 +288,10 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       facilityName: value.facility?.name,
       startsAt: draft.startsAt(start).toIso8601String(),
       durationMinutes: draft.durationMinutes,
+      // The sheet asks Visita or Bloqueio pessoal before this button exists.
+      // Leaving it behind reopened the answer as Interação, so a block drawn
+      // and named as personal arrived in the editor asking for a clinic.
+      personalBlock: value.kind == CalendarEventKind.personalBlock,
     ).push(context);
   }
 
@@ -294,14 +311,9 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
         now.hour,
         now.minute < 30 ? 30 : 0,
       );
-      return now.minute >= 30
-          ? rounded.add(const Duration(hours: 1))
-          : rounded;
+      return now.minute >= 30 ? rounded.add(const Duration(hours: 1)) : rounded;
     }
-    final prefs = ref.read(userPreferencesValueProvider).valueOrNull;
-    final startMinutes =
-        parseHhMmMinutes(prefs?.workdayStart) ?? kLinhaWorkdayStartMinutes;
-    return day.add(Duration(minutes: startMinutes));
+    return day.add(Duration(minutes: _workdayStartMinutes));
   }
 
   Widget _dial(BuildContext context, DateTime day) => AgendaSpeedDial(

@@ -89,6 +89,10 @@ Future<void> _pump(
       overrides: [
         calendarRepositoryProvider.overrideWithValue(repository),
         currentUserProvider.overrideWith((ref) async => _manager),
+        // The day screen reads the rep's working hours to decide where a new
+        // appointment opens. Left to the real repository it starts an
+        // eight-minute periodic timer the test never outlives.
+        userPreferencesValueProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp(theme: AppTheme.light, home: screen),
     ),
