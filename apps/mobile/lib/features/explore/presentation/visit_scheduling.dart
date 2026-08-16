@@ -1,24 +1,26 @@
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/clinic_visit_screen.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
-/// Opens the agenda's interaction editor with the clinic already settled.
+/// Opens the visit screen for one clinic.
 ///
-/// A visit *is* an agenda interaction, so scheduling one reuses
-/// `CalendarEditorScreen` rather than growing a second form: the rep picks a
-/// date, time, duration and modality in the one place those fields already
-/// exist, and the appointment lands in their agenda. Coming from the clinic's
-/// own page there is nothing left to ask about the clinic, so the editor shows
-/// it fixed rather than as a search box.
-void openClinicVisitScheduler(
+/// A visit is still an agenda interaction and still goes through the calendar
+/// editor's controller, validation and submit — but not through its form. That
+/// screen builds *any* calendar entry, so it opens by asking whether this is an
+/// interação or a bloqueio pessoal and then offers a clinic picker. Both are
+/// already answered by the time somebody taps "Visita" on a clinic, and leaving
+/// them on screen only gives the rep a way to contradict themselves.
+Future<void> openClinicVisitScheduler(
   BuildContext context, {
   required int facilityId,
   required String facilityName,
 }) {
-  AgendaNewRoute(
-    facilityId: facilityId,
-    facilityName: facilityName,
-    title: 'Visita · $facilityName',
-  ).push(context);
+  return Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) =>
+          ClinicVisitScreen(facilityId: facilityId, facilityName: facilityName),
+    ),
+  );
 }
 
 /// Opens the same editor for a visit to a professional.

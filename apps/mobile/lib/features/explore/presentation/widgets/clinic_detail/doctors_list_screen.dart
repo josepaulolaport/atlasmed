@@ -251,7 +251,15 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                       final d = filtered[i];
                       return DoctorRow(
                         showDistance: false,
-                        showRelationship: true,
+                        // Only when the score was actually loaded.
+                        //
+                        // `ProfessionalRoster.fromRosterItem` never fills
+                        // `relationshipScore` — the facility roster endpoint
+                        // does not return it — so every doctor here rendered
+                        // five empty stars under the word "Relacionamento",
+                        // including doctors the rep had rated. An absent rating
+                        // and a rating of zero are not the same statement.
+                        showRelationship: d.relationshipScore != null,
                         phone: d.phone,
                         relationshipScore: d.relationshipScore,
                         badges: _badgesFor(d),

@@ -15,8 +15,13 @@ String brlNumber(double value) {
   return '${buf.toString().split('').reversed.join()},$decPart';
 }
 
-/// Formats [value] as a BRL currency string, e.g. "R$1.840,00".
-String brl(double value) => 'R\$${brlNumber(value)}';
+/// Formats [value] as a BRL currency string, e.g. "R$ 1.840,00".
+///
+/// The one BRL formatter. There were two, disagreeing on both counts: the
+/// catalog wrote "R$5.150,00" with no space, and Pedidos wrote "R$ 5301,00"
+/// with a space and no thousands separator — so the same order was priced
+/// two ways depending on the screen, and five-figure totals ran together.
+String brl(double value) => 'R\$ ${brlNumber(value)}';
 
 /// Parses a user-typed price such as "1.840,00", "1840,00" or "1840.00"
 /// back into a [double] — the inverse of [brlNumber], used by admin forms

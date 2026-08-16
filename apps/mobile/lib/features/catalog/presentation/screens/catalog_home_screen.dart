@@ -11,9 +11,9 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/varian
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
     show isAdminProvider;
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
@@ -155,8 +155,8 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
               onPressed: () => _openNewProductForm(families),
             )
           : null,
-      appBar: AtlasAppBar(
-        page: 'Catálogo',
+      appBar: SubscreenAppBar(
+        title: 'Catálogo',
         actions: [
           if (isAdmin)
             IconButton(

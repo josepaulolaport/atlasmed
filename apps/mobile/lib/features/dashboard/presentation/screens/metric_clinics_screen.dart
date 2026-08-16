@@ -23,7 +23,7 @@ const _metricTitles = <String, String>{
   'assigned-clinics': 'Clínicas atribuídas',
   'coverage': 'Cobertura',
   'cadastro-completion': 'Cadastro completo',
-  'unassigned-clinics': 'Clínicas não atribuídas',
+  'unassigned-clinics': 'Clínicas sem consultor',
   'bucket-active': 'Clientes ativos',
   'bucket-inactive': 'Clientes inativos',
   'bucket-never-bought': 'Nunca compraram',

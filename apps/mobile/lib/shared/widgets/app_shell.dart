@@ -36,59 +36,22 @@ class AppShellScreen extends StatefulWidget {
   State<AppShellScreen> createState() => AppShellScreenState();
 }
 
-/// The branches visited before the current one, most recent last.
-///
-/// `StatefulNavigationShell` gives each branch its own stack and no order
-/// between them, so at the root of a branch there is nothing to go back to: you
-/// land on Equipe from Desempenho and the only way out is the drawer again.
-/// This is that memory, and it is the whole of it — enough to answer "where was
-/// I", not a second navigator.
-class BranchHistory {
-  /// Bounded because this is a convenience, not a record. Somebody moving
-  /// between two sections all afternoon should not accumulate an afternoon of
-  /// history to walk back through.
-  static const maxEntries = 12;
-
-  final List<int> _entries = [];
-
-  bool get canGoBack => _entries.isNotEmpty;
-
-  /// Records leaving [current]. Re-selecting the open branch is not a move, so
-  /// it remembers nothing — otherwise tapping Equipe twice would make "back"
-  /// return to Equipe.
-  void push({required int leaving, required int entering}) {
-    if (leaving == entering) return;
-    _entries.add(leaving);
-    if (_entries.length > maxEntries) _entries.removeAt(0);
-  }
-
-  /// The branch to return to, or null when there is none.
-  int? pop() => _entries.isEmpty ? null : _entries.removeLast();
-}
-
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final BranchHistory _branchHistory = BranchHistory();
-
-  bool get canGoBackBranch => _branchHistory.canGoBack;
-
-  /// Switches branch, remembering the one being left.
+  /// Switches branch.
+  ///
+  /// It used to also record the branch being left, feeding a back control in
+  /// the top bar. Sections are destinations rather than steps — you reach one
+  /// from the drawer and leave it the same way — so there is no order between
+  /// them to remember, and the memory only made the bar mean different things
+  /// at different times.
   void selectBranch(int branchIndex) {
     final current = widget.navigationShell.currentIndex;
-    _branchHistory.push(leaving: current, entering: branchIndex);
     widget.navigationShell.goBranch(
       branchIndex,
       initialLocation: branchIndex == current,
     );
-    setState(() {});
-  }
-
-  /// Returns to the branch this one was opened from.
-  void goBackBranch() {
-    final previous = _branchHistory.pop();
-    if (previous == null) return;
-    widget.navigationShell.goBranch(previous);
     setState(() {});
   }
 
@@ -252,15 +215,16 @@ class _AtlasTopBarContent extends StatelessWidget {
         height: 40,
         child: Row(
           children: [
-            // Shown only once there is somewhere to return to. At the root of a
-            // branch the leading control is a menu, which opens a list of
-            // destinations rather than retracing the one step you took — so
-            // arriving on Equipe from Desempenho left no way back but choosing
-            // Desempenho again from that list.
-            if (_branchBackAvailable(context)) ...[
-              _branchBackButton(context),
-              const SizedBox(width: 8),
-            ],
+            // No back control here. A section is a destination, not a step: you
+            // arrive at one from the drawer and leave it the same way, and
+            // every section behaves identically whether or not you happened to
+            // pass through another one first.
+            //
+            // There was one, remembering the section you came from. It made the
+            // bar mean two different things — a header at launch, a history
+            // control after any drawer use — and put a back arrow on a screen
+            // that has nothing behind it. Going back inside the app is what
+            // pushed screens do, with their own [SubscreenAppBar].
             _hamburgerButton(context),
             if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
             if (compact) const Spacer(),
@@ -270,58 +234,16 @@ class _AtlasTopBarContent extends StatelessWidget {
     );
   }
 
-  static bool _branchBackAvailable(BuildContext context) =>
-      AppShellScreenState.of(context)?.canGoBackBranch ?? false;
-
-  /// Back to the section you came from, drawn like the leading control so the
-  /// pair reads as one bar rather than as a button bolted onto one.
-  Widget _branchBackButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => AppShellScreenState.of(context)?.goBackBranch(),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: AppColors.surfaceSecondary),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A0f1729),
-              blurRadius: 2,
-              offset: Offset(0, 1),
-            ),
-            BoxShadow(
-              color: Color(0x0D0f1729),
-              blurRadius: 14,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: AppColors.navyDeep,
-          size: 15,
-        ),
-      ),
-    );
-  }
-
-  /// The leading button, which is a *menu* inside the shell and a *back* button
-  /// above it.
+  /// The leading button: the menu, always.
   ///
-  /// It always did both — a screen pushed over the shell has no
-  /// `AppShellScreenState` ancestor, so the tap fell through to `maybePop`. What
-  /// it did not do was say so: it drew a hamburger either way, so on a rep's
-  /// Desempenho, pushed from Equipe, the only way back looked like a menu and
-  /// nobody tried it. The icon now matches the action.
+  /// It used to be a menu inside the shell and a back button above it, because
+  /// pushed screens borrowed this bar. None do any more — they use
+  /// [SubscreenAppBar] — so the bar means one thing, and a section header no
+  /// longer has a way of turning into a back control depending on how the
+  /// screen was reached.
   Widget _hamburgerButton(BuildContext context) {
-    final isInsideAppShell = AppShellScreenState.of(context) != null;
-
     return GestureDetector(
-      onTap: isInsideAppShell
-          ? () => openAppDrawer(context)
-          : () => Navigator.of(context).maybePop(),
+      onTap: () => openAppDrawer(context),
       child: Container(
         width: 36,
         height: 36,
@@ -345,35 +267,27 @@ class _AtlasTopBarContent extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(
-              isInsideAppShell
-                  ? Icons.menu_rounded
-                  : Icons.arrow_back_ios_new_rounded,
-              color: AppColors.navyDeep,
-              size: 15,
-            ),
+            const Icon(Icons.menu_rounded, color: AppColors.navyDeep, size: 15),
             // Green dot accent — the drawer's "you have somewhere to go" mark.
-            // A back button has one obvious destination, so it carries none.
-            if (isInsideAppShell)
-              Positioned(
-                top: 6,
-                right: 5,
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: AppColors.green,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white,
-                        blurRadius: 0,
-                        spreadRadius: 1.5,
-                      ),
-                    ],
-                  ),
+            Positioned(
+              top: 6,
+              right: 5,
+              child: Container(
+                width: 5,
+                height: 5,
+                decoration: const BoxDecoration(
+                  color: AppColors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white,
+                      blurRadius: 0,
+                      spreadRadius: 1.5,
+                    ),
+                  ],
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -471,15 +385,14 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.calendar_month_outlined,
     visibleFor: canReadAgenda,
   ),
-  AppNavigationItem(
-    branchIndex: 4,
-    label: 'Territórios',
-    route: '/territories',
-    icon: Icons.layers_outlined,
-    visibleFor: canReadTerritories,
-  ),
-  // Spec 0014 §6. `Usuários` below stays admin-only and unrelated: this is the
-  // roster a manager works from, not the user-administration surface.
+  // Territórios and Usuários are out of the drawer by request. Branches 4 and
+  // 5 and their routes still exist, so anything already holding a link still
+  // resolves — only the way in from here is gone.
+  //
+  // What goes with them, so it is not rediscovered as a bug: the territory
+  // editor and the map of zones have no other entry point, and neither does
+  // the invitations list. "Convidar" starts on Usuários and nowhere else, so
+  // with this removed the app cannot invite anyone.
   AppNavigationItem(
     branchIndex: 11,
     label: 'Equipe',
@@ -487,11 +400,6 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.groups_outlined,
     visibleFor: canReadTeam,
   ),
-  // Usuários is deliberately absent from the drawer: Equipe is now the one
-  // place people are listed. Branch 5 and `/users` still exist and still work —
-  // only the way in is gone — so restoring the entry is one item, not a
-  // rebuild. Note that this also removes the only entry point to "Convidar":
-  // nothing else in the app starts an invitation.
   AppNavigationItem(
     branchIndex: 6,
     label: 'Pedidos',

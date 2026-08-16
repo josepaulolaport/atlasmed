@@ -110,19 +110,49 @@ void main() {
       expect(find.text('CRM'), findsNothing);
     });
 
-    testWidgets('hides freight, which is a 1.00 import placeholder', (
+    testWidgets('accounts for the gap between the subtotal and the total', (
       tester,
     ) async {
-      // Every imported order carries freight 1.00. A "Frete R$ 1,00" row reads
-      // as a shipping cost; it is not one. It stays inside the total.
+      // This test used to assert the opposite — that freight was hidden,
+      // because 1.00 on every imported order is a placeholder rather than a
+      // shipping cost. Hiding it printed "Subtotal R$ 1000,00 / Total
+      // R$ 1001,00": two numbers a rep reconciling against Emultec cannot make
+      // agree. Naming the line is the lesser evil; the column is `freight`.
       await pumpDetail(
         tester,
         detail(items: [item()], itemsTotal: 1000, freight: 1, total: 1001),
       );
 
+      expect(find.text('Frete'), findsOneWidget);
+      expect(find.text('R\$ 1,00'), findsOneWidget);
+      // Grouped: one BRL formatter across the app now, and this one used to
+      // print "R$ 1001,00".
+      expect(find.text('R\$ 1.001,00'), findsOneWidget);
+    });
+
+    testWidgets('says nothing about freight when there is none', (
+      tester,
+    ) async {
+      await pumpDetail(
+        tester,
+        detail(items: [item()], itemsTotal: 1000, freight: 0, total: 1000),
+      );
+
       expect(find.text('Frete'), findsNothing);
-      expect(find.text('R\$ 1,00'), findsNothing);
-      expect(find.text('R\$ 1001,00'), findsOneWidget);
+    });
+
+    testWidgets('the clinic on the order opens the clinic', (tester) async {
+      // The order named the clinic and stopped there — the one place in the
+      // app where a clinic's name is not a way to reach the clinic.
+      await pumpDetail(tester, detail());
+
+      final clinic = find.byKey(const Key('order-detail-clinic'));
+      expect(clinic, findsOneWidget);
+      expect(
+        tester.widget<InkWell>(clinic).onTap,
+        isNotNull,
+        reason: 'the row must be live, not merely shaped like a link',
+      );
     });
 
     testWidgets('names the order the way the clinic does', (tester) async {

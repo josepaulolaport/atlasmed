@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,67 +30,9 @@ void main() {
       expect(agenda.visibleFor!(UserRoleName.manager), isTrue);
       expect(agenda.visibleFor!(UserRoleName.admin), isTrue);
       expect(agenda.visibleFor!(UserRoleName.ops), isFalse);
-      expect(
-        appNavigationItems
-            .singleWhere((item) => item.route == '/territories')
-            .branchIndex,
-        4,
-      );
-      // `/profile` was pinned here too. It is no longer in this list — the
-      // drawer entry is hidden — and branch 10 is now guarded by the router,
-      // not by the navigation items.
-    });
-  });
-
-  group('BranchHistory', () {
-    test('nothing to go back to until a branch is left', () {
-      final history = BranchHistory();
-      expect(history.canGoBack, isFalse);
-      expect(history.pop(), isNull);
-    });
-
-    test('remembers the branch it came from', () {
-      final history = BranchHistory();
-      history.push(leaving: 0, entering: 11);
-
-      expect(history.canGoBack, isTrue);
-      expect(history.pop(), 0);
-      expect(history.canGoBack, isFalse);
-    });
-
-    test('re-selecting the open branch is not a move', () {
-      // Otherwise tapping Equipe while already on Equipe would make "back"
-      // return to Equipe, which is the one destination it cannot usefully have.
-      final history = BranchHistory();
-      history.push(leaving: 11, entering: 11);
-
-      expect(history.canGoBack, isFalse);
-    });
-
-    test('walks back in the order visited', () {
-      final history = BranchHistory();
-      history.push(leaving: 0, entering: 1);
-      history.push(leaving: 1, entering: 11);
-
-      expect(history.pop(), 1);
-      expect(history.pop(), 0);
-      expect(history.pop(), isNull);
-    });
-
-    test('forgets the oldest rather than growing without bound', () {
-      final history = BranchHistory();
-      for (var i = 0; i <= BranchHistory.maxEntries; i++) {
-        history.push(leaving: i, entering: i + 1);
-      }
-
-      // The first entry is gone; the most recent is still the next step back.
-      expect(history.pop(), BranchHistory.maxEntries);
-      final remaining = <int>[];
-      for (var next = history.pop(); next != null; next = history.pop()) {
-        remaining.add(next);
-      }
-      expect(remaining.length, BranchHistory.maxEntries - 1);
-      expect(remaining.contains(0), isFalse);
+      // `/profile`, `/territories` and `/users` were pinned here too. None are
+      // in this list any more — their drawer entries are hidden — and branches
+      // 10, 4 and 5 are guarded by the router rather than by these items.
     });
   });
 
@@ -117,19 +60,59 @@ void main() {
       );
     });
 
-    test('offers no way into Usuários — Equipe is the one roster', () {
-      // The branch and the route still exist, so this is about the drawer only.
-      // Asserted rather than left to a screenshot because the entry is one line
-      // and would come back unnoticed in any merge that touches this list.
+    test('offers no way into Usuários or Territórios', () {
+      // Both were removed from the drawer by request. The branches and the
+      // routes survive, as with Perfil above — only the entries are gone.
+      //
+      // What that costs, recorded here so it is not rediscovered as a bug:
+      // "Convidar" starts on Usuários and nowhere else, so the app cannot
+      // invite anyone; and the territory editor and the map of zones have no
+      // other entry point either.
       expect(
-        appNavigationItems,
-        isNot(
-          contains(
-            predicate<AppNavigationItem>((item) => item.route == '/users'),
-          ),
+        appNavigationItems.where(
+          (item) => item.route == '/users' || item.route == '/territories',
         ),
+        isEmpty,
       );
     });
+  });
+
+  testWidgets('a section header carries no back control, ever', (tester) async {
+    // A section is a destination, not a step: you arrive from the drawer and
+    // leave the same way.
+    //
+    // This bar used to hold two back controls between them. One appeared once
+    // you had switched sections, so the same header meant different things
+    // before and after any drawer use. The other was the leading button
+    // itself, which turned into a back arrow whenever the bar was used outside
+    // the shell. Both are gone, and pushed screens use SubscreenAppBar.
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(appBar: AtlasAppBar(page: 'Cadastros')),
+      ),
+    );
+
+    expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsNothing);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    // The leading control is the menu whether or not a shell is above it.
+    expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+  });
+
+  testWidgets('a pushed screen gets a back arrow and its own title', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          appBar: const SubscreenAppBar(title: 'Campos de potencial'),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('subscreen-back')), findsOneWidget);
+    expect(find.text('Campos de potencial'), findsOneWidget);
+    // None of the shell's furniture: no breadcrumb, no menu.
+    expect(find.text('ATLASMED'), findsNothing);
   });
 
   testWidgets('drawer remains scrollable on compact height and large text', (

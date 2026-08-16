@@ -81,6 +81,20 @@ CpfIssue? cpfIssueFor({String? legalDocumentType, String? legalDocument}) {
 
 enum CpfIssue { missing, invalid }
 
+/// A CEP as it is written: `22775-001`, not `22775001`.
+///
+/// The document beside it on the same card is punctuated (`21.264.267/0001-66`)
+/// and the postal code was not, which reads as raw data that escaped
+/// formatting. Anything that is not eight digits is returned untouched rather
+/// than mangled.
+String? formatPostalCode(String? value) {
+  final normalized = _normalizedValue(value);
+  if (normalized == null) return null;
+  final digits = _digits(normalized);
+  if (digits.length != 8) return normalized;
+  return '${digits.substring(0, 5)}-${digits.substring(5)}';
+}
+
 String? _normalizedValue(String? value) {
   final trimmed = value?.trim();
   return trimmed == null || trimmed.isEmpty ? null : trimmed;

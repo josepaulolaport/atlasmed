@@ -10,16 +10,17 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territor
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// A small, non-interactive live map preview for a single assigned
-/// territory — used in the horizontally-scrollable "Territórios atribuídos"
-/// row on the user detail screen. The name and sector are shown as a plain
-/// label above the card (not overlaid on the map); the map itself is a real,
-/// fully-styled Mapbox view (streets, water, parks, POI labels) framing the
-/// territory's real boundary, or a centered pin when no boundary is
-/// available. Tapping the card opens a full-screen, freely pannable/
-/// zoomable view of the same territory (see [TerritoryMapExpandedScreen]).
+/// territory — used in the horizontally-scrollable "Territórios" row on the
+/// user detail screen. The map is a real, fully-styled Mapbox view (streets,
+/// water, parks, POI labels) framing the territory's real boundary, or a
+/// centered pin when no boundary is available, with the territory's name
+/// overlaid along its bottom edge. Tapping the card opens a full-screen,
+/// freely pannable/zoomable view of the same territory (see
+/// [TerritoryMapExpandedScreen]).
 class TerritoryMapCard extends StatefulWidget {
   const TerritoryMapCard({
     super.key,
@@ -27,6 +28,7 @@ class TerritoryMapCard extends StatefulWidget {
     this.width = 260,
     this.mapHeight = 120,
     this.onTap,
+    this.onEdit,
   });
 
   final TerritoryAssignment assignment;
@@ -35,6 +37,10 @@ class TerritoryMapCard extends StatefulWidget {
 
   /// When set, replaces the default "expand to full-screen map" tap.
   final VoidCallback? onTap;
+
+  /// Carried into the full-screen view as its "Editar" action, so looking at
+  /// a territory and changing it are no longer the same gesture.
+  final VoidCallback? onEdit;
 
   @override
   State<TerritoryMapCard> createState() => _TerritoryMapCardState();
@@ -80,82 +86,86 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
 
     return SizedBox(
       width: widget.width,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.assignment.territoryName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
+      child: GestureDetector(
+        onTap:
+            widget.onTap ??
+            () => TerritoryMapExpandedScreen.show(
+              context,
+              widget.assignment,
+              onEdit: widget.onEdit,
             ),
-          ),
-          if (widget.assignment.verticalName != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              widget.assignment.verticalName!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
-            ),
-          ],
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap:
-                widget.onTap ??
-                () =>
-                    TerritoryMapExpandedScreen.show(context, widget.assignment),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              // Explicit width/height (rather than leaving it to the
-              // Column's cross-axis sizing) guarantees the map box spans
-              // the card's full width, flush with its right edge.
-              child: SizedBox(
-                width: widget.width,
-                height: widget.mapHeight,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSecondary,
-                    border: Border.all(color: AppColors.surfaceSecondary),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (token.isEmpty || centroid == null || _mapUnavailable)
-                        const _MapPlaceholder()
-                      else
-                        IgnorePointer(
-                          child: SizedMapHost(
-                            builder: (context, width, height) => MapWidget(
-                              key: ValueKey(
-                                'mapa-${widget.assignment.territoryId}',
-                              ),
-                              styleUri: MapboxStyles.STANDARD,
-                              viewport: _initialViewport,
-                              onMapCreated: _onMapCreated,
-                              onStyleLoadedListener: (_) => _configureMap(),
-                              onMapLoadErrorListener: (_) =>
-                                  setState(() => _mapUnavailable = true),
-                            ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: widget.width,
+            height: widget.mapHeight,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSecondary,
+                border: Border.all(color: AppColors.surfaceSecondary),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (token.isEmpty || centroid == null || _mapUnavailable)
+                    const _MapPlaceholder()
+                  else
+                    IgnorePointer(
+                      child: SizedMapHost(
+                        builder: (context, width, height) => MapWidget(
+                          key: ValueKey(
+                            'mapa-${widget.assignment.territoryId}',
+                          ),
+                          styleUri: MapboxStyles.STANDARD,
+                          viewport: _initialViewport,
+                          onMapCreated: _onMapCreated,
+                          onStyleLoadedListener: (_) async {
+                            await useFlatProjection(_mapboxMap);
+                            await _configureMap();
+                          },
+                          onMapLoadErrorListener: (_) =>
+                              setState(() => _mapUnavailable = true),
+                        ),
+                      ),
+                    ),
+                  // The name sits on the map rather than above it. As a label
+                  // stacked over the card it left the minimap looking like an
+                  // unlabelled grey slab with a caption floating off it.
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(10, 18, 10, 8),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [Color(0xE60F1729), Color(0x000F1729)],
                           ),
                         ),
-                      if (widget.onTap == null)
-                        const Positioned(
-                          bottom: 10,
-                          right: 10,
-                          child: _ExpandButton(),
+                        child: Text(
+                          widget.assignment.territoryName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.2,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
-                    ],
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.onTap == null)
+                    const Positioned(top: 8, right: 8, child: _ExpandButton()),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

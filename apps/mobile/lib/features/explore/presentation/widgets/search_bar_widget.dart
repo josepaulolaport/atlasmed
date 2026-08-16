@@ -11,6 +11,10 @@ class SearchBarWidget extends StatelessWidget {
   final int filterCount;
   final String hintText;
 
+  /// For surfaces that exist only to be searched — "Associar clínica" opens
+  /// straight onto an empty list with nothing to do but type.
+  final bool autofocus;
+
   const SearchBarWidget({
     super.key,
     required this.value,
@@ -18,6 +22,7 @@ class SearchBarWidget extends StatelessWidget {
     this.onFilter,
     this.filterCount = 0,
     required this.hintText,
+    this.autofocus = false,
   });
 
   @override
@@ -59,6 +64,7 @@ class SearchBarWidget extends StatelessWidget {
                       ),
                     ),
                     onChanged: onChanged,
+                    autofocus: autofocus,
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.gray900,

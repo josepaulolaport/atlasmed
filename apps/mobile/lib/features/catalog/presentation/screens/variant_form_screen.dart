@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/brasindice_date.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -144,6 +145,28 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     });
   }
 
+  DateTime? _brasindiceDate() {
+    final existing = widget.existing;
+    return brasindiceDateForSave(
+      existing: existing?.brasindiceUpdatedAt,
+      currentPrices: [
+        parseBrlNumber(_price.text),
+        parseBrlNumber(_price17.text),
+        parseBrlNumber(_price18.text),
+        parseBrlNumber(_price20.text),
+      ],
+      savedPrices: existing == null
+          ? const []
+          : [
+              existing.price,
+              existing.price17,
+              existing.price18,
+              existing.price20,
+            ],
+      now: DateTime.now(),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_isValid || _saving) return;
     setState(() {
@@ -165,7 +188,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       price17: parseBrlNumber(_price17.text),
       price18: parseBrlNumber(_price18.text),
       price20: parseBrlNumber(_price20.text),
-      brasindiceUpdatedAt: DateTime.now(),
+      brasindiceUpdatedAt: _brasindiceDate(),
       verticalIds: _selectedVerticalIds.toList(),
     );
 

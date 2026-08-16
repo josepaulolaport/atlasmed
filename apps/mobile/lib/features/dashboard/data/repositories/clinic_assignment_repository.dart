@@ -15,7 +15,11 @@ enum UnassignReason {
   repChanged('rep_changed', 'Mudou de representante'),
   clinicClosed('clinic_closed', 'Clínica fechada ou inativa'),
   wrongAssignment('wrong_assignment', 'Atribuição incorreta'),
-  other('manual_unassign', 'Outro motivo');
+
+  /// `other`, not `manual_unassign`: that code means "reason unrecorded" —
+  /// what the API writes for a legacy row or a caller that sent nothing — so
+  /// sending it for a deliberate choice made the choice invisible.
+  other('other', 'Outro motivo');
 
   const UnassignReason(this.wireValue, this.label);
 

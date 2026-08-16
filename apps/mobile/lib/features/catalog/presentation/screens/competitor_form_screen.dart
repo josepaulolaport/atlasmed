@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/brasindice_date.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -99,6 +100,22 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       parseBrlNumber(_price18.text) != null &&
       parseBrlNumber(_price20.text) != null;
 
+  DateTime? _brasindiceDate() {
+    final existing = widget.existing;
+    return brasindiceDateForSave(
+      existing: existing?.brasindiceUpdatedAt,
+      currentPrices: [
+        parseBrlNumber(_price17.text),
+        parseBrlNumber(_price18.text),
+        parseBrlNumber(_price20.text),
+      ],
+      savedPrices: existing == null
+          ? const []
+          : [existing.price17, existing.price18, existing.price20],
+      now: DateTime.now(),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_isValid || _saving) return;
     setState(() {
@@ -114,7 +131,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       price17: parseBrlNumber(_price17.text),
       price18: parseBrlNumber(_price18.text),
       price20: parseBrlNumber(_price20.text),
-      brasindiceUpdatedAt: DateTime.now(),
+      brasindiceUpdatedAt: _brasindiceDate(),
     );
 
     try {

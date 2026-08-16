@@ -89,7 +89,8 @@ void main() {
     // No rows to read the kind from — and this is where it matters most, since
     // the two empty states have different causes and different fixes.
     await _pump(tester, const [], role: UserRoleName.admin);
-    expect(find.text('Nenhum gestor com zona nesta linha'), findsOneWidget);
+    // "Gerente" — the word the rest of the app uses for this role.
+    expect(find.text('Nenhum gerente com zona nesta linha'), findsOneWidget);
   });
 
   testWidgets('an empty rep roster reads as a manager\'s, not an admin\'s', (
@@ -198,6 +199,94 @@ void main() {
 
     expect(find.text('Nenhum representante nesta equipe'), findsNothing);
     expect(find.text('Novo Rep'), findsOneWidget);
+  });
+
+  testWidgets('a card says who the person is, not just their name', (
+    tester,
+  ) async {
+    // Taking the metrics off these cards left a name alone on a 72pt slab,
+    // while the role and the e-mail behind it were fetched and discarded.
+    await _pump(tester, [_member(userId: 5, name: 'Ana')]);
+
+    expect(find.text('Ana'), findsOneWidget);
+    expect(find.text('Representante'), findsOneWidget);
+    expect(find.text('ana@atlasmed.com.br'), findsOneWidget);
+  });
+
+  testWidgets('a manager card is labelled Gerente', (tester) async {
+    await _pump(tester, [
+      _member(userId: 2, name: 'Silvio', role: 'MANAGER'),
+    ], role: UserRoleName.admin);
+
+    expect(find.text('Gerente'), findsOneWidget);
+    expect(find.text('Gestor'), findsNothing);
+  });
+
+  testWidgets('the roster says how many people it holds', (tester) async {
+    // Every other list in the app counts itself; this one opened onto cards.
+    await _pump(tester, [
+      _member(userId: 5, name: 'Ana'),
+      _member(userId: 6, name: 'Bruno'),
+    ]);
+
+    expect(find.text('2 representantes'), findsOneWidget);
+  });
+
+  testWidgets('one person is counted in the singular', (tester) async {
+    await _pump(tester, [_member(userId: 5, name: 'Ana')]);
+
+    expect(find.text('1 representante'), findsOneWidget);
+  });
+
+  testWidgets('a search that matches nobody hides the invitations too', (
+    tester,
+  ) async {
+    // Invites went unfiltered, so searching for a name nobody has still listed
+    // every pending one — and the "matched nothing" notice was suppressed by
+    // those same invites being present.
+    await _pump(
+      tester,
+      [for (var i = 0; i < 9; i++) _member(userId: i + 1, name: 'Pessoa$i')],
+      invites: [
+        PendingInvite(
+          invitationId: 9,
+          name: 'Novo Rep',
+          email: 'novo@atlasmed.com.br',
+          roleName: 'REP',
+          territories: const [],
+          expiresAt: DateTime.utc(2026, 9, 1),
+        ),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Novo Rep'), findsNothing);
+    expect(find.textContaining('corresponde a "zzz"'), findsOneWidget);
+  });
+
+  testWidgets('a search matching an invitation keeps it', (tester) async {
+    await _pump(
+      tester,
+      [for (var i = 0; i < 9; i++) _member(userId: i + 1, name: 'Pessoa$i')],
+      invites: [
+        PendingInvite(
+          invitationId: 9,
+          name: 'Novo Rep',
+          email: 'novo@atlasmed.com.br',
+          roleName: 'REP',
+          territories: const [],
+          expiresAt: DateTime.utc(2026, 9, 1),
+        ),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField), 'novo');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Novo Rep'), findsOneWidget);
+    expect(find.textContaining('corresponde a'), findsNothing);
   });
 
   testWidgets('every row leads to one place — that person', (tester) async {

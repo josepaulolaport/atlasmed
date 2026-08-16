@@ -72,7 +72,9 @@ class InviteIdentityStep extends StatelessWidget {
                   controller: firstNameController,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    hintText: 'Nome',
+                    // An example, like the e-mail and phone fields below.
+                    // Repeating the label above it said nothing.
+                    hintText: 'Adriana',
                     isDense: true,
                   ),
                   validator: (value) {
@@ -89,7 +91,7 @@ class InviteIdentityStep extends StatelessWidget {
                   controller: lastNameController,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    hintText: 'Sobrenome',
+                    hintText: 'Oliveira',
                     isDense: true,
                   ),
                   validator: (value) {
@@ -128,7 +130,8 @@ class InviteIdentityStep extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: AppColors.gray500),
                 ),
                 const SizedBox(height: 16),
-                const InviteFieldLabel('Email'),
+                // "E-mail" — the spelling everywhere else in the app.
+                const InviteFieldLabel('E-mail'),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: emailController,

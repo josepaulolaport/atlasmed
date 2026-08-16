@@ -140,7 +140,7 @@ class _Profile extends ConsumerWidget {
               ? 'Nenhuma clínica nesta área'
               : member.isRep
               ? 'Ver e gerenciar as clínicas desta pessoa'
-              : 'Todas as clínicas dentro das zonas deste gestor',
+              : 'Todas as clínicas dentro das zonas deste gerente',
           onTap: member.assignedClinicCount == 0
               ? null
               : () => MetricClinicsRoute(
@@ -164,7 +164,7 @@ class _Profile extends ConsumerWidget {
           _LinkCard(
             icon: Icons.add_location_alt_outlined,
             title: 'Associar nova clínica',
-            subtitle: 'Sem representante, ou já com outro — com justificativa',
+            subtitle: 'Sem consultor, ou já com outro — com justificativa',
             onTap: () => AssignClinicRoute(
               userId: member.userId,
               memberName: member.displayName,
@@ -182,7 +182,12 @@ class _Profile extends ConsumerWidget {
             accent: member.unassignedClinicCount! > 0
                 ? AppColors.amber
                 : AppColors.navyBright,
-            title: 'Clínicas sem representante',
+            // "Consultor" is what the rest of the app calls the person
+            // assigned to a clinic — the action that creates the assignment is
+            // "Atribuir consultor". This one number was called three things:
+            // "não atribuídas" on Desempenho, "sem representante" here, and
+            // "sem consultor" on Territórios.
+            title: 'Clínicas sem consultor',
             trailing: '${member.unassignedClinicCount}',
             subtitle: member.unassignedClinicCount! > 0
                 ? 'Dentro das zonas, sem ninguém atendendo'
@@ -201,7 +206,7 @@ class _Profile extends ConsumerWidget {
           _LinkCard(
             icon: Icons.groups_rounded,
             title: 'Equipe',
-            subtitle: 'Representantes sob este gestor',
+            subtitle: 'Representantes sob este gerente',
             onTap: () => TeamMemberRoute(
               managerId: member.userId,
               managerName: member.displayName,
@@ -306,9 +311,16 @@ class _Identity extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
+                  // Same words and same colour as the pill on the roster card
+                  // this screen opens from — it was navy for both roles here
+                  // and role-coloured there.
                   _Chip(
-                    label: member.isRep ? 'Representante' : 'Gestor',
-                    color: AppColors.navyBright,
+                    label: member.isRep
+                        ? UserRoleName.rep.label
+                        : UserRoleName.manager.label,
+                    color: member.isRep
+                        ? UserRoleName.rep.color
+                        : UserRoleName.manager.color,
                   ),
                   if (member.status != 'ACTIVE') ...[
                     const SizedBox(width: 6),
@@ -504,11 +516,17 @@ class _LinkCard extends StatelessWidget {
                 ),
               ],
               const SizedBox(width: 6),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.gray500,
-              ),
+              // No chevron on a card that leads nowhere. The comment above
+              // this class already said a chevron into nothing is worse than a
+              // greyed row; the row was greyed and kept the chevron.
+              if (enabled)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
+                )
+              else
+                const SizedBox(width: 18),
             ],
           ),
         ),

@@ -5,7 +5,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facili
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicRow extends StatelessWidget {
-  final FacilityEntry clinic;
+  /// The full entry. Null on [ClinicRow.summary].
+  final FacilityEntry? clinic;
   final VoidCallback onTap;
 
   /// Optional control at the end of the row.
@@ -15,19 +16,49 @@ class ClinicRow extends StatelessWidget {
   /// reason it had grown a private copy of this row in the first place.
   final Widget? trailing;
 
+  /// Set by [ClinicRow.summary] when the caller's endpoint returns a name and
+  /// a place and nothing else.
+  final String? _summaryName;
+  final String? _summaryLocation;
+  final List<Widget> _summaryBadges;
+
   const ClinicRow({
     super.key,
-    required this.clinic,
+    required FacilityEntry this.clinic,
     required this.onTap,
     this.trailing,
-  });
+  }) : _summaryName = null,
+       _summaryLocation = null,
+       _summaryBadges = const [];
+
+  /// The same row for a list that only knows a clinic's name and where it is.
+  ///
+  /// "Associar clínica" had grown its own row because `/assignable` returns
+  /// neither doctor counts nor clinical focus — and mapping it onto
+  /// [FacilityEntry] would have printed "0 médicos" and "Sem foco clínico" as
+  /// if they were facts about the clinic. This keeps one row and one visual
+  /// language, and draws only what the caller actually knows.
+  const ClinicRow.summary({
+    super.key,
+    required String name,
+    required String location,
+    required this.onTap,
+    List<Widget> badges = const [],
+    this.trailing,
+  }) : clinic = null,
+       _summaryName = name,
+       _summaryLocation = location,
+       _summaryBadges = badges;
 
   @override
   Widget build(BuildContext context) {
+    final entry = clinic;
+    if (entry == null) return _buildSummary();
+
     final statusChips = buildFacilityStatusChips(
-      verticalProfiles: clinic.verticalProfiles,
+      verticalProfiles: entry.verticalProfiles,
     );
-    final serviceChip = ClinicalFocusLabels.chipSummary(clinic.displayServices);
+    final serviceChip = ClinicalFocusLabels.chipSummary(entry.displayServices);
 
     return InkWell(
       onTap: onTap,
@@ -66,7 +97,7 @@ class ClinicRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    clinic.name,
+                    entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     softWrap: false,
@@ -77,7 +108,7 @@ class ClinicRow extends StatelessWidget {
                       letterSpacing: -0.15,
                     ),
                   ),
-                  if (clinic.locationLabel != null) ...[
+                  if (entry.locationLabel != null) ...[
                     const SizedBox(height: 3),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,7 +124,7 @@ class ClinicRow extends StatelessWidget {
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
-                            clinic.locationLabel!,
+                            entry.locationLabel!,
                             softWrap: true,
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -111,7 +142,7 @@ class ClinicRow extends StatelessWidget {
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (clinic.distanceKm != null)
+                      if (entry.distanceKm != null)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -122,7 +153,7 @@ class ClinicRow extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${clinic.distanceKm!.toStringAsFixed(1)} km',
+                              '${entry.distanceKm!.toStringAsFixed(1)} km',
                               style: const TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
@@ -141,7 +172,7 @@ class ClinicRow extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
+                            '${entry.doctorCount} ${entry.doctorCount == 1 ? 'médico' : 'médicos'}',
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
@@ -162,7 +193,7 @@ class ClinicRow extends StatelessWidget {
                     ],
                   ),
                   if (statusChips.isNotEmpty ||
-                      clinic.lastVisitDays != null) ...[
+                      entry.lastVisitDays != null) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -170,14 +201,109 @@ class ClinicRow extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         ...statusChips,
-                        if (clinic.lastVisitDays != null)
+                        if (entry.lastVisitDays != null)
                           _MetaItem(
                             icon: Icons.access_time_rounded,
-                            text: clinic.lastVisitDays == 0
+                            text: entry.lastVisitDays == 0
                                 ? 'Hoje'
-                                : 'Há ${clinic.lastVisitDays} dia${clinic.lastVisitDays == 1 ? '' : 's'}',
+                                : 'Há ${entry.lastVisitDays} dia${entry.lastVisitDays == 1 ? '' : 's'}',
                           ),
                       ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The same tile, name, location line and divider as the full row — only the
+/// meta line differs, because a summary caller has no meta to show.
+extension on ClinicRow {
+  Widget _buildSummary() {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.blue100, AppColors.blueLight],
+                ),
+              ),
+              child: const Icon(
+                Icons.local_hospital_rounded,
+                size: 22,
+                color: AppColors.navyBright,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _summaryName ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
+                  ),
+                  if ((_summaryLocation ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.location_on_rounded,
+                            size: 11,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            _summaryLocation!,
+                            softWrap: true,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.gray500,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (_summaryBadges.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: _summaryBadges,
                     ),
                   ],
                 ],

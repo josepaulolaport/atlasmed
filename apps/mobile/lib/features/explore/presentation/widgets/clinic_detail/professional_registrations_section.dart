@@ -342,6 +342,11 @@ class _RegistrationSheetState extends ConsumerState<_RegistrationSheet> {
           else ...[
             DropdownButtonFormField<int>(
               initialValue: _councilId,
+              // "CRM — Conselho Regional de Medicina" does not fit a phone:
+              // without this the field overflowed its row by 231 logical
+              // pixels and the sheet showed Flutter's yellow-and-black stripes
+              // over the selected council.
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Conselho',
                 border: OutlineInputBorder(),
@@ -350,7 +355,10 @@ class _RegistrationSheetState extends ConsumerState<_RegistrationSheet> {
                   .map(
                     (c) => DropdownMenuItem(
                       value: c.id,
-                      child: Text('${c.abbreviation} — ${c.name}'),
+                      child: Text(
+                        '${c.abbreviation} — ${c.name}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(growable: false),

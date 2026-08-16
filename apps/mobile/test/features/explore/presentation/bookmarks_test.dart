@@ -239,15 +239,18 @@ void main() {
 
         expect(find.text('Clínicas'), findsOneWidget);
         expect(find.text('Médicos'), findsOneWidget);
+        // Title then explanation, the same shape as the Explore empty state.
+        expect(find.text('Nenhuma clínica salva'), findsOneWidget);
         expect(
-          find.textContaining('Nenhuma clínica salva ainda'),
+          find.textContaining('Toque no marcador na página de uma clínica'),
           findsOneWidget,
         );
 
         await tester.tap(find.text('Médicos'));
         await tester.pumpAndSettle();
+        expect(find.text('Nenhum médico salvo'), findsOneWidget);
         expect(
-          find.textContaining('Nenhum médico salvo ainda'),
+          find.textContaining('Toque no marcador na página de um médico'),
           findsOneWidget,
         );
       },

@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_en
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -21,16 +22,20 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// the Explore search path is Meilisearch, whose documents are shared between
 /// users — expressing "mine" there would mean reindexing a clinic on every
 /// toggle. This page asks Postgres directly instead.
-class FavoritosScreen extends StatefulWidget {
+class FavoritosScreen extends ConsumerStatefulWidget {
   const FavoritosScreen({super.key});
 
   @override
-  State<FavoritosScreen> createState() => _FavoritosScreenState();
+  ConsumerState<FavoritosScreen> createState() => _FavoritosScreenState();
 }
 
-class _FavoritosScreenState extends State<FavoritosScreen>
+class _FavoritosScreenState extends ConsumerState<FavoritosScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  late final TabController _tabs = TabController(length: 2, vsync: this)
+    // Keeps the toggle in step when the tab changes by swipe rather than tap.
+    ..addListener(() {
+      if (mounted) setState(() {});
+    });
 
   @override
   void dispose() {
@@ -40,13 +45,21 @@ class _FavoritosScreenState extends State<FavoritosScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Page 1 of each list is already being watched by the tabs below, so
+    // reading the totals here costs no extra request.
+    final clinicTotal =
+        ref.watch(clinicBookmarksProvider(1)).valueOrNull?.pagination.total ??
+        0;
+    final doctorTotal =
+        ref.watch(doctorBookmarksProvider(1)).valueOrNull?.pagination.total ??
+        0;
+
     return Scaffold(
       backgroundColor: Colors.white,
 
       /// A pushed screen, so it carries a back arrow and its own title rather
       /// than [AtlasAppBar], which is the top-level nav shell (hamburger +
       /// breadcrumb) and would suggest Favoritos is a destination of its own.
-      /// Same header shape as `facility_drill_down_screen.dart`.
       body: SafeArea(
         child: Column(
           children: [
@@ -75,15 +88,17 @@ class _FavoritosScreenState extends State<FavoritosScreen>
                 ],
               ),
             ),
-            TabBar(
-              controller: _tabs,
-              labelColor: AppColors.navyBright,
-              unselectedLabelColor: AppColors.gray500,
-              indicatorColor: AppColors.navyBright,
-              tabs: const [
-                Tab(text: 'Clínicas'),
-                Tab(text: 'Médicos'),
-              ],
+            // Explorar's own tabs, not Material's.
+            //
+            // This screen shows the same Clínicas/Médicos choice as the list it
+            // is opened from, one tap away, and drew it as a plain `TabBar` —
+            // different type scale, different indicator, no counts. Two designs
+            // for one control.
+            TabToggle(
+              value: _tabs.index == 0 ? 'clinic' : 'doctor',
+              clinicCount: clinicTotal,
+              doctorCount: doctorTotal,
+              onChanged: (value) => _tabs.animateTo(value == 'clinic' ? 0 : 1),
             ),
             Expanded(
               child: TabBarView(
@@ -112,29 +127,54 @@ class _LoadingRows extends StatelessWidget {
   }
 }
 
+/// The same shape as the Explore list's empty state — circle, title, then the
+/// explanation — rather than a fourth way of saying "nothing here".
 class _EmptyFavoritos extends StatelessWidget {
-  const _EmptyFavoritos({required this.message});
+  const _EmptyFavoritos({required this.title, required this.message});
 
+  final String title;
   final String message;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.bookmark_border_rounded,
-              size: 40,
-              color: AppColors.gray500,
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.gray100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.bookmark_border_rounded,
+                size: 32,
+                color: AppColors.gray400,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray900,
+              ),
+            ),
+            const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.gray500),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.gray500,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -192,9 +232,9 @@ class _ClinicsTabState extends ConsumerState<_ClinicsTab> {
     }
     if (items.isEmpty) {
       return const _EmptyFavoritos(
+        title: 'Nenhuma clínica salva',
         message:
-            'Nenhuma clínica salva ainda. Toque no marcador na página de '
-            'uma clínica para salvá-la aqui.',
+            'Toque no marcador na página de uma clínica para salvá-la aqui.',
       );
     }
 
@@ -258,9 +298,8 @@ class _DoctorsTabState extends ConsumerState<_DoctorsTab> {
     }
     if (items.isEmpty) {
       return const _EmptyFavoritos(
-        message:
-            'Nenhum médico salvo ainda. Toque no marcador na página de '
-            'um médico para salvá-lo aqui.',
+        title: 'Nenhum médico salvo',
+        message: 'Toque no marcador na página de um médico para salvá-lo aqui.',
       );
     }
 

@@ -37,6 +37,33 @@ class ManageCompetitorsScreen extends ConsumerWidget {
           .read(catalogRepositoryProvider)
           .unlinkCompetitor(variantId, row.id);
       invalidateCatalog(ref, variantId: variantId);
+      if (!context.mounted) return;
+      // One tap took a brand out of the product's comparativo with nothing
+      // said and nothing to press. Re-linking is a round trip through the
+      // "adicionar" sheet, so offer the way back here instead.
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('${row.label} saiu do comparativo.'),
+            action: SnackBarAction(
+              label: 'Desfazer',
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(catalogRepositoryProvider)
+                      .linkCompetitor(variantId, row.id);
+                  invalidateCatalog(ref, variantId: variantId);
+                } catch (_) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Não foi possível desfazer.')),
+                  );
+                }
+              },
+            ),
+          ),
+        );
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

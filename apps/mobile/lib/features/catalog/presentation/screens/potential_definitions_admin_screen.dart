@@ -2,7 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/subscreen_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -130,17 +130,22 @@ class _PotentialDefinitionsAdminScreenState
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remover campo?'),
-        content: Text(
-          'Soft-delete de “${def.label}”. Valores e links ficam, campo some das listas.',
+        title: Text('Remover “${def.label}”?'),
+        // Was "Soft-delete de X. Valores e links ficam, campo some das
+        // listas." — a database term and a schema note, shown to whoever
+        // administers the catalogue.
+        content: const Text(
+          'O campo deixa de aparecer nas listas e nos formulários. O que já '
+          'foi preenchido nele continua guardado.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Remover'),
           ),
         ],
@@ -176,7 +181,7 @@ class _PotentialDefinitionsAdminScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Potencial'),
+      appBar: const SubscreenAppBar(title: 'Campos de potencial'),
       floatingActionButton: _verticalId == null
           ? null
           : FloatingActionButton.extended(

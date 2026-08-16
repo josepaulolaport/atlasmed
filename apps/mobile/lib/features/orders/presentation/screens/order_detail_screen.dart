@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// One order, built only from columns that exist.
@@ -42,6 +43,10 @@ class OrderDetailScreen extends ConsumerWidget {
               onRefresh: () async =>
                   ref.invalidate(orderDetailProvider(orderId)),
               child: ListView(
+                // A short order does not fill the screen, and a list that
+                // cannot be over-scrolled never hands the gesture to the
+                // indicator — pull-to-refresh did nothing on most orders.
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
                   _Header(detail: detail),
@@ -69,11 +74,15 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The same shell as the cards under it. It was a white strip with a
+    // bottom border floating inside a padded list, which read as a piece of
+    // a chrome bar that had come loose.
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(12, 12, 14, 14),
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -165,7 +174,11 @@ class _SummaryCard extends StatelessWidget {
         children: [
           const _CardTitle('Pedido'),
           const SizedBox(height: 12),
-          _DetailRow(label: 'Clínica', value: detail.clinic),
+          _DetailRow(
+            label: 'Clínica',
+            value: detail.clinic,
+            onTap: () => ClinicDetailRoute(id: detail.facilityId).push(context),
+          ),
           _DetailRow(label: 'Tipo', value: orderTypeLabel(detail.type)),
           if (detail.seller != null)
             _DetailRow(label: 'Vendedor', value: detail.seller!),
@@ -200,14 +213,34 @@ class _ItemsCard extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
           ...detail.items.map((item) => _ItemRow(item: item)),
-          const SizedBox(height: 6),
-          const Divider(height: 18, color: AppColors.surfaceSecondary),
-          _TotalRow(label: 'Subtotal', value: detail.itemsTotal),
-          const SizedBox(height: 6),
-          // No freight line. It is 1.00 on every imported order — a placeholder,
-          // not a shipping cost — so a "Frete R$ 1,00" row would read as a fact.
-          // It stays inside this total, which is what reconciles with Emultec.
-          _TotalRow(label: 'Total', value: detail.total, bold: true),
+          const SizedBox(height: 4),
+          // The sums sit on their own ground rather than running straight on
+          // from the lines with a hairline between them.
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceTertiary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _TotalRow(label: 'Subtotal', value: detail.itemsTotal),
+                // Shown whenever it moves the total. It is 1.00 on every
+                // imported order — a placeholder rather than a real shipping
+                // cost — but leaving it out is worse than naming it: the
+                // screen read "Subtotal 5300 / Total 5301", arithmetic a rep
+                // cannot check.
+                if (detail.freight != 0) ...[
+                  const SizedBox(height: 6),
+                  _TotalRow(label: 'Frete', value: detail.freight),
+                ],
+                const SizedBox(height: 8),
+                const Divider(height: 1, color: AppColors.gray200),
+                const SizedBox(height: 8),
+                _TotalRow(label: 'Total', value: detail.total, bold: true),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -242,6 +275,9 @@ class _ItemRow extends StatelessWidget {
                   item.name ?? 'Produto não identificado',
                   style: const TextStyle(
                     fontSize: 13,
+                    // The catalogue stores these in capitals, so most run to
+                    // three lines and need the room to breathe.
+                    height: 1.3,
                     fontWeight: FontWeight.w600,
                     color: AppColors.gray900,
                   ),
@@ -332,41 +368,59 @@ class _CardTitle extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
 
+  /// When the value names something with a screen of its own.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
+    final row = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 132,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.gray500,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: onTap == null ? AppColors.gray800 : AppColors.navyBright,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        if (onTap != null)
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: AppColors.gray400,
+          ),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 132,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: AppColors.gray500,
-                fontWeight: FontWeight.w500,
-              ),
+      child: onTap == null
+          ? row
+          : InkWell(
+              key: const Key('order-detail-clinic'),
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(8),
+              child: row,
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: AppColors.gray800,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

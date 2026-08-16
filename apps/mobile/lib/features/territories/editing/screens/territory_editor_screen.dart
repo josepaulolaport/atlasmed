@@ -25,6 +25,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/map/map_projection.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoryEditorScreen extends ConsumerStatefulWidget {
@@ -281,7 +282,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         _viewportApplied = true;
         mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
       },
-      onStyleLoadedListener: (_) => _configureMap(),
+      onStyleLoadedListener: (_) async {
+        await useFlatProjection(_mapboxMap);
+        await _configureMap();
+      },
       onMapLoadErrorListener: (_) => setState(() => _mapUnavailable = true),
       // ignore: deprecated_member_use
       onTapListener: _handleMapTap,
@@ -1402,6 +1406,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            // The irreversible half of the choice, painted like the safe half.
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Descartar'),
           ),
         ],
@@ -1428,6 +1434,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
             child: const Text('Excluir'),
           ),
         ],

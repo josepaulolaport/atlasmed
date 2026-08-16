@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -163,6 +164,32 @@ void main() {
 
     // "Associar" is the wrong promise for a save that only removes.
     expect(find.text('Remover (1)'), findsOneWidget);
+  });
+
+  testWidgets('a removal-only save is coloured as the destructive act it is', (
+    tester,
+  ) async {
+    final client = RecordingClient(handler);
+    await pumpSheet(tester, client: client, associated: [linked()]);
+
+    // Before: nothing staged, so the button is the ordinary primary action.
+    FilledButton button() =>
+        tester.widget<FilledButton>(find.byType(FilledButton));
+    Color? background(FilledButton widget) =>
+        widget.style?.backgroundColor?.resolve(const <WidgetState>{});
+
+    expect(background(button()), AppColors.navyBright);
+
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      background(button()),
+      AppColors.red,
+      reason:
+          'a button reading "Remover" in the primary navy says nothing '
+          'about which of associate/remove is about to happen',
+    );
   });
 
   testWidgets('saving ends the affiliation on the server', (tester) async {

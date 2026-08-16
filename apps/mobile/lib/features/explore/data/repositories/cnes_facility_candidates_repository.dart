@@ -17,6 +17,42 @@ class CnesFacilityImportException implements Exception {
   String toString() => message;
 }
 
+/// Where an address resolved to.
+class GeocodedPoint {
+  const GeocodedPoint({required this.latitude, required this.longitude});
+
+  final double latitude;
+  final double longitude;
+}
+
+/// What sits at a point, as the fields the form has rather than one line.
+class ReverseGeocodedAddress {
+  const ReverseGeocodedAddress({
+    this.fullAddress,
+    this.streetAddress,
+    this.streetNumber,
+    this.neighborhood,
+    this.postalCode,
+    this.city,
+    this.state,
+  });
+
+  final String? fullAddress;
+  final String? streetAddress;
+  final String? streetNumber;
+  final String? neighborhood;
+  final String? postalCode;
+  final String? city;
+  final String? state;
+
+  /// Nothing usable came back, so there is nothing to write over the form.
+  bool get isEmpty =>
+      streetAddress == null &&
+      streetNumber == null &&
+      neighborhood == null &&
+      postalCode == null;
+}
+
 /// One row of the CNES offer list.
 class CnesFacilityCandidate {
   const CnesFacilityCandidate({
@@ -257,6 +293,100 @@ class CnesFacilityCandidatesRepository extends Repository<void>
       if (candidate != null) out.add(candidate);
     }
     return out;
+  }
+
+  /// Where an address sits, or null when the provider cannot place it.
+  ///
+  /// Server-side so the wizard lands on the coordinates the backfill script
+  /// would have chosen — it does the CEP lookup and the candidate scoring that
+  /// a raw Mapbox call from here would skip.
+  Future<GeocodedPoint?> geocodeAddress({
+    String? streetAddress,
+    String? streetNumber,
+    String? neighborhood,
+    String? city,
+    String? state,
+    String? postalCode,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_base/facilities/geocode'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          if ((streetAddress ?? '').trim().isNotEmpty)
+            'streetAddress': streetAddress!.trim(),
+          if ((streetNumber ?? '').trim().isNotEmpty)
+            'streetNumber': streetNumber!.trim(),
+          if ((neighborhood ?? '').trim().isNotEmpty)
+            'neighborhood': neighborhood!.trim(),
+          if ((city ?? '').trim().isNotEmpty) 'city': city!.trim(),
+          if ((state ?? '').trim().isNotEmpty) 'state': state!.trim(),
+          if ((postalCode ?? '').trim().isNotEmpty)
+            'postalCode': postalCode!.trim(),
+        },
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      throw CnesFacilityImportException(
+        _messageOf(response.body) ??
+            'Não foi possível localizar o endereço (${response.statusCode})',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final point = decoded['point'];
+    if (point is! Map<String, dynamic>) return null;
+    final lat = (point['lat'] as num?)?.toDouble();
+    final lng = (point['lng'] as num?)?.toDouble();
+    if (lat == null || lng == null) return null;
+    return GeocodedPoint(latitude: lat, longitude: lng);
+  }
+
+  /// The address a dropped pin sits at. Spec 0009 decision 4: an address and a
+  /// pin are two views of one fact, so moving the pin re-derives the address.
+  Future<ReverseGeocodedAddress?> reverseGeocode({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_base/facilities/reverse-geocode'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'lat': latitude, 'lng': longitude},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      throw CnesFacilityImportException(
+        _messageOf(response.body) ??
+            'Não foi possível descrever este ponto (${response.statusCode})',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final parts = decoded['parts'];
+    return ReverseGeocodedAddress(
+      fullAddress: decoded['fullAddress'] as String?,
+      streetAddress: _stringOrNull(parts, 'streetAddress'),
+      streetNumber: _stringOrNull(parts, 'streetNumber'),
+      neighborhood: _stringOrNull(parts, 'neighborhood'),
+      postalCode: _stringOrNull(parts, 'postalCode'),
+      city: _stringOrNull(parts, 'city'),
+      state: _stringOrNull(parts, 'state'),
+    );
+  }
+
+  static String? _stringOrNull(Object? parts, String key) {
+    if (parts is! Map<String, dynamic>) return null;
+    final value = parts[key];
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<CnesFacilityPreview> preview(String cnesCode) async {

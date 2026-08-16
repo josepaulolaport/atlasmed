@@ -13,6 +13,9 @@ class GlassInput extends StatefulWidget {
   final bool enabled;
   final FocusNode? focusNode;
 
+  /// Lets the platform's password manager offer to fill this field.
+  final List<String>? autofillHints;
+
   const GlassInput({
     super.key,
     required this.label,
@@ -25,6 +28,7 @@ class GlassInput extends StatefulWidget {
     this.error = false,
     this.enabled = true,
     this.focusNode,
+    this.autofillHints,
   });
 
   @override
@@ -107,6 +111,7 @@ class _GlassInputState extends State<GlassInput> {
         obscureText: _obscured,
         keyboardType: widget.keyboardType,
         textInputAction: widget.textInputAction,
+        autofillHints: widget.autofillHints,
         cursorColor: Colors.white,
         style: const TextStyle(
           fontSize: 15,
