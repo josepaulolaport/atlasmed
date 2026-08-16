@@ -7,7 +7,6 @@ import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/config/app_version_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -16,7 +15,6 @@ import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
-import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -94,8 +92,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final sessionProfile = ref.watch(sessionProfileProvider);
     final currentUser = ref.watch(currentUserProvider);
     final profileAsync = ref.watch(profileProvider);
-    final territoryAsync = ref.watch(territoryStatsProvider);
-    final summaryAsync = ref.watch(quickSummaryProvider);
     final prefsAsync = ref.watch(preferencesProvider);
     ref.listen<AsyncValue<void>>(avatarControllerProvider, (_, next) {
       if (next.hasError) _showAvatarError(next.error.toString());
@@ -155,21 +151,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Território
-                        territoryAsync.when(
-                          loading: () => _buildSectionSkeleton(height: 260),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (stats) => _buildTerritory(stats),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Resumo rápido
-                        summaryAsync.when(
-                          loading: () => _buildSummarySkeleton(),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildQuickSummary(items),
-                        ),
-                        const SizedBox(height: 20),
+                        // Território and Resumo rápido used to sit here. Both
+                        // said what Desempenho says, less well and from a
+                        // second query — which is how the two came to disagree
+                        // about the same book, 184 médicos against 214. A
+                        // profile is for who you are and what you can change,
+                        // not for a second opinion on your numbers.
 
                         // Preferências
                         prefsAsync.when(
@@ -355,200 +342,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Território ──────────────────────────────────────────────
-  Widget _buildTerritory(TerritoryStats stats) {
-    final assignmentsAsync = ref.watch(profileAssignmentsProvider);
-    final managers = assignmentsAsync.valueOrNull?.managers ?? const [];
-    final territories = assignmentsAsync.valueOrNull?.territories ?? const [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(
-          title: 'Território',
-          action: 'Abrir mapa',
-          onAction: () => const MapRoute().go(context),
-        ),
-        const SizedBox(height: 8),
-        if (managers.isNotEmpty) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.surfaceSecondary),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  managers.length > 1 ? 'Gerentes' : 'Gerente',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...managers.map(
-                  (manager) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.person_outline_rounded,
-                          size: 18,
-                          color: AppColors.navyDeep,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            manager.displayName,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.gray900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.surfaceSecondary),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              // The territory's own name, where a hand-painted map used to be.
-              //
-              // That drawing was invented: a polygon of no particular place,
-              // eight clinic pins at fixed fractions of the box, and a green
-              // dot for the rep that never moved. It sat under the heading
-              // "Território" looking exactly like a small view of theirs. The
-              // real map is one tap away and has been all along, in this
-              // section's own "Abrir mapa".
-              if (territories.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.public_outlined,
-                        size: 16,
-                        color: AppColors.navyDeep,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          territories
-                              .map((t) => t.territoryName)
-                              .join(' · '),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.gray900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              // Stats row
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-                child: Row(
-                  children: [
-                    _StatCell(value: '${stats.clinics}', label: 'clínicas'),
-                    Container(width: 1, height: 28, color: AppColors.gray100),
-                    _StatCell(value: '${stats.doctors}', label: 'médicos'),
-                    Container(width: 1, height: 28, color: AppColors.gray100),
-                    _StatCell(
-                      value: '${stats.coveragePct}%',
-                      label: 'cobertura',
-                      highlight: true,
-                    ),
-                  ],
-                ),
-              ),
-              // Coverage text + bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 10, 6, 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.gray700,
-                            ),
-                            children: [
-                              const TextSpan(text: 'Você cobriu '),
-                              TextSpan(
-                                text: '${stats.coveragePct}%',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.green,
-                                ),
-                              ),
-                              const TextSpan(text: ' da sua região'),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          stats.coverageWeek,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: AppColors.gray400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: FractionallySizedBox(
-                        widthFactor: stats.coveragePct / 100,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.green, AppColors.green600],
-                            ),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Conta ───────────────────────────────────────────────────
   /// Who the account says you are, and the one part of it you may change.
   ///
@@ -649,119 +442,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
-  }
-
-  // ── Resumo rápido ──────────────────────────────────────────
-  Widget _buildQuickSummary(List<QuickSummaryItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Resumo rápido'),
-        const SizedBox(height: 8),
-        Row(
-          children: items
-              .map(
-                (item) => Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: items.last == item ? 0 : 8),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: AppColors.surfaceSecondary),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.value,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: Color(item.color),
-                            letterSpacing: -0.5,
-                            height: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          item.label,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.gray800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.sub,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: AppColors.gray400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummarySkeleton() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Resumo rápido'),
-        const SizedBox(height: 8),
-        AtlasShimmer(
-          child: Row(
-            children: List.generate(
-              3,
-              (i) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: AppColors.surfaceSecondary),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          width: 50,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   // ── Preferências ────────────────────────────────────────────
@@ -1268,89 +948,22 @@ class _ProfileChevron extends StatelessWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final String? action;
-  final VoidCallback? onAction;
-  const _SectionHeader({required this.title, this.action, this.onAction});
+  const _SectionHeader({required this.title});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: AppColors.gray700,
-            ),
-          ),
-          if (action != null)
-            InkWell(
-              onTap: onAction,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    action!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.navyDeep,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 14,
-                    color: AppColors.navyDeep,
-                  ),
-                ],
-              ),
-            ),
-        ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 2),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: AppColors.gray700,
       ),
-    );
-  }
+    ),
+  );
 }
-
-class _StatCell extends StatelessWidget {
-  final String value;
-  final String label;
-  final bool highlight;
-  const _StatCell({
-    required this.value,
-    required this.label,
-    this.highlight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: highlight ? AppColors.green : AppColors.gray800,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10.5, color: AppColors.gray400),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Territory map preview ────────────────────────────────────
 
 /// One fact about the account. Tappable only when it can actually be changed.
 class _AccountRow extends StatelessWidget {
