@@ -506,13 +506,45 @@ a number is never local when other things are derived from it.
    Still open on this one: **what the rep types about how it went.** The two
    structured questions work as they are, and the free-text description §15.7.5
    calls for has nowhere to live yet — `person_notes` exists and is unused.
-2. **The relationship-activity merit component** (§15.7.5) — a bonus, never a
+2. **A miss carries a reason** (§15.7.7) — one tap, skippable, the §15.5.2
+   vocabulary, stored on the interaction and read by the engine. **Decided, not
+   built.**
+3. **Running late, surfaced while it can still be acted on** (§15.7.7) — how
+   late, how many stops behind, one press to push the rest of the day. **Decided,
+   not built.**
+4. **The relationship-activity merit component** (§15.7.5) — a bonus, never a
    veto: no cooldown from a doctor contact, a small decaying lift on that
    doctor's clinics, weighted by the outcome.
-3. **One clinic for one slot** (§15.7.4) — the same `gain` against a single gap,
+5. **One clinic for one slot** (§15.7.4) — the same `gain` against a single gap,
    replacing a name search that ranks by nothing.
-4. **Second-precision placement** (§15.7.6) — measured at +16 min/day for
+6. **Second-precision placement** (§15.7.6) — measured at +16 min/day for
    ceiling-to-5. Still the user's call.
+
+### 11. The day that does not go to plan (2026-08-16, last)
+
+Design in §15.7.7. What landed:
+
+- **`missedAfter`**, one rule in one place, replacing three copies that each
+  derived "missed" from the visit's own window — the read model, the server's
+  guard, and a sweep that ran every minute. A visit is missed once *that rep's*
+  working day is over. Verified against Postgres: interaction 31, reading
+  `NOT_COMPLETED`, started cleanly at 22:48Z — the exact 409 from the user's
+  screenshot, now accepted.
+- **A missed visit reopens** on start, so a late arrival is measured rather than
+  corrected.
+- **An arrival attaches** to the visit already booked at that clinic today,
+  instead of minting a second row beside a plan left to rot.
+- The **Desempenho card** shows the whole day sideways — start left, finish
+  right, the running stop tinted with "em andamento", finished ones kept. It
+  used to drop a visit the moment it was closed, which is what "why did it
+  disappear?" was about.
+- **A 404 no longer jams the capture queue**: every unmapped status became
+  `CalendarNetworkException`, the one class the queue reads as "keep and stop",
+  so one dead entry froze every press behind it.
+
+Not driven on the device yet: the doctor-by-clinic filter, in-person with no
+clinic, the late start, and the arrival attach. The simulator still runs the
+build from before those landed.
 
 ---
 

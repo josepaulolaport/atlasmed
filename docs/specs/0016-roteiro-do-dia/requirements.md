@@ -2183,6 +2183,60 @@ If it is taken: ceil to five minutes, but test feasibility with the exact time
 and keep the exact seconds whenever the rounded placement no longer fits.
 **Not decided.**
 
+### 15.7.7 A day that does not go to plan
+
+Prompted by one screenshot: *"Interaction cannot transition from NOT_COMPLETED
+to IN_PROGRESS"*, on a rep pressing **Cheguei** at a clinic they were standing
+in. Behind it sat a rule that made the most ordinary thing that happens to a day
+produce the worst record the system can hold.
+
+**What the machine did.** A planned visit became `NOT_COMPLETED` the instant its
+window closed — derived that way on read, and written that way by a sweep that
+ran **every minute** — while `start` demanded `SCHEDULED`. So:
+
+| what happened | what was recorded |
+|---|---|
+| rep arrives 20 minutes late | nothing. `start` refused; the only route was a correction — a typed justification and an `INFERRED` duration for a visit that was perfectly measurable |
+| visit 2 overruns by 90 minutes | visits 3, 4 and 5 each become missed at their own window ends, while the rep is still working. One overrun converts the rest of the day |
+| rep presses Cheguei from the clinic's page | a **second** interaction, measured, beside the planned one rotting to missed. One hour in one building, counted twice and missed once |
+| rep genuinely skips a clinic | a bare status. No reason, so §15.5.2 learns nothing and the engine proposes it again tomorrow at the same merit |
+
+The through-line: **the plan's end time was being treated as a fact about the
+world.** It is a guess about a day that has not happened yet.
+
+**`missedAfter` — one rule, one place.** A planned visit stops being startable
+at the later of its own window and the end of *that rep's* working day (§15.5.5;
+linha default 18:00). Three places computed this before — the read model the app
+draws from, the guard the server enforces, and the sweep that writes the status
+— and any two of them disagreeing surfaces as the app offering a press the
+server refuses. That is what the screenshot was.
+
+**A missed visit reopens.** `NOT_COMPLETED → IN_PROGRESS` is allowed outright.
+The rep is in the clinic; that is a fact, and a system that refuses to record it
+because its own clock has moved on is precisely the one §15.6.5 warns about. The
+visit is then measured like any other, which is the entire point.
+
+Correction keeps the job it should have had all along: recording a visit **after
+the day is over**, where a justification genuinely belongs.
+
+**An arrival attaches to the plan.** `recordArrival` looks for a visit this rep
+has booked at this clinic on this local day and has not started, and starts
+that one. Only `SCHEDULED` or `NOT_COMPLETED` qualify — a rep who walks back
+into the same clinic in the afternoon means the second visit, not a correction
+to the first.
+
+**Still to build, decided 2026-08-16:**
+
+- **A miss carries a reason** — offered in one tap and skippable, using the
+  rejection vocabulary of §15.5.2. Required would be worse: a rep in a hurry
+  simply presses nothing, and then the sweep marks it missed with no reason
+  anyway. "Não fui" is evidence; its absence is not.
+- **Running late is surfaced while it can still be acted on** — while a stop
+  runs past the next one's start, the day says how late it is and how many stops
+  sit behind it, with one press to shift the rest of the day. Warn-and-offer
+  rather than shift-automatically: a booked visit is a promise to somebody else,
+  so moving it is the rep's call.
+
 ---
 
 ## 16. Deferred
