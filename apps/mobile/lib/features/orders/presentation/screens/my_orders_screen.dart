@@ -75,6 +75,13 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
+  /// Tapping the card for the filter already applied clears it, so the strip
+  /// is a way back to everything and not a one-way trip.
+  void _selectFilterByLabel(String label) {
+    final target = label == selectedFilter ? 'Todos' : label;
+    _selectFilter(_filters.firstWhere((filter) => filter.label == target));
+  }
+
   Future<void> _pickClinic(OrderFacilityFilter? current) async {
     final chosen = await showOrderClinicFilterSheet(context, current: current);
     if (chosen == null || !mounted) return;
@@ -112,7 +119,11 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _SummaryStrip(counts: listState?.statusCounts ?? const {}),
+                    _SummaryStrip(
+                      counts: listState?.statusCounts ?? const {},
+                      selectedFilter: selectedFilter,
+                      onSelect: _selectFilterByLabel,
+                    ),
                     const SizedBox(height: 18),
                     _ClinicFilterRow(
                       facility: listState?.facility,
@@ -169,11 +180,16 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                   ),
                 ],
                 data: (state) => state.orders.isEmpty
-                    ? const [
+                    ? [
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: _EmptyState(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _EmptyState(
+                              facility: state.facility,
+                              statusLabel: selectedFilter == 'Todos'
+                                  ? null
+                                  : selectedFilter,
+                            ),
                           ),
                         ),
                       ]
@@ -350,10 +366,20 @@ class _ListFooter extends StatelessWidget {
 /// These were counted from the loaded page, and mislabelled on top of it:
 /// APPROVED read "Em trânsito" and INVOICED read "Entregue", neither of which
 /// is what those statuses mean. Nothing in the system tracks a delivery.
+///
+/// Each card carries the same label as one of the chips below it, so tapping
+/// the number applies that chip. They were inert before, which made three
+/// button-shaped things on the busiest screen in the app do nothing.
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.counts});
+  const _SummaryStrip({
+    required this.counts,
+    required this.selectedFilter,
+    required this.onSelect,
+  });
 
   final Map<String, int> counts;
+  final String selectedFilter;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -365,6 +391,8 @@ class _SummaryStrip extends StatelessWidget {
             label: 'Faturados',
             count: counts['INVOICED'] ?? 0,
             color: AppColors.green,
+            selected: selectedFilter == 'Faturados',
+            onTap: () => onSelect('Faturados'),
           ),
         ),
         const SizedBox(width: 10),
@@ -373,6 +401,8 @@ class _SummaryStrip extends StatelessWidget {
             label: 'Sem faturamento',
             count: counts['NO_BILLING'] ?? 0,
             color: AppColors.navyDeep,
+            selected: selectedFilter == 'Sem faturamento',
+            onTap: () => onSelect('Sem faturamento'),
           ),
         ),
         const SizedBox(width: 10),
@@ -381,6 +411,8 @@ class _SummaryStrip extends StatelessWidget {
             label: 'Pendentes',
             count: pending,
             color: AppColors.amber,
+            selected: selectedFilter == 'Pendentes',
+            onTap: () => onSelect('Pendentes'),
           ),
         ),
       ],
@@ -392,43 +424,58 @@ class _SummaryCard extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _SummaryCard({
     required this.label,
     required this.count,
     required this.color,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        key: Key('orders-summary-$label'),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: color,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? color : AppColors.surfaceSecondary,
+              width: selected ? 1.5 : 1,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.gray500,
-              fontWeight: FontWeight.w500,
-            ),
+          child: Column(
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.gray500,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -529,7 +576,9 @@ class _OrderCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '${order.items} itens · toque para detalhes',
+                  // "1 itens" before. The count is real data, so it agrees
+                  // with itself.
+                  '${order.items} ${order.items == 1 ? 'item' : 'itens'}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.gray400,
@@ -545,6 +594,14 @@ class _OrderCard extends StatelessWidget {
                     color: AppColors.navyDeep,
                   ),
                 ),
+                // A chevron rather than "toque para detalhes" printed on every
+                // card — the house signal for a row that opens.
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray400,
+                ),
               ],
             ),
           ],
@@ -554,8 +611,35 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
+/// Says why the list is empty.
+///
+/// It read "Nenhum pedido ainda / Os pedidos registrados aparecerão aqui"
+/// whatever was in effect, so a clinic with no rejected orders looked like a
+/// rep with no orders at all.
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({this.facility, this.statusLabel});
+
+  final OrderFacilityFilter? facility;
+
+  /// The chip in effect, or null when it is "Todos".
+  final String? statusLabel;
+
+  String get _title {
+    if (facility == null && statusLabel == null) return 'Nenhum pedido ainda';
+    return 'Nenhum pedido encontrado';
+  }
+
+  String get _subtitle {
+    final status = statusLabel?.toLowerCase();
+    if (facility != null && status != null) {
+      return 'Nenhum pedido "$status" para ${facility!.name}.';
+    }
+    if (facility != null) {
+      return 'Nenhum pedido registrado para ${facility!.name}.';
+    }
+    if (status != null) return 'Nenhum pedido "$status" no seu território.';
+    return 'Os pedidos registrados aparecerão aqui.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -580,9 +664,9 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nenhum pedido ainda',
-            style: TextStyle(
+          Text(
+            _title,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.gray800,
@@ -590,9 +674,9 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Os pedidos registrados aparecerão aqui.',
+            _subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
         ],
       ),

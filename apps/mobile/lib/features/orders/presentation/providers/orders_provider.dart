@@ -189,6 +189,7 @@ OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
   placedAt: _formatDate(order.orderedAt ?? order.createdAt),
   updatedAt: _formatDate(order.updatedAt),
   clinic: order.facility.name,
+  facilityId: order.facility.id,
   seller: order.seller?.name,
   status: _orderStatusFromApi(order.status),
   type: order.type,
@@ -215,9 +216,11 @@ OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
       )
       .toList(growable: false),
   itemsTotal: order.itemsTotal,
-  // Freight is deliberately not surfaced: it is 1.00 on every imported order,
-  // a placeholder rather than a shipping cost. It stays inside `total`, which
-  // is what the API computes and what reconciles against Emultec.
+  // Carried through rather than dropped. It is 1.00 on every imported order —
+  // a placeholder, not a real shipping cost — but it is inside `total`, and
+  // hiding it put a Subtotal and a Total on screen that differed by an amount
+  // the screen never accounted for.
+  freight: order.freight,
   total: order.total,
 );
 
