@@ -304,6 +304,8 @@ class CalendarInteractionContext extends Equatable {
     this.agentUserId,
     this.modality,
     this.version = 0,
+    this.actualStartedAt,
+    this.actualEndedAt,
   });
 
   final int id;
@@ -311,6 +313,11 @@ class CalendarInteractionContext extends Equatable {
   final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
+
+  /// What the visit *was*, against a plan that stays what it was meant to be
+  /// (§15.6.3). Both null until the rep starts; the end arrives on close.
+  final DateTime? actualStartedAt;
+  final DateTime? actualEndedAt;
 
   /// Needed to start or finish this visit without opening it first — the
   /// lifecycle calls take an `expectedVersion`. The API has always sent it on
@@ -327,6 +334,8 @@ class CalendarInteractionContext extends Equatable {
             : _enumFromApi(CalendarModality.values, json['modality']),
         status: _enumFromApi(InteractionStatus.values, json['status']),
         version: (json['version'] as num?)?.toInt() ?? 0,
+        actualStartedAt: _parseUtcOrNull(json['actualStartedAt']),
+        actualEndedAt: _parseUtcOrNull(json['actualEndedAt']),
       );
 
   @override
@@ -337,6 +346,8 @@ class CalendarInteractionContext extends Equatable {
     modality,
     status,
     version,
+    actualStartedAt,
+    actualEndedAt,
   ];
 }
 
@@ -938,6 +949,9 @@ String formatAgendaDay(DateTime date) {
 
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
+
+DateTime? _parseUtcOrNull(Object? value) =>
+    value is String ? DateTime.parse(value).toUtc() : null;
 
 String _formatTime(DateTime value) =>
     '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';

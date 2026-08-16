@@ -32,6 +32,46 @@ CalendarOccurrence _occurrence({
   );
 }
 
+/// The same block, carrying what the interaction turned out to be.
+///
+/// Deliberately reuses `_occurrence`'s id, so two visits planned for the same
+/// hour compare equal — which is how the lane layout used to lose one.
+CalendarOccurrence _measured({
+  required int startHour,
+  required int endHour,
+  InteractionStatus status = InteractionStatus.completed,
+  DateTime? from,
+  DateTime? to,
+}) {
+  final plan = _occurrence(startHour: startHour, endHour: endHour);
+  return CalendarOccurrence(
+    calendarId: plan.calendarId,
+    occurrenceId: plan.occurrenceId,
+    recurrenceKey: plan.recurrenceKey,
+    kind: plan.kind,
+    title: plan.title,
+    owner: plan.owner,
+    facility: plan.facility,
+    modality: plan.modality,
+    startsAt: plan.startsAt,
+    endsAt: plan.endsAt,
+    localDate: plan.localDate,
+    localStartsAt: plan.localStartsAt,
+    localEndsAt: plan.localEndsAt,
+    recurrence: plan.recurrence,
+    interaction: CalendarInteractionContext(
+      id: 1,
+      status: status,
+      actualStartedAt: from,
+      actualEndedAt: to,
+    ),
+    canMutate: plan.canMutate,
+    timeZone: plan.timeZone,
+    durationMinutes: plan.durationMinutes,
+    version: plan.version,
+  );
+}
+
 void main() {
   group('snapping', () {
     test('rounds to the nearest slot rather than flooring', () {
@@ -233,6 +273,138 @@ void main() {
       ]);
 
       expect(lanes, hasLength(3));
+    });
+  });
+
+  group('drawnExtent', () {
+    test('a scheduled visit is drawn at the length it was planned', () {
+      final extent = drawnExtent(_occurrence(startHour: 9, endHour: 10));
+
+      expect(extent.startsAt, DateTime(2026, 8, 14, 9));
+      expect(extent.endsAt, DateTime(2026, 8, 14, 10));
+    });
+
+    test('a completed visit is drawn where and when it happened', () {
+      // The arrival booked an hour at 09:00 because the calendar needs some
+      // length; the rep was there 09:40 to 10:35.
+      final extent = drawnExtent(
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          from: DateTime(2026, 8, 14, 9, 40),
+          to: DateTime(2026, 8, 14, 10, 35),
+        ),
+      );
+
+      expect(extent.startsAt, DateTime(2026, 8, 14, 9, 40));
+      expect(extent.endsAt, DateTime(2026, 8, 14, 10, 35));
+    });
+
+    test('a visit shorter than a slot is still drawn one slot tall', () {
+      // Three minutes is three pixels: invisible, and impossible to tap to
+      // record the outcome of.
+      final extent = drawnExtent(
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          from: DateTime(2026, 8, 14, 9, 2),
+          to: DateTime(2026, 8, 14, 9, 5),
+        ),
+      );
+
+      expect(
+        extent.endsAt.difference(extent.startsAt).inMinutes,
+        kMinDrawnMinutes,
+      );
+      expect(extent.startsAt, DateTime(2026, 8, 14, 9, 2));
+    });
+
+    test('a completed visit with no measured start keeps the plan', () {
+      // Nothing was measured, so there is nothing else to draw.
+      final extent = drawnExtent(
+        _measured(startHour: 9, endHour: 10, to: DateTime(2026, 8, 14, 9, 30)),
+      );
+
+      expect(extent.startsAt, DateTime(2026, 8, 14, 9));
+      expect(extent.endsAt, DateTime(2026, 8, 14, 10));
+    });
+
+    test('a visit in progress keeps the plan', () {
+      // It has a start but no end; drawing it down to the current minute would
+      // make the block twitch every rebuild.
+      final extent = drawnExtent(
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          status: InteractionStatus.inProgress,
+          from: DateTime(2026, 8, 14, 9, 40),
+        ),
+      );
+
+      expect(extent.endsAt, DateTime(2026, 8, 14, 10));
+    });
+  });
+
+  group('overlap after the fact', () {
+    test('two short visits inside overlapping plans keep the full width', () {
+      // The defect this whole change exists for: two arrivals five minutes
+      // apart each booked an hour, so the grid split the width and reported a
+      // double-booking that lasted four minutes in total.
+      final lanes = layOutOverlaps([
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          from: DateTime(2026, 8, 14, 9),
+          to: DateTime(2026, 8, 14, 9, 4),
+        ),
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          from: DateTime(2026, 8, 14, 9, 40),
+          to: DateTime(2026, 8, 14, 9, 44),
+        ),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 1), isTrue);
+    });
+
+    test('a clash is still a clash when both visits really ran long', () {
+      final lanes = layOutOverlaps([
+        _measured(
+          startHour: 9,
+          endHour: 10,
+          from: DateTime(2026, 8, 14, 9),
+          to: DateTime(2026, 8, 14, 10, 30),
+        ),
+        _measured(
+          startHour: 10,
+          endHour: 11,
+          from: DateTime(2026, 8, 14, 10),
+          to: DateTime(2026, 8, 14, 11),
+        ),
+      ]);
+
+      expect(lanes.every((lane) => lane.columns == 2), isTrue);
+    });
+
+    test('a draft still clashes with the hour a short visit holds', () {
+      // The calendar block did not shrink, and the server refuses a create
+      // that lands inside it. Warning late is worse than warning about a
+      // block the rep can no longer see.
+      final clashes = draftClashes(
+        const DayGridDraft(startMinutes: 9 * 60, endMinutes: 10 * 60),
+        _day,
+        [
+          _measured(
+            startHour: 9,
+            endHour: 10,
+            from: DateTime(2026, 8, 14, 9),
+            to: DateTime(2026, 8, 14, 9, 4),
+          ),
+        ],
+      );
+
+      expect(clashes, hasLength(1));
     });
   });
 

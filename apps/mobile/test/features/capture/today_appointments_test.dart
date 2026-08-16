@@ -24,12 +24,7 @@ CalendarOccurrence _visit({
   'version': 1,
   'canMutate': true,
   if (!personalBlock)
-    'interaction': {
-      'id': id,
-      'facilityId': 9,
-      'status': status,
-      'version': 3,
-    },
+    'interaction': {'id': id, 'facilityId': 9, 'status': status, 'version': 3},
 });
 
 void main() {

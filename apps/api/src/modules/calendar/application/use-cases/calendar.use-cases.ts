@@ -48,7 +48,15 @@ export interface CalendarOccurrenceDto {
   owner: { id: number; name: string };
   facility: { id: number; name: string } | null;
   canMutate: boolean;
-  interaction?: { id: number; facilityId: number; modality: InteractionModality; status: string; version: number };
+  /**
+   * `actualStartedAt`/`actualEndedAt` are what the visit *was*, against a
+   * `startsAt`/`endsAt` that stay what it was *planned* to be (§15.6.3). The day
+   * grid needs both: an arrival books a 60-minute placeholder, so without the
+   * measured pair three improvised five-minute visits draw as three overlapping
+   * hours and the rep's afternoon reads as full.
+   */
+  interaction?: { id: number; facilityId: number; modality: InteractionModality; status: string; version: number;
+    actualStartedAt: string | null; actualEndedAt: string | null };
 }
 
 const MAX_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
@@ -274,7 +282,9 @@ export class ListCalendarUseCase {
           canMutate: !managerView && event.ownerUserId === input.actor.userId,
           ...(occurrence.override ? { overrideVersion: occurrence.override.version } : {}),
           ...(interaction ? { interaction: { id: interaction.id, facilityId: interaction.facilityId, modality: interaction.modality,
-            status: effectiveInteractionStatus!, version: interaction.version } } : {}) });
+            status: effectiveInteractionStatus!, version: interaction.version,
+            actualStartedAt: interaction.actualStartedAt?.toISOString() ?? null,
+            actualEndedAt: interaction.actualEndedAt?.toISOString() ?? null } } : {}) });
         if (rows.length > MAX_RESULTS) throw new ValidationError([{ field: "range", message: `Calendar result exceeds ${MAX_RESULTS} occurrences` }]);
       }
     }

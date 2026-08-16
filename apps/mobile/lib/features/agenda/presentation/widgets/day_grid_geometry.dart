@@ -95,6 +95,11 @@ DayGridDraft resizeEnd(DayGridDraft draft, double dy) {
 /// only they can decide, but the API refuses a clash on save (which is why
 /// `DaySchedulePicker` marks busy slots at all), so finding out at the moment
 /// of the drag is the difference between a choice and a rejection.
+///
+/// Read against the *plan*, not the drawn span: a visit that took four minutes
+/// still holds its hour in the calendar, and the server will refuse a create
+/// that lands inside it. Warning about a block the rep can no longer see is
+/// confusing; being refused on save without warning is worse.
 List<CalendarOccurrence> draftClashes(
   DayGridDraft draft,
   DateTime day,
@@ -107,6 +112,45 @@ List<CalendarOccurrence> draftClashes(
     final occurrenceEnd = occurrence.endsAt.toLocal();
     return start.isBefore(occurrenceEnd) && occurrenceStart.isBefore(end);
   }).toList();
+}
+
+/// Shortest a block may be *drawn*, however short the visit actually was.
+///
+/// A three-minute visit is 3px tall: unreadable, untappable, and invisible next
+/// to the hour lines. One slot, so the floor lands on the grid's own
+/// granularity and the height the layout reserves is the height that gets
+/// painted. Applied to the drawing only — the label inside still reads the real
+/// times, and nothing stored moves.
+const kMinDrawnMinutes = kSlotMinutes;
+
+/// The span a block occupies on the grid: what happened, or what was planned.
+///
+/// A `COMPLETED` visit is drawn at its measured length. Everything else keeps
+/// the plan, which is all that is known about it. The two are deliberately
+/// different numbers on the same row — the plan stays the plan (§15.6.3), and
+/// the gap between them is what P5 measures — so this converts one to the other
+/// at paint time rather than rewriting either.
+///
+/// It matters most where no plan was ever made: an arrival books a 60-minute
+/// placeholder because the calendar needs *some* length, so three improvised
+/// five-minute visits used to draw as three overlapping hours and an afternoon
+/// with six hours free read as full.
+({DateTime startsAt, DateTime endsAt}) drawnExtent(
+  CalendarOccurrence occurrence,
+) {
+  final plan = (startsAt: occurrence.startsAt, endsAt: occurrence.endsAt);
+  final interaction = occurrence.interaction;
+  if (interaction == null ||
+      interaction.status != InteractionStatus.completed) {
+    return plan;
+  }
+  final start = interaction.actualStartedAt;
+  final end = interaction.actualEndedAt;
+  // A close without a start is a visit the auto-closer never had an opening
+  // instant for; there is nothing measured to draw.
+  if (start == null || end == null || !end.isAfter(start)) return plan;
+  final floor = start.add(const Duration(minutes: kMinDrawnMinutes));
+  return (startsAt: start, endsAt: end.isAfter(floor) ? end : floor);
 }
 
 /// Where one event sits when the day double-books.
@@ -133,20 +177,29 @@ class DayGridLane {
 /// is shared. A cluster rather than a pairwise check because three appointments
 /// can chain — A overlaps B, B overlaps C, A and C do not — and splitting the
 /// width only between the pair that touches would still stack A and C.
+///
+/// It clusters on the span each block is *drawn* at, not the one it was planned
+/// at: two visits an hour apart on paper that each took four minutes do not
+/// overlap on the grid, and halving their width would say they did.
 List<DayGridLane> layOutOverlaps(List<CalendarOccurrence> occurrences) {
-  final ordered = [...occurrences]
-    ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+  // Paired up front rather than looked up by occurrence: two occurrences of the
+  // same series can compare equal, and a map keyed on them would lose one.
+  final ordered =
+      [
+        for (final item in occurrences)
+          (occurrence: item, extent: drawnExtent(item)),
+      ]..sort((a, b) => a.extent.startsAt.compareTo(b.extent.startsAt));
 
   final lanes = <DayGridLane>[];
   var index = 0;
   while (index < ordered.length) {
     // Extend the cluster while anything in it still runs past the next start.
-    var clusterEnd = ordered[index].endsAt;
+    var clusterEnd = ordered[index].extent.endsAt;
     var last = index + 1;
     while (last < ordered.length &&
-        ordered[last].startsAt.isBefore(clusterEnd)) {
-      if (ordered[last].endsAt.isAfter(clusterEnd)) {
-        clusterEnd = ordered[last].endsAt;
+        ordered[last].extent.startsAt.isBefore(clusterEnd)) {
+      if (ordered[last].extent.endsAt.isAfter(clusterEnd)) {
+        clusterEnd = ordered[last].extent.endsAt;
       }
       last += 1;
     }
@@ -157,15 +210,15 @@ List<DayGridLane> layOutOverlaps(List<CalendarOccurrence> occurrences) {
     // not three, or a busy morning shrinks to unreadable slivers.
     final columnEnds = <DateTime>[];
     final assigned = <int>[];
-    for (final occurrence in cluster) {
+    for (final item in cluster) {
       var column = columnEnds.indexWhere(
-        (end) => !end.isAfter(occurrence.startsAt),
+        (end) => !end.isAfter(item.extent.startsAt),
       );
       if (column == -1) {
-        columnEnds.add(occurrence.endsAt);
+        columnEnds.add(item.extent.endsAt);
         column = columnEnds.length - 1;
       } else {
-        columnEnds[column] = occurrence.endsAt;
+        columnEnds[column] = item.extent.endsAt;
       }
       assigned.add(column);
     }
@@ -173,7 +226,7 @@ List<DayGridLane> layOutOverlaps(List<CalendarOccurrence> occurrences) {
     for (var i = 0; i < cluster.length; i += 1) {
       lanes.add(
         DayGridLane(
-          occurrence: cluster[i],
+          occurrence: cluster[i].occurrence,
           column: assigned[i],
           columns: columnEnds.length,
         ),

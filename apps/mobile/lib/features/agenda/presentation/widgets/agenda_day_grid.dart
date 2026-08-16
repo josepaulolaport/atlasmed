@@ -138,6 +138,10 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         controller: _controller,
+        // Padding, not extra grid: a block at 23:30 ends flush with the last
+        // pixel of the day, so its lower edge and the handles that resize it sat
+        // against the end of the scroll with nothing to scroll into.
+        padding: const EdgeInsets.only(bottom: 32),
         child: SizedBox(
           height: _hourHeight * 24,
           child: Stack(
@@ -286,8 +290,12 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
 
   Widget _positioned(DayGridLane lane, BuildContext context, double width) {
     final occurrence = lane.occurrence;
-    final start = occurrence.startsAt.toLocal();
-    final end = occurrence.endsAt.toLocal();
+    // What happened, once it has; the plan until then. A completed visit drawn
+    // at its planned length turns an arrival's 60-minute placeholder into an
+    // hour the rep can see they do not have.
+    final extent = drawnExtent(occurrence);
+    final start = extent.startsAt.toLocal();
+    final end = extent.endsAt.toLocal();
     final top = (start.hour + start.minute / 60) * _hourHeight;
     final height = (end.difference(start).inMinutes / 60 * _hourHeight).clamp(
       28.0,
@@ -305,12 +313,35 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
       height: height,
       child: _EventBlock(
         occurrence: occurrence,
+        // The real times, not the floored ones the block is drawn at: the
+        // height is a legibility compromise, the label is the record.
+        timeLabel: _timeLabel(occurrence),
+        height: height,
         onTap: onOccurrenceTap == null
             ? null
             : () => onOccurrenceTap!(occurrence),
       ),
     );
   }
+
+  /// What the row says under the title. A finished visit reads the hours it
+  /// actually ran; anything else reads the hours it is booked for.
+  static String _timeLabel(CalendarOccurrence occurrence) {
+    final interaction = occurrence.interaction;
+    final start = interaction?.actualStartedAt;
+    final end = interaction?.actualEndedAt;
+    if (interaction?.status != InteractionStatus.completed ||
+        start == null ||
+        end == null ||
+        !end.isAfter(start)) {
+      return '${occurrence.localStartsAt}–${occurrence.localEndsAt}';
+    }
+    return '${_clock(start.toLocal())}–${_clock(end.toLocal())}';
+  }
+
+  static String _clock(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}';
 
   Widget _nowLine(DateTime current) {
     final top = (current.hour + current.minute / 60) * _hourHeight;
@@ -372,10 +403,34 @@ class _HourLine extends StatelessWidget {
 }
 
 class _EventBlock extends StatelessWidget {
-  const _EventBlock({required this.occurrence, this.onTap});
+  const _EventBlock({
+    required this.occurrence,
+    required this.timeLabel,
+    required this.height,
+    this.onTap,
+  });
 
   final CalendarOccurrence occurrence;
+  final String timeLabel;
+
+  /// How tall the block is allowed to be. A half-hour block cannot hold two
+  /// stacked lines, and a measured visit is often exactly that tall.
+  final double height;
   final VoidCallback? onTap;
+
+  /// Below this, the title and the times share one line instead of stacking.
+  static const _twoLineFloor = 44.0;
+
+  static TextStyle _titleStyle(bool isBlock) => TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: isBlock ? AppColors.gray700 : AppColors.navyDeep,
+  );
+
+  static const _timeStyle = TextStyle(
+    fontSize: 10,
+    color: AppColors.gray500,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -395,27 +450,40 @@ class _EventBlock extends StatelessWidget {
             border: Border(left: BorderSide(color: color, width: 3)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                occurrence.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isBlock ? AppColors.gray700 : AppColors.navyDeep,
+          child: height < _twoLineFloor
+              // One line, so a four-minute visit still says its name and its
+              // hours rather than overflowing its own half-hour box.
+              ? Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        occurrence.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _titleStyle(isBlock),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(timeLabel, maxLines: 1, style: _timeStyle),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      occurrence.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _titleStyle(isBlock),
+                    ),
+                    Text(
+                      timeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _timeStyle,
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                '${occurrence.localStartsAt}–${occurrence.localEndsAt}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: AppColors.gray500),
-              ),
-            ],
-          ),
         ),
       ),
     );
