@@ -13,6 +13,7 @@ import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart'
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/widgets/working_hours_sheet.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
@@ -20,6 +21,21 @@ import 'package:atlasmed_mobile_app/router/routes.dart';
 // ======================================================================
 // ProfileScreen — representative's personal overview
 // ======================================================================
+
+const _monthNames = [
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
+];
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -131,6 +147,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Conta
+                        profileAsync.when(
+                          loading: () => _buildSectionSkeleton(height: 190),
+                          error: (_, _) => const SizedBox.shrink(),
+                          data: _buildAccount,
+                        ),
+                        const SizedBox(height: 20),
+
                         // Território
                         territoryAsync.when(
                           loading: () => _buildSectionSkeleton(height: 260),
@@ -162,7 +186,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _buildLogoutButton(),
 
                         // Footer
-                        _buildFooter(sessionProfile.valueOrNull?.since ?? ''),
+                        _buildFooter(
+                          sessionProfile.valueOrNull?.memberSince ??
+                              profileAsync.valueOrNull?.memberSince,
+                        ),
                       ],
                     ),
                   ),
@@ -403,13 +430,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           child: Column(
             children: [
-              // Map preview
-              _TerritoryMapPreview(
-                height: 150,
-                label: territories.isEmpty
-                    ? null
-                    : territories.map((t) => t.territoryName).join(' · '),
-              ),
+              // The territory's own name, where a hand-painted map used to be.
+              //
+              // That drawing was invented: a polygon of no particular place,
+              // eight clinic pins at fixed fractions of the box, and a green
+              // dot for the rep that never moved. It sat under the heading
+              // "Território" looking exactly like a small view of theirs. The
+              // real map is one tap away and has been all along, in this
+              // section's own "Abrir mapa".
+              if (territories.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.public_outlined,
+                        size: 16,
+                        color: AppColors.navyDeep,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          territories
+                              .map((t) => t.territoryName)
+                              .join(' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               // Stats row
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
@@ -491,6 +547,108 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  // ── Conta ───────────────────────────────────────────────────
+  /// Who the account says you are, and the one part of it you may change.
+  ///
+  /// The screen showed a name, a role and a region and nothing else — the
+  /// e-mail and telephone were on the model the whole time and never drawn, so
+  /// a rep could not check the address a password reset would go to.
+  ///
+  /// Only the name is editable, because `PATCH /user` accepts only the name.
+  /// E-mail, telephone and username identify the account rather than describe
+  /// the person, and changing them is an administrator's job — the rows say so
+  /// rather than offering a tap that would fail.
+  Widget _buildAccount(UserProfile profile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Conta'),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.surfaceSecondary),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              _AccountRow(
+                key: const Key('profile-account-name'),
+                icon: Icons.badge_outlined,
+                label: 'Nome',
+                value: profile.displayName,
+                onTap: () => _editName(profile),
+              ),
+              _AccountRow(
+                icon: Icons.alternate_email_rounded,
+                label: 'E-mail',
+                value: profile.email,
+                showTopBorder: true,
+              ),
+              _AccountRow(
+                icon: Icons.phone_outlined,
+                label: 'Telefone',
+                value: profile.phone?.trim().isNotEmpty == true
+                    ? profile.phone!
+                    : 'Não informado',
+                muted: profile.phone?.trim().isNotEmpty != true,
+                showTopBorder: true,
+              ),
+              if (profile.username case final username?
+                  when username.isNotEmpty)
+                _AccountRow(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Usuário',
+                  value: username,
+                  showTopBorder: true,
+                ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 8, 4, 0),
+          child: Text(
+            'E-mail, telefone e usuário são alterados pelo administrador.',
+            style: TextStyle(fontSize: 11.5, color: AppColors.gray500),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editName(UserProfile profile) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = await showModalBottomSheet<({String first, String last})>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _NameSheet(
+        firstName: profile.firstName ?? '',
+        lastName: profile.lastName ?? '',
+      ),
+    );
+    if (saved == null) return;
+
+    try {
+      await ref
+          .read(userProvider)
+          .updateName(firstName: saved.first, lastName: saved.last);
+      if (!mounted) return;
+      // Everything that reads a name hangs off the user, so the whole screen —
+      // header, initials, drawer — follows from this one invalidation.
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(profileProvider);
+      ref.invalidate(sessionProfileProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Nome atualizado.')));
+    } on UserUpdateException catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   // ── Resumo rápido ──────────────────────────────────────────
@@ -857,8 +1015,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   // ── Footer ──────────────────────────────────────────────────
-  Widget _buildFooter(String since) {
+  Widget _buildFooter(DateTime? memberSince) {
     final version = ref.watch(appVersionProvider).valueOrNull ?? '';
+    // `since` was a string that defaulted to empty and was never filled in, so
+    // this half of the line could not appear. The account's own creation date
+    // was on the user all along.
+    final since = memberSince == null
+        ? ''
+        : 'desde ${_monthNames[memberSince.month - 1]} ${memberSince.year}';
     return Padding(
       padding: const EdgeInsets.only(top: 18),
       child: Center(
@@ -1187,155 +1351,184 @@ class _StatCell extends StatelessWidget {
 }
 
 // ── Territory map preview ────────────────────────────────────
-class _TerritoryMapPreview extends StatelessWidget {
-  final double height;
-  const _TerritoryMapPreview({this.height = 150, this.label});
 
-  /// The rep's own territory. Null hides the chip — better than the mockup's
-  /// hardcoded "São Paulo · Zona Oeste", which a Rio rep read as a claim about
-  /// where they work.
-  final String? label;
+/// One fact about the account. Tappable only when it can actually be changed.
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.muted = false,
+    this.showTopBorder = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
+  final bool muted;
+  final bool showTopBorder;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
+    final row = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: showTopBorder
+            ? const Border(top: BorderSide(color: AppColors.surfaceSecondary))
+            : null,
       ),
-      child: Stack(
+      child: Row(
         children: [
-          // Simplified map SVG
-          CustomPaint(size: Size.infinite, painter: _MapPainter()),
-          // Region label
-          if (label != null)
-            Positioned(
-              top: 10,
-              left: 10,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 4,
-                ),
-                constraints: const BoxConstraints(maxWidth: 220),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x14000000), blurRadius: 4),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.navyDeep,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        label!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navyDeep,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0x120a2f7f),
+              borderRadius: BorderRadius.circular(9),
             ),
-          // Expand button
-          Positioned(
-            bottom: 10,
-            right: 10,
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: AppColors.surfaceSecondary),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x14000000), blurRadius: 4),
-                ],
-              ),
-              child: const Icon(
-                Icons.open_in_full_rounded,
-                size: 13,
-                color: AppColors.gray700,
-              ),
+            child: Center(
+              child: Icon(icon, size: 14, color: AppColors.navyDeep),
             ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: muted ? AppColors.gray400 : AppColors.gray900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) _ProfileChevron(),
         ],
       ),
+    );
+
+    if (onTap == null) return row;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: row),
     );
   }
 }
 
-class _MapPainter extends CustomPainter {
+/// The rename form. Two fields, because that is what the endpoint takes.
+class _NameSheet extends StatefulWidget {
+  const _NameSheet({required this.firstName, required this.lastName});
+
+  final String firstName;
+  final String lastName;
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
+  State<_NameSheet> createState() => _NameSheetState();
+}
 
-    // Region polygon (hatched)
-    final path = Path()
-      ..moveTo(size.width * 0.17, size.height * 0.19)
-      ..lineTo(size.width * 0.33, size.height * 0.12)
-      ..lineTo(size.width * 0.53, size.height * 0.20)
-      ..lineTo(size.width * 0.62, size.height * 0.35)
-      ..lineTo(size.width * 0.63, size.height * 0.63)
-      ..lineTo(size.width * 0.53, size.height * 0.81)
-      ..lineTo(size.width * 0.36, size.height * 0.81)
-      ..lineTo(size.width * 0.22, size.height * 0.72)
-      ..lineTo(size.width * 0.13, size.height * 0.52)
-      ..close();
+class _NameSheetState extends State<_NameSheet> {
+  late final _first = TextEditingController(text: widget.firstName);
+  late final _last = TextEditingController(text: widget.lastName);
 
-    paint.color = const Color(0x2E0a2f7f);
-    canvas.drawPath(path, paint);
-    paint.color = AppColors.navyDeep;
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 2;
-    canvas.drawPath(path, paint);
-
-    // Clinic pins
-    paint.style = PaintingStyle.fill;
-    paint.color = const Color(0x8C0a2f7f);
-    final pins = [
-      Offset(size.width * 0.25, size.height * 0.30),
-      Offset(size.width * 0.36, size.height * 0.37),
-      Offset(size.width * 0.47, size.height * 0.28),
-      Offset(size.width * 0.42, size.height * 0.52),
-      Offset(size.width * 0.29, size.height * 0.55),
-      Offset(size.width * 0.51, size.height * 0.59),
-      Offset(size.width * 0.32, size.height * 0.70),
-      Offset(size.width * 0.50, size.height * 0.73),
-    ];
-    for (final pin in pins) {
-      canvas.drawCircle(pin, 3, paint);
-    }
-
-    // Rep location (green)
-    final repPos = Offset(size.width * 0.39, size.height * 0.45);
-    paint.color = const Color(0x2E16a373);
-    canvas.drawCircle(repPos, 14, paint);
-    paint.color = AppColors.green;
-    canvas.drawCircle(repPos, 7, paint);
+  @override
+  void dispose() {
+    _first.dispose();
+    _last.dispose();
+    super.dispose();
   }
 
+  bool get _valid =>
+      _first.text.trim().isNotEmpty && _last.text.trim().isNotEmpty;
+
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        12 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Seu nome',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'É assim que você aparece para o seu gerente e nos relatórios.',
+            style: TextStyle(fontSize: 12, color: AppColors.gray500),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('profile-first-name'),
+            controller: _first,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'Nome',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('profile-last-name'),
+            controller: _last,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'Sobrenome',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            key: const Key('profile-name-save'),
+            onPressed: _valid
+                ? () => Navigator.of(context).pop((
+                    first: _first.text.trim(),
+                    last: _last.text.trim(),
+                  ))
+                : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.navyBright,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // ── Preference row ───────────────────────────────────────────

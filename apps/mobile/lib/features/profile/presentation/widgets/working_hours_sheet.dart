@@ -27,7 +27,18 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
   late String? _end = widget.current.workdayEnd;
   late String? _lunch = widget.current.lunchStart;
 
+  /// How long lunch lasts, which the roteiro engine blocks out of the day.
+  ///
+  /// The sheet asked when lunch *starts* and never how long it runs, so the
+  /// stored value stayed at whatever it was — zero, for every rep — and the
+  /// engine reserved a lunch of no minutes and planned visits straight through
+  /// it. Asking when it begins without asking how long is the one combination
+  /// that cannot mean anything.
+  late int _lunchMinutes = widget.current.lunchMinutes ?? 0;
+
   static const _linhaDefaults = (start: '08:00', end: '18:00', lunch: '12:00');
+
+  static const _lunchChoices = [0, 30, 45, 60, 90];
 
   Future<void> _pick(
     String? value,
@@ -125,6 +136,19 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
                   ? null
                   : () => setState(() => _lunch = null),
             ),
+            _DurationRow(
+              label: 'Duração do almoço',
+              minutes: _lunchMinutes,
+              onPick: () async {
+                final chosen = await showDurationWheelPicker(
+                  context,
+                  initial: _lunchMinutes,
+                  options: _lunchChoices,
+                  subtitle: 'O roteiro não sugere visitas nesse intervalo.',
+                );
+                if (chosen != null) setState(() => _lunchMinutes = chosen);
+              },
+            ),
             if (!_ordered)
               const Padding(
                 padding: EdgeInsets.only(top: 10),
@@ -143,7 +167,7 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
                         workdayStart: _start,
                         workdayEnd: _end,
                         lunchStart: _lunch,
-                        lunchMinutes: widget.current.lunchMinutes,
+                        lunchMinutes: _lunchMinutes,
                       ),
                     )
                   : null,
@@ -154,6 +178,49 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
       ),
     );
   }
+}
+
+/// How long lunch lasts. Matches `_HourRow`, minus the reset — there is no
+/// linha default to fall back to, so zero is a real answer meaning "no break".
+class _DurationRow extends StatelessWidget {
+  const _DurationRow({
+    required this.label,
+    required this.minutes,
+    required this.onPick,
+  });
+
+  final String label;
+  final int minutes;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: AppColors.gray800),
+          ),
+        ),
+        Text(
+          minutes == 0 ? 'Sem pausa' : formatDurationLabel(minutes),
+          style: TextStyle(
+            fontSize: minutes == 0 ? 13 : 14,
+            fontWeight: minutes == 0 ? FontWeight.w400 : FontWeight.w600,
+            color: minutes == 0 ? AppColors.gray500 : AppColors.gray900,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Escolher',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          onPressed: onPick,
+        ),
+      ],
+    ),
+  );
 }
 
 class _HourRow extends StatelessWidget {

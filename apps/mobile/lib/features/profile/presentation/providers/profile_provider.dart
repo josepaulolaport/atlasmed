@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/profile/data/user_preferences.dart'
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/visits/presentation/providers/visit_summary_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 
 String _regionLabel(UserAssignments? assignments) {
   if (assignments == null) return 'Sem território definido';
@@ -50,6 +51,10 @@ final profileProvider = FutureProvider<UserProfile>((ref) async {
     region: _regionLabel(assignments),
     email: user.email,
     phone: user.phoneNumber,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    memberSince: user.createdAt,
   );
 });
 
@@ -71,6 +76,10 @@ final sessionProfileProvider = FutureProvider<UserProfile?>((ref) async {
     region: _regionLabel(assignments),
     email: user.email,
     phone: user.phoneNumber,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    memberSince: user.createdAt,
   );
 });
 
@@ -139,9 +148,16 @@ final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((
 String workingHoursSummary(UserPreferences prefs) {
   final start = prefs.workdayStart;
   final end = prefs.workdayEnd;
-  if (start == null && end == null) return 'Padrão da linha · 08:00–18:00';
+  // The lunch break is part of the answer: the engine blocks it out of the day,
+  // so a rep reading this row needs to see whether it is reserved at all.
+  final lunch = (prefs.lunchMinutes ?? 0) > 0
+      ? ' · almoço ${formatDurationLabel(prefs.lunchMinutes!)}'
+      : '';
+  if (start == null && end == null) {
+    return 'Padrão da linha · 08:00–18:00$lunch';
+  }
   return '${start ?? "08:00"}–${end ?? "18:00"}'
-      '${start == null || end == null ? " (parcial)" : ""}';
+      '${start == null || end == null ? " (parcial)" : ""}$lunch';
 }
 
 /// The rep's stored preferences, so the screen can build rows that need them.
