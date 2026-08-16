@@ -4,15 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/support_catalog.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// `Administração › Catálogos` (spec 0016 §4.6).
 ///
-/// Three small reference lists behind one screen and a segmented control, rather
-/// than three drawer-level destinations: each is a handful of rows, edited
-/// rarely, and three near-identical screens in the hub would bury the catalogue
-/// work above them.
+/// Four small reference lists behind one screen and a segmented control, rather
+/// than four drawer-level destinations: each is edited rarely, and four
+/// near-identical screens in the hub would bury the catalogue work above them.
 ///
 /// Until this shipped, `docs/architecture/current.md` recorded these as having
 /// "no write path in code" — a `psql` session every time a clinic needed a focus
@@ -31,11 +36,42 @@ class AdminSupportCatalogsScreen extends ConsumerStatefulWidget {
 class _AdminSupportCatalogsScreenState
     extends ConsumerState<AdminSupportCatalogsScreen> {
   SupportCatalog _catalog = SupportCatalog.healthcareSpecialties;
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _selectCatalog(SupportCatalog catalog) {
+    // The query belongs to the list being searched. Carrying "cardio" across to
+    // Conselhos shows an empty screen the admin did not ask for.
+    setState(() {
+      _catalog = catalog;
+      _query = '';
+      _searchController.clear();
+    });
+  }
+
+  List<SupportCatalogEntry> _filtered(List<SupportCatalogEntry> all) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return all;
+    return all
+        .where(
+          (entry) =>
+              entry.name.toLowerCase().contains(query) ||
+              (entry.extra ?? '').toLowerCase().contains(query),
+        )
+        .toList();
+  }
 
   Future<void> _openForm({SupportCatalogEntry? existing}) async {
     final saved = await showModalBottomSheet<SupportCatalogEntry>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
@@ -45,14 +81,11 @@ class _AdminSupportCatalogsScreenState
     );
     if (saved == null || !mounted) return;
     ref.invalidate(supportCatalogProvider(_catalog));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          existing == null
-              ? '${saved.name} cadastrado'
-              : '${saved.name} atualizado',
-        ),
-      ),
+    showCatalogSnack(
+      context,
+      existing == null
+          ? '${saved.name} cadastrado'
+          : '${saved.name} atualizado',
     );
   }
 
@@ -74,7 +107,7 @@ class _AdminSupportCatalogsScreenState
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               // Four segments do not fit a phone width side by side, so they
               // scroll horizontally rather than truncating to initials.
               child: SingleChildScrollView(
@@ -92,80 +125,79 @@ class _AdminSupportCatalogsScreenState
                   ],
                   selected: {_catalog},
                   showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    selectedBackgroundColor: AppColors.blue50,
+                    selectedForegroundColor: AppColors.navyDeep,
+                    foregroundColor: AppColors.gray500,
+                    side: const BorderSide(color: AppColors.gray200),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                   onSelectionChanged: (selection) =>
-                      setState(() => _catalog = selection.first),
+                      _selectCatalog(selection.first),
                 ),
               ),
             ),
+            // Especialidades alone is 69 rows. Every other list in the panel
+            // can be searched; this one could only be scrolled.
+            CatalogSearchBar(
+              controller: _searchController,
+              hintText: 'Buscar ${_catalog.singular}…',
+              onChanged: (value) => setState(() => _query = value),
+            ),
             Expanded(
               child: entriesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Não foi possível carregar.'),
-                      TextButton(
-                        onPressed: () =>
-                            ref.invalidate(supportCatalogProvider(_catalog)),
-                        child: const Text('Tentar de novo'),
-                      ),
-                    ],
-                  ),
+                loading: () => const SimpleListSkeleton(),
+                error: (_, _) => CatalogErrorState(
+                  onRetry: () =>
+                      ref.invalidate(supportCatalogProvider(_catalog)),
                 ),
-                data: (entries) => entries.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Nenhum registro',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.gray400,
-                          ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () async =>
-                            ref.invalidate(supportCatalogProvider(_catalog)),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final entry = entries[index];
-                            return ListTile(
-                              title: Text(
-                                entry.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: entry.isActive
-                                      ? AppColors.gray900
-                                      : AppColors.gray400,
-                                ),
-                              ),
-                              subtitle: entry.extra == null
-                                  ? null
-                                  : Text(
-                                      '${_catalog.extraLabel}: ${entry.extra}',
-                                    ),
-                              trailing: entry.isActive
-                                  ? const Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: 18,
-                                      color: AppColors.gray400,
-                                    )
-                                  : const Text(
-                                      'Inativo',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.gray700,
-                                      ),
-                                    ),
-                              onTap: () => _openForm(existing: entry),
-                            );
-                          },
-                        ),
+                data: (all) {
+                  final entries = _filtered(all);
+                  if (entries.isEmpty) {
+                    return _query.trim().isNotEmpty
+                        ? CatalogEmptyState.noResults(
+                            query: _query.trim(),
+                            onClear: () => setState(() {
+                              _query = '';
+                              _searchController.clear();
+                            }),
+                          )
+                        : CatalogEmptyState(
+                            icon: Icons.list_alt_rounded,
+                            title: 'Nenhum registro ainda',
+                            subtitle:
+                                'Toque em “${_catalog.newLabel}” para '
+                                'cadastrar o primeiro.',
+                          );
+                  }
+                  return RefreshIndicator(
+                    color: AppColors.navyDeep,
+                    onRefresh: () async =>
+                        ref.invalidate(supportCatalogProvider(_catalog)),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                      itemCount: entries.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final entry = entries[index];
+                        return CatalogListRow(
+                          title: entry.name,
+                          subtitle: entry.extra == null
+                              ? null
+                              : '${_catalog.extraLabel}: ${entry.extra}',
+                          isActive: entry.isActive,
+                          onTap: () => _openForm(existing: entry),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -267,94 +299,40 @@ class _SupportCatalogFormState extends ConsumerState<_SupportCatalogForm> {
   Widget build(BuildContext context) {
     final extraLabel = widget.catalog.extraLabel;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isEditing
-                  ? 'Editar ${widget.catalog.singular}'
-                  : widget.catalog.newLabel,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _name,
-              autofocus: !_isEditing,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Nome',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            if (extraLabel != null) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _extra,
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  labelText: widget.catalog.extraRequired
-                      ? extraLabel
-                      : '$extraLabel (opcional)',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: _isActive,
-              onChanged: (value) => setState(() => _isActive = value),
-              title: const Text(
-                'Ativo',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text(
-                'Um registro inativo some dos seletores. O que já foi '
-                'preenchido com ele continua valendo.',
-                style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.error),
-              ),
-            ],
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _isValid && !_saving ? _submit : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navyDeep,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Salvar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.5,
-                      ),
-                    ),
-            ),
-          ],
+    return CatalogFormSheet(
+      title: _isEditing
+          ? 'Editar ${widget.catalog.singular}'
+          : widget.catalog.newLabel,
+      saving: _saving,
+      error: _error,
+      onSave: _isValid ? _submit : null,
+      children: [
+        CatalogField(
+          label: 'Nome',
+          controller: _name,
+          autofocus: !_isEditing,
+          capitalization: TextCapitalization.sentences,
+          hint: 'Ex.: Cardiologia',
         ),
-      ),
+        if (extraLabel != null) ...[
+          const SizedBox(height: 16),
+          CatalogField(
+            label: widget.catalog.extraRequired
+                ? extraLabel
+                : '$extraLabel (opcional)',
+            controller: _extra,
+            capitalization: TextCapitalization.characters,
+          ),
+        ],
+        const SizedBox(height: 4),
+        CatalogActiveSwitch(
+          value: _isActive,
+          onChanged: (value) => setState(() => _isActive = value),
+          explanation:
+              'Um registro inativo some dos seletores. O que já foi '
+              'preenchido com ele continua valendo.',
+        ),
+      ],
     );
   }
 }

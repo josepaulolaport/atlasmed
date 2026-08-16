@@ -5,6 +5,9 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/variant_form_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/product_thumbnail.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
@@ -111,18 +114,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       families: families,
     );
     if (saved == null || !mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${saved.name} atualizado')));
+    showCatalogSnack(context, '${saved.name} atualizado');
   }
 
   Future<void> _openNewProductForm(List<CatalogFamily> families) async {
     final created = await VariantFormScreen.show(context, families: families);
     if (created == null) return;
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${created.name} adicionado ao catálogo')),
-    );
+    showCatalogSnack(context, '${created.name} adicionado ao catálogo');
   }
 
   @override
@@ -166,29 +165,71 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 ),
                 data: (families) {
                   final entries = _filtered(families);
-                  return entries.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Nenhum produto encontrado',
-                            style: TextStyle(
+                  if (entries.isEmpty) {
+                    if (_query.trim().isNotEmpty) {
+                      return CatalogEmptyState.noResults(
+                        query: _query.trim(),
+                        onClear: () => setState(() {
+                          _query = '';
+                          _searchController.clear();
+                        }),
+                      );
+                    }
+                    return CatalogEmptyState(
+                      icon: _filter.activeCount > 0
+                          ? Icons.filter_alt_off_rounded
+                          : Icons.medical_services_outlined,
+                      title: _filter.activeCount > 0
+                          ? 'Nenhum produto com estes filtros'
+                          : 'Nenhum produto ainda',
+                      subtitle: _filter.activeCount > 0
+                          ? 'Limpe os filtros para ver o catálogo inteiro.'
+                          : 'Toque em “Novo produto” para cadastrar o '
+                                'primeiro.',
+                      action: _filter.activeCount > 0
+                          ? TextButton(
+                              onPressed: () => setState(
+                                () => _filter = const ProductFilterSelection(),
+                              ),
+                              child: const Text('Limpar filtros'),
+                            )
+                          : null,
+                    );
+                  }
+                  return RefreshIndicator(
+                    color: AppColors.navyDeep,
+                    onRefresh: () async =>
+                        ref.invalidate(adminCatalogFamiliesProvider),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                      itemCount: entries.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final (variant, family) = entries[index];
+                        return CatalogListRow(
+                          leading: ProductThumbnail(
+                            pictureUrl: variant.pictureUrl,
+                            blurhash: variant.pictureBlurhash,
+                          ),
+                          title: variant.comparisonLabel,
+                          subtitle: family.manufacturer,
+                          isActive: variant.isActive,
+                          trailing: Text(
+                            brl(variant.price),
+                            style: const TextStyle(
                               fontSize: 12.5,
-                              color: AppColors.gray400,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.navyDeep,
                             ),
                           ),
-                        )
-                      : ListView.separated(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final (variant, family) = entries[index];
-                            return _ProductRow(
-                              variant: variant,
-                              onTap: () => _openEditor(variant, families),
-                            );
-                          },
+                          onTap: () => _openEditor(variant, families),
                         );
+                      },
+                    ),
+                  );
                 },
               ),
             ),
@@ -199,122 +240,3 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   }
 }
 
-/// One row in the flat product list — compact enough to scan many products
-/// quickly: icon, name/presentation, price, chevron. Tap for the full
-/// detail in a quick-view sheet.
-class _ProductRow extends StatelessWidget {
-  final CatalogVariant variant;
-  final VoidCallback onTap;
-
-  const _ProductRow({required this.variant, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
-          ),
-          child: Row(
-            children: [
-              ProductThumbnail(
-                pictureUrl: variant.pictureUrl,
-                blurhash: variant.pictureBlurhash,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            variant.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: variant.isActive
-                                  ? AppColors.gray900
-                                  : AppColors.gray400,
-                              letterSpacing: -0.1,
-                            ),
-                          ),
-                        ),
-                        if (!variant.isActive) ...[
-                          const SizedBox(width: 6),
-                          const _InactiveChip(),
-                        ],
-                      ],
-                    ),
-                    if (variant.presentation.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        variant.presentation,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.gray400,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                brl(variant.price),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.navyDeep,
-                ),
-              ),
-              const SizedBox(width: 2),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.gray400,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Marks a retired row. The admin lists show inactive products alongside active
-/// ones (spec 0016 §4), so something has to say which is which — dimming alone
-/// reads as a rendering artefact.
-class _InactiveChip extends StatelessWidget {
-  const _InactiveChip();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: AppColors.surfaceSecondary,
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: const Text(
-      'Inativo',
-      style: TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray700,
-      ),
-    ),
-  );
-}

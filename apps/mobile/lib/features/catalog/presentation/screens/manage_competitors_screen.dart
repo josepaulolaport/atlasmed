@@ -6,7 +6,9 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_prod
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/competitor_form_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
@@ -70,14 +72,12 @@ class ManageCompetitorsScreen extends ConsumerWidget {
       showNightlyRecomputeNotice(context, prefix: '“${row.label}” desvinculado.');
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is CatalogApiException
-                ? error.message
-                : 'Não foi possível remover o produto.',
-          ),
-        ),
+      showCatalogSnack(
+        context,
+        error is CatalogApiException
+            ? error.message
+            : 'Não foi possível remover o produto.',
+        isError: true,
       );
     }
   }
@@ -104,32 +104,15 @@ class ManageCompetitorsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.gray950,
-        title: const Text(
-          'Produtos concorrentes',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-      ),
+      appBar: const CatalogFormAppBar(title: 'Produtos concorrentes'),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  variantLabel.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                child: CatalogSectionLabel(variantLabel.toUpperCase()),
               ),
             ),
             Expanded(
@@ -144,14 +127,16 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                       .where((row) => !row.isOwn)
                       .toList();
                   if (competitors.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Nenhum produto concorrente vinculado ainda',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.gray400,
-                        ),
-                      ),
+                    // Spec 0013 §7: with no equivalence, a rep cannot record
+                    // quantities against any competitor for this product. The
+                    // empty state is the one place to say so.
+                    return const CatalogEmptyState(
+                      icon: Icons.compare_arrows_rounded,
+                      title: 'Nenhum concorrente vinculado',
+                      subtitle:
+                          'Sem equivalências, este produto não aparece no '
+                          'comparativo e o representante não consegue '
+                          'registrar quantidades contra ele.',
                     );
                   }
                   return ListView.separated(
@@ -289,14 +274,12 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
   void _showLinkError(Object error) {
     if (!mounted) return;
     setState(() => _linking = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          error is CatalogApiException
-              ? error.message
-              : 'Não foi possível vincular o produto.',
-        ),
-      ),
+    showCatalogSnack(
+      context,
+      error is CatalogApiException
+          ? error.message
+          : 'Não foi possível vincular o produto.',
+      isError: true,
     );
   }
 

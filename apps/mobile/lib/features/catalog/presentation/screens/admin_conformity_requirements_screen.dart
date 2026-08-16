@@ -6,7 +6,13 @@ import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_a
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// `Administração › Requisitos de cadastro` (spec 0016 §4.7).
 ///
@@ -35,14 +41,11 @@ class _AdminConformityRequirementsScreenState
     );
     if (saved == null || !mounted) return;
     ref.invalidate(adminConformityRequirementsProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          existing == null
-              ? '${saved.name} cadastrado'
-              : '${saved.name} atualizado',
-        ),
-      ),
+    showCatalogSnack(
+      context,
+      existing == null
+          ? '${saved.name} cadastrado'
+          : '${saved.name} atualizado',
     );
   }
 
@@ -52,7 +55,7 @@ class _AdminConformityRequirementsScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AtlasAppBar(page: 'Requisitos'),
+      appBar: const AtlasAppBar(page: 'Requisitos de cadastro'),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.navyDeep,
         foregroundColor: Colors.white,
@@ -62,50 +65,59 @@ class _AdminConformityRequirementsScreenState
       ),
       body: SafeArea(
         child: requirementsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Não foi possível carregar.'),
-                TextButton(
-                  onPressed: () =>
-                      ref.invalidate(adminConformityRequirementsProvider),
-                  child: const Text('Tentar de novo'),
-                ),
-              ],
-            ),
+          loading: () => const SimpleListSkeleton(),
+          error: (_, _) => CatalogErrorState(
+            onRetry: () => ref.invalidate(adminConformityRequirementsProvider),
           ),
-          data: (requirements) => ListView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-            children: [
-              const Text(
-                'Documentos que o cadastro pede de cada clínica. Um requisito '
-                'ativo passa a faltar imediatamente em todas as clínicas do '
-                'escopo dele.',
-                style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
-              ),
-              const SizedBox(height: 16),
-              if (requirements.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    'Nenhum requisito cadastrado — o cadastro não pede nenhum '
-                    'documento hoje.',
-                    style: TextStyle(fontSize: 12.5, color: AppColors.error),
-                  ),
-                )
-              else
-                for (final requirement in requirements) ...[
-                  _RequirementCard(
+          data: (requirements) {
+            if (requirements.isEmpty) {
+              // Not a neutral empty list: with no requirements the cadastro
+              // asks every clinic for nothing, which is a configuration
+              // problem rather than a blank slate.
+              return const CatalogEmptyState(
+                icon: Icons.assignment_late_outlined,
+                title: 'O cadastro não pede nenhum documento',
+                subtitle:
+                    'Nenhum requisito está cadastrado, então nenhuma clínica '
+                    'tem pendências. Toque em “Novo requisito” para começar.',
+              );
+            }
+            return RefreshIndicator(
+              color: AppColors.navyDeep,
+              onRefresh: () async =>
+                  ref.invalidate(adminConformityRequirementsProvider),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                itemCount: requirements.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        'Documentos que o cadastro pede de cada clínica. Um '
+                        'requisito ativo passa a faltar imediatamente em '
+                        'todas as clínicas do escopo dele.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.gray500,
+                          height: 1.45,
+                        ),
+                      ),
+                    );
+                  }
+                  final requirement = requirements[index - 1];
+                  return _RequirementCard(
                     requirement: requirement,
                     onTap: () => _openForm(existing: requirement),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-            ],
-          ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );
@@ -125,81 +137,13 @@ class _RequirementCard extends StatelessWidget {
       if (requirement.requiresFrontAndBack) 'frente e verso',
     ];
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      requirement.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: requirement.isActive
-                            ? AppColors.gray900
-                            : AppColors.gray400,
-                      ),
-                    ),
-                  ),
-                  if (!requirement.isActive)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        'Inativo',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.gray700,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                requirement.scopeLabel,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.gray400,
-                ),
-              ),
-              if (flags.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                Text(
-                  'Pede ${flags.join(' e ')}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.navyDeep,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    return CatalogListRow(
+      leading: const CatalogRowIcon(icon: Icons.description_outlined),
+      title: requirement.name,
+      subtitle: requirement.scopeLabel,
+      note: flags.isEmpty ? null : 'Pede ${flags.join(' e ')}',
+      isActive: requirement.isActive,
+      onTap: onTap,
     );
   }
 }
@@ -398,9 +342,7 @@ class _RequirementFormScreenState
       ref.invalidate(adminConformityRequirementsProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${existing.name} excluído')));
+      showCatalogSnack(context, '${existing.name} excluído');
     } catch (error) {
       if (!mounted) return;
       showDeleteFailure(
@@ -417,26 +359,18 @@ class _RequirementFormScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.gray950,
-        title: Text(
-          _isEditing ? 'Editar requisito' : 'Novo requisito',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        actions: [
-          if (_isEditing)
-            // The shared button, not a bare icon: it disables itself when the
-            // list already said this requirement is answered, so the admin is
-            // never offered a delete the API will refuse (spec 0016 §6.2).
-            CatalogDeleteButton(
-              deletability: widget.existing?.deletability,
-              onDelete: _delete,
-              blockedTitle: 'Este requisito não pode ser excluído',
-            ),
-        ],
+      appBar: CatalogFormAppBar(
+        title: _isEditing ? 'Editar requisito' : 'Novo requisito',
+        // The shared button, not a bare icon: it disables itself when the list
+        // already said this requirement is answered, so the admin is never
+        // offered a delete the API will refuse (spec 0016 §6.2).
+        action: _isEditing
+            ? CatalogDeleteButton(
+                deletability: widget.existing?.deletability,
+                onDelete: _delete,
+                blockedTitle: 'Este requisito não pode ser excluído',
+              )
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -446,34 +380,28 @@ class _RequirementFormScreenState
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 children: [
                   const _Label('Nome do documento'),
-                  TextField(
+                  CatalogTextInput(
                     controller: _name,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Ex.: Licença Sanitária',
-                      border: OutlineInputBorder(),
-                    ),
+                    capitalization: TextCapitalization.sentences,
+                    hint: 'Ex.: Licença Sanitária',
                   ),
                   const SizedBox(height: 14),
                   const _Label('Descrição'),
-                  TextField(
+                  CatalogTextInput(
                     controller: _description,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Opcional — o que o representante deve enviar',
-                      border: OutlineInputBorder(),
-                    ),
+                    capitalization: TextCapitalization.sentences,
+                    hint: 'Opcional — o que o representante deve enviar',
                   ),
                   const SizedBox(height: 14),
                   const _Label('Identificador (slug)'),
-                  TextField(
-                    controller: _slug,
-                    enabled: !_isEditing,
-                    decoration: InputDecoration(
-                      hintText: 'Derivado do nome se ficar vazio',
-                      border: const OutlineInputBorder(),
-                      filled: _isEditing,
-                      fillColor: AppColors.surfaceSecondary,
+                  // Locked once saved: the slug is the key this document
+                  // travels by, so the field is disabled rather than removed —
+                  // an admin looking for it deserves to see it and the reason.
+                  _ReadOnlyWhenEditing(
+                    isEditing: _isEditing,
+                    child: CatalogTextInput(
+                      controller: _slug,
+                      hint: 'Derivado do nome se ficar vazio',
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -505,9 +433,12 @@ class _RequirementFormScreenState
                     ),
                     data: (verticals) => DropdownButtonFormField<int?>(
                       initialValue: _verticalId,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
+                      isDense: true,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.gray900,
                       ),
+                      decoration: catalogInputDecoration,
                       items: [
                         const DropdownMenuItem(
                           value: null,
@@ -526,9 +457,12 @@ class _RequirementFormScreenState
                   const _Label('Tipo de documento da clínica'),
                   DropdownButtonFormField<RequirementLegalDocumentType?>(
                     initialValue: _documentType,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    isDense: true,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.gray900,
                     ),
+                    decoration: catalogInputDecoration,
                     items: [
                       const DropdownMenuItem(
                         value: null,
@@ -541,41 +475,23 @@ class _RequirementFormScreenState
                   ),
                   const SizedBox(height: 20),
                   const _Section('O QUE SERÁ PEDIDO'),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  CatalogActiveSwitch(
                     value: _requiresValidityDate,
+                    label: 'Pede data de validade',
                     onChanged: (value) =>
                         setState(() => _requiresValidityDate = value),
-                    title: const Text(
-                      'Pede data de validade',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Uma Licença Sanitária vence; um Cartão CNPJ não. O aviso '
-                      'de vencimento sai desta data.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.gray400,
-                      ),
-                    ),
+                    explanation:
+                        'Uma Licença Sanitária vence; um Cartão CNPJ não. O '
+                        'aviso de vencimento sai desta data.',
                   ),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  CatalogActiveSwitch(
                     value: _requiresFrontAndBack,
+                    label: 'Pede frente e verso',
                     onChanged: (value) =>
                         setState(() => _requiresFrontAndBack = value),
-                    title: const Text(
-                      'Pede frente e verso',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    explanation:
+                        'Duas imagens em vez de uma — documentos de identidade '
+                        'costumam precisar.',
                   ),
                   const SizedBox(height: 14),
                   const _Label('Tipos de arquivo aceitos'),
@@ -620,12 +536,9 @@ class _RequirementFormScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _Label('Máx. arquivos'),
-                            TextField(
+                            CatalogTextInput(
                               controller: _maxFiles,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                              ),
                             ),
                           ],
                         ),
@@ -636,12 +549,9 @@ class _RequirementFormScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _Label('Máx. por arquivo (MB)'),
-                            TextField(
+                            CatalogTextInput(
                               controller: _maxFileSizeMb,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                              ),
                             ),
                           ],
                         ),
@@ -652,12 +562,9 @@ class _RequirementFormScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _Label('Máx. total (MB)'),
-                            TextField(
+                            CatalogTextInput(
                               controller: _maxCombinedMb,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                              ),
                             ),
                           ],
                         ),
@@ -666,68 +573,20 @@ class _RequirementFormScreenState
                   ),
                   const SizedBox(height: 20),
                   const _Section('ESTADO'),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  CatalogActiveSwitch(
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value),
-                    title: const Text(
-                      'Ativo',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Um requisito inativo some das listas de cadastro. O que '
-                      'já foi enviado continua valendo.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.gray400,
-                      ),
-                    ),
+                    explanation:
+                        'Um requisito inativo some das listas de cadastro. O '
+                        'que já foi enviado continua valendo.',
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: FilledButton(
-                onPressed: _isValid && !_saving ? _submit : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navyDeep,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Salvar',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                        ),
-                      ),
-              ),
+            CatalogSaveBar(
+              onSave: _isValid ? _submit : null,
+              saving: _saving,
+              error: _error,
             ),
           ],
         ),
@@ -744,14 +603,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12.5,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray700,
-      ),
-    ),
+    child: CatalogFieldLabel(text),
   );
 }
 
@@ -761,13 +613,26 @@ class _Section extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w700,
-      color: AppColors.gray400,
-      letterSpacing: 0.5,
-    ),
-  );
+  Widget build(BuildContext context) => CatalogSectionLabel(text);
+}
+
+/// Greys out and blocks a field once the requirement exists.
+///
+/// `TextField(enabled: false)` alone drops to Material's disabled colours,
+/// which do not match anything else in the panel; this keeps the panel's field
+/// and shows its locked state the way the rest of the form shows state.
+class _ReadOnlyWhenEditing extends StatelessWidget {
+  const _ReadOnlyWhenEditing({required this.isEditing, required this.child});
+
+  final bool isEditing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isEditing) return child;
+    return Opacity(
+      opacity: 0.6,
+      child: IgnorePointer(child: child),
+    );
+  }
 }

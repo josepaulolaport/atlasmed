@@ -88,7 +88,10 @@ class CatalogErrorState extends StatelessWidget {
 class CatalogSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final VoidCallback onFilter;
+  /// Null on a list with nothing to filter, so the button is not drawn at all.
+  /// Three admin screens passed `() {}` and rendered a control that did
+  /// nothing when tapped.
+  final VoidCallback? onFilter;
   final int filterCount;
   final String hintText;
 
@@ -96,7 +99,7 @@ class CatalogSearchBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onChanged,
-    required this.onFilter,
+    this.onFilter,
     this.filterCount = 0,
     this.hintText = 'Buscar produto…',
   });
@@ -174,6 +177,7 @@ class CatalogSearchBar extends StatelessWidget {
               ),
             ),
           ),
+          if (onFilter != null) ...[
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onFilter,
@@ -231,6 +235,7 @@ class CatalogSearchBar extends StatelessWidget {
               ),
             ),
           ),
+          ],
         ],
       ),
     );

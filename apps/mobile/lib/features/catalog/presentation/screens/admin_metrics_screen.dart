@@ -1,7 +1,12 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
@@ -70,9 +75,7 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
       await _load();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Não foi possível criar')));
+      showCatalogSnack(context, 'Não foi possível criar', isError: true);
     }
   }
 
@@ -100,29 +103,33 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
     );
   }
 
-  Future<void> _editDefinition(PotentialDefinition def) async {
+  /// Returns the new label, or null when nothing changed — the metric screen
+  /// uses it to update its own title without popping.
+  Future<String?> _editDefinition(PotentialDefinition def) async {
     final label = await _askForLabel(
-      title: 'Editar label',
+      title: 'Renomear métrica',
       confirmLabel: 'Salvar',
       initialValue: def.label,
     );
-    if (label == null || label.isEmpty || label == def.label) return;
+    if (label == null || label.isEmpty || label == def.label) return null;
     try {
       await _repo.update(id: def.id, label: label);
       await _load();
+      if (mounted) showCatalogSnack(context, 'Métrica renomeada');
+      return label;
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Não foi possível salvar')));
+      if (!mounted) return null;
+      showCatalogSnack(context, 'Não foi possível salvar', isError: true);
+      return null;
     }
   }
 
-  Future<void> _deleteDefinition(PotentialDefinition def) async {
+  /// Returns true when the metric is gone, so the screen showing it can pop.
+  Future<bool> _deleteDefinition(PotentialDefinition def) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remover campo?'),
+        title: const Text('Remover métrica?'),
         content: Text(
           '“${def.label}” deixa de aparecer nas listas e no cadastro das '
           'clínicas. Os valores já preenchidos e os produtos vinculados '
@@ -140,15 +147,17 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true) return false;
     try {
       await _repo.softDelete(def.id);
       await _load();
+      if (mounted) showCatalogSnack(context, '“${def.label}” removida');
+      return true;
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Não foi possível remover')));
+      if (mounted) {
+        showCatalogSnack(context, 'Não foi possível remover', isError: true);
+      }
+      return false;
     }
   }
 
@@ -159,6 +168,8 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
           definition: def,
           repo: _repo,
           catalog: _catalog,
+          onRename: () => _editDefinition(def),
+          onDelete: () => _deleteDefinition(def),
         ),
       ),
     );
@@ -184,28 +195,34 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                'Métricas de potencial por linha',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navyDeep,
-                ),
-              ),
-            ),
+            // No page heading here: `AtlasAppBar` already says "Métricas", and
+            // a second 22px title under it was the only screen in the panel
+            // announcing itself twice.
             optionsAsync.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (_, _) => const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Erro ao carregar linhas'),
+              loading: () => const Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: SizedBox(height: 48),
+              ),
+              error: (_, _) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: CatalogErrorState(
+                  message: 'Não foi possível carregar as linhas',
+                  onRetry: () => ref.invalidate(
+                    currentUserFacilityVerticalOptionsProvider,
+                  ),
+                ),
               ),
               data: (options) {
                 if (options.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text('Nenhuma linha comercial disponível'),
+                    child: CatalogInlineEmpty(
+                      icon: Icons.info_outline_rounded,
+                      message:
+                          'Nenhuma linha comercial disponível para o seu '
+                          'acesso. Métricas pertencem a uma linha, então não '
+                          'há o que listar.',
+                    ),
                   );
                 }
                 final selected =
@@ -219,81 +236,67 @@ class _AdminMetricsScreenState extends ConsumerState<AdminMetricsScreen> {
                   });
                 }
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: DropdownButtonFormField<int>(
-                    initialValue: selected,
-                    decoration: const InputDecoration(
-                      labelText: 'Linha comercial',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      for (final v in options)
-                        DropdownMenuItem(value: v.id, child: Text(v.name)),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CatalogFieldLabel('Linha comercial'),
+                      const SizedBox(height: 6),
+                      CatalogDropdown<int>(
+                        value: selected!,
+                        items: [for (final v in options) v.id],
+                        labelOf: (id) =>
+                            options.firstWhere((v) => v.id == id).name,
+                        onChanged: _selectVertical,
+                      ),
                     ],
-                    onChanged: (id) {
-                      if (id == null) return;
-                      _selectVertical(id);
-                    },
                   ),
                 );
               },
             ),
             if (_verticalId == null || (_loading && _defs.isEmpty))
-              const Expanded(child: Center(child: CircularProgressIndicator()))
+              const Expanded(child: SimpleListSkeleton(hasSubtitle: false))
             else if (_error != null)
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      TextButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
+                child: CatalogErrorState(message: _error!, onRetry: _load),
+              )
+            else if (_defs.isEmpty)
+              const Expanded(
+                child: CatalogEmptyState(
+                  icon: Icons.insights_outlined,
+                  title: 'Nenhuma métrica nesta linha',
+                  subtitle:
+                      'Uma métrica é o que o representante preenche por '
+                      'clínica — "ampolas/mês", por exemplo. Toque em "Nova '
+                      'métrica" para criar a primeira.',
                 ),
               )
             else
               Expanded(
                 child: RefreshIndicator(
+                  color: AppColors.navyDeep,
                   onRefresh: _load,
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     itemCount: _defs.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final def = _defs[index];
-                      return Card(
-                        child: ListTile(
-                          title: Text(def.label),
-                          subtitle: Text(def.key),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (action) {
-                              switch (action) {
-                                case 'edit':
-                                  _editDefinition(def);
-                                case 'products':
-                                  _manageProducts(def);
-                                case 'delete':
-                                  _deleteDefinition(def);
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Editar label'),
-                              ),
-                              PopupMenuItem(
-                                value: 'products',
-                                child: Text('Produtos vinculados'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Remover'),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _manageProducts(def),
+                      return CatalogListRow(
+                        leading: const CatalogRowIcon(
+                          icon: Icons.insights_outlined,
+                          tinted: true,
                         ),
+                        title: def.label,
+                        subtitle: def.key,
+                        // One thing per row, like every other list here.
+                        // Renaming and removing live inside the metric, next to
+                        // the products they affect — a popup menu on the row
+                        // offered three actions and explained none of them.
+                        onTap: () => _manageProducts(def),
                       );
                     },
                   ),
@@ -311,11 +314,20 @@ class _DefinitionProductsScreen extends StatefulWidget {
     required this.definition,
     required this.repo,
     required this.catalog,
+    required this.onRename,
+    required this.onDelete,
   });
 
   final PotentialDefinition definition;
   final PotentialDefinitionsRepository repo;
   final CatalogRepository catalog;
+
+  /// Renaming and removing the metric live here rather than behind a popup menu
+  /// on the list row: this is the screen that shows what the metric *is*, so it
+  /// is the screen where changing it makes sense. Both return true when the
+  /// list behind needs reloading, and removing also pops this screen.
+  final Future<String?> Function() onRename;
+  final Future<bool> Function() onDelete;
 
   @override
   State<_DefinitionProductsScreen> createState() =>
@@ -334,6 +346,20 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
   /// equivalences of that product, never from here.
   List<LinkedPotentialProduct> _derivedBrands = const [];
   bool _loading = true;
+
+  /// Kept locally so a rename shows in the title without popping the screen.
+  late String _label = widget.definition.label;
+
+  Future<void> _rename() async {
+    final renamed = await widget.onRename();
+    if (renamed == null || !mounted) return;
+    setState(() => _label = renamed);
+  }
+
+  Future<void> _remove() async {
+    final removed = await widget.onDelete();
+    if (removed && mounted) Navigator.of(context).pop();
+  }
 
   @override
   void initState() {
@@ -412,12 +438,10 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       showNightlyRecomputeNotice(context);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Falha ao vincular. Produto precisa ser da mesma linha.',
-          ),
-        ),
+      showCatalogSnack(
+        context,
+        'Não foi possível vincular: o produto precisa ser da mesma linha.',
+        isError: true,
       );
     }
   }
@@ -461,9 +485,7 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       showNightlyRecomputeNotice(context);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Falha ao desvincular')));
+      showCatalogSnack(context, 'Não foi possível desvincular', isError: true);
     }
   }
 
@@ -471,34 +493,75 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.definition.label),
+        title: Text(_label),
         actions: [
           IconButton(
-            onPressed: _linkProduct,
-            icon: const Icon(Icons.add_link_rounded),
-            tooltip: 'Vincular produto',
+            onPressed: _rename,
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Renomear métrica',
+          ),
+          IconButton(
+            onPressed: _remove,
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.error,
+            ),
+            tooltip: 'Remover métrica',
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.navyDeep,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_link_rounded),
+        label: const Text('Vincular produto'),
+        onPressed: _linkProduct,
+      ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SimpleListSkeleton()
           : RefreshIndicator(
+              color: AppColors.navyDeep,
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 32),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.only(bottom: 100),
                 children: [
                   const _MetricSectionHeader('Nossos produtos'),
                   if (_linked.isEmpty)
-                    const _MetricEmptyRow('Nenhum produto vinculado')
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: CatalogInlineEmpty(
+                        icon: Icons.link_off_rounded,
+                        message:
+                            'Nenhum produto vinculado. Sem isso, nada que o '
+                            'representante registrar conta para esta métrica.',
+                      ),
+                    )
                   else
                     for (final p in _linked)
-                      ListTile(
-                        title: Text(p.name),
-                        subtitle: Text(p.code),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.link_off_rounded),
-                          tooltip: 'Desvincular',
-                          onPressed: () => _unlink(p),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: CatalogListRow(
+                          leading: const CatalogRowIcon(
+                            icon: Icons.medical_services_outlined,
+                            tinted: true,
+                          ),
+                          title: p.name,
+                          subtitle: p.code,
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.link_off_rounded,
+                              size: 18,
+                              color: AppColors.error,
+                            ),
+                            tooltip: 'Desvincular',
+                            onPressed: () => _unlink(p),
+                          ),
+                          // No row tap: unlinking is the only thing to do here
+                          // and making the whole row do it turns a mis-tap into
+                          // a destructive action.
                         ),
                       ),
                   const _MetricSectionHeader('Outras marcas que contam'),
@@ -513,20 +576,22 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
                     ),
                   ),
                   if (_derivedBrands.isEmpty)
-                    const _MetricEmptyRow(
-                      'Nenhum produto concorrente equivalente aos produtos acima',
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: CatalogInlineEmpty(
+                        message:
+                            'Nenhum produto concorrente é equivalente aos '
+                            'produtos acima.',
+                      ),
                     )
                   else
                     for (final brand in _derivedBrands)
-                      ListTile(
-                        dense: true,
-                        leading: const Icon(
-                          Icons.storefront_outlined,
-                          size: 20,
-                          color: AppColors.gray400,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: _DerivedBrandRow(
+                          name: brand.name,
+                          code: brand.code,
                         ),
-                        title: Text(brand.name),
-                        subtitle: brand.code.isEmpty ? null : Text(brand.code),
                       ),
                 ],
               ),
@@ -551,21 +616,6 @@ class _MetricSectionHeader extends StatelessWidget {
         letterSpacing: 0.6,
         color: AppColors.navyDeep,
       ),
-    ),
-  );
-}
-
-class _MetricEmptyRow extends StatelessWidget {
-  const _MetricEmptyRow(this.message);
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-    child: Text(
-      message,
-      style: const TextStyle(fontSize: 12.5, color: AppColors.gray400),
     ),
   );
 }
@@ -623,6 +673,68 @@ class _LabelDialogState extends State<_LabelDialog> {
           child: Text(widget.confirmLabel),
         ),
       ],
+    );
+  }
+}
+
+/// A competitor product that counts toward this metric.
+///
+/// Flat, not tappable and not a [CatalogListRow]: the list is derived (spec
+/// 0013 §4.6) and there is nothing to open. A row that looks like the tappable
+/// ones above it and does nothing is worse than one that looks inert.
+class _DerivedBrandRow extends StatelessWidget {
+  const _DerivedBrandRow({required this.name, required this.code});
+
+  final String name;
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceTertiary,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.surfaceSecondary),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.storefront_outlined,
+            size: 18,
+            color: AppColors.gray400,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray700,
+                  ),
+                ),
+                if (code.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.gray400,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,48 @@
 import 'package:flutter/material.dart';
 
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+
+/// The panel's snackbars.
+///
+/// Floating, matching Explorar — the largest surface in the app and the one
+/// this panel's lists were modelled on. It also keeps the toast clear of the
+/// extended FAB every list screen carries.
+///
+/// [isError] is the only variant. A failure that looks exactly like a success
+/// is how an admin walks away from an edit that did not happen.
+void showCatalogSnack(
+  BuildContext context,
+  String message, {
+  bool isError = false,
+}) {
+  ScaffoldMessenger.of(context)
+    // Editing several rows in a row otherwise queues toasts that land long
+    // after the work they describe.
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? AppColors.error : AppColors.gray900,
+        duration: Duration(seconds: isError ? 5 : 3),
+        content: Row(
+          children: [
+            Icon(
+              isError
+                  ? Icons.error_outline_rounded
+                  : Icons.check_circle_outline_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message, style: const TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    );
+}
+
 /// What the panel says after a link or an unlink (spec 0016 §6.6).
 ///
 /// The panel never triggers a recompute. Spec 0013 §4.6 backlogs the
@@ -18,9 +61,5 @@ void showNightlyRecomputeNotice(BuildContext context, {String? prefix}) {
             'noturno.'
       : '$prefix Os números das clínicas são atualizados no próximo '
             'processamento noturno.';
-  ScaffoldMessenger.of(context)
-    // The admin can link several competitors in a row; queuing four identical
-    // snackbars behind each other means the last one lands long after the work.
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  showCatalogSnack(context, message);
 }

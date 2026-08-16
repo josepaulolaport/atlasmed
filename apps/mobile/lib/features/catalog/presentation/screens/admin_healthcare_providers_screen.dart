@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/healthcare_provider.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_empty_state.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_list_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
@@ -58,16 +62,22 @@ class _AdminHealthcareProvidersScreenState
     );
     if (saved == null || !mounted) return;
     ref.invalidate(adminHealthcareProvidersProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          existing == null
-              ? '${saved.name} cadastrada'
-              : '${saved.name} atualizada',
-        ),
-      ),
+    showCatalogSnack(
+      context,
+      existing == null
+          ? '${saved.name} cadastrada'
+          : '${saved.name} atualizada',
     );
   }
+
+  /// A payer type is the one thing that distinguishes these rows from each
+  /// other at a glance, so it gets an icon rather than only a subtitle.
+  static IconData _iconFor(HealthcareProviderType type) => switch (type) {
+    HealthcareProviderType.private => Icons.business_center_outlined,
+    HealthcareProviderType.public => Icons.account_balance_outlined,
+    HealthcareProviderType.mixed => Icons.swap_horiz_rounded,
+    HealthcareProviderType.other => Icons.more_horiz_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +100,6 @@ class _AdminHealthcareProvidersScreenState
               controller: _searchController,
               hintText: 'Buscar fonte pagadora…',
               onChanged: (value) => setState(() => _query = value),
-              filterCount: 0,
-              onFilter: () {},
             ),
             Expanded(
               child: providersAsync.when(
@@ -103,123 +111,52 @@ class _AdminHealthcareProvidersScreenState
                 data: (all) {
                   final providers = _filtered(all);
                   if (providers.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Nenhuma fonte pagadora encontrada',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.gray400,
-                        ),
-                      ),
-                    );
+                    return _query.trim().isNotEmpty
+                        ? CatalogEmptyState.noResults(
+                            query: _query.trim(),
+                            onClear: () => setState(() {
+                              _query = '';
+                              _searchController.clear();
+                            }),
+                          )
+                        : const CatalogEmptyState(
+                            icon: Icons.account_balance_wallet_outlined,
+                            title: 'Nenhuma fonte pagadora ainda',
+                            subtitle:
+                                'Toque em “Nova fonte” para cadastrar a '
+                                'primeira. Elas aparecem no seletor de '
+                                'participação das clínicas.',
+                          );
                   }
-                  return ListView.separated(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                    itemCount: providers.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final provider = providers[index];
-                      return _ProviderRow(
-                        provider: provider,
-                        onTap: () => _openForm(existing: provider),
-                      );
-                    },
+                  return RefreshIndicator(
+                    color: AppColors.navyDeep,
+                    onRefresh: () async =>
+                        ref.invalidate(adminHealthcareProvidersProvider),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                      itemCount: providers.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final provider = providers[index];
+                        return CatalogListRow(
+                          leading: CatalogRowIcon(
+                            icon: _iconFor(provider.type),
+                          ),
+                          title: provider.name,
+                          subtitle: provider.type.label,
+                          isActive: provider.isActive,
+                          onTap: () => _openForm(existing: provider),
+                        );
+                      },
+                    ),
                   );
                 },
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProviderRow extends StatelessWidget {
-  const _ProviderRow({required this.provider, required this.onTap});
-
-  final HealthcareProvider provider;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            provider.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: provider.isActive
-                                  ? AppColors.gray900
-                                  : AppColors.gray400,
-                            ),
-                          ),
-                        ),
-                        if (!provider.isActive) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceSecondary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Inativa',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.gray700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      provider.type.label,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.gray400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.gray400,
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -303,96 +240,38 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isEditing ? 'Editar fonte pagadora' : 'Nova fonte pagadora',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _name,
-              autofocus: !_isEditing,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nome',
-                hintText: 'Ex.: Unimed',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<HealthcareProviderType>(
-              initialValue: _type,
-              decoration: const InputDecoration(
-                labelText: 'Tipo',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final type in HealthcareProviderType.values)
-                  DropdownMenuItem(value: type, child: Text(type.label)),
-              ],
-              onChanged: (type) {
-                if (type == null) return;
-                setState(() => _type = type);
-              },
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: _isActive,
-              onChanged: (value) => setState(() => _isActive = value),
-              title: const Text(
-                'Ativa',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text(
-                'Uma fonte inativa deixa de aparecer no seletor da clínica. As '
-                'participações já registradas continuam valendo.',
-                style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.error),
-              ),
-            ],
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _name.text.trim().isEmpty || _saving ? null : _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navyDeep,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Salvar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.5,
-                      ),
-                    ),
-            ),
-          ],
+    return CatalogFormSheet(
+      title: _isEditing ? 'Editar fonte pagadora' : 'Nova fonte pagadora',
+      saving: _saving,
+      error: _error,
+      onSave: _name.text.trim().isEmpty ? null : _submit,
+      children: [
+        CatalogField(
+          label: 'Nome',
+          controller: _name,
+          autofocus: !_isEditing,
+          capitalization: TextCapitalization.words,
+          hint: 'Ex.: Unimed',
         ),
-      ),
+        const SizedBox(height: 16),
+        const CatalogFieldLabel('Tipo'),
+        const SizedBox(height: 6),
+        CatalogDropdown<HealthcareProviderType>(
+          value: _type,
+          items: HealthcareProviderType.values,
+          labelOf: (type) => type.label,
+          onChanged: (type) => setState(() => _type = type),
+        ),
+        const SizedBox(height: 4),
+        CatalogActiveSwitch(
+          value: _isActive,
+          onChanged: (value) => setState(() => _isActive = value),
+          label: 'Ativa',
+          explanation:
+              'Uma fonte inativa deixa de aparecer no seletor da clínica. '
+              'As participações já registradas continuam valendo.',
+        ),
+      ],
     );
   }
 }

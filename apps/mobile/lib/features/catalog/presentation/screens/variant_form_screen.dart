@@ -7,6 +7,8 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant
 import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
@@ -211,14 +213,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _pictureBusy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is CatalogApiException
-                ? error.message
-                : 'Não foi possível enviar a imagem.',
-          ),
-        ),
+      showCatalogSnack(
+        context,
+        error is CatalogApiException
+            ? error.message
+            : 'Não foi possível enviar a imagem.',
+        isError: true,
       );
     }
   }
@@ -252,14 +252,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _pictureBusy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is CatalogApiException
-                ? error.message
-                : 'Não foi possível remover a imagem.',
-          ),
-        ),
+      showCatalogSnack(
+        context,
+        error is CatalogApiException
+            ? error.message
+            : 'Não foi possível remover a imagem.',
+        isError: true,
       );
     }
   }
@@ -336,9 +334,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       invalidateCatalog(ref, variantId: existing.id);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${existing.name} excluído')));
+      showCatalogSnack(context, '${existing.name} excluído');
     } catch (error) {
       if (!mounted) return;
       showDeleteFailure(
@@ -533,23 +529,15 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.gray950,
-        title: Text(
-          _isEditing ? 'Editar produto' : 'Novo produto',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        actions: [
-          if (_isEditing)
-            CatalogDeleteButton(
-              deletability: _deletability,
-              onDelete: _delete,
-              blockedTitle: 'Este produto não pode ser excluído',
-            ),
-        ],
+      appBar: CatalogFormAppBar(
+        title: _isEditing ? 'Editar produto' : 'Novo produto',
+        action: _isEditing
+            ? CatalogDeleteButton(
+                deletability: _deletability,
+                onDelete: _delete,
+                blockedTitle: 'Este produto não pode ser excluído',
+              )
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -558,7 +546,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 children: [
-                  const _FieldLabel('Imagem'),
+                  const CatalogFieldLabel('Imagem'),
                   const SizedBox(height: 6),
                   _PictureField(
                     // A new product has no id yet, and the upload route takes
@@ -572,9 +560,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     onTap: _openPictureOptions,
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('Nome do produto'),
+                  const CatalogFieldLabel('Nome do produto'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _name,
                     hint: 'Ex.: REVISCON 1.0%',
                     capitalization: TextCapitalization.words,
@@ -586,9 +574,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Código'),
+                            const CatalogFieldLabel('Código'),
                             const SizedBox(height: 6),
-                            _TextInput(controller: _code, hint: 'REV-1.0'),
+                            CatalogTextInput(controller: _code, hint: 'REV-1.0'),
                           ],
                         ),
                       ),
@@ -597,9 +585,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Apresentação'),
+                            const CatalogFieldLabel('Apresentação'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _presentation,
                               hint: '20MG / 2ML',
                             ),
@@ -609,9 +597,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('Família'),
+                  const CatalogFieldLabel('Família'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _familyName,
                     hint: 'Ex.: REVISCON',
                     capitalization: TextCapitalization.characters,
@@ -633,9 +621,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  const _FieldLabel('Descrição'),
+                  const CatalogFieldLabel('Descrição'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _description,
                     hint: 'Opcional',
                     capitalization: TextCapitalization.sentences,
@@ -647,9 +635,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Marca'),
+                            const CatalogFieldLabel('Marca'),
                             const SizedBox(height: 6),
-                            _TextInput(controller: _brand, hint: 'Opcional'),
+                            CatalogTextInput(controller: _brand, hint: 'Opcional'),
                           ],
                         ),
                       ),
@@ -658,9 +646,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Classificação'),
+                            const CatalogFieldLabel('Classificação'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _productClassification,
                               hint: 'Opcional',
                             ),
@@ -670,14 +658,14 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('Classificação interna'),
+                  const CatalogFieldLabel('Classificação interna'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _internalClassification,
                     hint: 'Opcional',
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('Linhas comerciais'),
+                  const CatalogFieldLabel('Linhas comerciais'),
                   const SizedBox(height: 6),
                   if (_isEditing)
                     // Spec 0016 §6.7: chosen once. Orders key on
@@ -776,9 +764,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Fabricante'),
+                            const CatalogFieldLabel('Fabricante'),
                             const SizedBox(height: 6),
-                            _TextInput(controller: _manufacturer, hint: 'VSY'),
+                            CatalogTextInput(controller: _manufacturer, hint: 'VSY'),
                           ],
                         ),
                       ),
@@ -787,9 +775,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('País'),
+                            const CatalogFieldLabel('País'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _countryOfOrigin,
                               hint: 'Alemanha',
                             ),
@@ -799,23 +787,17 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  CatalogActiveSwitch(
                     value: _requiresSterilization,
+                    label: 'Requer esterilização',
                     onChanged: (value) =>
                         setState(() => _requiresSterilization = value),
-                    title: const Text(
-                      'Requer esterilização',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray900,
-                      ),
-                    ),
+                    explanation:
+                        'Marque para produtos que passam por autoclave antes '
+                        'do uso.',
                   ),
                   const SizedBox(height: 12),
-                  const _SectionLabel('CÓDIGOS'),
+                  const CatalogSectionLabel('CÓDIGOS'),
                   const SizedBox(height: 4),
                   const Text(
                     'Todos opcionais. Um campo vazio é salvo como “sem código” '
@@ -823,13 +805,13 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
                   ),
                   const SizedBox(height: 10),
-                  const _FieldLabel('SIMPRO'),
+                  const CatalogFieldLabel('SIMPRO'),
                   const SizedBox(height: 6),
-                  _TextInput(controller: _simproCode, hint: '00308555'),
+                  CatalogTextInput(controller: _simproCode, hint: '00308555'),
                   const SizedBox(height: 16),
-                  const _FieldLabel('BRASÍNDICE'),
+                  const CatalogFieldLabel('BRASÍNDICE'),
                   const SizedBox(height: 6),
-                  _TextInput(controller: _brasindiceCode, hint: '024847'),
+                  CatalogTextInput(controller: _brasindiceCode, hint: '024847'),
                   const SizedBox(height: 10),
                   // The date the Brasíndice record was published — not the date
                   // someone saved this form, which is what it used to record.
@@ -842,9 +824,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         : () => setState(() => _brasindiceUpdatedAt = null),
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('TISS'),
+                  const CatalogFieldLabel('TISS'),
                   const SizedBox(height: 6),
-                  _TextInput(controller: _tissCode, hint: '0000094527'),
+                  CatalogTextInput(controller: _tissCode, hint: '0000094527'),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -852,9 +834,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('EAN / código de barras'),
+                            const CatalogFieldLabel('EAN / código de barras'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _barcode,
                               hint: '7891234567890',
                             ),
@@ -866,9 +848,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('NCM'),
+                            const CatalogFieldLabel('NCM'),
                             const SizedBox(height: 6),
-                            _TextInput(controller: _ncm, hint: '3006.10.19'),
+                            CatalogTextInput(controller: _ncm, hint: '3006.10.19'),
                           ],
                         ),
                       ),
@@ -881,9 +863,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Registro ANVISA'),
+                            const CatalogFieldLabel('Registro ANVISA'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _anvisaRegistration,
                               hint: 'Opcional',
                             ),
@@ -895,9 +877,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('Código comercial'),
+                            const CatalogFieldLabel('Código comercial'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _commercialCode,
                               hint: 'Opcional',
                             ),
@@ -907,9 +889,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('ID do produto no Emultec'),
+                  const CatalogFieldLabel('ID do produto no Emultec'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _idProdutoEmultec,
                     hint: 'Somente números',
                     keyboardType: TextInputType.number,
@@ -922,11 +904,11 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
                   ),
                   const SizedBox(height: 20),
-                  const _SectionLabel('UNIDADES'),
+                  const CatalogSectionLabel('UNIDADES'),
                   const SizedBox(height: 10),
-                  const _FieldLabel('Unidade'),
+                  const CatalogFieldLabel('Unidade'),
                   const SizedBox(height: 6),
-                  _TextInput(controller: _unit, hint: 'Ex.: caixa, ampola'),
+                  CatalogTextInput(controller: _unit, hint: 'Ex.: caixa, ampola'),
                   const SizedBox(height: 12),
                   // Read-only by decision (spec 0016 §7.1). Shown rather than
                   // hidden, because the number is already used in reads and an
@@ -940,11 +922,11 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         'quantidades brutas, e este campo não é editável.',
                   ),
                   const SizedBox(height: 20),
-                  const _SectionLabel('PREÇOS'),
+                  const CatalogSectionLabel('PREÇOS'),
                   const SizedBox(height: 10),
-                  const _FieldLabel('Preço de tabela'),
+                  const CatalogFieldLabel('Preço de tabela'),
                   const SizedBox(height: 6),
-                  _TextInput(
+                  CatalogTextInput(
                     controller: _price,
                     hint: '0,00',
                     keyboardType: TextInputType.numberWithOptions(
@@ -958,9 +940,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('ICMS 17%'),
+                            const CatalogFieldLabel('ICMS 17%'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _price17,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -975,9 +957,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('ICMS 18%'),
+                            const CatalogFieldLabel('ICMS 18%'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _price18,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -992,9 +974,9 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _FieldLabel('ICMS 20%'),
+                            const CatalogFieldLabel('ICMS 20%'),
                             const SizedBox(height: 6),
-                            _TextInput(
+                            CatalogTextInput(
                               controller: _price20,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -1008,7 +990,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                   ),
                   if (_isEditing) ...[
                     const SizedBox(height: 20),
-                    const _SectionLabel('RELACIONADOS'),
+                    const CatalogSectionLabel('RELACIONADOS'),
                     const SizedBox(height: 4),
                     _LinkRow(
                       icon: Icons.storefront_outlined,
@@ -1038,71 +1020,22 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ],
                   ],
                   const SizedBox(height: 20),
-                  const _SectionLabel('ESTADO'),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  const CatalogSectionLabel('ESTADO'),
+                  CatalogActiveSwitch(
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value),
-                    title: const Text(
-                      'Ativo',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray900,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Um produto inativo some das listas dos representantes e '
-                      'dos pedidos novos. Os pedidos e as métricas já '
-                      'registrados continuam válidos.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.gray400,
-                      ),
-                    ),
+                    explanation:
+                        'Um produto inativo some das listas dos representantes '
+                        'e dos pedidos novos. Os pedidos e as métricas já '
+                        'registrados continuam válidos.',
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: FilledButton(
-                onPressed: _isValid && !_saving ? _submit : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navyDeep,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Salvar',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                        ),
-                      ),
-              ),
+            CatalogSaveBar(
+              onSave: _isValid ? _submit : null,
+              saving: _saving,
+              error: _error,
             ),
           ],
         ),
@@ -1111,82 +1044,6 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
   }
 }
 
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12.5,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray700,
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray400,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
-}
-
-class _TextInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final TextCapitalization capitalization;
-  final TextInputType? keyboardType;
-
-  const _TextInput({
-    required this.controller,
-    required this.hint,
-    this.capitalization = TextCapitalization.none,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      textCapitalization: capitalization,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 14, color: AppColors.gray900),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.gray400),
-        filled: true,
-        fillColor: Colors.white,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
-        ),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.gray200),
-        ),
-      ),
-    );
-  }
-}
-
-/// A date the admin picks, with a way to clear it. Used for the Brasíndice
-/// publication date, which is nullable because the code it belongs to is.
 class _DateField extends StatelessWidget {
   const _DateField({
     required this.label,
@@ -1208,7 +1065,7 @@ class _DateField extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _FieldLabel(label),
+              CatalogFieldLabel(label),
               const SizedBox(height: 4),
               Text(
                 value == null ? 'Sem data' : formatDate(value!),
@@ -1260,7 +1117,7 @@ class _ReadOnlyRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _FieldLabel(label),
+              CatalogFieldLabel(label),
               Text(
                 value,
                 style: const TextStyle(

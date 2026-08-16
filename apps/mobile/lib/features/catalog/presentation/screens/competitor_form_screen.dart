@@ -5,6 +5,8 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_prod
 import 'package:atlasmed_mobile_app/features/catalog/data/models/product_deletability.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_delete_action.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_feedback.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_form_fields.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -113,9 +115,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
       invalidateCatalog(ref);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${existing.name} excluído')));
+      showCatalogSnack(context, '${existing.name} excluído');
     } catch (error) {
       if (!mounted) return;
       showDeleteFailure(
@@ -203,23 +203,15 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.gray950,
-        title: Text(
-          _isEditing ? 'Editar produto' : 'Novo produto',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        actions: [
-          if (_isEditing)
-            CatalogDeleteButton(
-              deletability: _deletability,
-              onDelete: _delete,
-              blockedTitle: 'Este produto não pode ser excluído',
-            ),
-        ],
+      appBar: CatalogFormAppBar(
+        title: _isEditing ? 'Editar produto' : 'Novo produto',
+        action: _isEditing
+            ? CatalogDeleteButton(
+                deletability: _deletability,
+                onDelete: _delete,
+                blockedTitle: 'Este produto não pode ser excluído',
+              )
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -228,17 +220,17 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 children: [
-                  const _CompFieldLabel('Nome do produto'),
+                  const CatalogFieldLabel('Nome do produto'),
                   const SizedBox(height: 6),
-                  _CompTextInput(
+                  CatalogTextInput(
                     controller: _name,
                     hint: 'Ex.: SINGJOINT 24MG / 2ML',
                     capitalization: TextCapitalization.words,
                   ),
                   const SizedBox(height: 16),
-                  const _CompFieldLabel('Marca (opcional)'),
+                  const CatalogFieldLabel('Marca (opcional)'),
                   const SizedBox(height: 6),
-                  _CompTextInput(
+                  CatalogTextInput(
                     controller: _brand,
                     hint: 'Ex.: Synvisc',
                     capitalization: TextCapitalization.words,
@@ -250,9 +242,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CompFieldLabel('Fabricante'),
+                            const CatalogFieldLabel('Fabricante'),
                             const SizedBox(height: 6),
-                            _CompTextInput(
+                            CatalogTextInput(
                               controller: _manufacturer,
                               hint: 'Hangzhou',
                             ),
@@ -264,9 +256,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CompFieldLabel('País'),
+                            const CatalogFieldLabel('País'),
                             const SizedBox(height: 6),
-                            _CompTextInput(
+                            CatalogTextInput(
                               controller: _countryOfOrigin,
                               hint: 'China',
                             ),
@@ -276,7 +268,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const _CompSectionLabel('PREÇOS'),
+                  const CatalogSectionLabel('PREÇOS'),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -284,9 +276,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CompFieldLabel('ICMS 17%'),
+                            const CatalogFieldLabel('ICMS 17%'),
                             const SizedBox(height: 6),
-                            _CompTextInput(
+                            CatalogTextInput(
                               controller: _price17,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -301,9 +293,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CompFieldLabel('ICMS 18%'),
+                            const CatalogFieldLabel('ICMS 18%'),
                             const SizedBox(height: 6),
-                            _CompTextInput(
+                            CatalogTextInput(
                               controller: _price18,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -318,9 +310,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CompFieldLabel('ICMS 20%'),
+                            const CatalogFieldLabel('ICMS 20%'),
                             const SizedBox(height: 6),
-                            _CompTextInput(
+                            CatalogTextInput(
                               controller: _price20,
                               hint: '0,00',
                               keyboardType: TextInputType.numberWithOptions(
@@ -333,147 +325,24 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const _CompSectionLabel('ESTADO'),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
+                  const CatalogSectionLabel('ESTADO'),
+                  CatalogActiveSwitch(
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value),
-                    title: const Text(
-                      'Ativo',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray900,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Um produto inativo deixa de aparecer no comparativo e no '
-                      'seletor do representante. As quantidades já registradas '
-                      'nas clínicas continuam valendo.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.gray400,
-                      ),
-                    ),
+                    explanation:
+                        'Um produto inativo deixa de aparecer no comparativo e '
+                        'no seletor do representante. As quantidades já '
+                        'registradas nas clínicas continuam valendo.',
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: FilledButton(
-                onPressed: _isValid && !_saving ? _submit : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navyDeep,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Salvar',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                        ),
-                      ),
-              ),
+            CatalogSaveBar(
+              onSave: _isValid ? _submit : null,
+              saving: _saving,
+              error: _error,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CompFieldLabel extends StatelessWidget {
-  final String text;
-  const _CompFieldLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12.5,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray700,
-      ),
-    );
-  }
-}
-
-class _CompSectionLabel extends StatelessWidget {
-  final String text;
-  const _CompSectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: AppColors.gray400,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
-}
-
-class _CompTextInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final TextCapitalization capitalization;
-  final TextInputType? keyboardType;
-
-  const _CompTextInput({
-    required this.controller,
-    required this.hint,
-    this.capitalization = TextCapitalization.none,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      textCapitalization: capitalization,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 14, color: AppColors.gray900),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.gray400),
-        filled: true,
-        fillColor: Colors.white,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
-        ),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.gray200),
         ),
       ),
     );
