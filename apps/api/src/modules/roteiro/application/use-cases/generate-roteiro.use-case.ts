@@ -816,11 +816,14 @@ export class GenerateRoteiroUseCase {
       reachMode,
       fixedPoints,
       origin,
-      // A day already at its budget still shortlists one clinic deep. Asking
-      // for a shortlist of nothing finds nothing, and "nenhuma clínica ao
-      // alcance" is a dead end on the rep's screen — the opposite of what a
-      // full day means.
-      limit: Math.max(1, limit),
+      // The **requested** limit, not what is left of it. The shortlist is the
+      // pool the greedy pass chooses from, and a rep with bookings needs more
+      // choice rather than less: the clinics that fit around a booked morning
+      // are a narrower set than the clinics that fit an empty one. Shrinking
+      // the pool with the budget would also make a day at its limit shortlist
+      // nothing and report "nenhuma clínica ao alcance" — a dead end on the
+      // rep's screen, and the opposite of what a full day means.
+      limit: requestedLimit,
     });
 
     if (expanded) {
