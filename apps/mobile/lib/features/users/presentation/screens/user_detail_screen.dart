@@ -77,6 +77,43 @@ class UserDetailScreen extends ConsumerWidget {
     );
   }
 
+  /// Names the person and says what they lose, rather than asking "tem
+  /// certeza?" over an action the reader has to remember the meaning of.
+  Future<bool?> _confirmLifecycle(
+    BuildContext context, {
+    required User user,
+    required bool deactivating,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          deactivating
+              ? 'Desativar ${user.displayName}?'
+              : 'Suspender ${user.displayName}?',
+        ),
+        content: Text(
+          deactivating
+              ? 'A conta perde o acesso ao aplicativo. Os territórios e as '
+                    'clínicas sob esta pessoa continuam como estão.'
+              : 'A conta perde o acesso até a suspensão ser cancelada.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('user-lifecycle-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: Text(deactivating ? 'Desativar' : 'Suspender'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showLifecycleSheet(
     BuildContext context,
     WidgetRef ref,
@@ -142,6 +179,19 @@ class UserDetailScreen extends ConsumerWidget {
       ref.invalidate(userDetailProvider(userId));
       await ref.read(usersListProvider.notifier).refreshRow(userId);
       return;
+    }
+
+    // Suspending or deactivating someone takes their access away, and both
+    // were one tap on a sheet row with nothing in between. Every other
+    // destructive action in the app asks first — deleting a territory, taking
+    // a clinic out of the field.
+    if (action == 'suspend' || action == 'deactivate') {
+      final confirmed = await _confirmLifecycle(
+        context,
+        user: user,
+        deactivating: action == 'deactivate',
+      );
+      if (confirmed != true || !context.mounted) return;
     }
 
     final repository = ref.read(usersRepositoryProvider);

@@ -117,17 +117,20 @@ void main() {
       );
     });
 
-    test('offers no way into Usuários — Equipe is the one roster', () {
-      // The branch and the route still exist, so this is about the drawer only.
-      // Asserted rather than left to a screenshot because the entry is one line
-      // and would come back unnoticed in any merge that touches this list.
+    test('offers a way into Usuários, gated to admins', () {
+      // This used to assert the opposite. Usuários had been dropped from the
+      // drawer on the grounds that Equipe is the one place people are listed —
+      // true of *listing* people, but Usuários is roles, assignments and
+      // invitations, and "Convidar" starts there and nowhere else. Removing
+      // the entry left the app with no way to invite anyone at all.
+      final users = appNavigationItems.where((item) => item.route == '/users');
+
+      expect(users, hasLength(1));
+      expect(users.single.label, 'Usuários');
       expect(
-        appNavigationItems,
-        isNot(
-          contains(
-            predicate<AppNavigationItem>((item) => item.route == '/users'),
-          ),
-        ),
+        users.single.visibleFor,
+        isNotNull,
+        reason: 'user administration stays admin-only',
       );
     });
   });

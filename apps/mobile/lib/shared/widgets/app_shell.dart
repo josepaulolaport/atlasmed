@@ -487,11 +487,20 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.groups_outlined,
     visibleFor: canReadTeam,
   ),
-  // Usuários is deliberately absent from the drawer: Equipe is now the one
-  // place people are listed. Branch 5 and `/users` still exist and still work —
-  // only the way in is gone — so restoring the entry is one item, not a
-  // rebuild. Note that this also removes the only entry point to "Convidar":
-  // nothing else in the app starts an invitation.
+  // Usuários is back. It had been dropped because Equipe is the one place
+  // people are *listed* — which is true, and Equipe keeps that job. But this
+  // is a different surface: roles, assignments, and invitations. Taking it out
+  // of the drawer left the app with no way to invite anyone at all, since
+  // "Convidar" starts here and nowhere else.
+  //
+  // Admin-only, as it was.
+  AppNavigationItem(
+    branchIndex: 5,
+    label: 'Usuários',
+    route: '/users',
+    icon: Icons.manage_accounts_outlined,
+    visibleFor: canManageUsers,
+  ),
   AppNavigationItem(
     branchIndex: 6,
     label: 'Pedidos',
