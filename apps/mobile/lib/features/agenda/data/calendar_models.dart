@@ -71,6 +71,7 @@ class CalendarEditorPrefill extends Equatable {
     this.facilityChoice = CalendarFacilityChoice.anyClinic,
     this.startsAt,
     this.durationMinutes,
+    this.recurrence,
   });
 
   final int? facilityId;
@@ -97,6 +98,10 @@ class CalendarEditorPrefill extends Equatable {
   final DateTime? startsAt;
   final int? durationMinutes;
 
+  /// Whether the block the rep drew repeats. Set on the day grid's own sheet,
+  /// which asks the question rather than sending them to the full form for it.
+  final CalendarRecurrence? recurrence;
+
   @override
   List<Object?> get props => [
     facilityId,
@@ -108,6 +113,7 @@ class CalendarEditorPrefill extends Equatable {
     facilityChoice,
     startsAt,
     durationMinutes,
+    recurrence,
   ];
 }
 

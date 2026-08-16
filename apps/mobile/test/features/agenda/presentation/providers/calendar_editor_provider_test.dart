@@ -140,6 +140,31 @@ void main() {
     });
   });
 
+  test('a rhythm chosen on the day grid survives into the event', () async {
+    // The quick sheet asks about recurrence itself now — it was the one field
+    // that used to justify sending the rep to a second form over a block they
+    // had already drawn. If the prefill dropped it, the sheet would offer the
+    // question and quietly save a one-off.
+    final repository = _FakeCalendarRepository();
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: const CalendarEditorTarget.creating(
+        prefill: CalendarEditorPrefill(
+          kind: CalendarEventKind.personalBlock,
+          title: 'Almoço',
+          recurrence: CalendarRecurrence.daily,
+        ),
+      ),
+      now: () => DateTime(2026, 8, 3, 9, 17),
+      timeZoneResolver: (_) => 'America/Sao_Paulo',
+    );
+
+    expect(notifier.state.draft.recurrence, CalendarRecurrence.daily);
+    await notifier.submit();
+
+    expect(repository.created?.recurrence, CalendarRecurrence.daily);
+  });
+
   test(
     'new editor defaults to interaction, in-person, 60 minutes and no recurrence',
     () {

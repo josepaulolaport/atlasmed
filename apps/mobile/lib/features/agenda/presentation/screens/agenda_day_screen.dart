@@ -228,7 +228,6 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
                 _error = null;
               }),
               onSave: (value) => _save(value, start),
-              onMoreOptions: (value) => _openFullEditor(value, start),
             ),
         ],
       ),
@@ -272,6 +271,7 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
           facilityName: value.facility?.name,
           startsAt: draft.startsAt(start),
           durationMinutes: draft.durationMinutes,
+          recurrence: value.recurrence,
         ),
       ),
     );
@@ -489,24 +489,6 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
       id: occurrence.calendarId,
       recurrenceKey: occurrence.recurrenceKey,
       $extra: occurrence,
-    ).push(context);
-  }
-
-  /// Hands the block to the full editor, carrying what the rep already typed.
-  void _openFullEditor(ScheduleDraftValue value, DateTime start) {
-    final draft = _draft;
-    if (draft == null) return;
-    setState(() => _draft = null);
-    AgendaNewRoute(
-      title: value.title.isEmpty ? null : value.title,
-      facilityId: value.facility?.id,
-      facilityName: value.facility?.name,
-      startsAt: draft.startsAt(start).toIso8601String(),
-      durationMinutes: draft.durationMinutes,
-      // The sheet asks Visita or Bloqueio pessoal before this button exists.
-      // Leaving it behind reopened the answer as Interação, so a block drawn
-      // and named as personal arrived in the editor asking for a clinic.
-      personalBlock: value.kind == CalendarEventKind.personalBlock,
     ).push(context);
   }
 

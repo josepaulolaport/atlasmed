@@ -41,7 +41,7 @@ class RecurrenceFields extends StatelessWidget {
                 for (final value in CalendarRecurrence.values)
                   (
                     value: value,
-                    label: _recurrenceLabel(value),
+                    label: recurrenceLabel(value),
                     icon: value == CalendarRecurrence.none
                         ? Icons.block_outlined
                         : Icons.repeat_rounded,
@@ -131,7 +131,10 @@ class RecurrenceFields extends StatelessWidget {
   }
 }
 
-String _recurrenceLabel(CalendarRecurrence value) => switch (value) {
+/// Shared with the day grid's quick sheet, which asks the same question in a
+/// smaller space — two places offering "Semanalmente" and "Semanal" would read
+/// as two different settings.
+String recurrenceLabel(CalendarRecurrence value) => switch (value) {
   CalendarRecurrence.none => 'Não repetir',
   CalendarRecurrence.daily => 'Diariamente',
   CalendarRecurrence.weekly => 'Semanalmente',
@@ -188,7 +191,7 @@ class _RecurrenceTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    _recurrenceLabel(value),
+                    recurrenceLabel(value),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,

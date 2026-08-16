@@ -1,7 +1,9 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/clinic_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/day_grid_geometry.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/recurrence_fields.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/wheel_picker_sheet.dart';
 import 'package:flutter/material.dart';
 
 const _weekdayNames = [
@@ -37,21 +39,27 @@ class ScheduleDraftValue {
     required this.kind,
     required this.title,
     required this.facility,
+    this.recurrence = CalendarRecurrence.none,
   });
 
   final CalendarEventKind kind;
   final String title;
   final CalendarIdentity? facility;
+  final CalendarRecurrence recurrence;
 }
 
 /// The bar under a block the rep is drawing on the day grid.
 ///
-/// Deliberately the *small* half of the job. Most appointments need a name, a
-/// time and a clinic, and two of those are already on screen — asking for
-/// modality, recurrence and duration before the rep has decided the thing is
-/// happening is what makes scheduling feel like paperwork. Everything else goes
-/// through **Mais opções**, which opens the full editor on this same block
-/// rather than starting over.
+/// Deliberately the *small* half of the job. An appointment needs a name, a
+/// time, a clinic and — sometimes — a rhythm, and the time is already on screen
+/// because the rep drew it. Nothing else is asked before they have decided the
+/// thing is happening, which is what makes scheduling feel like paperwork.
+///
+/// There is no "Mais opções" any more. It existed for one field, recurrence,
+/// and paid for it by opening a second form over a block the rep had already
+/// placed. The one field is here now; a visit that needs the rest — a remote
+/// modality, a bounded series — is made through the speed dial or edited after
+/// it is saved, and neither of those interrupts the drag.
 ///
 /// The kind chips are not decoration: an interaction requires a clinic and a
 /// personal block must not have one, so this is the question that decides
@@ -64,7 +72,6 @@ class ScheduleDraftSheet extends StatefulWidget {
     required this.clashes,
     required this.onCancel,
     required this.onSave,
-    required this.onMoreOptions,
     this.saving = false,
     this.errorText,
   });
@@ -79,7 +86,6 @@ class ScheduleDraftSheet extends StatefulWidget {
 
   final VoidCallback onCancel;
   final ValueChanged<ScheduleDraftValue> onSave;
-  final ValueChanged<ScheduleDraftValue> onMoreOptions;
   final bool saving;
   final String? errorText;
 
@@ -91,6 +97,7 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
   final _title = TextEditingController();
   CalendarEventKind _kind = CalendarEventKind.interaction;
   CalendarIdentity? _facility;
+  CalendarRecurrence _recurrence = CalendarRecurrence.none;
 
   @override
   void dispose() {
@@ -102,6 +109,7 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
     kind: _kind,
     title: _title.text.trim(),
     facility: _kind == CalendarEventKind.interaction ? _facility : null,
+    recurrence: _recurrence,
   );
 
   /// Choosing the clinic names the visit, unless the rep already named it.
@@ -241,6 +249,28 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
                     onClear: () => setState(() => _chooseFacility(null)),
                   ),
                 ],
+                const SizedBox(height: 8),
+                _RecurrenceRow(
+                  value: _recurrence,
+                  onPick: () async {
+                    final picked = await showOptionSheet<CalendarRecurrence>(
+                      context,
+                      title: 'Repetição',
+                      selected: _recurrence,
+                      options: [
+                        for (final value in CalendarRecurrence.values)
+                          (
+                            value: value,
+                            label: recurrenceLabel(value),
+                            icon: value == CalendarRecurrence.none
+                                ? Icons.block_outlined
+                                : Icons.repeat_rounded,
+                          ),
+                      ],
+                    );
+                    if (picked != null) setState(() => _recurrence = picked);
+                  },
+                ),
                 if (widget.clashes.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   _Note(
@@ -259,16 +289,7 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
                     text: widget.errorText!,
                   ),
                 ],
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: widget.saving
-                        ? null
-                        : () => widget.onMoreOptions(_value),
-                    icon: const Icon(Icons.tune, size: 16),
-                    label: const Text('Mais opções'),
-                  ),
-                ),
+                const SizedBox(height: 4),
               ],
             ),
           ),
@@ -341,6 +362,64 @@ class _ClinicRow extends StatelessWidget {
                 size: 18,
                 color: AppColors.gray400,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Whether the block repeats, in the same clothes as the clinic row above it.
+///
+/// This was the only thing the sheet could not say, and the whole reason it
+/// carried a "Mais opções" that opened a second form over the top of a block
+/// the rep had already drawn. Asking it here is one tap; the full editor is
+/// still there for a visit that needs more, reached the way every other
+/// appointment is — through the speed dial, or by tapping the block once saved.
+class _RecurrenceRow extends StatelessWidget {
+  const _RecurrenceRow({required this.value, required this.onPick});
+
+  final CalendarRecurrence value;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final repeats = value != CalendarRecurrence.none;
+    return InkWell(
+      key: const Key('draft-recurrence'),
+      onTap: onPick,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.gray300),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.repeat_rounded,
+              size: 17,
+              color: repeats ? AppColors.navyBright : AppColors.gray500,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                recurrenceLabel(value),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: repeats ? FontWeight.w600 : FontWeight.w400,
+                  color: repeats ? AppColors.gray900 : AppColors.gray500,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.gray400,
+            ),
           ],
         ),
       ),

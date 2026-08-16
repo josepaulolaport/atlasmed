@@ -571,7 +571,7 @@ CalendarEditorDraft _initialDraft(
     startsAt: prefill?.startsAt ?? rounded,
     timeZone: timeZoneResolver(now),
     durationMinutes: prefill?.durationMinutes ?? 60,
-    recurrence: CalendarRecurrence.none,
+    recurrence: prefill?.recurrence ?? CalendarRecurrence.none,
     recurrenceEnd: CalendarRecurrenceEnd.none,
     recurrenceUntil: null,
     recurrenceCount: null,
