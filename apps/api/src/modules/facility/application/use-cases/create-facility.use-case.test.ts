@@ -151,6 +151,7 @@ function inMemoryRepository(): FacilityRepository & {
     registryHasEstablishment: async () => true,
     findById: async (id) => stored.get(id) ?? null,
     listClinicalFocusCatalog: async () => [],
+    replaceClinicalFocuses: async () => [],
     listUnitTypesInUse: async () => [],
     listUnitTypeCatalog: async () => [],
     create: async (data) => {

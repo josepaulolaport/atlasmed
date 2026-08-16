@@ -45,4 +45,10 @@ export interface PersonRepository {
 
   /** Distinct active specialty names linked to at least one non-deleted person. */
   listDistinctSpecialtyNames(): Promise<string[]>;
+
+  /** Set a doctor's specialties to exactly this list, at most one primary. */
+  replaceSpecialties(input: {
+    personId: number;
+    specialties: { id: number; isPrimary: boolean }[];
+  }): Promise<{ id: number; name: string; isPrimary: boolean }[]>;
 }

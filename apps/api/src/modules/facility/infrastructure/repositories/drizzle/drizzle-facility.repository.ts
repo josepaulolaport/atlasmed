@@ -531,6 +531,7 @@ async function loadClinicalFocusesByFacilityIds(
       id: clinicalFocuses.id,
       name: clinicalFocuses.name,
       cnesCode: clinicalFocuses.cnesCode,
+      isPrimary: facilityClinicalFocuses.isPrimary,
     })
     .from(facilityClinicalFocuses)
     .innerJoin(
@@ -545,12 +546,18 @@ async function loadClinicalFocusesByFacilityIds(
       id: row.id,
       name: row.name,
       cnesCode: row.cnesCode,
+      isPrimary: row.isPrimary,
     });
     result.set(row.facilityId, list);
   }
 
   for (const [facilityId, list] of result) {
-    list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    // The primary first, then alphabetical. A chip row that led with whichever
+    // focus sorted first would bury the one the clinic is known for.
+    list.sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.localeCompare(b.name, "pt-BR");
+    });
     result.set(facilityId, list);
   }
   return result;
@@ -1266,6 +1273,51 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       throw new ResourceNotFoundError("Clinic", facilityId);
     }
     return refreshed;
+  }
+
+  /**
+   * Replace a clinic's clinical focuses with exactly the set given.
+   *
+   * Stated as a replacement rather than as add/remove calls because the screen
+   * is a multiselect: the user's intent is "these are the focuses", and turning
+   * that into a diff on the client would let a dropped connection leave the row
+   * half-applied. Delete and insert run in one transaction for the same reason.
+   *
+   * The primary is cleared first as part of the delete, so moving it from one
+   * focus to another cannot momentarily hold two and trip the partial unique
+   * index.
+   */
+  async replaceClinicalFocuses(input: {
+    facilityId: number;
+    focuses: { id: number; isPrimary: boolean }[];
+  }): Promise<FacilityClinicalFocus[]> {
+    const primaries = input.focuses.filter((f) => f.isPrimary);
+    if (primaries.length > 1) {
+      throw new ValidationError([
+        { field: "focuses", message: "Only one focus can be the primary one" },
+      ]);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(facilityClinicalFocuses)
+        .where(eq(facilityClinicalFocuses.facilityId, input.facilityId));
+
+      if (input.focuses.length === 0) return;
+
+      await tx.insert(facilityClinicalFocuses).values(
+        input.focuses.map((focus) => ({
+          facilityId: input.facilityId,
+          clinicalFocusId: focus.id,
+          isPrimary: focus.isPrimary,
+        })),
+      );
+    });
+
+    const byFacility = await loadClinicalFocusesByFacilityIds([
+      input.facilityId,
+    ]);
+    return byFacility.get(input.facilityId) ?? [];
   }
 
   async update(

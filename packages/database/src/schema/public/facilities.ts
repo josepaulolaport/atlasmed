@@ -637,6 +637,13 @@ export const facilityClinicalFocuses = pgTable(
     clinicalFocusId: bigint("clinical_focus_id", { mode: "number" })
       .notNull()
       .references(() => clinicalFocuses.id, { onDelete: "restrict" }),
+    /**
+     * The focus a clinic leads with, when it has one. Mirrors
+     * `person_healthcare_profile_specialties.is_primary` down to the partial
+     * unique index, so "many, one of them primary" means the same thing on a
+     * clinic as it does on a doctor.
+     */
+    isPrimary: boolean("is_primary").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
@@ -645,6 +652,11 @@ export const facilityClinicalFocuses = pgTable(
       t.facilityId,
       t.clinicalFocusId
     ),
+    // At most one primary per facility, enforced by the database rather than by
+    // whichever code path happens to write the row.
+    uniqueIndex("facility_clinical_focuses_primary_uidx")
+      .on(t.facilityId)
+      .where(sql`${t.isPrimary}`),
     index("facility_clinical_focuses_facility_id_idx").on(t.facilityId),
     index("facility_clinical_focuses_clinical_focus_id_idx").on(t.clinicalFocusId),
   ]

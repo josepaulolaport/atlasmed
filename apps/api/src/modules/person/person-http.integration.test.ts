@@ -81,6 +81,7 @@ function personUseCases(
   return {
     getPerson: () => person,
     patchPerson: () => mutated,
+    replacePersonSpecialties: () => mutated,
     listPersonNotes: () => emptyNotes,
     createPersonNote: () => mutated,
     updatePersonNote: () => mutated,

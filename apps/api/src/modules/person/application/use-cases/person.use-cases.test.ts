@@ -61,6 +61,7 @@ function createRepository(options?: {
       } as PersonRecord;
     },
     listDistinctSpecialtyNames: async () => options?.specialties ?? ["Ortopedia"],
+    replaceSpecialties: async () => [],
   };
 }
 

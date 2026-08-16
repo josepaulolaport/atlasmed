@@ -540,6 +540,44 @@ const updateFacilityBillingEmailRoute = new Elysia()
     }
   );
 
+const replaceFacilityClinicalFocusesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .put(
+    "/facilities/:id/clinical-focuses",
+    async ({ params, body, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.replaceFacilityClinicalFocuses().execute({
+        facilityId: params.id,
+        scope,
+        focuses: body.focuses,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary:
+          "Set a clinic's clinical focuses, at most one of them the primary one",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      // The whole selection, not a diff: the screen is a multiselect, and a
+      // partially applied diff would leave the clinic tagged with neither the
+      // old set nor the new one.
+      body: t.Object({
+        focuses: t.Array(
+          t.Object({
+            id: t.Number({ minimum: 1 }),
+            isPrimary: t.Boolean(),
+          }),
+          { maxItems: 50 },
+        ),
+      }),
+    }
+  );
+
 const approveFacilityCadastroRecordRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CADASTRO_SUBMISSION"))
@@ -1032,6 +1070,7 @@ export const facilitiesRoute = new Elysia()
   .use(createFacilityConformityRecordRoute)
   .use(getFacilityCadastroRoute)
   .use(updateFacilityBillingEmailRoute)
+  .use(replaceFacilityClinicalFocusesRoute)
   .use(approveFacilityCadastroRecordRoute)
   .use(rejectFacilityCadastroRecordRoute)
   .use(listCadastroSubmissionsRoute)
