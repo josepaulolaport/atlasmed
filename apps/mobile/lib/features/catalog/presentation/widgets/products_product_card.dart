@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Compact family card for the Produtos list — brand-level introduction with
@@ -71,15 +70,10 @@ class ProductsProductCard extends StatelessWidget {
                         value: family.countryOfOrigin,
                       ),
                     ],
-                    const SizedBox(height: 6),
-                    Text(
-                      '${family.variants.length} ${family.variants.length == 1 ? 'apresentação' : 'apresentações'} · a partir de ${brl(family.minPrice)}',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyBright,
-                      ),
-                    ),
+                    // No "N apresentações · a partir de R$ X" line. Both
+                    // figures belong to the presentation the detail screen
+                    // makes you choose anyway, and a blue strapline under two
+                    // grey meta rows made every card end on a shout.
                   ],
                 ),
               ),
