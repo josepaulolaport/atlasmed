@@ -19,11 +19,11 @@ function createStore(overrides: Partial<PurchaseRecurrenceStore> = {}): Purchase
     listBackfillFacilityIds: mock(async () => []),
     listChangedOrderFacilityIds: mock(async () => []),
     listDueTransitionFacilityIds: mock(async () => []),
-    recalculateFacility: mock(async (facilityId: number) => ({
-      facilityId,
-      changed: false,
-      document,
-    })),
+    listInvalidatedFacilityIds: mock(async () => []),
+    readCoveredUntil: mock(async () => null),
+    commitCoveredUntil: mock(async () => {}),
+    recalculateFacilities: mock(async (facilityIds: number[]) =>
+      facilityIds.map((facilityId) => ({ facilityId, changed: false, document }))),
     ...overrides,
   };
 }
@@ -49,6 +49,68 @@ describe("purchase recurrence batch selection", () => {
       cursor: 2,
       limit: 2,
     })).toEqual([3, 4]);
+  });
+
+  /**
+   * A clinic that *lost* an order is reachable from neither of the other two
+   * selectors: nothing joins to it through `orders` any more, and it has no
+   * transition date to come due. The importer clears its
+   * `purchase_recurrence_calculated_at` and this is what picks it back up.
+   */
+  test("RECONCILE also takes facilities whose snapshot was invalidated", () => {
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [4],
+      dueTransitionIds: [],
+      invalidatedIds: [2, 4],
+      cursor: null,
+      limit: 10,
+    })).toEqual([2, 4]);
+  });
+
+  /**
+   * The property that makes the keyset safe with several selectors: a full
+   * selector cannot be overrun. It contributes `limit` ids of its own at or
+   * below its last one, so the page fills before reaching past it and the
+   * cursor never skips the ids it did not get to report.
+   */
+  test("RECONCILE never pages past a selector that came back full", () => {
+    // `changedOrderIds` is full at 3 and may hold more between 3 and 900.
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 2, 3],
+      dueTransitionIds: [500, 900],
+      invalidatedIds: [],
+      cursor: null,
+      limit: 3,
+    })).toEqual([1, 2, 3]);
+
+    // Two full selectors, interleaved: the page still stops inside both.
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 4],
+      dueTransitionIds: [2, 8],
+      invalidatedIds: [],
+      cursor: null,
+      limit: 2,
+    })).toEqual([1, 2]);
+  });
+
+  test("RECONCILE takes the whole union when no selector was truncated", () => {
+    expect(selectReconcileFacilityIds({
+      changedOrderIds: [1, 2],
+      dueTransitionIds: [500, 900],
+      invalidatedIds: [7],
+      cursor: null,
+      limit: 10,
+    })).toEqual([1, 2, 7, 500, 900]);
+  });
+
+  test("RECONCILE asks all three selectors", async () => {
+    const store = createStore({ listBackfillFacilityIds: async () => [] });
+    const activity = createPurchaseRecurrenceBatchActivity({ store, updateSearchDocuments: async () => {} });
+    await activity({
+      mode: "RECONCILE", cursor: null, limit: 500, today: "2026-07-22",
+      since: "2026-07-22T00:00:00.000Z", until: "2026-07-22T02:00:00.000Z",
+    });
+    expect(store.listInvalidatedFacilityIds).toHaveBeenCalledWith({ cursor: null, limit: 500 });
   });
 
   test("full sweep uses the active-facility keyset in reconcile mode", async () => {
@@ -119,11 +181,11 @@ describe("purchase recurrence batch processing", () => {
   });
 
   test("wraps page-list DB failures retryably without recalculating or advancing the cursor", async () => {
-    const recalculateFacility = mock(async () => ({ facilityId: 10, changed: true, document }));
+    const recalculateFacilities = mock(async () => [{ facilityId: 10, changed: true, document }]);
     const activity = createPurchaseRecurrenceBatchActivity({
       store: createStore({
         listBackfillFacilityIds: async () => { throw new Error("list query unavailable"); },
-        recalculateFacility,
+        recalculateFacilities,
       }),
       updateSearchDocuments: async () => {},
     });
@@ -134,7 +196,7 @@ describe("purchase recurrence batch processing", () => {
         type: "PurchaseRecurrenceDatabaseFailure",
         nonRetryable: false,
       });
-    expect(recalculateFacility).not.toHaveBeenCalled();
+    expect(recalculateFacilities).not.toHaveBeenCalled();
   });
 
   test("throws retryably on a DB failure and a retry converges without advancing the failed page", async () => {
@@ -143,10 +205,10 @@ describe("purchase recurrence batch processing", () => {
     const activity = createPurchaseRecurrenceBatchActivity({
       store: createStore({
         listBackfillFacilityIds: async () => [1],
-        recalculateFacility: async () => {
+        recalculateFacilities: async () => {
           attempts += 1;
           if (attempts === 1) throw new Error("database unavailable");
-          return { facilityId: 1, changed: true, document };
+          return [{ facilityId: 1, changed: true, document }];
         },
       }),
       updateSearchDocuments,
@@ -167,7 +229,7 @@ describe("purchase recurrence batch processing", () => {
     const activity = createPurchaseRecurrenceBatchActivity({
       store: createStore({
         listBackfillFacilityIds: async () => [7],
-        recalculateFacility: async () => ({ facilityId: 7, changed: true, document: null }),
+        recalculateFacilities: async () => [{ facilityId: 7, changed: true, document: null }],
       }),
       updateSearchDocuments,
       deleteSearchDocuments,
@@ -190,7 +252,7 @@ describe("purchase recurrence batch processing", () => {
     const activity = createPurchaseRecurrenceBatchActivity({
       store: createStore({
         listBackfillFacilityIds: async () => [1],
-        recalculateFacility: async () => ({ facilityId: 1, changed: recalculations++ === 0, document }),
+        recalculateFacilities: async () => [{ facilityId: 1, changed: recalculations++ === 0, document }],
       }),
       updateSearchDocuments,
     });
@@ -201,3 +263,4 @@ describe("purchase recurrence batch processing", () => {
     expect(updateSearchDocuments).toHaveBeenCalledTimes(2);
   });
 });
+

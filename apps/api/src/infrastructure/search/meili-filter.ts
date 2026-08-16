@@ -16,6 +16,8 @@ const FILTER_FIELDS = [
   "verticalPurchaseIntervalSources",
   "verticalManualPurchaseProfiles",
   "purchaseFunnelStagesAny",
+  "purchaseIntervalSourcesAny",
+  "manualPurchaseProfilesAny",
   "unitTypeId",
   "legalDocumentType",
   "clinicalFocusIds",
@@ -27,6 +29,7 @@ type FilterClause = { expression: string };
 type NumericFilterField =
   | "purchaseFunnelStageRank"
   | "purchaseIntervalDaysMin"
+  | "purchaseIntervalDaysMax"
   | "hasLastValidPurchase"
   | "lastValidPurchaseSortAt";
 

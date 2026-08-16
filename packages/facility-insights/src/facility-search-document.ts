@@ -55,6 +55,22 @@ export type FacilitySearchDocument = {
   purchaseFunnelStagesAny: string[];
   purchaseFunnelStageRank: number;
   purchaseIntervalDaysMin: number;
+  /**
+   * The longest interval among the clinic's active profiles.
+   *
+   * Exists so an unscoped interval filter can mean the same thing in Meili as it
+   * does in SQL. SQL asks "does this clinic have *a* profile of at least N days"
+   * — a separate EXISTS per bound — so the lower bound has to be tested against
+   * the largest interval and the upper bound against the smallest. Testing both
+   * against the minimum turned "any profile" into "every profile" and quietly
+   * dropped multi-vertical clinics, in the one direction the hydrate guard does
+   * not catch: it only notices Meili returning too *many* rows.
+   */
+  purchaseIntervalDaysMax: number;
+  /** Interval sources present, unscoped — the "any profile is automatic" filter. */
+  purchaseIntervalSourcesAny: string[];
+  /** Manual profiles present, unscoped. Empty when every profile is automatic. */
+  manualPurchaseProfilesAny: string[];
   hasLastValidPurchase: 0 | 1;
   lastValidPurchaseSortAt: number;
   _geo?: { lat: number; lng: number };
@@ -67,6 +83,9 @@ export function deriveFacilityProfileFunnelFields(profiles: FacilityProfileFunne
   purchaseFunnelStagesAny: string[];
   purchaseFunnelStageRank: number;
   purchaseIntervalDaysMin: number;
+  purchaseIntervalDaysMax: number;
+  purchaseIntervalSourcesAny: string[];
+  manualPurchaseProfilesAny: string[];
   hasLastValidPurchase: 0 | 1;
   lastValidPurchaseSortAt: number;
 } {
@@ -96,6 +115,20 @@ export function deriveFacilityProfileFunnelFields(profiles: FacilityProfileFunne
     profiles.length === 0
       ? 30
       : Math.min(...profiles.map((profile) => profile.purchaseIntervalDays));
+  const purchaseIntervalDaysMax =
+    profiles.length === 0
+      ? 30
+      : Math.max(...profiles.map((profile) => profile.purchaseIntervalDays));
+  const purchaseIntervalSourcesAny = [
+    ...new Set(profiles.map((profile) => profile.purchaseIntervalSource)),
+  ];
+  const manualPurchaseProfilesAny = [
+    ...new Set(
+      profiles.flatMap((profile) =>
+        profile.manualPurchaseProfile === null ? [] : [profile.manualPurchaseProfile],
+      ),
+    ),
+  ];
   const lastValidPurchaseDates = profiles
     .map((profile) => profile.lastValidPurchaseDate)
     .filter((date): date is string => date !== null);
@@ -115,6 +148,9 @@ export function deriveFacilityProfileFunnelFields(profiles: FacilityProfileFunne
     purchaseFunnelStagesAny,
     purchaseFunnelStageRank,
     purchaseIntervalDaysMin,
+    purchaseIntervalDaysMax,
+    purchaseIntervalSourcesAny,
+    manualPurchaseProfilesAny,
     hasLastValidPurchase: lastValidPurchaseDates.length === 0 ? 0 : 1,
     lastValidPurchaseSortAt,
   };

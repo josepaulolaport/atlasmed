@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  displacedProfileId,
   emultecOrderItemRowUnchanged,
   emultecOrderRowUnchanged,
   type EmultecOrderItemRow,
@@ -164,5 +165,41 @@ describe("emultecOrderItemRowUnchanged", () => {
       ) as never;
       expect(emultecOrderItemRowUnchanged(baseline, mutated)).toBe(false);
     }
+  });
+});
+
+/**
+ * An order that changes clinics leaves the old one holding a purchase it no
+ * longer has. Reconciliation reaches a facility by joining an order to its
+ * profile, so the destination is found and the origin is reachable from nothing
+ * — its `last_valid_purchase_date` and funnel stage go on counting the order
+ * until a full sweep happens to recompute it.
+ */
+describe("displacedProfileId", () => {
+  const base: EmultecOrderRow = {
+    facilityVerticalProfileId: 10,
+    sellerId: 1,
+    personId: null,
+    status: "INVOICED",
+    type: "SALE",
+    orderedAt: new Date("2026-08-15T12:00:00.000Z"),
+    notes: null,
+    freight: "0",
+    grossWeight: "0",
+    netWeight: "0",
+  };
+
+  test("names the profile an order moved away from", () => {
+    // The real shape: an avulsa first resolved to the surgeon's own CPF
+    // facility, then moved to the clinic once the CNPJ link existed.
+    expect(displacedProfileId(base, { ...base, facilityVerticalProfileId: 20 })).toBe(10);
+  });
+
+  test("names nothing when only other columns changed", () => {
+    expect(displacedProfileId(base, { ...base, notes: "revised" })).toBeNull();
+  });
+
+  test("names nothing when the row is identical", () => {
+    expect(displacedProfileId(base, { ...base })).toBeNull();
   });
 });

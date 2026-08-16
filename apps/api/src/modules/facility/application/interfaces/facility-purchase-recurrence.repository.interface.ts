@@ -35,10 +35,4 @@ export interface FacilityPurchaseRecurrenceRepository {
     ) => Promise<DesiredPurchaseRecurrenceUpdate<T>>,
     fields?: FacilityUpdateFields,
   ): Promise<{ result: T; facility: FacilityRecord } | null>;
-
-  /** Recalc every active profile for a facility (worker backfill/reconcile). */
-  recalculateAllProfiles(
-    facilityId: number,
-    today: string,
-  ): Promise<{ changed: boolean } | null>;
 }
