@@ -15,6 +15,22 @@ final class AppConfig {
   static String get mapboxAccessToken =>
       const String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
 
+  /// Whether the roteiro do dia is offered at all.
+  ///
+  /// The agenda and the capture loop stand on their own: nothing in
+  /// `features/agenda`, `features/capture` or `features/dashboard` imports
+  /// `features/roteiro`, and on the server nothing in `calendar` or
+  /// `interactions` imports the roteiro module. The dependency runs one way, so
+  /// the planning half can be withheld without touching the half that records
+  /// what actually happened.
+  ///
+  /// Off by default, and left off for the first beta on purpose. It keeps the
+  /// pilot's question to one thing — *will a rep keep a diary and press the
+  /// buttons?* — with no Mapbox Matrix spend and no "did they like the
+  /// suggestions?" confound. Turning it on is this flag, not another merge.
+  static bool get roteiroEnabled =>
+      const bool.fromEnvironment('ROTEIRO_ENABLED');
+
   /// Optional fixed GPS for local/dev (e.g. simulator without a real fix).
   /// Set via `DEBUG_FIXED_LATITUDE` + `DEBUG_FIXED_LONGITUDE` dart-defines.
   static ({double latitude, double longitude})? get debugFixedLocation {

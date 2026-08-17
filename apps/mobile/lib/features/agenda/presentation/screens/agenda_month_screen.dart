@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_month_grid.dart';
@@ -139,17 +140,22 @@ class _AgendaMonthScreenState extends ConsumerState<AgendaMonthScreen> {
                 // From the month, the roteiro plans today — a rep who wants
                 // another day opens that day first, which is where its own
                 // context lives.
-                AgendaAction(
-                  label: 'Roteiro do dia',
-                  icon: Icons.route_outlined,
-                  emphasis: true,
-                  onTap: () {
-                    final now = DateTime.now();
-                    RoteiroRoute(
-                      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-                    ).push(context);
-                  },
-                ),
+                //
+                // Withheld entirely when the roteiro is off (AppConfig
+                // .roteiroEnabled): an action that opens a screen the build
+                // does not offer is worse than no action.
+                if (AppConfig.roteiroEnabled)
+                  AgendaAction(
+                    label: 'Roteiro do dia',
+                    icon: Icons.route_outlined,
+                    emphasis: true,
+                    onTap: () {
+                      final now = DateTime.now();
+                      RoteiroRoute(
+                        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+                      ).push(context);
+                    },
+                  ),
               ],
             )
           : null,

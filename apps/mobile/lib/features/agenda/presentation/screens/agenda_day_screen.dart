@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
@@ -545,14 +546,16 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
           startsAt: _newAppointmentStart(day).toIso8601String(),
         ).push(context),
       ),
-      AgendaAction(
-        label: 'Roteiro do dia',
-        icon: Icons.route_outlined,
-        emphasis: true,
-        onTap: () => RoteiroRoute(
-          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
-        ).push(context),
-      ),
+      // Withheld when the roteiro is off — see AppConfig.roteiroEnabled.
+      if (AppConfig.roteiroEnabled)
+        AgendaAction(
+          label: 'Roteiro do dia',
+          icon: Icons.route_outlined,
+          emphasis: true,
+          onTap: () => RoteiroRoute(
+            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+          ).push(context),
+        ),
     ],
   );
 }
