@@ -229,6 +229,24 @@ class _AddressEditSuggestionSheetBodyState
     }
   }
 
+  /// Roughly where this clinic is, for a map with no pin to open on.
+  Future<MapCoordinate?> _approximateFromAddress() async {
+    try {
+      final point = await _geocoding.geocodeAddress(
+        city: widget.city,
+        state: widget.state,
+        postalCode: _postalCodeCtrl.text,
+      );
+      if (point == null) return null;
+      return MapCoordinate(
+        latitude: point.latitude,
+        longitude: point.longitude,
+      );
+    } on CnesFacilityImportException {
+      return null;
+    }
+  }
+
   /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
   /// one fact, so moving the pin rewrites the fields rather than leaving them
   /// describing where the clinic used to be.
@@ -237,9 +255,16 @@ class _AddressEditSuggestionSheetBodyState
   /// point it cannot name, so what comes back is always a place — there is no
   /// window here where new coordinates sit beside the old address.
   Future<void> _pickOnMap() async {
+    // A clinic normally has a point, so `initial` carries it and the picker
+    // opens where the clinic already is. The fallback only matters if it
+    // somehow does not: then open on its município rather than another state.
+    final fallback = _point == null ? await _approximateFromAddress() : null;
+    if (!mounted) return;
+
     final picked = await FacilityPinPickerScreen.show(
       context,
       initial: _point,
+      fallback: fallback,
       title: 'Endereço da clínica',
       resolve: (lat, lng) =>
           _geocoding.reverseGeocode(latitude: lat, longitude: lng),
@@ -382,40 +407,60 @@ class _AddressEditSuggestionSheetBodyState
               style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop(<String, Object?>{
-                    'neighborhood': _neighborhoodCtrl.text.trim().isEmpty
-                        ? null
-                        : _neighborhoodCtrl.text.trim(),
-                    'streetAddress': _streetCtrl.text.trim().isEmpty
-                        ? null
-                        : _streetCtrl.text.trim(),
-                    'streetNumber': _numberCtrl.text.trim().isEmpty
-                        ? null
-                        : _numberCtrl.text.trim(),
-                    'addressComplement': _complementCtrl.text.trim().isEmpty
-                        ? null
-                        : _complementCtrl.text.trim(),
-                    'postalCode': _postalCodeCtrl.text.trim().isEmpty
-                        ? null
-                        : _postalCodeCtrl.text.trim(),
-                    'lat': _point?.latitude,
-                    'lng': _point?.longitude,
-                  });
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navyBright,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Paired with Cancelar: the logradouro field autofocuses, so this
+            // sheet opens with the keyboard over its lower half, and "Enviar"
+            // alone left somebody who opened it by mistake no way out but to
+            // submit.
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancelar'),
                   ),
                 ),
-                child: const Text('Enviar sugestão'),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(<String, Object?>{
+                        'neighborhood': _neighborhoodCtrl.text.trim().isEmpty
+                            ? null
+                            : _neighborhoodCtrl.text.trim(),
+                        'streetAddress': _streetCtrl.text.trim().isEmpty
+                            ? null
+                            : _streetCtrl.text.trim(),
+                        'streetNumber': _numberCtrl.text.trim().isEmpty
+                            ? null
+                            : _numberCtrl.text.trim(),
+                        'addressComplement': _complementCtrl.text.trim().isEmpty
+                            ? null
+                            : _complementCtrl.text.trim(),
+                        'postalCode': _postalCodeCtrl.text.trim().isEmpty
+                            ? null
+                            : _postalCodeCtrl.text.trim(),
+                        'lat': _point?.latitude,
+                        'lng': _point?.longitude,
+                      });
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.navyBright,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Enviar sugestão'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
