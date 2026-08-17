@@ -328,7 +328,9 @@ void main() {
       timeZoneResolver: (_) => 'America/Sao_Paulo',
     );
 
-    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setPerson(
+      const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'),
+    );
     notifier.setModality(CalendarModality.remote);
 
     expect(notifier.validationErrors, isNot(contains('facilityId')));
@@ -346,7 +348,9 @@ void main() {
       timeZoneResolver: (_) => 'America/Sao_Paulo',
     );
 
-    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setPerson(
+      const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'),
+    );
     notifier.setModality(CalendarModality.inPerson);
 
     expect(notifier.validationErrors, isNot(contains('facilityId')));
@@ -362,7 +366,9 @@ void main() {
     );
 
     notifier.setTitle('Ligação de acompanhamento');
-    notifier.setPerson(const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'));
+    notifier.setPerson(
+      const CalendarIdentity(id: 7, name: 'Dra. Marina Alves'),
+    );
     notifier.setModality(CalendarModality.remote);
     await notifier.submit();
 

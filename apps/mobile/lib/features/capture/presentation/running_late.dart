@@ -40,9 +40,7 @@ RunningLate? runningLate(
   Duration threshold = const Duration(minutes: 10),
 }) {
   final running = day
-      .where(
-        (item) => item.interaction?.status == InteractionStatus.inProgress,
-      )
+      .where((item) => item.interaction?.status == InteractionStatus.inProgress)
       .firstOrNull;
   if (running == null) return null;
 
@@ -69,5 +67,7 @@ String formatOverrun(Duration value) {
   if (minutes < 60) return '$minutes min';
   final hours = minutes ~/ 60;
   final rest = minutes % 60;
-  return rest == 0 ? '${hours}h' : '${hours}h${rest.toString().padLeft(2, '0')}';
+  return rest == 0
+      ? '${hours}h'
+      : '${hours}h${rest.toString().padLeft(2, '0')}';
 }

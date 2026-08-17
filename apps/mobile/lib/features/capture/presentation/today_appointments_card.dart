@@ -170,7 +170,11 @@ class _RunningLateBannerState extends ConsumerState<_RunningLateBanner> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.running_with_errors_rounded, size: 18, color: AppColors.amber),
+          const Icon(
+            Icons.running_with_errors_rounded,
+            size: 18,
+            color: AppColors.amber,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -391,7 +395,8 @@ class _StopFooter extends ConsumerWidget {
     // Declared missed. It keeps its Cheguei — the rep may still turn up, and
     // §15.7.7 lets a missed visit reopen — but the card leads with what they
     // already said rather than pretending the question is still open.
-    final missed = occurrence.interaction?.status == InteractionStatus.notCompleted;
+    final missed =
+        occurrence.interaction?.status == InteractionStatus.notCompleted;
     if (missed) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -399,7 +404,8 @@ class _StopFooter extends ConsumerWidget {
           Expanded(
             child: _Tag(
               icon: Icons.event_busy_outlined,
-              label: occurrence.interaction?.missReason?.label ?? 'Não realizada',
+              label:
+                  occurrence.interaction?.missReason?.label ?? 'Não realizada',
               colour: AppColors.amber,
             ),
           ),

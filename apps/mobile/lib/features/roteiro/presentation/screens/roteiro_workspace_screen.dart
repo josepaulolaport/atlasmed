@@ -262,7 +262,8 @@ class _RoteiroWorkspaceScreenState
     }
 
     final kept = {
-      for (final stop in after.roteiro?.stops ?? const []) stop.facilityVerticalProfileId,
+      for (final stop in after.roteiro?.stops ?? const [])
+        stop.facilityVerticalProfileId,
     };
     final dropped = approved.difference(kept);
 

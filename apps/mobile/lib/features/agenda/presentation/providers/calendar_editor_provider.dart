@@ -32,6 +32,7 @@ class CalendarEditorDraft extends Equatable {
   final String title;
   final int? facilityId;
   final String? facilityName;
+
   /// The doctor the contact is with, when the rep booked a person rather than
   /// a place (§15.7.5). Both may be set: a visit to a named doctor at their
   /// clinic is one interaction, not two.
@@ -298,6 +299,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
     ),
   );
   void setTitle(String value) => _setDraft(state.draft.copyWith(title: value));
+
   /// Picking the clinic names the visit, unless the rep has named it themselves.
   ///
   /// "Still automatic" means empty, or exactly the title the previous clinic
@@ -325,6 +327,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
             ),
     );
   }
+
   /// Picking the doctor names the contact, on the same rule as the clinic:
   /// only a title the rep has not written themselves is replaced.
   void setPerson(CalendarIdentity? person) {
@@ -338,7 +341,10 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState>
 
     _setDraft(
       person == null
-          ? draft.copyWith(clearPerson: true, title: automatic ? '' : draft.title)
+          ? draft.copyWith(
+              clearPerson: true,
+              title: automatic ? '' : draft.title,
+            )
           : draft.copyWith(
               personId: person.id,
               personName: person.name,

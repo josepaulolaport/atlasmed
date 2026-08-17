@@ -123,7 +123,8 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
     final previous = _facility;
     final automatic =
         _title.text.trim().isEmpty ||
-        (previous != null && _title.text == visitTitleForFacility(previous.name));
+        (previous != null &&
+            _title.text == visitTitleForFacility(previous.name));
 
     _facility = facility;
     if (!automatic) return;
@@ -244,7 +245,8 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
                     selected: _facility,
                     onPick: () async {
                       final picked = await showClinicPicker(context);
-                      if (picked != null) setState(() => _chooseFacility(picked));
+                      if (picked != null)
+                        setState(() => _chooseFacility(picked));
                     },
                     onClear: () => setState(() => _chooseFacility(null)),
                   ),
@@ -415,11 +417,7 @@ class _RecurrenceRow extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: AppColors.gray400,
-            ),
+            const Icon(Icons.chevron_right, size: 18, color: AppColors.gray400),
           ],
         ),
       ),

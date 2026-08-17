@@ -1124,10 +1124,9 @@ class _NameSheetState extends State<_NameSheet> {
           FilledButton(
             key: const Key('profile-name-save'),
             onPressed: _valid
-                ? () => Navigator.of(context).pop((
-                    first: _first.text.trim(),
-                    last: _last.text.trim(),
-                  ))
+                ? () => Navigator.of(
+                    context,
+                  ).pop((first: _first.text.trim(), last: _last.text.trim()))
                 : null,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.navyBright,

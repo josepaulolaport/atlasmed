@@ -321,11 +321,13 @@ class _AgendaDayScreenState extends ConsumerState<AgendaDayScreen> {
     // "Cheguei" is an arrival somewhere, and a remote contact with a doctor
     // (§15.7.5) is nowhere — the arrival endpoint needs a clinic it does not
     // have. Same press, honest name: the rep is starting a call.
-    final arrives = occurrence.interaction?.modality != CalendarModality.remote
-        && occurrence.interaction?.facilityId != null;
-    final name = occurrence.facility?.name
-        ?? occurrence.interaction?.person?.name
-        ?? occurrence.title;
+    final arrives =
+        occurrence.interaction?.modality != CalendarModality.remote &&
+        occurrence.interaction?.facilityId != null;
+    final name =
+        occurrence.facility?.name ??
+        occurrence.interaction?.person?.name ??
+        occurrence.title;
 
     final action = await showModalBottomSheet<String>(
       context: context,

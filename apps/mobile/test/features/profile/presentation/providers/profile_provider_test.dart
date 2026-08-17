@@ -21,17 +21,15 @@ class _MemoryCacheStorage extends RepositoryCacheStorage {
   Future<void> write({required String key, required String value}) async {}
 }
 
-UserPreferences _prefs({
-  String? workdayStart,
-  String? workdayEnd,
-}) => UserPreferences(
-  theme: UserPreferenceTheme.system,
-  pushNotificationsEnabled: true,
-  emailNotificationsEnabled: true,
-  smsNotificationsEnabled: false,
-  workdayStart: workdayStart,
-  workdayEnd: workdayEnd,
-);
+UserPreferences _prefs({String? workdayStart, String? workdayEnd}) =>
+    UserPreferences(
+      theme: UserPreferenceTheme.system,
+      pushNotificationsEnabled: true,
+      emailNotificationsEnabled: true,
+      smsNotificationsEnabled: false,
+      workdayStart: workdayStart,
+      workdayEnd: workdayEnd,
+    );
 
 void main() {
   BaseRepository.storage = const _MemoryCacheStorage();
@@ -47,10 +45,7 @@ void main() {
     });
 
     test('names the linha default rather than showing a blank', () {
-      expect(
-        workingHoursSummary(_prefs()),
-        'Padrão da linha · 08:00–18:00',
-      );
+      expect(workingHoursSummary(_prefs()), 'Padrão da linha · 08:00–18:00');
     });
 
     test('marks a half-answered day as partial', () {

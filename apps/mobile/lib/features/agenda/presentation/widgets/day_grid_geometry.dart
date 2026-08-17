@@ -184,11 +184,10 @@ class DayGridLane {
 List<DayGridLane> layOutOverlaps(List<CalendarOccurrence> occurrences) {
   // Paired up front rather than looked up by occurrence: two occurrences of the
   // same series can compare equal, and a map keyed on them would lose one.
-  final ordered =
-      [
-        for (final item in occurrences)
-          (occurrence: item, extent: drawnExtent(item)),
-      ]..sort((a, b) => a.extent.startsAt.compareTo(b.extent.startsAt));
+  final ordered = [
+    for (final item in occurrences)
+      (occurrence: item, extent: drawnExtent(item)),
+  ]..sort((a, b) => a.extent.startsAt.compareTo(b.extent.startsAt));
 
   final lanes = <DayGridLane>[];
   var index = 0;

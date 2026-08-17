@@ -284,8 +284,10 @@ class _AgendaDayGridState extends State<AgendaDayGrid> {
             centreY: _handleTouchRadius,
             colour: colour,
             active: active,
-            resize: (anchor, dy) =>
-                resizeStart(anchor, offsetFromMinutes(anchor.startMinutes) + dy),
+            resize: (anchor, dy) => resizeStart(
+              anchor,
+              offsetFromMinutes(anchor.startMinutes) + dy,
+            ),
           ),
           _handle(
             centreY: _handleTouchRadius + height,
@@ -509,10 +511,7 @@ class _EventBlock extends StatelessWidget {
     color: isBlock ? AppColors.gray700 : AppColors.navyDeep,
   );
 
-  static const _timeStyle = TextStyle(
-    fontSize: 10,
-    color: AppColors.gray500,
-  );
+  static const _timeStyle = TextStyle(fontSize: 10, color: AppColors.gray500);
 
   @override
   Widget build(BuildContext context) {

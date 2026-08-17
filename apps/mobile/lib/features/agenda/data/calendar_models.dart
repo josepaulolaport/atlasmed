@@ -157,8 +157,10 @@ class CalendarCreateCommand extends Equatable {
   final CalendarEventKind kind;
   final String title;
   final int? facilityId;
-  /// The doctor, when the contact is with a person (§15.7.5). A remote one may
-  /// name no clinic at all; an in-person one still has to.
+
+  /// The doctor, when the contact is with a person (§15.7.5). Either modality
+  /// may name no clinic: a call happened nowhere, and a coffee happened
+  /// somewhere the rep's book has never heard of.
   final int? personId;
   final CalendarModality? modality;
   final String startsAt;
@@ -577,6 +579,7 @@ class InteractionDetail extends Equatable {
   final DateTime occurrenceStartsAt;
   final DateTime occurrenceEndsAt;
   final String timeZone;
+
   /// Null for a contact with a doctor that happened nowhere (§15.7.5).
   final InteractionFacility? facility;
 

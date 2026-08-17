@@ -28,7 +28,8 @@ CalendarOccurrence _stop({
 });
 
 class _Moves implements CalendarMutationRepositoryContract {
-  final List<({int calendarId, String startsAt, int expectedVersion})> moves = [];
+  final List<({int calendarId, String startsAt, int expectedVersion})> moves =
+      [];
   final Set<int> refuse = {};
 
   @override
@@ -84,7 +85,10 @@ void main() {
 
     test('measures the overrun from the stop the rep is in', () {
       // 09:00–10:00, still running at 10:35.
-      final late = runningLate(day, DateTime.utc(2026, 8, 16, 10, 35).toLocal());
+      final late = runningLate(
+        day,
+        DateTime.utc(2026, 8, 16, 10, 35).toLocal(),
+      );
 
       expect(late, isNotNull);
       expect(late!.by.inMinutes, 35);
@@ -92,19 +96,28 @@ void main() {
     });
 
     test('says nothing about the five minutes every visit runs over', () {
-      expect(runningLate(day, DateTime.utc(2026, 8, 16, 10, 5).toLocal()), isNull);
+      expect(
+        runningLate(day, DateTime.utc(2026, 8, 16, 10, 5).toLocal()),
+        isNull,
+      );
     });
 
     test('says nothing when no stop is running', () {
       // A rep who has not pressed Cheguei may simply be driving there, and
       // being told they are late for something they are on the way to is noise.
       final planned = [_stop(hour: 9, id: 1), _stop(hour: 11, id: 2)];
-      expect(runningLate(planned, DateTime.utc(2026, 8, 16, 12).toLocal()), isNull);
+      expect(
+        runningLate(planned, DateTime.utc(2026, 8, 16, 12).toLocal()),
+        isNull,
+      );
     });
 
     test('says nothing when the overrun eats into nothing', () {
       final last = [_stop(hour: 9, id: 1, status: 'IN_PROGRESS')];
-      expect(runningLate(last, DateTime.utc(2026, 8, 16, 11).toLocal()), isNull);
+      expect(
+        runningLate(last, DateTime.utc(2026, 8, 16, 11).toLocal()),
+        isNull,
+      );
     });
   });
 
@@ -141,17 +154,23 @@ void main() {
       expect(result.blocked, hasLength(1));
     });
 
-    test("sends the override's version, or zero when it has never moved", () async {
-      final repository = _Moves();
+    test(
+      "sends the override's version, or zero when it has never moved",
+      () async {
+        final repository = _Moves();
 
-      await pushTheDay(
-        repository: repository,
-        stops: [_stop(hour: 11, id: 2), _stop(hour: 13, id: 3, overrideVersion: 4)],
-        by: const Duration(minutes: 15),
-      );
+        await pushTheDay(
+          repository: repository,
+          stops: [
+            _stop(hour: 11, id: 2),
+            _stop(hour: 13, id: 3, overrideVersion: 4),
+          ],
+          by: const Duration(minutes: 15),
+        );
 
-      expect(repository.moves[0].expectedVersion, 4);
-      expect(repository.moves[1].expectedVersion, 0);
-    });
+        expect(repository.moves[0].expectedVersion, 4);
+        expect(repository.moves[1].expectedVersion, 0);
+      },
+    );
   });
 }

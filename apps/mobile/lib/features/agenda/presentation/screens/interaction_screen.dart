@@ -814,7 +814,10 @@ class _InfoLine extends StatelessWidget {
             if (note case final text?)
               Text(
                 text,
-                style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.gray500,
+                ),
               ),
           ],
         ),

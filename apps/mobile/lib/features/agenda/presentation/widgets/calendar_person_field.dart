@@ -40,8 +40,7 @@ final calendarPersonSearchProvider = FutureProvider.autoDispose
           .map(
             (doctor) => CalendarIdentity(
               id: doctor.id,
-              name:
-                  doctor.fullName?.trim().isNotEmpty == true
+              name: doctor.fullName?.trim().isNotEmpty == true
                   ? doctor.fullName!.trim()
                   : '${doctor.firstName} ${doctor.lastName}'.trim(),
             ),
