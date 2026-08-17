@@ -48,6 +48,13 @@ const workdayOrderIssue = {
   path: ["workdayEnd"],
 };
 
+/**
+ * The keys this version knows about, for readers that have to cope with rows
+ * written by an older one. See `parseMetadataPreferences`: reading stored JSON
+ * must not fail because the app used to store more than it does now.
+ */
+export const userPreferencesShapeForReading = userPreferencesShape;
+
 export const userPreferencesSchema = userPreferencesShape.refine(
   workdayOrdered,
   workdayOrderIssue,
