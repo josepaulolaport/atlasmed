@@ -362,6 +362,11 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         .from(interactions).where(eq(interactions.id, input.id)).limit(1)
         .then((rows) => rows[0]?.status);
       const [updated] = await tx.update(interactions).set({ status: "IN_PROGRESS", actualStartedAt: input.startedAt,
+        // The rep said it was closed and then walked in. Keeping the reason
+        // would leave a completed visit claiming the door was locked — and
+        // hold the clinic out of the slate for a fortnight on the strength of
+        // it (§15.7.7).
+        missReason: null,
         updatedAt: input.startedAt, version: sql`${interactions.version} + 1` }).where(and(eq(interactions.id, input.id),
           inArray(interactions.status, ["SCHEDULED", "NOT_COMPLETED"]), eq(interactions.version, input.expectedVersion))).returning();
       if (!updated) {

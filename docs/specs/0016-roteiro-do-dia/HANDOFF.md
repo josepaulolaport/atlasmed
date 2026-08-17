@@ -542,9 +542,26 @@ Design in §15.7.7. What landed:
   `CalendarNetworkException`, the one class the queue reads as "keep and stop",
   so one dead entry froze every press behind it.
 
-Not driven on the device yet: the doctor-by-clinic filter, in-person with no
-clinic, the late start, and the arrival attach. The simulator still runs the
-build from before those landed.
+**The miss reason** (§15.7.7) and **the running-late warning** landed after
+that, and everything above was then driven on the iPhone 17 against Postgres:
+
+| driven | result |
+|---|---|
+| "Não fui" → *Estava fechada* | `NOT_COMPLETED` + `miss_reason=FECHADA`, event `rep-marked-missed`; the card leads with the reason |
+| Cheguei on that same missed visit | `IN_PROGRESS` with a measured start — the 409 from the user's screenshot, accepted |
+| arrival at a clinic with a booked visit | attached to interaction 31; still one row for facility 54 today |
+| doctor search with a clinic chosen | "an" → *nenhum médico com esse nome nesta clínica*; "Humberto" → only the one who attends there |
+| presencial contact, doctor, no clinic | saved with `facility_id` null |
+| FECHADA seeded at facility 46 | that clinic drops out of the generated day; removing the row restores the slate exactly |
+
+Two defects the device found that the suite could not: the stop card overflowed
+by three pixels once a late stop carried two actions, and a declared miss showed
+nothing on the card because the list DTO never carried `missReason`.
+
+⚠️ One consequence worth knowing: dropping a single clinic re-shuffled **all
+five** stops of the generated day. The greedy picks by merit-per-detour and each
+pick moves the cursor, so removing one link re-optimises the chain behind it.
+Not a defect, but the slate is more sensitive to small changes than it looks.
 
 ---
 

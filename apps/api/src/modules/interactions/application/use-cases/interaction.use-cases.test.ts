@@ -105,7 +105,8 @@ class FakeInteractionRepository implements InteractionRepository {
     if (!this.record || this.record.version !== input.expectedVersion
       || !["SCHEDULED", "NOT_COMPLETED"].includes(this.record.status)) return null;
     const previousStatus = this.record.status;
-    this.record = { ...this.record, status: "IN_PROGRESS", actualStartedAt: input.startedAt, version: this.record.version + 1, updatedAt: input.startedAt };
+    this.record = { ...this.record, status: "IN_PROGRESS", actualStartedAt: input.startedAt, missReason: null,
+      version: this.record.version + 1, updatedAt: input.startedAt };
     this.events.push({ previousStatus, newStatus: "IN_PROGRESS" });
     this.receipts.set(`start:${input.idempotencyKey}`, this.record);
     return { interaction: this.record, replayed: false };
@@ -331,9 +332,12 @@ describe("StartInteractionUseCase", () => {
       .resolves.toBeDefined();
 
     const swept = new FakeInteractionRepository();
-    swept.record = interaction({ status: "NOT_COMPLETED" });
-    await expect(new StartInteractionUseCase({ repository: swept, now: () => new Date("2026-08-03T21:30:00.000Z") }).execute(ownerInput()))
-      .resolves.toBeDefined();
+    swept.record = interaction({ status: "NOT_COMPLETED", missReason: "FECHADA" });
+    const reopened = await new StartInteractionUseCase({ repository: swept, now: () => new Date("2026-08-03T21:30:00.000Z") })
+      .execute(ownerInput());
+    expect(reopened.status).toBe("IN_PROGRESS");
+    // And the reason goes: they said it was shut, then walked in.
+    expect(reopened.missReason).toBeNull();
   });
 
   test("rejects start when calendar/override cancellation makes a stale row cancelled", async () => {
