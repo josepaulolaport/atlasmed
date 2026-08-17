@@ -68,6 +68,9 @@ describe("calendar and interaction schema", () => {
     expect(calendarRecurrenceEnum.enumValues).toEqual([
       "NONE",
       "DAILY",
+      // Added with the lunch block (§9): a break the rep takes Monday to
+      // Friday, which no other recurrence could say.
+      "WEEKDAYS",
       "WEEKLY",
       "MONTHLY",
       "YEARLY",
@@ -238,6 +241,7 @@ describe("calendar and interaction schema", () => {
         "calendar_id",
         "recurrence_key",
         "facility_id",
+        "person_id",
         "agent_user_id",
         "modality",
         "status",
@@ -260,7 +264,11 @@ describe("calendar and interaction schema", () => {
     ).toEqual([
       ["calendar_id", "bigint", true],
       ["recurrence_key", "text", true],
-      ["facility_id", "bigint", true],
+      // Both nullable since §15.7.5: an interaction is about a clinic, a
+      // doctor, or the two together — never neither, which
+      // `interactions_subject_check` enforces.
+      ["facility_id", "bigint", false],
+      ["person_id", "bigint", false],
       ["agent_user_id", "bigint", true],
       ["modality", "interaction_modality", true],
       ["status", "interaction_status", true],

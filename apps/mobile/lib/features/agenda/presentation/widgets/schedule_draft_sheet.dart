@@ -245,8 +245,9 @@ class _ScheduleDraftSheetState extends State<ScheduleDraftSheet> {
                     selected: _facility,
                     onPick: () async {
                       final picked = await showClinicPicker(context);
-                      if (picked != null)
+                      if (picked != null) {
                         setState(() => _chooseFacility(picked));
+                      }
                     },
                     onClear: () => setState(() => _chooseFacility(null)),
                   ),

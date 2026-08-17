@@ -2,8 +2,6 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/capture/presentation/today_appointments_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-final _now = DateTime(2026, 8, 16, 14);
-
 CalendarOccurrence _visit({
   required int hour,
   String status = 'SCHEDULED',

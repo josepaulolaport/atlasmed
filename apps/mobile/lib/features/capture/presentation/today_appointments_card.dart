@@ -1,5 +1,3 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';

@@ -23,6 +23,7 @@ CalendarOccurrence _stop({
   'recurrence': 'NONE',
   'version': 1,
   'canMutate': true,
+  // ignore: use_null_aware_elements — value-nullable entry, not key-nullable.
   if (overrideVersion != null) 'overrideVersion': overrideVersion,
   'interaction': {'id': id, 'facilityId': 9, 'status': status, 'version': 3},
 });
