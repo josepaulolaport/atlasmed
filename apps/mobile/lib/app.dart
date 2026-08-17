@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:atlasmed_mobile_app/core/session/user_activity.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/dismiss_keyboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,7 +116,11 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           : child ?? const SizedBox.shrink();
       // Wraps everything so a touch anywhere counts, including inside the
       // router's own pages.
-      return UserActivityTracker(child: devicePreviewed);
+      // Outside the activity tracker so a tap still counts as interaction
+      // even when all it does is close the keyboard.
+      return UserActivityTracker(
+        child: DismissKeyboardOnTapOutside(child: devicePreviewed),
+      );
     },
   );
 }

@@ -182,24 +182,44 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
             style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                final value = _controller.text.trim();
-                if (value.isEmpty) return;
-                Navigator.of(context).pop(value);
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navyBright,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Paired with Cancelar rather than standing alone. The field
+          // autofocuses, so the sheet opens with the keyboard over the lower
+          // half of the screen; with "Enviar" the only control on it, somebody
+          // who opened this by mistake had no way out but to submit something.
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar'),
                 ),
               ),
-              child: const Text('Enviar sugestão'),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    final value = _controller.text.trim();
+                    if (value.isEmpty) return;
+                    Navigator.of(context).pop(value);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.navyBright,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Enviar sugestão'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

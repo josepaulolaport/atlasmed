@@ -176,6 +176,20 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
           ),
           const SizedBox(height: 16),
+          // Cancelar beside Salvar: the field autofocuses, so the keyboard
+          // covers the lower half of the sheet and saving was the only control
+          // on it.
+          OutlinedButton(
+            onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Cancelar'),
+          ),
+          const SizedBox(height: 10),
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(

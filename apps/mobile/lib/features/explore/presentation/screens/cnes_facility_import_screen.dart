@@ -440,6 +440,41 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
     }
   }
 
+  /// Roughly where this clinic is, for a map that has no pin to open on.
+  ///
+  /// Tries the full address first and falls back to the município, which the
+  /// CNES record always has. Returns null rather than guessing when neither
+  /// resolves — the picker then opens on a country overview, which is honest
+  /// about knowing nothing.
+  Future<MapCoordinate?> _approximateFromAddress() async {
+    final preview = _preview;
+    if (preview == null) return null;
+    try {
+      final point =
+          await widget.repository.geocodeAddress(
+            streetAddress: _street.text,
+            streetNumber: _number.text,
+            neighborhood: _neighborhood.text,
+            city: preview.municipalityName,
+            state: preview.stateAbbreviation,
+            postalCode: _postalCode.text,
+          ) ??
+          await widget.repository.geocodeAddress(
+            city: preview.municipalityName,
+            state: preview.stateAbbreviation,
+          );
+      if (point == null) return null;
+      return MapCoordinate(
+        latitude: point.latitude,
+        longitude: point.longitude,
+      );
+    } on CnesFacilityImportException {
+      // A lookup that failed is not worth surfacing here: the user asked for a
+      // map, and they still get one.
+      return null;
+    }
+  }
+
   /// Pin → address. Spec 0009 decision 4: an address and a pin are two views of
   /// one fact, so moving the pin rewrites the address rather than leaving it
   /// describing where the clinic used to be.
@@ -449,9 +484,16 @@ class _CnesFacilityImportDetailState extends State<_CnesFacilityImportDetail> {
   /// second lookup here, and no window where the new coordinates sit beside the
   /// old address.
   Future<void> _pickOnMap() async {
+    // With no pin yet, open near the clinic rather than on a hardcoded city:
+    // the CNES record always carries a município even when it carries no
+    // coordinates, and starting 400km away meant dragging the country past.
+    final fallback = _point == null ? await _approximateFromAddress() : null;
+    if (!mounted) return;
+
     final picked = await FacilityPinPickerScreen.show(
       context,
       initial: _point,
+      fallback: fallback,
       title: widget.candidate.name,
       resolve: (lat, lng) =>
           widget.repository.reverseGeocode(latitude: lat, longitude: lng),

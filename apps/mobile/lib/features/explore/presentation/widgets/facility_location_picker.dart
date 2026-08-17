@@ -33,9 +33,16 @@ class FacilityPinPickerScreen extends StatefulWidget {
     required this.initial,
     required this.title,
     required this.resolve,
+    this.fallback,
   });
 
   final MapCoordinate? initial;
+
+  /// Where to open when there is no pin yet — the clinic's município, or
+  /// wherever its address geocoded to. Without one the map opened on a
+  /// hardcoded São Paulo, so a clinic in Barra da Tijuca started 400km from
+  /// itself and the whole country had to be dragged past.
+  final MapCoordinate? fallback;
   final String title;
 
   /// Describes what sits at a point, or returns null when nothing does.
@@ -45,6 +52,7 @@ class FacilityPinPickerScreen extends StatefulWidget {
   static Future<PickedLocation?> show(
     BuildContext context, {
     MapCoordinate? initial,
+    MapCoordinate? fallback,
     required String title,
     required Future<ReverseGeocodedAddress?> Function(double lat, double lng)
     resolve,
@@ -54,6 +62,7 @@ class FacilityPinPickerScreen extends StatefulWidget {
         fullscreenDialog: true,
         builder: (_) => FacilityPinPickerScreen(
           initial: initial,
+          fallback: fallback,
           title: title,
           resolve: resolve,
         ),
@@ -67,14 +76,23 @@ class FacilityPinPickerScreen extends StatefulWidget {
 }
 
 class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
-  /// Somewhere in Brazil to start from when there is no pin at all, so the map
-  /// does not open on the middle of the Atlantic.
-  static const _fallback = MapCoordinate(
-    longitude: -46.6333,
-    latitude: -23.5505,
-  );
+  /// Last resort when neither a pin nor a fallback was supplied: the middle of
+  /// Brazil at country zoom, which at least contains wherever the clinic is.
+  /// A city centre picked at random is worse than an honest overview — it looks
+  /// like an answer.
+  static const _lastResort = MapCoordinate(longitude: -51.9, latitude: -14.2);
 
   MapboxMap? _map;
+
+  /// Whether the camera has been placed where this screen asked for.
+  ///
+  /// `viewport` is a request, and the map emits camera events before it is
+  /// honoured — during style load it reports its own default, which is 30,-10,
+  /// the Atlantic off Portugal. `_onCameraChanged` took those at face value and
+  /// overwrote the pin with them, so a picker opened for a clinic in Rio showed
+  /// open ocean and a coordinate the clinic never had. Nothing is believed until
+  /// the camera has been set explicitly below.
+  bool _cameraReady = false;
 
   /// Where the map is centred, which is where the marker is drawn.
   late MapCoordinate _pin;
@@ -103,10 +121,14 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   @override
   void initState() {
     super.initState();
-    _pin = widget.initial ?? _fallback;
+    _pin = pinPickerCentre(initial: widget.initial, fallback: widget.fallback);
     _readout = _pin;
     _placed = widget.initial != null;
     MapboxOptions.setAccessToken(AppConfig.mapboxAccessToken);
+    // Started here, not from the style-load callback: what sits at the initial
+    // point depends on the point, not on the map. Hanging it off style load
+    // meant a map that never loaded also never looked the address up, and the
+    // sheet sat on "Verificando…" with nothing in flight.
     if (widget.initial != null) _scheduleResolve();
   }
 
@@ -174,6 +196,7 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
   /// a new spot and confirmed the old one. The address then did not change,
   /// because as far as the code was concerned the pin had not moved.
   void _onCameraChanged(CameraChangedEventData event) {
+    if (!_cameraReady) return;
     final centre = event.cameraState.center.coordinates;
     final moved = MapCoordinate(
       longitude: centre.lng.toDouble(),
@@ -207,7 +230,43 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
     );
   }
 
-  MapboxMap? _mapboxMapOrNull() => _map;
+  /// Places the camera where this screen asked for, once the style is up.
+  ///
+  /// Done here rather than trusting `viewport` alone because the projection
+  /// changes on style load — STANDARD starts on a globe — and the camera does
+  /// not survive that untouched. Setting it explicitly afterwards is what makes
+  /// the opening position the one that was asked for.
+  Future<void> _onStyleLoaded() async {
+    final map = _map;
+    await useFlatProjection(map);
+    if (map == null || !mounted) return;
+
+    final centre = pinPickerCentre(
+      initial: widget.initial,
+      fallback: widget.fallback,
+    );
+    try {
+      await map.setCamera(
+        CameraOptions(
+          center: Point(
+            coordinates: Position(centre.longitude, centre.latitude),
+          ),
+          zoom: pinPickerZoom(
+            initial: widget.initial,
+            fallback: widget.fallback,
+          ),
+        ),
+      );
+    } catch (_) {
+      // A camera that refused to move still leaves a usable map.
+    }
+    if (!mounted) return;
+    setState(() {
+      _pin = centre;
+      _readout = centre;
+      _cameraReady = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,16 +319,34 @@ class _FacilityPinPickerScreenState extends State<FacilityPinPickerScreen> {
                               _pin.latitude,
                             ),
                           ),
-                          zoom: widget.initial == null ? 10 : 16,
+                          zoom: pinPickerZoom(
+                            initial: widget.initial,
+                            fallback: widget.fallback,
+                          ),
                         ),
                         onMapCreated: (map) {
                           _map = map;
                           map.scaleBar.updateSettings(
                             ScaleBarSettings(enabled: false),
                           );
+                          // Stated rather than left to the defaults. Pan and
+                          // zoom are the whole interaction; rotate and pitch
+                          // are not, and both make a centre-pin map hard to
+                          // aim — a tilted view puts the marker somewhere
+                          // other than where it looks like it is.
+                          map.gestures.updateSettings(
+                            GesturesSettings(
+                              scrollEnabled: true,
+                              pinchToZoomEnabled: true,
+                              doubleTapToZoomInEnabled: true,
+                              doubleTouchToZoomOutEnabled: true,
+                              quickZoomEnabled: true,
+                              rotateEnabled: false,
+                              pitchEnabled: false,
+                            ),
+                          );
                         },
-                        onStyleLoadedListener: (_) =>
-                            useFlatProjection(_mapboxMapOrNull()),
+                        onStyleLoadedListener: (_) => _onStyleLoaded(),
                         onMapLoadErrorListener: (_) =>
                             setState(() => _mapUnavailable = true),
                         onCameraChangeListener: _onCameraChanged,
@@ -741,4 +818,29 @@ class _NoPinPlaceholder extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Where the picker opens, and how close.
+///
+/// A pure function so the choice can be asserted: a Mapbox platform view draws
+/// nothing in a widget test, and the defect here was never in the drawing — a
+/// clinic in Barra da Tijuca opened the map on São Paulo, 400km away, because
+/// the fallback was a hardcoded city.
+@visibleForTesting
+MapCoordinate pinPickerCentre({
+  required MapCoordinate? initial,
+  required MapCoordinate? fallback,
+}) => initial ?? fallback ?? _FacilityPinPickerScreenState._lastResort;
+
+/// Street level on a known pin; neighbourhood level on a fallback, which is a
+/// place rather than a point; country level with nothing to go on, so the map
+/// does not claim a precision it lacks.
+@visibleForTesting
+double pinPickerZoom({
+  required MapCoordinate? initial,
+  required MapCoordinate? fallback,
+}) {
+  if (initial != null) return 16;
+  if (fallback != null) return 13;
+  return 4;
 }

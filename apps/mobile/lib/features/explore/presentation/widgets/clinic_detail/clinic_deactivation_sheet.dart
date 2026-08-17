@@ -166,25 +166,46 @@ class _ClinicDeactivationSheetBodyState
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              key: const Key('deactivation-submit'),
-              onPressed: _canSubmit
-                  ? () => Navigator.of(context).pop(_controller.text.trim())
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.red,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.gray200,
-                disabledForegroundColor: AppColors.gray400,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // The worst version of the trap this pairing fixes: the field
+          // autofocuses, "Enviar solicitação" is disabled until something is
+          // typed, and there was no other control — so a sheet opened by
+          // mistake had no enabled button on it at all.
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  key: const Key('deactivation-cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar'),
                 ),
               ),
-              child: const Text('Enviar solicitação'),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  key: const Key('deactivation-submit'),
+                  onPressed: _canSubmit
+                      ? () => Navigator.of(context).pop(_controller.text.trim())
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.red,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.gray200,
+                    disabledForegroundColor: AppColors.gray400,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Enviar solicitação'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
